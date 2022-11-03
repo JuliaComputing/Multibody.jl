@@ -3,11 +3,18 @@ uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
 authors = ["Yingbo Ma <mayingbo5@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+ModelingToolkitStandardLibrary = "16a59e39-deab-5bd0-87e4-056b12336739"
+
 [compat]
+ModelingToolkit = "8.30"
+ModelingToolkitStandardLibrary = "1.8"
 julia = "1"
 
 [extras]
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["OrdinaryDiffEq", "Test"]
