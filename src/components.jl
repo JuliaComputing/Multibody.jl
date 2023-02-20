@@ -52,8 +52,9 @@ function Revolute(; name)
     compose(ODESystem(eqs, t; name), frame_b)
 end
 
+skewcoords(R) = [R[3,2];R[1,3];R[2,1]]
 
-function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)))
+function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false)
     @named frame_a = Frame()
     R = frame_a.R.R |> collect
     f = frame_a.f
@@ -71,14 +72,15 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)))
 
     v,a,w,g,q,q̇,r_cm,I,tau = collect.((v,a,w,g,q,q̇,r_cm,I,tau))
 
-    eqs = if true # isRoot
+    eqs = if isroot # isRoot
         Equation[
-            0 .~ orientation_constraint(q)
+            0 .~ orientation_constraint(q) # TODO: Replace with non-unit quaternion
             q̇ .~ D.(q)
             w .~ angular_velocity2(q, q̇)
-            ]
+        ]
     else
-        error("Note done yet") # TODO: not done yet
+        w .~ skewcoords(R*D.(R')) # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
+            # Quaternion not used in this branch
     end
 
     eqs = [
