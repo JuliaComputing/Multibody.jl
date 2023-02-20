@@ -2,7 +2,8 @@ function Oriantation(; name)
     # T: Transformation matrix from world frame to local frame
     # w: Absolute angular velocity of local frame, resolved in local frame
 
-    @variables R(t)[1:3, 1:3] w(t)[1:3]
+    @variables R(t)[1:3, 1:3] [description="angular velocity"]
+    @variables w(t)[1:3] [description="Orientation rotation matrix ∈ SO(3)"]
     R,w = collect.((R,w))
 
     ODESystem(Equation[], t, [vec(R); w], [], name = name)
@@ -13,7 +14,9 @@ end
     # R: Orientation object to rotate the world frame into the connector frame
     # f: Cut-force resolved in connector frame
     # tau: Cut-torque resolved in connector frame
-    @variables r_0(t)[1:3] f(t)[1:3] [connect = Flow] tau(t)[1:3] [connect = Flow]
+    @variables r_0(t)[1:3] [description = "Position vector directed from the origin of the world frame to the connector frame origin, resolved in world frame"]
+    @variables f(t)[1:3] [connect = Flow, description = "Cut force resolved in connector frame"]
+    @variables tau(t)[1:3] [connect = Flow, description = "Cut torque resolved in connector frame"]
     r_0, f, tau = collect.((r_0, f, tau))
     @named R = Oriantation()
 
