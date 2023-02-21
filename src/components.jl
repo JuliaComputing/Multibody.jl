@@ -70,7 +70,7 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
     @variables w(t)[1:3]=0 
     @variables g(t)[1:3]=0 [description="gravity acceleration"]
     @variables q(t)[1:4]=[0,0,0,1] [description="quaternion orientation"]
-    @variables q̇(t)[1:4] [description="quaternion tiem derivative"]
+    @variables q̇(t)[1:4]=[0,0,0,0] [description="quaternion time derivative"]
     @parameters m=m [description="mass"]
     @parameters r_cm[1:3]=r_cm [description="center of mass"]
     @parameters I[1:3, 1:3]=I [description="inertia tensor"]
