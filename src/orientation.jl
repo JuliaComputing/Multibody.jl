@@ -85,8 +85,9 @@ function abs_rotation(R1, R_rel)
 end
 
 function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
-    [vec(R1.R.mat .~ R2.R.mat);
-        R1.w .~ R2.w]
+    # [vec(R1.R.mat .~ R2.R.mat);
+    #     R1.w .~ R2.w]
+    vec(R1.R.mat .~ R2.R.mat)
 end
 
 function angular_velocity2(R::RotationMatrix)
