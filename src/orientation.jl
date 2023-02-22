@@ -105,6 +105,16 @@ end
 
 orientation_constraint(R1, R2) = orientation_constraint(R1'R2)
 
+function residue(O1, O2)
+    R1 = O1.R
+    R2 = O2.R
+    [
+        atan(cross(R1[1, :], R1[2, :])⋅R2[2, :],R1[1,:]⋅R2[1,:])
+        atan(-cross(R1[1, :],R1[2, :])⋅R2[1, :],R1[2,:]⋅R2[2,:])
+        atan(R1[2, :]⋅R2[1, :],R1[3,:]⋅R2[3,:])
+    ]
+end
+
 ## Quaternions
 orientation_constraint(q::AbstractVector) = q'q - 1
 
