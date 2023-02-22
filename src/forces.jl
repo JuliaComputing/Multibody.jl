@@ -17,7 +17,7 @@ function LineForceBase(; name, length=0, s_small = 1e-10)
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
 
-    eqs = [r_rel_0 .~ frame_b.r_0 - frame_a.r_0;
+    eqs = [r_rel_0 .~ frame_b.r_0 .- frame_a.r_0;
            length ~ norm(r_rel_0)
            s ~ max(length, s_small)
            e_rel_0 .~ r_rel_0 ./ s]
@@ -43,6 +43,8 @@ function LineForceWithMass(; name, length=0, m = 1.0, lengthFraction = 0.5)
         description = "Location of point mass with respect to frame_a as a fraction of the distance from frame_a to frame_b",
         bounds = (0, 1),
     ]
+
+    r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0 = collect.((r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0))
 
     eqs = [flange_a.s ~ 0
            flange_b.s ~ length]
@@ -89,17 +91,17 @@ function LineForceWithMass(; name, length=0, m = 1.0, lengthFraction = 0.5)
                r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthFraction
                v_CM_0 .~ D.(r_CM_0)
                ag_CM_0 .~ D.(v_CM_0) - gravity_acceleration(r_CM_0)
-               frame_a.f .~ resolve2(frame_a.R,
+               frame_a.f .~ resolve2(ori(frame_a),
                                      (m * (1 - lengthFraction)) * ag_CM_0 - e_rel_0 * fa)
-               frame_b.f .~ resolve2(frame_b.R,
+               frame_b.f .~ resolve2(ori(frame_b),
                                      (m * lengthFraction) * ag_CM_0 - e_rel_0 * fb)]
     else
         eqs = [eqs
                r_CM_0 .~ zeros(3)
                v_CM_0 .~ zeros(3)
                ag_CM_0 .~ zeros(3)
-               frame_a.f .~ -resolve2(frame_a.R, e_rel_0 * fa)
-               frame_b.f .~ -resolve2(frame_b.R, e_rel_0 * fb)]
+               frame_a.f .~ -resolve2(ori(frame_a), e_rel_0 * fa)
+               frame_b.f .~ -resolve2(ori(frame_b), e_rel_0 * fb)]
     end
 
     extend(ODESystem(eqs, t; name, systems = [flange_a, flange_b]), lfb)
@@ -139,7 +141,7 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0)
     @named spring = TP.Spring(c; s_rel0=s_unstretched)
 
     eqs = [
-        r_rel_a .~ resolve2(frame_a.R, r_rel_0)
+        r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
         e_a .~ r_rel_a/s
         f .~ spring.f
         length ~ lineForce.length

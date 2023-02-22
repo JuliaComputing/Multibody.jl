@@ -1,12 +1,16 @@
 module Multibody
 
+using LinearAlgebra
 using ModelingToolkit
 const t = let
     (@variables t)[1]
 end
 const D = Differential(t)
 
-export Frame, Orientation
+export Orientation, RotationMatrix
+include("orientation.jl")
+
+export Frame
 include("frames.jl")
 
 include("interfaces.jl")

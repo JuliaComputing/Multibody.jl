@@ -1,0 +1,96 @@
+using Rotations
+
+const R3{T} = RotMatrix{3, T}
+
+abstract type Orientation end
+
+struct RotationMatrix <: Orientation
+    R::R3
+    w
+end
+
+RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
+
+RotationMatrix() = RotationMatrix(R3(1.0I(3)), zeros(3))
+
+function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3))
+    @variables R(t)[1:3, 1:3]=R [description="Orientation rotation matrix ∈ SO(3)"]
+    @variables w(t)[1:3]=w [description="angular velocity"]
+    R,w = collect.((R,w))
+    RotationMatrix(R, w)
+end
+
+nullrotation() = RotationMatrix()
+
+function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
+    @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
+    @variables w(t)[1:3]=w [description="angular velocity"]
+    R,w = collect.((R,w))
+
+    ODESystem(Equation[], t, [vec(R); w], [], name = name)
+end
+
+Base.:*(R1::RotationMatrix, x::AbstractVector) = R1.R*x
+Base.:*(R1::RotationMatrix, R2::RotationMatrix) = RotationMatrix(R1.R*R2.R, R1*R2.w + R1.w)
+LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
+
+"""
+    h2 = resolve2(R21, h1)
+
+`R21` is a 3x3 matrix that transforms a vector from frame 1 to frame 2. `h1` is a
+vector resolved in frame 1. `h2` is the same vector in frame 2.
+"""
+resolve2(R21::RotationMatrix, v1) = R21 * collect(v1)
+
+"""
+    h1 = resolve1(R21, h2)
+
+`R12` is a 3x3 matrix that transforms a vector from frame 1 to frame 2. `h2` is a
+vector resolved in frame 2. `h1` is the same vector in frame 1.
+"""
+resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
+
+
+
+skew(s) = [0 -s[3] s[2];s[3] 0 -s[1]; -s[2] s[1] 0]
+skewcoords(R::AbstractMatrix) = [R[3,2];R[1,3];R[2,1]]
+
+function planar_rotation(axis, ϕ, ϕ̇)
+    length(axis) == 3 || error("axis must be a 3-vector")
+    ee = axis*axis'
+    R = ee + (I(3) - ee)*cos(ϕ) - skew(axis)*sin(ϕ)
+    w = e*ϕ̇
+    RotationMatrix(R, w)
+end
+
+"""
+    R2 = abs_rotation(R1, R_rel)
+
+- `R1`: `Orientation` object to rotate frame 0 into frame 1
+- `R_rel`: `Orientation` object to rotate frame 1 into frame 2
+- `R2`: `Orientation` object to rotate frame 0 into frame 2
+"""
+function abs_rotation(R1, R_rel)
+    # R2 = R_rel.R*R1.R
+    # w = resolve2(R_rel, R1.w) + R_rel.w
+    # RotationMatrix(R2, w)
+    R_rel*R1
+end
+
+function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
+    [vec(R1.R.mat .~ R2.R.mat);
+        R1.w .~ R2.w]
+end
+
+function angular_velocity2(R::RotationMatrix)
+    R.w
+end
+
+
+## Quaternions
+orientation_constraint(q::AbstractVector) = q'q - 1
+
+function angular_velocity2(q::AbstractVector, q̇) 
+    Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
+    2*Q*q̇
+end

@@ -12,6 +12,9 @@ connections = [
 ]
 
 @named model = ODESystem(connections, t, systems=[world, body])
+
+modele = ModelingToolkit.expand_connections(model)
+
 ssys = structural_simplify(model)
 
 
@@ -27,3 +30,6 @@ ssys = structural_simplify(model)
 
 
 
+## Simple pendulum
+
+@named joint = Revolute()
