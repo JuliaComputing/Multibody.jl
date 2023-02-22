@@ -3,6 +3,8 @@ using Multibody
 t = Multibody.t
 
 world = Multibody.world
+
+## Only body and world
 @named body = Body(; m=1)
 
 connections = [
@@ -13,7 +15,7 @@ connections = [
 ssys = structural_simplify(model)
 
 
-## Add spring
+## Add spring to make a harmonic oscillator
 @named spring = Multibody.Spring(40)
 connections = [
     connect(world.frame_b, spring.frame_a)

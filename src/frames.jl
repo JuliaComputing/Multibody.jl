@@ -1,9 +1,9 @@
-function Oriantation(; name)
+function Oriantation(; name, R=collect(1.0I(3)), w=zeros(3))
     # T: Transformation matrix from world frame to local frame
     # w: Absolute angular velocity of local frame, resolved in local frame
 
-    @variables R(t)[1:3, 1:3]=collect(1.0I(3)) [description="Orientation rotation matrix ∈ SO(3)"]
-    @variables w(t)[1:3] [description="angular velocity"]
+    @variables R(t)[1:3, 1:3]=R [description="Orientation rotation matrix ∈ SO(3)"]
+    @variables w(t)[1:3]=w [description="angular velocity"]
     R,w = collect.((R,w))
 
     ODESystem(Equation[], t, [vec(R); w], [], name = name)

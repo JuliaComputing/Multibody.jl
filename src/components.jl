@@ -5,7 +5,7 @@ function World(; name)
     @parameters n[1:3]=[0, 1, 0] [description="gravity direction of world"]
     @parameters g=9.81 [description="gravitational acceleration of world"]
     eqs = Equation[collect(frame_b.r_0) .~ 0
-                   vec(collect(frame_b.R.R) .~ nullrotation())]
+                orientation_equal(frame_b.R, nullrotation())]
     ODESystem(eqs, t, [], [n; g]; name, systems=[frame_b])
 end
 
@@ -27,7 +27,7 @@ function FixedTranslation(; name)
     taub = frame_b.tau
     eqs = Equation[
         frame_b.r_0 .~ frame_a.r_0 + resolve1(frame_a.R, r_ab)
-        vec(frame_b.R .~ frame_a.R)
+        orientation_equal(frame_b.R, frame_a.R)
         0 .~ fa + fb
         0 .~ taua + taub + cross(r_ab, fb)
     ]
@@ -40,13 +40,13 @@ function Revolute(; name, ϕ0=0, ω0=0)
     @parameters n[1:3]=[0, 0, 1] [description="axis of rotation"]
     @variables ϕ0(t)=ϕ0 [description="angle of rotation (rad)"]
     @variables ω0(t)=ω0 [description="angular velocity (rad/s)"]
-    @variables Rrel(t)[1:3, 1:3]=planarRotation(ϕ0) [description="relative rotation matrix"]
+    @variables Rrel(t)[1:3, 1:3]=planar_rotation(n, ϕ0) [description="relative rotation matrix"]
 
     
     eqs = Equation[
         frame_a.r_0 .~ frame_b.r_0
-        Rrel .~ planarRotation(ϕ)
-        vec(frame_b.R .~ absRotation(frame_a.R, Rrel))
+        orientation_equal(Rrel, planar_rotation(n, ϕ))
+        orientation_equal(frame_b.R, abs_rotation(frame_a.R, Rrel))
         D(ϕ) ~ ω
 
         0 .~ frame_a.f   + resolve1(Rrel, frame_b.f)
@@ -56,7 +56,6 @@ function Revolute(; name, ϕ0=0, ω0=0)
     compose(ODESystem(eqs, t; name), frame_b)
 end
 
-skewcoords(R) = [R[3,2];R[1,3];R[2,1]]
 
 function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false)
     @named frame_a = Frame()
