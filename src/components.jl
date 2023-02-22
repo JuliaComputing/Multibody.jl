@@ -82,24 +82,30 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
 
     Ra = ori(frame_a)
 
-    # eqs = if isroot # isRoot
-    #     Equation[
-    #         0 .~ orientation_constraint(q) # TODO: Replace with non-unit quaternion
-    #         q̇ .~ D.(q)
-    #         w .~ angular_velocity2(q, q̇)
-    #     ]
-    # else
-    #     # This equation is defined here and not in the Rotation component since the branch above might use another equaiton
-    #     w .~ skewcoords(R*D.(R')) # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
-    #         # Quaternion not used in this branch
-    # end
+    eqs = if isroot # isRoot
+        error("Not yet supported")
+        Equation[
+            # 0 .~ orientation_constraint(q) # TODO: Replace with non-unit quaternion
+            # q̇ .~ D.(q)
+            # w_a .~ 0;# angular_velocity2(q, q̇)
+        ]
+    else
+        # This equation is defined here and not in the Rotation component since the branch above might use another equation
+        # w .~ skewcoords(R*D.(R'))
+        [
+            # zeros(3) .~ equalityConstraint(ori(frame_a), R_start)
+            # vec(collect(ori(frame_a).R.mat) .~ Matrix(1.0LinearAlgebra.I(3)));
+            collect(w_a .~ D(Ra).w) # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
+                # Quaternion not used in this branch
+        ]
+    end
 
     eqs = [
+        eqs;
         collect(r_0 .~ frame_a.r_0)
         collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
         collect(v_0 .~ D.(r_0))
         collect(a_0 .~ D.(v_0))
-        collect(w_a .~ angular_velocity2(Ra))
         collect(z_a .~ D.(w_a))
 
         collect(f .~ m*(resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) + cross(w_a, cross(w_a, r_cm))))

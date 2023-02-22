@@ -5,7 +5,7 @@ t = Multibody.t
 world = Multibody.world
 
 ## Only body and world
-@named body = Body(; m=1)
+@named body = Body(; m=1, isroot=false)
 
 connections = [
     connect(world.frame_b, body.frame_a)

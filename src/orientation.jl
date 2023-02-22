@@ -34,6 +34,13 @@ Base.:*(R1::RotationMatrix, x::AbstractVector) = R1.R*x
 Base.:*(R1::RotationMatrix, R2::RotationMatrix) = RotationMatrix(R1.R*R2.R, R1*R2.w + R1.w)
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
+function (D::Differential)(RM::RotationMatrix)
+    R = RM.R
+    DR = D.(RM.R)
+    Dw = [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
+    RotationMatrix(DR, Dw)
+end
+
 """
     h2 = resolve2(R21, h1)
 
@@ -86,6 +93,17 @@ function angular_velocity2(R::RotationMatrix)
     R.w
 end
 
+function orientation_constraint(R::RotationMatrix)
+    T = R.R
+    [T[:, 1]'T[:, 1] - 1
+        T[:, 2]'T[:, 2] - 1
+        T[:, 3]'T[:, 3] - 1
+        T[:, 1]'T[:, 2]
+        T[:, 1]'T[:, 3]
+        T[:, 2]'T[:, 3]]
+end
+
+orientation_constraint(R1, R2) = orientation_constraint(R1'R2)
 
 ## Quaternions
 orientation_constraint(q::AbstractVector) = q'q - 1
