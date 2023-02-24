@@ -13,9 +13,12 @@ RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
 RotationMatrix() = RotationMatrix(R3(1.0I(3)), zeros(3))
 
-function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3))
+function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name)
     @variables R(t)[1:3, 1:3]=R [description="Orientation rotation matrix ∈ SO(3)"]
-    @variables w(t)[1:3]=w [description="angular velocity"]
+    # @variables w(t)[1:3]=w [description="angular velocity"]
+    R = collect(R)
+    # R = ModelingToolkit.renamespace.(name, R) .|> Num
+    w = get_w(R)
     R,w = collect.((R,w))
     RotationMatrix(R, w)
 end
@@ -35,10 +38,24 @@ Base.:*(R1::RotationMatrix, R2::RotationMatrix) = RotationMatrix(R1.R*R2.R, R1*R
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
 function (D::Differential)(RM::RotationMatrix)
+    # https://build.openmodelica.org/Documentation/Modelica.Mechanics.MultiBody.Frames.Orientation.html
     R = RM.R
     DR = D.(RM.R)
     Dw = [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
     RotationMatrix(DR, Dw)
+end
+
+
+function get_w(R::AbstractMatrix)
+    R = collect(R)
+    DR = collect(D.(R))
+    [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]] |> collect
+end
+
+function get_w(RM)
+    R = RM.R
+    DR = D.(RM.R)
+    [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
 end
 
 """
@@ -97,16 +114,17 @@ end
 function orientation_constraint(R::RotationMatrix)
     T = R.R
     [T[:, 1]'T[:, 1] - 1
-        T[:, 2]'T[:, 2] - 1
-        T[:, 3]'T[:, 3] - 1
-        T[:, 1]'T[:, 2]
-        T[:, 1]'T[:, 3]
-        T[:, 2]'T[:, 3]]
+     T[:, 2]'T[:, 2] - 1
+     T[:, 3]'T[:, 3] - 1
+     T[:, 1]'T[:, 2]
+     T[:, 1]'T[:, 3]
+     T[:, 2]'T[:, 3]]
 end
 
 orientation_constraint(R1, R2) = orientation_constraint(R1'R2)
 
 function residue(O1, O2)
+    # https://github.com/modelica/ModelicaStandardLibrary/blob/master/Modelica/Mechanics/MultiBody/Frames/Orientation.mo
     R1 = O1.R
     R2 = O2.R
     [

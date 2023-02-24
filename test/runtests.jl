@@ -6,6 +6,7 @@ world = Multibody.world
 
 ## Only body and world
 @named body = Body(; m=1, isroot=false)
+Multibody.isroot(body)
 
 connections = [
     connect(world.frame_b, body.frame_a)
@@ -17,6 +18,7 @@ modele = ModelingToolkit.expand_connections(model)
 
 ssys = structural_simplify(model)
 
+@test length(states(ssys)) == 0
 
 ## Add spring to make a harmonic oscillator
 @named spring = Multibody.Spring(40)
@@ -33,3 +35,7 @@ ssys = structural_simplify(model)
 ## Simple pendulum
 
 @named joint = Revolute()
+
+
+
+##

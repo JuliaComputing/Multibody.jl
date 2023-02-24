@@ -15,9 +15,10 @@
     @variables tau(t)[1:3] [connect = Flow, description = "Cut torque resolved in connector frame"]
     r_0, f, tau = collect.((r_0, f, tau))
     # R: Orientation object to rotate the world frame into the connector frame
-    R = NumRotationMatrix()
+    R = NumRotationMatrix(; name)
 
-    ODESystem(Equation[], t, [r_0; f; tau], []; name, metadata=Dict(:orientation => R))
+    ODESystem(Equation[], t, [r_0; f; tau], []; name, metadata=Dict(:orientation => R, :frame => true))
 end
 
-ori(sys::ODESystem) = sys.metadata[:orientation]
+
+
