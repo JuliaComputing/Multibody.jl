@@ -56,14 +56,14 @@ function LineForceWithMass(; name, length=0, m = 1.0, lengthFraction = 0.5)
            fa ~ flange_a.f
            fb ~ flange_b.f]
     # elseif cardinality(flange_a) > 0 && cardinality(flange_b) == 0
-    #   fa .~ flange_a.f
-    #   fb .~ -fa
+    #   fa ~ flange_a.f
+    #   fb ~ -fa
     # elseif cardinality(flange_a) == 0 && cardinality(flange_b) > 0
-    #   fa .~ -fb
-    #   fb .~ flange_b.f
+    #   fa ~ -fb
+    #   fb ~ flange_b.f
     # else
-    #   fa .~ 0
-    #   fb .~ 0
+    #   fa ~ 0
+    #   fb ~ 0
     # end
 
     #= Force and torque balance of point mass
@@ -138,12 +138,12 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0)
     @variables e_rel_0(t)[1:3] [
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
-    @named spring = TP.Spring(c; s_rel0=s_unstretched)
+    @named spring2d = TP.Spring(c; s_rel0=s_unstretched)
 
     eqs = [
         r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
         e_a .~ r_rel_a/s
-        f .~ spring.f
+        f ~ spring2d.f
         length ~ lineForce.length
         s ~ lineForce.s
         r_rel_0 .~ lineForce.r_rel_0
@@ -151,9 +151,9 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0)
     
         connect(lineForce.frame_a, frame_a)
         connect(lineForce.frame_b, frame_b)
-        connect(spring.flange_b, lineForce.flange_b)
-        connect(spring.flange_a, lineForce.flange_a)
+        connect(spring2d.flange_b, lineForce.flange_b)
+        connect(spring2d.flange_a, lineForce.flange_a)
     ]
 
-    extend(ODESystem(eqs, t; name, systems = [lineForce, spring]), ptf)
+    extend(ODESystem(eqs, t; name, systems = [lineForce, spring2d]), ptf)
 end

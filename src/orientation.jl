@@ -34,7 +34,7 @@ function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
 end
 
 Base.:*(R1::RotationMatrix, x::AbstractVector) = R1.R*x
-Base.:*(R1::RotationMatrix, R2::RotationMatrix) = RotationMatrix(R1.R*R2.R, R1*R2.w + R1.w)
+Base.:*(R1::RotationMatrix, R2::RotationMatrix) = RotationMatrix(R1.R.mat*R2.R.mat, R1*R2.w + collect(R1.w))
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
 function (D::Differential)(RM::RotationMatrix)
@@ -81,9 +81,10 @@ skewcoords(R::AbstractMatrix) = [R[3,2];R[1,3];R[2,1]]
 
 function planar_rotation(axis, ϕ, ϕ̇)
     length(axis) == 3 || error("axis must be a 3-vector")
-    ee = axis*axis'
+    axis = collect(axis)
+    ee = collect(axis*axis')
     R = ee + (I(3) - ee)*cos(ϕ) - skew(axis)*sin(ϕ)
-    w = e*ϕ̇
+    w = axis*ϕ̇
     RotationMatrix(R, w)
 end
 

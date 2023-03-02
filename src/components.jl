@@ -42,8 +42,8 @@ const world = World(; name=:world)
 gravity_acceleration(r) = world.g*world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
 function FixedTranslation(; name)
-    @named frame_a = Frame(name = name)
-    @named frame_b = Frame(name = name)
+    @named frame_a = Frame()
+    @named frame_b = Frame()
     @variables r_ab(t)[1:3] [description="position vector from frame_a to frame_b, resolved in frame_a"]
     fa = frame_a.f
     fb = frame_b.f
@@ -58,26 +58,28 @@ function FixedTranslation(; name)
     compose(ODESystem(eqs, t; name), frame_b)
 end
 
-function Revolute(; name, ϕ0=0, ω0=0, n=[0, 0, 1])
-    @named frame_a = Frame(name = name)
-    @named frame_b = Frame(name = name)
+function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1])
+    @named frame_a = Frame()
+    @named frame_b = Frame()
     @parameters n[1:3]=n [description="axis of rotation"]
     @variables ϕ(t)=ϕ0 [description="angle of rotation (rad)"]
     @variables ω(t)=ω0 [description="angular velocity (rad/s)"]
-    Rrel = planar_rotation(n, ϕ0, ω0)
+    Rrel0 = planar_rotation(n, ϕ0, ω0)
+    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
+    n = collect(n)
 
     
     eqs = Equation[
-        frame_a.r_0 .~ frame_b.r_0
+        collect(frame_a.r_0 .~ frame_b.r_0)
         Rrel ~ planar_rotation(n, ϕ, ω)
         ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
         D(ϕ) ~ ω
 
-        0 .~ frame_a.f   + resolve1(Rrel, frame_b.f)
-        0 .~ frame_a.tau + resolve1(Rrel, frame_b.tau)
-        0 .~ n'frame_b.tau # no torque through joint
+        0 .~ collect(frame_a.f)   + resolve1(Rrel, frame_b.f)
+        0 .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau)
+        0 .~ n'collect(frame_b.tau) # no torque through joint
     ]
-    compose(ODESystem(eqs, t; name), frame_b)
+    compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
 
