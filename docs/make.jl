@@ -15,6 +15,9 @@ makedocs(;
                                   assets = String[]),
          pages = [
              "Home" => "index.md",
+             "Tutorials" => [
+                "Hellow world: Pendulum" => "examples/pendulum.md",
+             ],
          ])
 
 deploydocs(;
