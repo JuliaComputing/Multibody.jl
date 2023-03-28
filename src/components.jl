@@ -58,7 +58,17 @@ function FixedTranslation(; name)
     compose(ODESystem(eqs, t; name), frame_b)
 end
 
-function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1])
+"""
+    Revolute(; name, ϕ0 = 0, ω0 = 0, n, useAxisFlange = false)
+
+Revolute joint with 1 rotational degree-of-freedom
+
+- `ϕ0`: Initial angle
+- `ω0`: Iniitial angular velocity
+- `n`: The axis of rotation
+- `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Rotational, `axis` and `support`, between which rotational components such as springs and dampers can be connected.
+"""
+function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false, isroot=false)
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description="axis of rotation"]
@@ -68,18 +78,36 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1])
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
-    
-    eqs = Equation[
+    @named fixed = Rotational.Fixed()
+    @named internalAxis = InternalSupport(tau=tau)
+    if isroot
+        error("isroot not yet supported")
+    else
+        eqs = Equation[
+            Rrel ~ planar_rotation(-n, ϕ, ω)
+            ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
+            collect(frame_a.f)  .~ - resolve1(Rrel, frame_b.f)
+            collect(frame_a.tau) .~ - resolve1(Rrel, frame_b.tau)
+        ]
+    end
+    moreeqs = [
         collect(frame_a.r_0 .~ frame_b.r_0)
-        Rrel ~ planar_rotation(n, ϕ, ω)
-        ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
         D(ϕ) ~ ω
-
-        0 .~ collect(frame_a.f)   + resolve1(Rrel, frame_b.f)
-        0 .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau)
-        0 .~ n'collect(frame_b.tau) # no torque through joint
+        n'collect(frame_b.tau) # no torque through joint
+        ϕ ~ internalAxis.ϕ
     ]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    append!(eqs, moreeqs)
+    if useAxisFlange
+        @named axis = Rotational.Flange()
+        @named support = Rotational.Flange()
+        push!(eqs, connect(fixed.flange, support))
+        push!(eqs, connect(internalAxis.flange, axis))
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support)
+    else
+        @named constantTorque = Rotational.ConstantTorque(tau_constant=0)
+        push!(eqs, connect(constantTorque.flange, internalAxis.flange))
+        compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    end
 end
 
 
