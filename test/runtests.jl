@@ -47,6 +47,9 @@ connections = [
 ]
 
 @named model = ODESystem(connections, t, systems=[world, spring, body])
+
+ModelingToolkit.n_extra_equations(model)
+
 modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model)
 

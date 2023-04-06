@@ -78,8 +78,8 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
-    @named fixed = Rotational.Fixed()
-    @named internalAxis = InternalSupport(tau=tau)
+    # @named fixed = Rotational.Fixed()
+    # @named internalAxis = InternalSupport(tau=tau)
     if isroot
         error("isroot not yet supported")
     else
@@ -93,19 +93,19 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
     moreeqs = [
         collect(frame_a.r_0 .~ frame_b.r_0)
         D(ϕ) ~ ω
-        n'collect(frame_b.tau) # no torque through joint
-        ϕ ~ internalAxis.ϕ
+        n'collect(frame_b.tau) ~ 0 # no torque through joint
+        # ϕ ~ internalAxis.ϕ
     ]
     append!(eqs, moreeqs)
     if useAxisFlange
         @named axis = Rotational.Flange()
         @named support = Rotational.Flange()
         push!(eqs, connect(fixed.flange, support))
-        push!(eqs, connect(internalAxis.flange, axis))
+        # push!(eqs, connect(internalAxis.flange, axis))
         compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support)
     else
-        @named constantTorque = Rotational.ConstantTorque(tau_constant=0)
-        push!(eqs, connect(constantTorque.flange, internalAxis.flange))
+        # @named constantTorque = Rotational.ConstantTorque(tau_constant=0)
+        # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
 end
