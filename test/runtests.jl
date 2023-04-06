@@ -68,4 +68,11 @@ connections = [
 modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model)
 
+prob = ODEProblem(ssys, [], (0, 10))
+
+
+using OrdinaryDiffEq
+sol = solve(prob, Rodas4())
+
+
 ##

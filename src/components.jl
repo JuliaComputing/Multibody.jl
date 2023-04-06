@@ -124,7 +124,7 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
     # 6*3 potential variables + Frame: 2*3 flow + 3 potential + 3 residual = 24 equations + 2*3 flow
     @parameters m=m [description="mass"]
     @parameters r_cm[1:3]=r_cm [description="center of mass"]
-    @parameters I[1:3, 1:3]=I [description="inertia tensor"]
+    # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
 
     @parameters I_11 = I[1,1] [description="Element (1,1) of inertia tensor"]
