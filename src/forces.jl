@@ -128,6 +128,7 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction, kwargs...)
+    @named spring2d = TP.Spring(c; s_rel0=s_unstretched)
     @parameters c=c [description = "spring constant", bounds = (0, Inf)]
     @parameters s_unstretched=s_unstretched [
         description = "unstretched length of spring",
@@ -155,7 +156,6 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
     @variables e_rel_0(t)[1:3] [
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
-    @named spring2d = TP.Spring(c; s_rel0=s_unstretched)
 
     eqs = [
         r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
