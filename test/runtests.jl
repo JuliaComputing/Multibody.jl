@@ -39,7 +39,7 @@ ssys = structural_simplify(model)
 
 @named lineForceBase = Multibody.LineForceBase(; length = 0)
 @named lineForce = Multibody.LineForceWithMass(; length = 0, m=0, lengthFraction=0.5)
-@named spring = Multibody.Spring(40)
+@named spring = Multibody.Spring(40, fixedRotationAtFrame_a=false, fixedRotationAtFrame_b=true)
 
 connections = [
     connect(world.frame_b, spring.frame_a)
@@ -53,7 +53,15 @@ ModelingToolkit.n_extra_equations(model)
 modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model)
 
+prob = ODEProblem(ssys, [], (0, 10))
 
+u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+
+
+using OrdinaryDiffEq
+sol = solve(prob, Rodas4())
+
+@test SciMLBase.successful_retcode(sol)
 
 ## Simple pendulum
 
