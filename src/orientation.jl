@@ -27,9 +27,10 @@ nullrotation() = RotationMatrix()
 
 function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     # @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
+    # @variables w(t)[1:3]=w [description="angular velocity"]
+    # R,w = collect.((R,w))
     R = at_variables_t(:R, 1:3, 1:3) 
-    @variables w(t)[1:3]=w [description="angular velocity"]
-    R,w = collect.((R,w))
+    w = at_variables_t(:w, 1:3)
 
     defaults = Dict(R .=> RM)
     ODESystem(Equation[], t, [vec(R); w], []; name, defaults)
