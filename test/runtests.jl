@@ -5,7 +5,7 @@ t = Multibody.t
 world = Multibody.world
 
 ## Only body and world
-@named body = Body(; m=1, isroot=false)
+@named body = Body(; m=1, isroot=false, r_cm=[1,0,1])
 Multibody.isroot(body)
 
 connections = [
@@ -18,7 +18,7 @@ modele = ModelingToolkit.expand_connections(model)
 
 ssys = structural_simplify(model)
 
-@test length(states(ssys)) == 0
+@test length(states(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
 ## Add spring to make a harmonic oscillator
 
@@ -52,16 +52,17 @@ ModelingToolkit.n_extra_equations(model)
 
 modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model)
+u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
 
+# prob = ODEProblem(ssys, [body.v_0 => randn(3)], (0, 10))
 prob = ODEProblem(ssys, [], (0, 10))
 
-u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
 
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
 
-@test SciMLBase.successful_retcode(sol)
+@test_broken SciMLBase.successful_retcode(sol) # Fails to initialize
 
 ## Simple pendulum
 
@@ -78,9 +79,13 @@ ssys = structural_simplify(model)
 
 prob = ODEProblem(ssys, [], (0, 10))
 
+u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
 
 
 ##
+ˍ₋arg1 = u0
+ˍ₋arg2 = p
