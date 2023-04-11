@@ -72,8 +72,8 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description="axis of rotation"]
-    @variables ϕ(t)=ϕ0 [description="angle of rotation (rad)"]
-    @variables ω(t)=ω0 [description="angular velocity (rad/s)"]
+    @variables ϕ(t)=ϕ0 [state_priority=10, description="angle of rotation (rad)"]
+    @variables ω(t)=ω0 [state_priority=10, description="angular velocity (rad/s)"]
     Rrel0 = planar_rotation(n, ϕ0, ω0)
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
