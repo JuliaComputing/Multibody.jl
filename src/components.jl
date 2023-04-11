@@ -38,7 +38,7 @@ end
 
 const world = World(; name=:world)
 
-"Function to compute the gravity acceleration, resolved in world frame"
+"Function frame_a.to compute the gravity acceleration, resolved in world frame"
 gravity_acceleration(r) = world.g*world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
 function FixedTranslation(; name)
@@ -113,8 +113,6 @@ end
 
 function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false)
     @named frame_a = Frame()
-    f = frame_a.f |> collect
-    tau = frame_a.tau |> collect
     @variables r_0(t)[1:3]=0 [description="Position vector from origin of world frame to origin of frame_a"]
     @variables v_0(t)[1:3]=0 [description="Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
     @variables a_0(t)[1:3]=0 [description="Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
@@ -165,8 +163,8 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
         collect(a_0 .~ D.(v_0))
         collect(z_a .~ D.(w_a))
 
-        collect(f .~ m*(resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) + cross(w_a, cross(w_a, r_cm))))
-        collect(tau .~ I*z_a + cross(w_a, I*w_a) + cross(r_cm, f))
+        collect(frame_a.f .~ m*(resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) + cross(w_a, cross(w_a, r_cm))))
+        collect(frame_a.tau .~ I*z_a + cross(w_a, I*w_a) + cross(r_cm, frame_a.f))
     ]
 
     ODESystem(eqs, t; name, metadata = Dict(:isroot => isroot), systems=[frame_a])
