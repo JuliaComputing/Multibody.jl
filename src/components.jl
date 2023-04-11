@@ -113,8 +113,8 @@ end
 
 function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false)
     @named frame_a = Frame()
-    @variables r_0(t)[1:3]=0 [description="Position vector from origin of world frame to origin of frame_a"]
-    @variables v_0(t)[1:3]=0 [description="Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
+    @variables r_0(t)[1:3]=0 [state_priority=2, description="Position vector from origin of world frame to origin of frame_a"]
+    @variables v_0(t)[1:3]=0 [state_priority=2, description="Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
     @variables a_0(t)[1:3]=0 [description="Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
     @variables g_0(t)[1:3]=0 [description="gravity acceleration"]
     @variables w_a(t)[1:3]=0 [description="Absolute angular velocity of frame_a resolved in frame_a"]
