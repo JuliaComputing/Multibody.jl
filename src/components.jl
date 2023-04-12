@@ -6,14 +6,18 @@ function isroot(sys)
     get(sys.metadata, :isroot, false)
 end
 
-function ori(sys)
+function ori(sys, varw = false)
     if sys.metadata isa Dict && (O = get(sys.metadata, :orientation, nothing)) !== nothing
-        R,w = collect.((O.R, O.w))
+        R = collect(O.R)
         # Since we are using this function instead of sys.ori, we need to handle namespacing properly as well
         ns = nameof(sys)
         R = ModelingToolkit.renamespace.(ns, R) .|> Num
-        w = get_w(R)
-        # w = ModelingToolkit.renamespace.(ns, w) .|> Num
+        if varw
+            w = collect(O.w)
+            w = ModelingToolkit.renamespace.(ns, w) .|> Num
+        else
+            w = get_w(R)
+        end
         RotationMatrix(R, w)
     else
         error("System $(sys.name) does not have an orientation object.")
@@ -111,7 +115,7 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
 end
 
 
-function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false)
+function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false, ϕ0 = zeros(3), ϕd0=zeros(3))
 
     @variables r_0(t)[1:3]=0 [state_priority=2, description="Position vector from origin of world frame to origin of frame_a"]
     @variables v_0(t)[1:3]=0 [state_priority=2, description="Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
@@ -140,14 +144,14 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
     # DRa = D(Ra)
 
     eqs = if isroot # isRoot
-        @variables ϕ(t)[1:3] = 0 [state_priority=10, description="Euler angles"]
-        @variables ϕd(t)[1:3] = 0 [state_priority=10]
-        @variables ϕdd(t)[1:3] = 0 [state_priority=10]
+        @variables ϕ(t)[1:3] = ϕ0 [state_priority=10, description="Euler angles"]
+        @variables ϕd(t)[1:3] = ϕd0 [state_priority=10]
+        @variables ϕdd(t)[1:3] = zeros(3) [state_priority=10]
         ϕ, ϕd, ϕdd = collect.((ϕ, ϕd, ϕdd))
         ar = axesRotations(ϕ, ϕd)
 
-        @named frame_a = Frame(derived_w = false)
-        Ra = ori(frame_a)
+        @named frame_a = Frame(varw = true)
+        Ra = ori(frame_a, true)
 
         Equation[
             # 0 .~ orientation_constraint(Ra); 
@@ -172,7 +176,7 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
         eqs;
         # collect(w_a .~ get_w(Ra));
         collect(r_0 .~ frame_a.r_0)
-        collect(g_0 .~ [0, -9.82, 0])# NOTE: should be gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
+        collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
         collect(v_0 .~ D.(r_0))
         collect(a_0 .~ D.(v_0))
         collect(z_a .~ D.(w_a))

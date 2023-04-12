@@ -20,7 +20,7 @@ ssys = structural_simplify(model)
 
 @test length(states(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
-error("There is a problem with how angular velocities are handled when calling Multibody.ori. When Body.isroot, the body must have additional states corresponding to angular velocities, whereas if it's not root, the states are defined elsewhere. ori just neglects w and recreates from R through differentiation")
+@error("There is a problem with how angular velocities are handled when calling Multibody.ori. When Body.isroot, the body must have additional states corresponding to angular velocities, whereas if it's not root, the states are defined elsewhere. ori just neglects w and recreates from R through differentiation")
 
 
 
@@ -52,11 +52,11 @@ The multibody paper mentions this as an interesting example, figure 8:
 #  - 1*(9-3) // 1*(R.T – R.residuals)
 # = 18 equations 
 
-@named body = Body(; m=1, isroot=true, r_cm=[1,0,1]) # This time the body isroot since there is no joint containing state
+@named body = Body(; m=1, isroot=true, r_cm=[1,0,1], ϕ0 = [1,1,1]) # This time the body isroot since there is no joint containing state
 
 @named lineForceBase = Multibody.LineForceBase(; length = 0)
 @named lineForce = Multibody.LineForceWithMass(; length = 0, m=0, lengthFraction=0.5)
-@named spring = Multibody.Spring(40, fixedRotationAtFrame_a=true, fixedRotationAtFrame_b=true)
+@named spring = Multibody.Spring(40, fixedRotationAtFrame_a=false, fixedRotationAtFrame_b=false)
 
 connections = [
     connect(world.frame_b, spring.frame_a)
@@ -73,6 +73,9 @@ u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
 
 # prob = ODEProblem(ssys, [body.v_0 => randn(3)], (0, 10))
 prob = ODEProblem(ssys, [], (0, 10))
+
+du = prob.f.f.f_oop(u0, p, 0)
+@test_broken all(isfinite, du)
 
 
 
@@ -100,6 +103,9 @@ ssys = structural_simplify(model)
 prob = ODEProblem(ssys, [], (0, 10))
 
 u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+
+du = prob.f.f.f_oop(u0, p, 0)
+@test_broken all(isfinite, du)
 
 
 using OrdinaryDiffEq
