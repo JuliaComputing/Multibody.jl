@@ -15,9 +15,13 @@ const D = Differential(t)
 
 Emulates the `@variables` macro but does never create array variables. Also never introuces the variable name into the calling scope.
 """
-function at_variables_t(args...)
+function at_variables_t(args...; default=nothing)
     xs = Symbolics.variables(args...; T = Symbolics.FnType)
-    map(x->x(t), xs)
+    xs = map(x->x(t), xs)
+    if default !== nothing
+        xs = Symbolics.setdefaultval.(xs, default)
+    end
+    xs
 end
 
 export Orientation, RotationMatrix
