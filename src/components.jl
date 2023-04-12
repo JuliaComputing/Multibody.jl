@@ -112,7 +112,7 @@ end
 
 
 function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false)
-    @named frame_a = Frame()
+
     @variables r_0(t)[1:3]=0 [state_priority=2, description="Position vector from origin of world frame to origin of frame_a"]
     @variables v_0(t)[1:3]=0 [state_priority=2, description="Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
     @variables a_0(t)[1:3]=0 [description="Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
@@ -136,27 +136,41 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
 
     r_0,v_0,a_0,g_0,w_a,z_a,r_cm = collect.((r_0,v_0,a_0,g_0,w_a,z_a,r_cm))
 
-    Ra = ori(frame_a)
-    DRa = D(Ra)
+    
+    # DRa = D(Ra)
 
     eqs = if isroot # isRoot
+        @variables ϕ(t)[1:3] = 0 [state_priority=10, description="Euler angles"]
+        @variables ϕd(t)[1:3] = 0 [state_priority=10]
+        @variables ϕdd(t)[1:3] = 0 [state_priority=10]
+        ϕ, ϕd, ϕdd = collect.((ϕ, ϕd, ϕdd))
+        ar = axesRotations(ϕ, ϕd)
+
+        @named frame_a = Frame(derived_w = false)
+        Ra = ori(frame_a)
+
         Equation[
-            0 .~ orientation_constraint(Ra); # TODO: Replace with non-unit quaternion
-            # collect(w_a .~ DRa.w);
-            # q̇ .~ D.(q)
-            # w_a .~ 0;# angular_velocity2(q, q̇)
+            # 0 .~ orientation_constraint(Ra); 
+            ϕd .~ D.(ϕ)
+            ϕdd .~ D.(ϕd)
+            Ra ~ ar
+            Ra.w .~ ar.w
+            collect(w_a .~ Ra.w)
         ]
     else
+        @named frame_a = Frame()
+        Ra = ori(frame_a)
         # This equation is defined here and not in the Rotation component since the branch above might use another equation
-        [
-            collect(w_a .~ Ra.w);
+        Equation[
             # collect(w_a .~ DRa.w); # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
             # vec(DRa.R .~ 0)
+            collect(w_a .~ angular_velocity2(Ra)); # we write this equality here since we do not include the angular velocities in the ~ for rotation objects
         ]
     end
-
+        
     eqs = [
         eqs;
+        # collect(w_a .~ get_w(Ra));
         collect(r_0 .~ frame_a.r_0)
         collect(g_0 .~ [0, -9.82, 0])# NOTE: should be gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
         collect(v_0 .~ D.(r_0))
@@ -168,4 +182,73 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
     ]
 
     ODESystem(eqs, t; name, metadata = Dict(:isroot => isroot), systems=[frame_a])
+end
+
+
+function axesRotations(angles, der_angles, sequence = [1, 2, 3], name=:R_ar)
+
+    R = axisRotation(sequence[3], angles[3]) * 
+        axisRotation(sequence[2], angles[2]) * 
+        axisRotation(sequence[1], angles[1])
+
+    w = axis(sequence[3])*der_angles[3] +
+        resolve2(axisRotation(sequence[3], angles[3]), axis(sequence[2])*der_angles[2]) + 
+        resolve2(
+            axisRotation(sequence[3], angles[3]) * axisRotation(sequence[2], angles[2]),
+            axis(sequence[1])*der_angles[1]
+        )
+    RotationMatrix(R.R, w)
+end
+
+axis(s) = float.(s .== (1:3))
+
+function axisRotation(sequence, angle; name=:R)
+    if sequence == 1
+        return RotationMatrix(rotx(angle), zeros(3))
+    elseif sequence == 2
+        return RotationMatrix(roty(angle), zeros(3))
+    elseif sequence == 3
+        return RotationMatrix(rotz(angle), zeros(3))
+    else
+        error("Invalid sequence $sequence")
+    end
+end
+
+function rotx(t, deg=false)
+    if deg
+        t *= pi/180
+    end
+    ct = cos(t)
+    st = sin(t)
+    R = [
+    1   0    0
+    0   ct  -st
+    0   st   ct
+    ]
+end
+
+function roty(t, deg=false)
+    if deg
+        t *= pi/180
+    end
+    ct = cos(t)
+    st = sin(t)
+    R = [
+    ct  0   st
+    0   1   0
+    -st  0   ct
+    ]
+end
+
+function rotz(t, deg=false)
+    if deg
+        t *= pi/180
+    end
+    ct = cos(t)
+    st = sin(t)
+    R = [
+    ct  -st  0
+    st   ct  0
+    0    0   1
+    ]
 end

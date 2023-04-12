@@ -13,12 +13,16 @@ RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
 RotationMatrix() = RotationMatrix(R3(1.0I(3)), zeros(3))
 
-function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name)
+function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, derived_w = true)
     R = at_variables_t(:R, 1:3, 1:3) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
-    w = get_w(R)
+    if derived_w
+        w = get_w(R)
+    else
+        w = at_variables_t(:w, 1:3)
+    end
     R,w = collect.((R,w))
     RotationMatrix(R, w)
 end
