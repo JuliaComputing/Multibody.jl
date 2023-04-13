@@ -9,10 +9,8 @@ makedocs(;
          repo = "https://github.com/YingboMa/Multibody.jl/blob/{commit}{path}#{line}",
          sitename = "Multibody.jl",
          format = Documenter.HTML(;
-                                  prettyurls = get(ENV, "CI", "false") == "true",
-                                  canonical = "https://YingboMa.github.io/Multibody.jl",
-                                  edit_link = "master",
-                                  assets = String[]),
+                                  prettyurls = get(ENV, "CI", nothing) == "true",
+                                  edit_link = nothing),
          pages = [
              "Home" => "index.md",
          ])
