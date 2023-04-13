@@ -16,5 +16,5 @@ makedocs(;
          ])
 
 deploydocs(;
-           repo = "github.com/YingboMa/Multibody.jl",
+           repo = "github.com/JuliaComputing/Multibody.jl",
            devbranch = "master")
