@@ -6,7 +6,12 @@ on:
   workflow_dispatch:
 jobs:
   TagBot:
-    if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.actor == 'ChrisRackauckas' &&
+        startsWith(github.event.comment.body, 'Triggering TagBot')
+      )
     runs-on: self-hosted
     steps:
       - uses: JuliaRegistries/TagBot@v1
