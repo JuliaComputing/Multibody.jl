@@ -16,4 +16,4 @@ makedocs(;
 
 deploydocs(;
            repo = "github.com/JuliaComputing/Multibody.jl",
-           devbranch = "master")
+           devbranch = "main")
