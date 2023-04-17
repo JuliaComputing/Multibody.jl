@@ -20,9 +20,6 @@ ssys = structural_simplify(model)
 
 @test length(states(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
-@error("There is a problem with how angular velocities are handled when calling Multibody.ori. When Body.isroot, the body must have additional states corresponding to angular velocities, whereas if it's not root, the states are defined elsewhere. ori just neglects w and recreates from R through differentiation")
-
-
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -88,7 +85,7 @@ sol = solve(prob, Rodas4())
 ## Simple pendulum =============================================================
 # ==============================================================================
 
-@named joint = Multibody.Revolute()
+@named joint = Multibody.Revolute(isroot=true)
 @named body = Body(; m=1, isroot=false, r_cm=[1,0,1])
 
 connections = [
@@ -115,3 +112,32 @@ sol = solve(prob, Rodas4())
 ##
 ˍ₋arg1 = u0
 ˍ₋arg2 = p
+
+
+# ==============================================================================
+## Simple pendulum from Modelica "First Example" tutorial ======================
+# ==============================================================================
+using ModelingToolkitStandardLibrary.Mechanical.Rotational
+
+world = Multibody.world
+@named body = Body(; m=1, isroot=false, r_cm = [0.5,0,0])
+@named damper = Damper(d = 0.1)
+@named rev = Multibody.Revolute(n = [0,0,1], useAxisFlange=true, isroot=true)
+
+connections = [
+    connect(world.frame_b, rev.frame_a)
+    connect(damper.flange_b, rev.axis)
+    connect(rev.support, damper.flange_a)
+    connect(body.frame_a, rev.frame_b)
+]
+
+@named model = ODESystem(connections, t, systems=[world, rev, damper, body])
+modele = ModelingToolkit.expand_connections(model)
+ssys = structural_simplify(model)
+
+prob = ODEProblem(ssys, [], (0, 10))
+
+u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+
+du = prob.f.f.f_oop(u0, p, 0)
+@test_broken all(isfinite, du)
