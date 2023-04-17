@@ -71,44 +71,57 @@ Revolute joint with 1 rotational degree-of-freedom
 - `ω0`: Iniitial angular velocity
 - `n`: The axis of rotation
 - `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Rotational, `axis` and `support`, between which rotational components such as springs and dampers can be connected.
+
+If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotational are also available:
+- `axis`: 1-dim. rotational flange that drives the joint
+- `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
 function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false, isroot=false)
+    norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description="axis of rotation"]
+    @variables tau(t)=0 [connect = Flow, description="Driving torque in direction of axis of rotation"]
     @variables ϕ(t)=ϕ0 [state_priority=10, description="angle of rotation (rad)"]
     @variables ω(t)=ω0 [state_priority=10, description="angular velocity (rad/s)"]
     Rrel0 = planar_rotation(n, ϕ0, ω0)
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
-    # @named fixed = Rotational.Fixed()
-    # @named internalAxis = InternalSupport(tau=tau)
     if isroot
-        error("isroot not yet supported")
-    else
         eqs = Equation[
-            Rrel ~ planar_rotation(-n, ϕ, ω)
+            Rrel ~ planar_rotation(n, ϕ, ω)
             ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
             collect(frame_a.f)  .~ - resolve1(Rrel, frame_b.f)
             collect(frame_a.tau) .~ - resolve1(Rrel, frame_b.tau)
+        ]
+    else
+        eqs = Equation[
+            Rrel ~ planar_rotation(-n, ϕ, ω)
+            ori(frame_a) ~ abs_rotation(ori(frame_b), Rrel)
+            collect(frame_b.f)  .~ - resolve1(Rrel, frame_a.f)
+            collect(frame_b.tau) .~ - resolve1(Rrel, frame_a.tau)
         ]
     end
     moreeqs = [
         collect(frame_a.r_0 .~ frame_b.r_0)
         D(ϕ) ~ ω
-        n'collect(frame_b.tau) ~ 0 # no torque through joint
-        # ϕ ~ internalAxis.ϕ
+        tau ~ -collect(frame_b.tau)'n # d'Alemberts principle
     ]
     append!(eqs, moreeqs)
     if useAxisFlange
+        @named internalAxis = Rotational.InternalSupport(tau=tau)
+        @named fixed = Rotational.Fixed()
+        
         @named axis = Rotational.Flange()
         @named support = Rotational.Flange()
+        push!(eqs, ϕ ~ internalAxis.phi)
         push!(eqs, connect(fixed.flange, support))
-        # push!(eqs, connect(internalAxis.flange, axis))
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support)
+        push!(eqs, connect(internalAxis.flange, axis))
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed, internalAxis)
     else
-        # @named constantTorque = Rotational.ConstantTorque(tau_constant=0)
+        
+        # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
