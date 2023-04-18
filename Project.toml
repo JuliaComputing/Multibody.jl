@@ -1,6 +1,6 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
-authors = ["Yingbo Ma <mayingbo5@gmail.com> and contributors"]
+authors = ["JuliaHub Inc."]
 version = "0.1.0"
 
 [deps]
@@ -13,8 +13,8 @@ SymbolicIR = "f7e81a98-b176-4533-a916-1afd54a23a03"
 [compat]
 ModelingToolkit = "8.30"
 ModelingToolkitStandardLibrary = "1.8"
-SymbolicIR = "0.1"
 Rotations = "1.4"
+SymbolicIR = "0.1"
 julia = "1"
 
 [extras]

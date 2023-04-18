@@ -80,12 +80,13 @@ prob = ODEProblem(ssys, defs, (0, 10))
 using OrdinaryDiffEq
 sol = solve(prob, Rodas5P())
 @test SciMLBase.successful_retcode(sol)
-@test sol(2pi, idxs=body.r_0[1]) ≈ 0 atol=1e-3
-@test sol(2pi, idxs=body.r_0[2]) ≈ 1 atol=1e-3
-@test sol(2pi, idxs=body.r_0[3]) ≈ 0 atol=1e-3
-@test sol(pi, idxs=body.r_0[2]) > 2
+@test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[2])≈1 atol=1e-3
+@test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
+@test sol(pi, idxs = body.r_0[2]) > 2
 
-isinteractive() && plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout=9)
+isinteractive() &&
+    plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout = 9)
 
 # ==============================================================================
 ## Simple pendulum =============================================================
@@ -111,8 +112,9 @@ prob = ODEProblem(ssys, defs, (0, 10))
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
-isinteractive() && plot(sol, idxs = collect(joint.phi))
 @test maximum(sol[joint.phi])≈π rtol=0.01
+@test minimum(sol[joint.phi])≈0 atol=0.01
+isinteractive() && plot(sol, idxs = collect(joint.phi))
 
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
@@ -144,6 +146,6 @@ du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
-isinteractive() && plot(sol, idxs = collect(rev.phi))
 @test maximum(sol[rev.phi]) < π
-@test sol[rev.phi][end]≈π / 2 rtol=0.01
+@test sol[rev.phi][end]≈π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
+isinteractive() && plot(sol, idxs = collect(rev.phi))

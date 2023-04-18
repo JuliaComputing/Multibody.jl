@@ -16,10 +16,10 @@ makedocs(;
          pages = [
              "Home" => "index.md",
              "Tutorials" => [
-                 "Hellow world: Pendulum" => "examples/pendulum.md",
+                 "Hello world: Pendulum" => "examples/pendulum.md",
              ],
          ])
 
 deploydocs(;
-           repo = "github.com/YingboMa/Multibody.jl",
+           repo = "github.com/JuliaComputing/Multibody.jl",
            devbranch = "master")
