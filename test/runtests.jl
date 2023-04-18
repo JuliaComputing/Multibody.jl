@@ -112,6 +112,7 @@ prob = ODEProblem(ssys, defs, (0, 10))
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
 @test maximum(sol[joint.phi])≈π rtol=0.01
 @test minimum(sol[joint.phi])≈0 atol=0.01
 isinteractive() && plot(sol, idxs = collect(joint.phi))
@@ -146,6 +147,7 @@ du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
 @test maximum(sol[rev.phi]) < π
 @test sol[rev.phi][end]≈π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 isinteractive() && plot(sol, idxs = collect(rev.phi))

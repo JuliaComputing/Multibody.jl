@@ -44,7 +44,7 @@ The world component is the root of all multibody models. It is a fixed frame wit
 """
 const world = World(; name = :world)
 
-"Function frame_a.to compute the gravity acceleration, resolved in world frame"
+"Compute the gravity acceleration, resolved in world frame"
 gravity_acceleration(r) = world.g * world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
 function FixedTranslation(; name)
@@ -122,7 +122,7 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
         # push!(eqs, connect(internalAxis.flange, axis))
         compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
     else
-
+        # Modelica Revolute uses a ConstantTorque as well as internalAxis = Rotational.InternalSupport(tau=tau), but it seemed more complicated than required and I couldn't get it to work, likely due to the `input` semantics of modelica not having an equivalent in MTK, so the (tau=tau) input argument caused problems.
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         push!(eqs, tau ~ 0)
@@ -136,7 +136,7 @@ end
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
 - `m`: Mass
-- `r_cm`: Vector from frame_a to center of mass, resolved in frame_a
+- `r_cm`: Vector from `frame_a` to center of mass, resolved in `frame_a`
 - `I`: Inertia matrix of the body
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
 - `phi0`: Initial orientation, only applicable if `isroot = true`

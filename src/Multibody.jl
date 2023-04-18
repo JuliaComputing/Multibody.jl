@@ -12,7 +12,7 @@ const D = Differential(t)
 """
     at_variables_t(args)
 
-Emulates the `@variables` macro but does never create array variables. Also never introuces the variable name into the calling scope.
+Emulates the `@variables` macro but does never creates array variables. Also never introuces the variable names into the calling scope.
 """
 function at_variables_t(args...; default = nothing)
     xs = Symbolics.variables(args...; T = Symbolics.FnType)

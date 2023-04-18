@@ -71,6 +71,11 @@ end
 
 `R21` is a 3x3 matrix that transforms a vector from frame 1 to frame 2. `h1` is a
 vector resolved in frame 1. `h2` is the same vector in frame 2.
+
+Typical usage:
+```julia
+resolve2(ori(frame_a), a_0 - g_0)
+```
 """
 resolve2(R21::RotationMatrix, v1) = R21 * collect(v1)
 
@@ -79,6 +84,11 @@ resolve2(R21::RotationMatrix, v1) = R21 * collect(v1)
 
 `R12` is a 3x3 matrix that transforms a vector from frame 1 to frame 2. `h2` is a
 vector resolved in frame 2. `h1` is the same vector in frame 1.
+
+Typical usage:
+```julia
+resolve1(ori(frame_a), r_ab)
+```
 """
 resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 
