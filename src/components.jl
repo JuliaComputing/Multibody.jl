@@ -39,6 +39,9 @@ function World(; name)
     ODESystem(eqs, t, [], [n; g]; name, systems = [frame_b])
 end
 
+"""
+The world component is the root of all multibody models. It is a fixed frame with a gravity vector specified by `world.n` and `world.g`.
+"""
 const world = World(; name = :world)
 
 "Function frame_a.to compute the gravity acceleration, resolved in world frame"
@@ -127,6 +130,18 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
     end
 end
 
+"""
+    Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3))
+
+Representing a body with 3 translational and 3 rotational degrees-of-freedom.
+
+- `m`: Mass
+- `r_cm`: Vector from frame_a to center of mass, resolved in frame_a
+- `I`: Inertia matrix of the body
+- `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
+- `phi0`: Initial orientation, only applicable if `isroot = true`
+- `phid0`: Initial angular velocity
+"""
 function Body(; name, m = 1, r_cm = [0, 0, 0], I = collect(0.001LinearAlgebra.I(3)),
               isroot = false, phi0 = zeros(3), phid0 = zeros(3))
     @variables r_0(t)[1:3]=0 [
@@ -149,7 +164,7 @@ function Body(; name, m = 1, r_cm = [0, 0, 0], I = collect(0.001LinearAlgebra.I(
     ]
     # 6*3 potential variables + Frame: 2*3 flow + 3 potential + 3 residual = 24 equations + 2*3 flow
     @parameters m=m [description = "mass"]
-    @parameters r_cm[1:3]=r_cm [description = "center of mass"]
+    @parameters r_cm[1:3]=r_cm [description = "Vector from frame_a to center of mass, resolved in frame_a"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
     @parameters I_11=I[1, 1] [description = "Element (1,1) of inertia tensor"]
