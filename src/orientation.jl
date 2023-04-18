@@ -6,7 +6,7 @@ abstract type Orientation end
 
 struct RotationMatrix <: Orientation
     R::R3
-    w
+    w::Any
 end
 
 RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
@@ -14,16 +14,16 @@ RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 RotationMatrix() = RotationMatrix(R3(1.0I(3)), zeros(3))
 
 function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = false)
-    R = at_variables_t(:R, 1:3, 1:3, default=R) #[description="Orientation rotation matrix ∈ SO(3)"]
+    R = at_variables_t(:R, 1:3, 1:3, default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
     if varw
-        w = at_variables_t(:w, 1:3, default=w)
+        w = at_variables_t(:w, 1:3, default = w)
     else
         w = get_w(R)
     end
-    R,w = collect.((R,w))
+    R, w = collect.((R, w))
     RotationMatrix(R, w)
 end
 
@@ -33,15 +33,17 @@ function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     # @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R,w = collect.((R,w))
-    R = at_variables_t(:R, 1:3, 1:3) 
+    R = at_variables_t(:R, 1:3, 1:3)
     w = at_variables_t(:w, 1:3)
 
     defaults = Dict(R .=> RM)
     ODESystem(Equation[], t, [vec(R); w], []; name, defaults)
 end
 
-Base.:*(R1::RotationMatrix, x::AbstractVector) = R1.R*x
-Base.:*(R1::RotationMatrix, R2::RotationMatrix) = RotationMatrix(R1.R.mat*R2.R.mat, R1*R2.w + collect(R1.w))
+Base.:*(R1::RotationMatrix, x::AbstractVector) = R1.R * x
+function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
+    RotationMatrix(R1.R.mat * R2.R.mat, R1 * R2.w + collect(R1.w))
+end
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
 function (D::Differential)(RM::RotationMatrix)
@@ -51,7 +53,6 @@ function (D::Differential)(RM::RotationMatrix)
     Dw = [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
     RotationMatrix(DR, Dw)
 end
-
 
 function get_w(R::AbstractMatrix)
     R = collect(R)
@@ -81,17 +82,15 @@ vector resolved in frame 2. `h1` is the same vector in frame 1.
 """
 resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 
-
-
-skew(s) = [0 -s[3] s[2];s[3] 0 -s[1]; -s[2] s[1] 0]
-skewcoords(R::AbstractMatrix) = [R[3,2];R[1,3];R[2,1]]
+skew(s) = [0 -s[3] s[2]; s[3] 0 -s[1]; -s[2] s[1] 0]
+skewcoords(R::AbstractMatrix) = [R[3, 2]; R[1, 3]; R[2, 1]]
 
 function planar_rotation(axis, phi, phi̇)
     length(axis) == 3 || error("axis must be a 3-vector")
     axis = collect(axis)
-    ee = collect(axis*axis')
-    R = ee + (I(3) - ee)*cos(phi) - skew(axis)*sin(phi)
-    w = axis*phi̇
+    ee = collect(axis * axis')
+    R = ee + (I(3) - ee) * cos(phi) - skew(axis) * sin(phi)
+    w = axis * phi̇
     RotationMatrix(R, w)
 end
 
@@ -106,7 +105,7 @@ function abs_rotation(R1, R_rel)
     # R2 = R_rel.R*R1.R
     # w = resolve2(R_rel, R1.w) + R_rel.w
     # RotationMatrix(R2, w)
-    R_rel*R1
+    R_rel * R1
 end
 
 function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
@@ -135,17 +134,15 @@ function residue(O1, O2)
     # https://github.com/modelica/ModelicaStandardLibrary/blob/master/Modelica/Mechanics/MultiBody/Frames/Orientation.mo
     R1 = O1.R
     R2 = O2.R
-    [
-        atan(cross(R1[1, :], R1[2, :])⋅R2[2, :],R1[1,:]⋅R2[1,:])
-        atan(-cross(R1[1, :],R1[2, :])⋅R2[1, :],R1[2,:]⋅R2[2,:])
-        atan(R1[2, :]⋅R2[1, :],R1[3,:]⋅R2[3,:])
-    ]
+    [atan(cross(R1[1, :], R1[2, :]) ⋅ R2[2, :], R1[1, :] ⋅ R2[1, :])
+     atan(-cross(R1[1, :], R1[2, :]) ⋅ R2[1, :], R1[2, :] ⋅ R2[2, :])
+     atan(R1[2, :] ⋅ R2[1, :], R1[3, :] ⋅ R2[3, :])]
 end
 
 ## Quaternions
 orientation_constraint(q::AbstractVector) = q'q - 1
 
-function angular_velocity2(q::AbstractVector, q̇) 
+function angular_velocity2(q::AbstractVector, q̇)
     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
-    2*Q*q̇
+    2 * Q * q̇
 end

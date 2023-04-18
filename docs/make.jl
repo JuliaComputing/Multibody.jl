@@ -16,7 +16,7 @@ makedocs(;
          pages = [
              "Home" => "index.md",
              "Tutorials" => [
-                "Hellow world: Pendulum" => "examples/pendulum.md",
+                 "Hellow world: Pendulum" => "examples/pendulum.md",
              ],
          ])
 

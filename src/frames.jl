@@ -10,16 +10,22 @@
 # end
 
 @connector function Frame(; name, varw = false)
-    @variables r_0(t)[1:3] = zeros(3) [description = "Position vector directed from the origin of the world frame to the connector frame origin, resolved in world frame"]
-    @variables f(t)[1:3] = zeros(3) [connect = Flow, description = "Cut force resolved in connector frame"]
-    @variables tau(t)[1:3] = zeros(3) [connect = Flow, description = "Cut torque resolved in connector frame"]
+    @variables r_0(t)[1:3]=zeros(3) [
+        description = "Position vector directed from the origin of the world frame to the connector frame origin, resolved in world frame",
+    ]
+    @variables f(t)[1:3]=zeros(3) [
+        connect = Flow,
+        description = "Cut force resolved in connector frame",
+    ]
+    @variables tau(t)[1:3]=zeros(3) [
+        connect = Flow,
+        description = "Cut torque resolved in connector frame",
+    ]
     r_0, f, tau = collect.((r_0, f, tau))
     # R: Orientation object to rotate the world frame into the connector frame
-    
+
     R = NumRotationMatrix(; name, varw)
 
-    ODESystem(Equation[], t, [r_0; f; tau], []; name, metadata=Dict(:orientation => R, :frame => true))
+    ODESystem(Equation[], t, [r_0; f; tau], []; name,
+              metadata = Dict(:orientation => R, :frame => true))
 end
-
-
-

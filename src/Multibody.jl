@@ -4,7 +4,6 @@ using LinearAlgebra
 using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 
-
 const t = let
     (@variables t)[1]
 end
@@ -15,9 +14,9 @@ const D = Differential(t)
 
 Emulates the `@variables` macro but does never create array variables. Also never introuces the variable name into the calling scope.
 """
-function at_variables_t(args...; default=nothing)
+function at_variables_t(args...; default = nothing)
     xs = Symbolics.variables(args...; T = Symbolics.FnType)
-    xs = map(x->x(t), xs)
+    xs = map(x -> x(t), xs)
     if default !== nothing
         xs = Symbolics.setdefaultval.(xs, default)
     end

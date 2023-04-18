@@ -1,6 +1,7 @@
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as TP
 
-function LineForceBase(; name, length=0, s_small = 1e-10, fixedRotationAtFrame_a=false, fixedRotationAtFrame_b=false)
+function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
+                       fixedRotationAtFrame_b = false)
     @named frame_a = Frame()
     @named frame_b = Frame()
 
@@ -22,7 +23,6 @@ function LineForceBase(; name, length=0, s_small = 1e-10, fixedRotationAtFrame_a
            s ~ max(length, s_small)
            e_rel_0 .~ r_rel_0 ./ s]
 
-           
     # Modelica stdlib has the option to inser special equations when two line forces are connected, this option does not yet exisst here https://github.com/modelica/ModelicaStandardLibrary/blob/10238e9927e2078571e41b53cda128c5207f69f7/Modelica/Mechanics/MultiBody/Interfaces/LineForceBase.mo#L49
 
     if fixedRotationAtFrame_a
@@ -42,7 +42,7 @@ function LineForceBase(; name, length=0, s_small = 1e-10, fixedRotationAtFrame_a
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
-function LineForceWithMass(; name, length=0, m = 1.0, lengthFraction = 0.5, kwargs...)
+function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kwargs...)
     m0 = m
     @named lfb = LineForceBase(; length, kwargs...)
     @unpack length, s, r_rel_0, e_rel_0, frame_a, frame_b = lfb
@@ -61,7 +61,8 @@ function LineForceWithMass(; name, length=0, m = 1.0, lengthFraction = 0.5, kwar
         bounds = (0, 1),
     ]
 
-    r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0 = collect.((r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0))
+    r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0 = collect.((r_rel_0, e_rel_0, r_CM_0, v_CM_0,
+                                                          ag_CM_0))
 
     eqs = [flange_a.s ~ 0
            flange_b.s ~ length]
@@ -127,15 +128,16 @@ end
 function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
-    @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction, kwargs...)
-    @named spring2d = TP.Spring(c; s_rel0=s_unstretched)
+    @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
+                                         kwargs...)
+    @named spring2d = TP.Spring(c; s_rel0 = s_unstretched)
     @parameters c=c [description = "spring constant", bounds = (0, Inf)]
     @parameters s_unstretched=s_unstretched [
         description = "unstretched length of spring",
         bounds = (0, Inf),
     ]
 
-    @variables r_rel_a(t)[1:3] = 0 [
+    @variables r_rel_a(t)[1:3]=0 [
         description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
     ]
     @variables e_a(t)[1:3] [
@@ -157,20 +159,17 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
 
-    eqs = [
-        r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
-        e_a .~ r_rel_a/s
-        f ~ spring2d.f
-        length ~ lineForce.length
-        s ~ lineForce.s
-        r_rel_0 .~ lineForce.r_rel_0
-        e_rel_0 .~ lineForce.e_rel_0
-    
-        connect(lineForce.frame_a, frame_a)
-        connect(lineForce.frame_b, frame_b)
-        connect(spring2d.flange_b, lineForce.flange_b)
-        connect(spring2d.flange_a, lineForce.flange_a)
-    ]
+    eqs = [r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
+           e_a .~ r_rel_a / s
+           f ~ spring2d.f
+           length ~ lineForce.length
+           s ~ lineForce.s
+           r_rel_0 .~ lineForce.r_rel_0
+           e_rel_0 .~ lineForce.e_rel_0
+           connect(lineForce.frame_a, frame_a)
+           connect(lineForce.frame_b, frame_b)
+           connect(spring2d.flange_b, lineForce.flange_b)
+           connect(spring2d.flange_a, lineForce.flange_a)]
 
     extend(ODESystem(eqs, t; name, systems = [lineForce, spring2d]), ptf)
 end
