@@ -110,15 +110,17 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
     ]
     append!(eqs, moreeqs)
     if useAxisFlange
-        @named internalAxis = Rotational.InternalSupport(tau=tau)
+        # @named internalAxis = Rotational.InternalSupport(tau=tau)
         @named fixed = Rotational.Fixed()
         
         @named axis = Rotational.Flange()
         @named support = Rotational.Flange()
-        push!(eqs, ϕ ~ internalAxis.phi)
+        # push!(eqs, ϕ ~ internalAxis.phi)
         push!(eqs, connect(fixed.flange, support))
-        push!(eqs, connect(internalAxis.flange, axis))
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed, internalAxis)
+        push!(eqs, axis.phi ~ ϕ)
+        push!(eqs, axis.tau ~ tau)
+        # push!(eqs, connect(internalAxis.flange, axis))
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
     else
         
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 

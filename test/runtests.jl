@@ -148,7 +148,7 @@ ssys = structural_simplify(model, allow_parameter=false)
 # irsys = IRSystem(modele)
 # ssys = structural_simplify(irsys)
 D = Differential(t)
-prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 1))
+prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.ϕ) => 0, D(D(rev.ϕ)) => 0], (0, 100))
 
 du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 @test all(isfinite, du)
@@ -156,4 +156,5 @@ du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
 plot(sol, idxs=collect(rev.ϕ))
-@test maximum(sol[rev.ϕ]) ≈ π rtol = 0.01
+@test maximum(sol[rev.ϕ]) < π
+@test sol[rev.ϕ][end] ≈ π/2 rtol = 0.01
