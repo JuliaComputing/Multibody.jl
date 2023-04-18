@@ -130,6 +130,49 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
     end
 end
 
+function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
+    isroot = false)
+    norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
+    @named frame_a = Frame()
+    @named frame_b = Frame()
+    @parameters n[1:3]=n [description = "axis of motion"]
+    n = collect(n)
+
+    @variables s(t)=0 [state_priority = 10, description = "Relative distance between frame_a and frame_b"]
+    @variables v(t)=0 [state_priority = 10, description = "Relative velocity between frame_a and frame_b"]
+    @variables a(t)=0 [state_priority = 10, description = "Relative acceleration between frame_a and frame_b"]
+    @variables f(t)=0 [connect = Flow, description = "Actuation force in direction of joint axis"]
+
+    eqs = [
+        v ~ D(s)
+        a ~ D(v)
+
+        # relationships between kinematic quantities of frame_a and of frame_b
+        collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n*s)
+        ori(frame_b) ~ ori(frame_a)
+
+        # Force and torque balance
+        zeros(3) .~ collect(frame_a.f + frame_b.f)
+        zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n*s, frame_b.f))
+
+        # d'Alemberts principle
+        f .~ -n'collect(frame_b.f)
+    ]
+
+    if useAxisFlange
+        @named fixed = Translational.Fixed()
+        @named axis = Translational.Flange()
+        @named support = Translational.Flange()
+        push!(eqs, connect(fixed.flange, support))
+        push!(eqs, axis.s ~ s)
+        push!(eqs, axis.f ~ f)
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
+    else
+        push!(eqs, f ~ 0)
+        compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    end
+end
+
 """
     Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3))
 
