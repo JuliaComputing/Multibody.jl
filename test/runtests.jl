@@ -50,7 +50,7 @@ The multibody paper mentions this as an interesting example, figure 8:
 #  - 1*(9-3) // 1*(R.T – R.residuals)
 # = 18 equations 
 
-@named body = Body(; m = 1, isroot = true, r_cm = [1, 0, 0], phi0 = [1, 0, 0]) # This time the body isroot since there is no joint containing state
+@named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0]) # This time the body isroot since there is no joint containing state
 @named spring = Multibody.Spring(1, fixedRotationAtFrame_a = false,
                                  fixedRotationAtFrame_b = false)
 
@@ -68,10 +68,11 @@ ssys = structural_simplify(model, allow_parameter = false)
 irsys = IRSystem(modele)
 ssys = structural_simplify(irsys)
 D = Differential(t)
-defs = Dict(collect(spring.r_rel_0 .=> [1, 0, 0])...,
+defs = Dict(collect(spring.r_rel_0 .=> [0, 1, 0])...,
+            collect(body.r_0 .=> [0, 0, 0])...,
             collect((D.(body.phi)) .=> [0, 0, 0])...,
             collect(D.(D.(body.phi)) .=> [0, 0, 0])...)
-prob = ODEProblem(ssys, defs, (0, 1))
+prob = ODEProblem(ssys, defs, (0, 10))
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 # @test all(isfinite, du)
@@ -79,7 +80,12 @@ prob = ODEProblem(ssys, defs, (0, 1))
 using OrdinaryDiffEq
 sol = solve(prob, Rodas5P())
 @test SciMLBase.successful_retcode(sol)
-isinteractive() && plot(sol, idxs = collect(body.r_0))
+@test sol(2pi, idxs=body.r_0[1]) ≈ 0 atol=1e-3
+@test sol(2pi, idxs=body.r_0[2]) ≈ 1 atol=1e-3
+@test sol(2pi, idxs=body.r_0[3]) ≈ 0 atol=1e-3
+@test sol(pi, idxs=body.r_0[2]) > 2
+
+isinteractive() && plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout=9)
 
 # ==============================================================================
 ## Simple pendulum =============================================================
