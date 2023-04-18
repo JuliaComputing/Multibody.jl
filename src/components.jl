@@ -123,6 +123,7 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
         
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
+        push!(eqs, tau ~ 0)
         compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
 end

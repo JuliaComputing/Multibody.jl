@@ -1,5 +1,7 @@
 using ModelingToolkit
 using Multibody
+using Test
+using SymbolicIR
 t = Multibody.t
 
 world = Multibody.world
@@ -49,11 +51,11 @@ The multibody paper mentions this as an interesting example, figure 8:
 #  - 1*(9-3) // 1*(R.T – R.residuals)
 # = 18 equations 
 
-@named body = Body(; m=1, isroot=true, r_cm=[1,0,1], ϕ0 = [1,1,1]) # This time the body isroot since there is no joint containing state
+@named body = Body(; m=1, isroot=true, r_cm=[1,0,0], ϕ0 = [1,0,0]) # This time the body isroot since there is no joint containing state
 
-@named lineForceBase = Multibody.LineForceBase(; length = 0)
-@named lineForce = Multibody.LineForceWithMass(; length = 0, m=0, lengthFraction=0.5)
-@named spring = Multibody.Spring(40, fixedRotationAtFrame_a=false, fixedRotationAtFrame_b=false)
+# @named lineForceBase = Multibody.LineForceBase(; length = 0)
+# @named lineForce = Multibody.LineForceWithMass(; length = 0, m=0, lengthFraction=0.5)
+@named spring = Multibody.Spring(1, fixedRotationAtFrame_a=false, fixedRotationAtFrame_b=false)
 
 connections = [
     connect(world.frame_b, spring.frame_a)
@@ -65,28 +67,36 @@ connections = [
 ModelingToolkit.n_extra_equations(model)
 
 modele = ModelingToolkit.expand_connections(model)
-ssys = structural_simplify(model)
-u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+# ssys = structural_simplify(model, allow_parameter=false)
+# u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
 
-# prob = ODEProblem(ssys, [body.v_0 => randn(3)], (0, 10))
-prob = ODEProblem(ssys, [], (0, 10))
+irsys = IRSystem(modele)
+ssys = structural_simplify(irsys)
+D = Differential(t)
+defs = Dict(
+    collect(spring.r_rel_0 .=> [1,0,0])...,
+    collect((D.(body.ϕ))   .=> [0,0,0])...,
+    collect(D.(D.(body.ϕ)) .=> [0,0,0])...,
+)
+prob = ODEProblem(ssys, defs, (0, 1))
 
-du = prob.f.f.f_oop(u0, p, 0)
-@test_broken all(isfinite, du)
+# du = prob.f.f.f_oop(prob.u0, prob.p, 0)
+# @test all(isfinite, du)
 
 
 
 using OrdinaryDiffEq
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas5P())
+plot(sol, idxs=collect(body.r_0))
 
-@test_broken SciMLBase.successful_retcode(sol) # Fails to initialize
+@test SciMLBase.successful_retcode(sol) 
 
 # ==============================================================================
 ## Simple pendulum =============================================================
 # ==============================================================================
 
-@named joint = Multibody.Revolute(isroot=true)
-@named body = Body(; m=1, isroot=false, r_cm=[1,0,1])
+@named joint = Multibody.Revolute(n = [0,0,1], isroot=true)
+@named body = Body(; m=1, isroot=false, r_cm=[0.5,0,0])
 
 connections = [
     connect(world.frame_b, joint.frame_a)
@@ -95,24 +105,23 @@ connections = [
 
 @named model = ODESystem(connections, t, systems=[world, joint, body])
 modele = ModelingToolkit.expand_connections(model)
-ssys = structural_simplify(model)
+ssys = structural_simplify(model, allow_parameter=false)
 
-prob = ODEProblem(ssys, [], (0, 10))
 
-u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+# irsys = IRSystem(modele)
+# ssys = structural_simplify(irsys)
 
-du = prob.f.f.f_oop(u0, p, 0)
-@test_broken all(isfinite, du)
-
+D = Differential(t)
+defs = Dict(
+    collect((D.(joint.ϕ))   .=> [0,0,0])...,
+    collect(D.(D.(joint.ϕ)) .=> [0,0,0])...,
+)
+prob = ODEProblem(ssys, defs, (0, 10))
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
-
-
-##
-ˍ₋arg1 = u0
-ˍ₋arg2 = p
-
+plot(sol, idxs=collect(joint.ϕ))
+@test maximum(sol[joint.ϕ]) ≈ π rtol = 0.01
 
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
@@ -131,13 +140,20 @@ connections = [
     connect(body.frame_a, rev.frame_b)
 ]
 
-@named model = ODESystem(connections, t, systems=[world, rev, damper, body])
+@named model = ODESystem(connections, t, systems=[world, rev, body, damper])
 modele = ModelingToolkit.expand_connections(model)
-ssys = structural_simplify(model)
+ssys = structural_simplify(model, allow_parameter=false)
 
-prob = ODEProblem(ssys, [], (0, 10))
 
-u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
+# irsys = IRSystem(modele)
+# ssys = structural_simplify(irsys)
+D = Differential(t)
+prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 1))
 
-du = prob.f.f.f_oop(u0, p, 0)
-@test_broken all(isfinite, du)
+du = prob.f.f.f_oop(prob.u0, prob.p, 0)
+@test all(isfinite, du)
+
+using OrdinaryDiffEq
+sol = solve(prob, Rodas4())
+plot(sol, idxs=collect(rev.ϕ))
+@test maximum(sol[rev.ϕ]) ≈ π rtol = 0.01

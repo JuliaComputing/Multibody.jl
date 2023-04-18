@@ -135,7 +135,7 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
         bounds = (0, Inf),
     ]
 
-    @variables r_rel_a(t)[1:3] [
+    @variables r_rel_a(t)[1:3] = 0 [
         description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
     ]
     @variables e_a(t)[1:3] [
