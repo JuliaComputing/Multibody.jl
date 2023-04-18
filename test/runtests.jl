@@ -51,10 +51,7 @@ The multibody paper mentions this as an interesting example, figure 8:
 #  - 1*(9-3) // 1*(R.T – R.residuals)
 # = 18 equations 
 
-@named body = Body(; m=1, isroot=true, r_cm=[1,0,0], ϕ0 = [1,0,0]) # This time the body isroot since there is no joint containing state
-
-# @named lineForceBase = Multibody.LineForceBase(; length = 0)
-# @named lineForce = Multibody.LineForceWithMass(; length = 0, m=0, lengthFraction=0.5)
+@named body = Body(; m=1, isroot=true, r_cm=[1,0,0], phi0 = [1,0,0]) # This time the body isroot since there is no joint containing state
 @named spring = Multibody.Spring(1, fixedRotationAtFrame_a=false, fixedRotationAtFrame_b=false)
 
 connections = [
@@ -67,7 +64,7 @@ connections = [
 ModelingToolkit.n_extra_equations(model)
 
 modele = ModelingToolkit.expand_connections(model)
-# ssys = structural_simplify(model, allow_parameter=false)
+ssys = structural_simplify(model, allow_parameter=false)
 # u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
 
 irsys = IRSystem(modele)
@@ -75,8 +72,8 @@ ssys = structural_simplify(irsys)
 D = Differential(t)
 defs = Dict(
     collect(spring.r_rel_0 .=> [1,0,0])...,
-    collect((D.(body.ϕ))   .=> [0,0,0])...,
-    collect(D.(D.(body.ϕ)) .=> [0,0,0])...,
+    collect((D.(body.phi))   .=> [0,0,0])...,
+    collect(D.(D.(body.phi)) .=> [0,0,0])...,
 )
 prob = ODEProblem(ssys, defs, (0, 1))
 
@@ -87,9 +84,8 @@ prob = ODEProblem(ssys, defs, (0, 1))
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas5P())
-plot(sol, idxs=collect(body.r_0))
-
 @test SciMLBase.successful_retcode(sol) 
+isinteractive() && plot(sol, idxs=collect(body.r_0))
 
 # ==============================================================================
 ## Simple pendulum =============================================================
@@ -113,15 +109,15 @@ ssys = structural_simplify(model, allow_parameter=false)
 
 D = Differential(t)
 defs = Dict(
-    collect((D.(joint.ϕ))   .=> [0,0,0])...,
-    collect(D.(D.(joint.ϕ)) .=> [0,0,0])...,
+    collect((D.(joint.phi))   .=> [0,0,0])...,
+    collect(D.(D.(joint.phi)) .=> [0,0,0])...,
 )
 prob = ODEProblem(ssys, defs, (0, 10))
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
-plot(sol, idxs=collect(joint.ϕ))
-@test maximum(sol[joint.ϕ]) ≈ π rtol = 0.01
+isinteractive() && plot(sol, idxs=collect(joint.phi))
+@test maximum(sol[joint.phi]) ≈ π rtol = 0.01
 
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
@@ -148,13 +144,13 @@ ssys = structural_simplify(model, allow_parameter=false)
 # irsys = IRSystem(modele)
 # ssys = structural_simplify(irsys)
 D = Differential(t)
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.ϕ) => 0, D(D(rev.ϕ)) => 0], (0, 100))
+prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0], (0, 100))
 
 du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 @test all(isfinite, du)
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
-plot(sol, idxs=collect(rev.ϕ))
-@test maximum(sol[rev.ϕ]) < π
-@test sol[rev.ϕ][end] ≈ π/2 rtol = 0.01
+isinteractive() && plot(sol, idxs=collect(rev.phi))
+@test maximum(sol[rev.phi]) < π
+@test sol[rev.phi][end] ≈ π/2 rtol = 0.01

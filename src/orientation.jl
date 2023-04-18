@@ -86,12 +86,12 @@ resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 skew(s) = [0 -s[3] s[2];s[3] 0 -s[1]; -s[2] s[1] 0]
 skewcoords(R::AbstractMatrix) = [R[3,2];R[1,3];R[2,1]]
 
-function planar_rotation(axis, ϕ, ϕ̇)
+function planar_rotation(axis, phi, phi̇)
     length(axis) == 3 || error("axis must be a 3-vector")
     axis = collect(axis)
     ee = collect(axis*axis')
-    R = ee + (I(3) - ee)*cos(ϕ) - skew(axis)*sin(ϕ)
-    w = axis*ϕ̇
+    R = ee + (I(3) - ee)*cos(phi) - skew(axis)*sin(phi)
+    w = axis*phi̇
     RotationMatrix(R, w)
 end
 

@@ -63,12 +63,12 @@ function FixedTranslation(; name)
 end
 
 """
-    Revolute(; name, ϕ0 = 0, ω0 = 0, n, useAxisFlange = false)
+    Revolute(; name, phi0 = 0, w0 = 0, n, useAxisFlange = false)
 
 Revolute joint with 1 rotational degree-of-freedom
 
-- `ϕ0`: Initial angle
-- `ω0`: Iniitial angular velocity
+- `phi0`: Initial angle
+- `w0`: Iniitial angular velocity
 - `n`: The axis of rotation
 - `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Rotational, `axis` and `support`, between which rotational components such as springs and dampers can be connected.
 
@@ -76,28 +76,28 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 - `axis`: 1-dim. rotational flange that drives the joint
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
-function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false, isroot=false)
+function Revolute(; name, phi0=0, w0=0, n=Float64[0, 0, 1], useAxisFlange=false, isroot=false)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description="axis of rotation"]
     @variables tau(t)=0 [connect = Flow, description="Driving torque in direction of axis of rotation"]
-    @variables ϕ(t)=ϕ0 [state_priority=10, description="angle of rotation (rad)"]
-    @variables ω(t)=ω0 [state_priority=10, description="angular velocity (rad/s)"]
-    Rrel0 = planar_rotation(n, ϕ0, ω0)
+    @variables phi(t)=phi0 [state_priority=10, description="angle of rotation (rad)"]
+    @variables w(t)=w0 [state_priority=10, description="angular velocity (rad/s)"]
+    Rrel0 = planar_rotation(n, phi0, w0)
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
     if isroot
         eqs = Equation[
-            Rrel ~ planar_rotation(n, ϕ, ω)
+            Rrel ~ planar_rotation(n, phi, w)
             ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
             collect(frame_a.f)  .~ - resolve1(Rrel, frame_b.f)
             collect(frame_a.tau) .~ - resolve1(Rrel, frame_b.tau)
         ]
     else
         eqs = Equation[
-            Rrel ~ planar_rotation(-n, ϕ, ω)
+            Rrel ~ planar_rotation(-n, phi, w)
             ori(frame_a) ~ abs_rotation(ori(frame_b), Rrel)
             collect(frame_b.f)  .~ - resolve1(Rrel, frame_a.f)
             collect(frame_b.tau) .~ - resolve1(Rrel, frame_a.tau)
@@ -105,7 +105,7 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
     end
     moreeqs = [
         collect(frame_a.r_0 .~ frame_b.r_0)
-        D(ϕ) ~ ω
+        D(phi) ~ w
         tau ~ -collect(frame_b.tau)'n # d'Alemberts principle
     ]
     append!(eqs, moreeqs)
@@ -115,9 +115,9 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
         
         @named axis = Rotational.Flange()
         @named support = Rotational.Flange()
-        # push!(eqs, ϕ ~ internalAxis.phi)
+        # push!(eqs, phi ~ internalAxis.phi)
         push!(eqs, connect(fixed.flange, support))
-        push!(eqs, axis.phi ~ ϕ)
+        push!(eqs, axis.phi ~ phi)
         push!(eqs, axis.tau ~ tau)
         # push!(eqs, connect(internalAxis.flange, axis))
         compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
@@ -131,7 +131,7 @@ function Revolute(; name, ϕ0=0, ω0=0, n=Float64[0, 0, 1], useAxisFlange=false,
 end
 
 
-function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false, ϕ0 = zeros(3), ϕd0=zeros(3))
+function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), isroot=false, phi0 = zeros(3), phid0=zeros(3))
 
     @variables r_0(t)[1:3]=0 [state_priority=2, description="Position vector from origin of world frame to origin of frame_a"]
     @variables v_0(t)[1:3]=0 [state_priority=2, description="Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
@@ -160,19 +160,19 @@ function Body(; name, m=1, r_cm=[0, 0, 0], I=collect(0.001LinearAlgebra.I(3)), i
     # DRa = D(Ra)
 
     eqs = if isroot # isRoot
-        @variables ϕ(t)[1:3] = ϕ0 [state_priority=10, description="Euler angles"]
-        @variables ϕd(t)[1:3] = ϕd0 [state_priority=10]
-        @variables ϕdd(t)[1:3] = zeros(3) [state_priority=10]
-        ϕ, ϕd, ϕdd = collect.((ϕ, ϕd, ϕdd))
-        ar = axesRotations(ϕ, ϕd)
+        @variables phi(t)[1:3] = phi0 [state_priority=10, description="Euler angles"]
+        @variables phid(t)[1:3] = phid0 [state_priority=10]
+        @variables phidd(t)[1:3] = zeros(3) [state_priority=10]
+        phi, phid, phidd = collect.((phi, phid, phidd))
+        ar = axesRotations(phi, phid)
 
         @named frame_a = Frame(varw = true)
         Ra = ori(frame_a, true)
 
         Equation[
             # 0 .~ orientation_constraint(Ra); 
-            ϕd .~ D.(ϕ)
-            ϕdd .~ D.(ϕd)
+            phid .~ D.(phi)
+            phidd .~ D.(phid)
             Ra ~ ar
             Ra.w .~ ar.w
             collect(w_a .~ Ra.w)
