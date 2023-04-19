@@ -26,11 +26,14 @@ jobs:
     steps:
       - name: Set debug env
         run: export JULIA_DEBUG="loading"
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.3.0
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      - uses: webfactory/ssh-agent@v0.8.0 
+        with: 
+          ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts

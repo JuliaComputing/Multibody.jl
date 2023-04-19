@@ -16,10 +16,13 @@ jobs:
   build:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.3.0
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
+      - uses: webfactory/ssh-agent@v0.8.0 
+        with: 
+          ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
       - uses: PumasAI/add-private-registry@main
         with:
           juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
