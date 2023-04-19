@@ -20,8 +20,8 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      - uses: webfactory/ssh-agent@v0.8.0 
-        with: 
+      - uses: webfactory/ssh-agent@v0.8.0
+        with:
           ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
       - uses: PumasAI/add-private-registry@main
         with:
@@ -29,7 +29,11 @@ jobs:
           private_registry_name: JuliaSimRegistry
           private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
       - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.add(name="Documenter", rev="master"); Pkg.instantiate()'
+        run: julia --project=docs -e 'using Pkg;
+                                      Pkg.setprotocol!(; domain = "github.com", protocol = "ssh");
+                                      Pkg.add(PackageSpec(name = "SymbolicIR", url = "https://github.com/JuliaComputing/SymbolicIR.jl", rev = "master"));
+                                      Pkg.develop(PackageSpec(path=pwd()));
+                                      Pkg.instantiate()'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
