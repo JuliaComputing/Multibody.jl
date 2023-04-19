@@ -1,4 +1,4 @@
-# Pendulum---The "Hello World of multi-body dynamics"
+# Pendulum--The "Hello World of multi-body dynamics"
 This beginners tutorial will model a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world. To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
@@ -72,12 +72,38 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
 ssys = structural_simplify(model, allow_parameter = false)
 
-
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(joint.phi) => 0, D(D(joint.phi)) => 0],
                   (0, 30))
 
-
 sol = solve(prob, Rodas4())
-plot(sol, idxs = collect(joint.phi))
+plot(sol, idxs = joint.phi)
 ```
 This time we see that the pendulum loses energy and eventually comes to rest at the stable equilibrium point ``\pi / 2``.
+
+## A linear pendulum?
+When we think of a pendulum, we typically think of a rotary pendulum that is rotating around a pivot point like in the examples above. 
+A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device.
+
+```@example pendulum
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as T
+
+@named damper = T.Damper(0.5)
+@named spring = T.Spring(1)
+@named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(damper.flange_b, spring.flange_b, joint.axis)
+               connect(joint.support, damper.flange_a, spring.flange_a)
+               connect(body.frame_a, joint.frame_b)]
+
+@named model = ODESystem(connections, t, systems = [world, joint, body, damper, spring])
+ssys = structural_simplify(model, allow_parameter = false)
+
+prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0],
+                  (0, 30))
+
+sol = solve(prob, Rodas4())
+plot(sol, idxs = joint.s)
+```
+
+As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `TranslationalModelica` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `useAxisFlange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.

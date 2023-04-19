@@ -3,6 +3,7 @@ module Multibody
 using LinearAlgebra
 using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 
 const t = let
     (@variables t)[1]
@@ -31,7 +32,7 @@ include("frames.jl")
 
 include("interfaces.jl")
 
-export World, world, FixedTranslation, Revolute, Body
+export World, world, FixedTranslation, Revolute, Prismatic, Body
 include("components.jl")
 
 export Spring

@@ -151,3 +151,29 @@ sol = solve(prob, Rodas4())
 @test maximum(sol[rev.phi]) < π
 @test sol[rev.phi][end]≈π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 isinteractive() && plot(sol, idxs = collect(rev.phi))
+
+
+# ==============================================================================
+## Linear mass-spring-damper ===================================================
+# ==============================================================================
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as T
+
+@named damper = T.Damper(0.5)
+@named spring = T.Spring(1)
+@named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(damper.flange_b, spring.flange_b, joint.axis)
+               connect(joint.support, damper.flange_a, spring.flange_a)
+               connect(body.frame_a, joint.frame_b)]
+
+@named model = ODESystem(connections, t, systems = [world, joint, body, damper, spring])
+ssys = structural_simplify(model, allow_parameter = false)
+
+prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0],
+                  (0, 30))
+
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+@test sol[joint.s][end]≈9.81 rtol=0.01 # gravitational acceleration since spring stiffness is 1
+isinteractive() && plot(sol, idxs = joint.s)
