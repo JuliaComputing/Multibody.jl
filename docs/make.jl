@@ -6,13 +6,10 @@ DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = tr
 makedocs(;
          modules = [Multibody],
          authors = "Yingbo Ma <mayingbo5@gmail.com> and contributors",
-         repo = "https://github.com/YingboMa/Multibody.jl/blob/{commit}{path}#{line}",
          sitename = "Multibody.jl",
          format = Documenter.HTML(;
-                                  prettyurls = get(ENV, "CI", "false") == "true",
-                                  canonical = "https://YingboMa.github.io/Multibody.jl",
-                                  edit_link = "master",
-                                  assets = String[]),
+                                  prettyurls = get(ENV, "CI", nothing) == "true",
+                                  edit_link = nothing),
          pages = [
              "Home" => "index.md",
              "Tutorials" => [
@@ -22,4 +19,4 @@ makedocs(;
 
 deploydocs(;
            repo = "github.com/JuliaComputing/Multibody.jl",
-           devbranch = "master")
+           devbranch = "main")
