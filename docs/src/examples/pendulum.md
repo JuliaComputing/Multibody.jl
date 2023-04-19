@@ -10,7 +10,12 @@ We then access the world frame and time variable from the Multibody module
 ```@example pendulum
 t = Multibody.t
 world = Multibody.world
+show(stdout, MIME"text/plain"(), world)
+nothing # hide
 ```
+
+Unless otherwise specified, the world defaults to have a gravitational field pointing in the negative ``y`` direction and an graivational acceleration of ``9.81``.
+
 
 ## Modeling the pendulum
 Our simple pendulum will initially consist of a [`Body`](@ref) and a [`Revolute`](@ref) joint (the pivot joint). We construct these elements by calling their constructors
@@ -52,7 +57,7 @@ defs = Dict(D(joint.phi) => 0, D(D(joint.phi)) => 0)
 prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4())
-plot(sol, idxs = joint.phi)
+plot(sol, idxs = joint.phi, title="Pendulum")
 ```
 The solution `sol` can be plotted directly if the Plots package is loaded. The figure indicates that the pendulum swings back and forth without any damping. To add damping as well, we could add a `Damper` from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module to the revolute joint. We do this below
 
@@ -76,13 +81,13 @@ prob = ODEProblem(ssys, [damper.phi_rel => 1, D(joint.phi) => 0, D(D(joint.phi))
                   (0, 30))
 
 sol = solve(prob, Rodas4())
-plot(sol, idxs = joint.phi)
+plot(sol, idxs = joint.phi, title="Damped pendulum")
 ```
 This time we see that the pendulum loses energy and eventually comes to rest at the stable equilibrium point ``\pi / 2``.
 
 ## A linear pendulum?
 When we think of a pendulum, we typically think of a rotary pendulum that is rotating around a pivot point like in the examples above. 
-A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device.
+A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device. This time around, we make use of a [`Prismatic`](@ref) joint rather than a [`Revolute`](@ref) joint. A [prismatic joint](https://en.wikipedia.org/wiki/Prismatic_joint) has one positional degree of freedom, compared to the single rotational degree of freedom for the revolute joint.
 
 ```@example pendulum
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as T
@@ -103,7 +108,47 @@ prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0]
                   (0, 30))
 
 sol = solve(prob, Rodas4())
-plot(sol, idxs = joint.s)
+plot(sol, idxs = joint.s, title="Mass-spring-damper system")
 ```
 
 As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `TranslationalModelica` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `useAxisFlange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
+
+### Why do we need a joint?
+In the example above, we introduced a prismatic joint to model the oscillating motion of the mass-spring system. In reality, we can suspend a mass in a spring without any joint, so why do we need one here? The answer is that we do not, in fact, need the joint, but if we connect the spring directly to the world, we need to make the body (mass) the root object of the kinematic tree instead:
+```@example pendulum
+using SymbolicIR
+@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0])
+@named multibody_spring = Multibody.Spring(1)
+
+connections = [connect(world.frame_b, multibody_spring.frame_a)
+                connect(root_body.frame_a, multibody_spring.frame_b)]
+
+@named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
+ssys = structural_simplify(IRSystem(expand_connections(model)))
+
+defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
+            collect(root_body.r_0 .=> [0, 0, 0])...,
+            collect((D.(root_body.phi)) .=> [0, 0, 0])...,
+            collect(D.(D.(root_body.phi)) .=> [0, 0, 0])...)
+
+prob = ODEProblem(ssys, defs, (0, 30))
+
+sol = solve(prob, Rodas4())
+plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring system without joint")
+```
+Here, we used a [`Multibody.Spring`](@ref) instead of connecting a `Translational.Spring` to a joint. The `Translational.Spring`, alongside other components from `ModelingToolkitStandardLibrary.Mechanical`, is a 1-dimensional object, whereas multibody components are 3-dimensional objects.
+
+Internally, the [`Multibody.Spring`](@ref) contains a `Translational.Spring`, attached between two flanges, so we could actually add a damper to the system as well:
+```@example pendulum
+push!(connections, connect(multibody_spring.spring2d.flange_a, damper.flange_a))
+push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
+
+@named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
+ssys = structural_simplify(IRSystem(expand_connections(model)))
+prob = ODEProblem(ssys, defs, (0, 30))
+
+sol = solve(prob, Rodas4())
+plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")
+```
+
+The figure above should look identical to the simulation of the mass-spring-damper further above.

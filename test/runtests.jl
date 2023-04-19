@@ -62,7 +62,7 @@ connections = [connect(world.frame_b, spring.frame_a)
 ModelingToolkit.n_extra_equations(model)
 
 modele = ModelingToolkit.expand_connections(model)
-ssys = structural_simplify(model, allow_parameter = false)
+# ssys = structural_simplify(model, allow_parameter = false)
 # u0,p = ModelingToolkit.get_u0_p(ssys, [], [])
 
 irsys = IRSystem(modele)
@@ -172,7 +172,7 @@ connections = [connect(world.frame_b, rev.frame_a)
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
 modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(IRSystem(modele))
 
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
