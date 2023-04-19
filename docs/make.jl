@@ -12,6 +12,9 @@ makedocs(;
                                   edit_link = nothing),
          pages = [
              "Home" => "index.md",
+             "Tutorials" => [
+                 "Hello world: Pendulum" => "examples/pendulum.md",
+             ],
          ])
 
 deploydocs(;
