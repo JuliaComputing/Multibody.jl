@@ -33,7 +33,6 @@ jobs:
                                       Pkg.setprotocol!(; domain = "github.com", protocol = "ssh");
                                       Pkg.add(PackageSpec(name = "SymbolicIR", url = "https://github.com/JuliaComputing/SymbolicIR.jl", rev = "master"));
                                       Pkg.develop(PackageSpec(path=pwd()));
-                                      Pkg.add(name="Documenter", rev="master");
                                       Pkg.instantiate()'
       - name: Build and deploy
         env:
