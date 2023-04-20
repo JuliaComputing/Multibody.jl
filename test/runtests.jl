@@ -51,7 +51,7 @@ The multibody paper mentions this as an interesting example, figure 8:
 # = 18 equations 
 
 @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0]) # This time the body isroot since there is no joint containing state
-@named spring = Multibody.Spring(1, fixedRotationAtFrame_a = false,
+@named spring = Multibody.Spring(c = 1, fixedRotationAtFrame_a = false,
                                  fixedRotationAtFrame_b = false)
 
 connections = [connect(world.frame_b, spring.frame_a)
@@ -247,7 +247,7 @@ isinteractive() &&
 # ==============================================================================
 
 @named damper = Translational.Damper(0.5)
-@named spring = Translational.Spring(1)
+@named spring = Translational.Spring(c = 1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -278,9 +278,9 @@ world = Multibody.world
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
     p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true, isroot = true)
-    spring2 = Multibody.Spring(30, s_unstretched = 0.1)
-    spring1 = Multibody.Spring(30, s_unstretched = 0.1)
-    damper1 = Multibody.Damper(2)
+    spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
+    spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
+    damper1 = Multibody.Damper(d = 2)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
        connect(bar1.frame_b, bar2.frame_a)

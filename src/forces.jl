@@ -155,9 +155,8 @@ function PartialLineForce(; name, kwargs...)
     extend(ODESystem(equations, t; name), lfb)
 end
 
-
 """
-    Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs)
+    Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs)
 
 Linear spring acting as line force between `frame_a` and `frame_b`.
 A force `f` is exerted on the origin of `frame_b` and with opposite sign
@@ -181,7 +180,7 @@ additional equations to handle the mass are removed.
 - `s_unstretched`: Length of the spring when it is unstretched
 - `kwargs`: are passed to `LineForceWithMass`
 """
-function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
+function Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
@@ -234,9 +233,8 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
     extend(ODESystem(eqs, t; name, systems = [lineForce, spring2d]), ptf)
 end
 
-
 """
-    Damper(d; name, kwargs)
+    Damper(; d, name, kwargs)
 
 Linear damper acting as line force between `frame_a` and `frame_b`.
 A force `f` is exerted on the origin of `frame_b` and with opposite sign
@@ -252,7 +250,7 @@ and `D(s)` is the time derivative of `s`.
 # Arguments:
 - `d`: Damping coefficient
 """
-function Damper(d; name, kwargs...)
+function Damper(; d, name, kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
     @parameters d=d [description = "damping constant", bounds = (0, Inf)]
