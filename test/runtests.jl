@@ -247,7 +247,7 @@ isinteractive() &&
 # ==============================================================================
 
 @named damper = Translational.Damper(0.5)
-@named spring = Translational.Spring(c = 1)
+@named spring = Translational.Spring(1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
