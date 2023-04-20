@@ -64,9 +64,7 @@ The solution `sol` can be plotted directly if the Plots package is loaded. The f
 ## Adding damping
 To add damping to the pendulum such that the pendulum will eventually come to rest, we add a [`Damper`](@ref) to the revolute joint. The damping coefficient is given by `d`, and the damping force is proportional to the angular velocity of the joint. To add the damper to the revolute joint, we must create the joint with the keyword argument `useAxisFlange = true`, this adds two internal flanges to the joint to which you can attach components from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module. We then connect one of the flanges of the damper to the axis flange of the joint, and the other damper flange to the support flange which is rigidly attached to the world.
 ```@example pendulum
-using ModelingToolkitStandardLibrary.Mechanical.Rotational
-
-@named damper = Damper(d = 0.1)
+@named damper = Rotational.Damper(d = 0.1)
 @named joint = Revolute(n = [0, 0, 1], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -90,10 +88,8 @@ When we think of a pendulum, we typically think of a rotary pendulum that is rot
 A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device. This time around, we make use of a [`Prismatic`](@ref) joint rather than a [`Revolute`](@ref) joint. A [prismatic joint](https://en.wikipedia.org/wiki/Prismatic_joint) has one positional degree of freedom, compared to the single rotational degree of freedom for the revolute joint.
 
 ```@example pendulum
-import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as T
-
-@named damper = T.Damper(0.5)
-@named spring = T.Spring(1)
+@named damper = Translational.Damper(0.5)
+@named spring = Translational.Spring(1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -111,7 +107,7 @@ sol = solve(prob, Rodas4())
 plot(sol, idxs = joint.s, title="Mass-spring-damper system")
 ```
 
-As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `TranslationalModelica` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `useAxisFlange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
+As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `Translational` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `useAxisFlange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
 
 ### Why do we need a joint?
 In the example above, we introduced a prismatic joint to model the oscillating motion of the mass-spring system. In reality, we can suspend a mass in a spring without any joint, so why do we need one here? The answer is that we do not, in fact, need the joint, but if we connect the spring directly to the world, we need to make the body (mass) the root object of the kinematic tree instead:

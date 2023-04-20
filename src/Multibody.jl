@@ -5,6 +5,8 @@ using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 
+export Rotational, Translational
+
 const t = let
     (@variables t)[1]
 end
