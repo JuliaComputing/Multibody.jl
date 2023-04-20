@@ -156,3 +156,105 @@ function angular_velocity2(q::AbstractVector, q̇)
     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
     2 * Q * q̇
 end
+
+
+
+function axesRotations(angles, der_angles, sequence = [1, 2, 3], name = :R_ar)
+    R = axisRotation(sequence[3], angles[3]) *
+        axisRotation(sequence[2], angles[2]) *
+        axisRotation(sequence[1], angles[1])
+
+    w = axis(sequence[3]) * der_angles[3] +
+        resolve2(axisRotation(sequence[3], angles[3]), axis(sequence[2]) * der_angles[2]) +
+        resolve2(axisRotation(sequence[3], angles[3]) *
+                 axisRotation(sequence[2], angles[2]),
+                 axis(sequence[1]) * der_angles[1])
+    RotationMatrix(R.R, w)
+end
+
+axis(s) = float.(s .== (1:3))
+
+"""
+    axisRotation(sequence, angle; name = :R)
+
+Generate a rotation matrix for a rotation around the specified axis.
+
+- `sequence`: The axis to rotate around (1: x-axis, 2: y-axis, 3: z-axis)
+- `angle`: The angle of rotation (in radians)
+
+Returns a `RotationMatrix` object.
+"""
+function axisRotation(sequence, angle; name = :R)
+    if sequence == 1
+        return RotationMatrix(rotx(angle), zeros(3))
+    elseif sequence == 2
+        return RotationMatrix(roty(angle), zeros(3))
+    elseif sequence == 3
+        return RotationMatrix(rotz(angle), zeros(3))
+    else
+        error("Invalid sequence $sequence")
+    end
+end
+
+"""
+    rotx(t, deg = false)
+
+Generate a rotation matrix for a rotation around the x-axis.
+
+- `t`: The angle of rotation (in radians, unless `deg` is set to true)
+- `deg`: (Optional) If true, the angle is in degrees
+
+Returns a 3x3 rotation matrix.
+"""
+function rotx(t, deg = false)
+    if deg
+        t *= pi / 180
+    end
+    ct = cos(t)
+    st = sin(t)
+    R = [1 0 0
+         0 ct -st
+         0 st ct]
+end
+
+"""
+    roty(t, deg = false)
+
+Generate a rotation matrix for a rotation around the y-axis.
+
+- `t`: The angle of rotation (in radians, unless `deg` is set to true)
+- `deg`: (Optional) If true, the angle is in degrees
+
+Returns a 3x3 rotation matrix.
+"""
+function roty(t, deg = false)
+    if deg
+        t *= pi / 180
+    end
+    ct = cos(t)
+    st = sin(t)
+    R = [ct 0 st
+         0 1 0
+         -st 0 ct]
+end
+
+"""
+    rotz(t, deg = false)
+
+Generate a rotation matrix for a rotation around the z-axis.
+
+- `t`: The angle of rotation (in radians, unless `deg` is set to true)
+- `deg`: (Optional) If true, the angle is in degrees
+
+Returns a 3x3 rotation matrix.
+"""
+function rotz(t, deg = false)
+    if deg
+        t *= pi / 180
+    end
+    ct = cos(t)
+    st = sin(t)
+    R = [ct -st 0
+         st ct 0
+         0 0 1]
+end

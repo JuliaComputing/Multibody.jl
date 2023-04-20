@@ -34,8 +34,11 @@ include("frames.jl")
 
 include("interfaces.jl")
 
-export World, world, FixedTranslation, Revolute, Prismatic, Body
+export World, world, FixedTranslation, Body
 include("components.jl")
+
+export Revolute, Prismatic
+include("joints.jl")
 
 export Spring
 include("forces.jl")
