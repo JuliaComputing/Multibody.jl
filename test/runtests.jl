@@ -280,7 +280,7 @@ world = Multibody.world
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true, isroot=true)
+    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true, isroot = true)
     spring2 = Multibody.Spring(30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(2)
@@ -309,32 +309,29 @@ eqs = [connect(world.frame_b, bar1.frame_a)
                              damper1,
                          ])
 # ssys = structural_simplify(model, allow_parameter = false)
-ssys = structural_simplify(IRSystem(model), alias_eliminate=false)
+ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
 
-prob = ODEProblem(ssys, [
-    collect(D.(body1.phid)) .=> 0;
-    D(p2.s) => 0;
-    D(D(p2.s)) => 0;
-    damper1.d => 0;
-], (0, 10))
+prob = ODEProblem(ssys,
+                  [collect(D.(body1.phid)) .=> 0;
+                   D(p2.s) => 0;
+                   D(D(p2.s)) => 0;
+                   damper1.d => 0], (0, 10))
 
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 
 endpoint = sol(sol.t[end], idxs = [spring1.s, spring2.s])
-@test_broken endpoint[1] ≈ endpoint[2] rtol=0.01
+@test_broken endpoint[1]≈endpoint[2] rtol=0.01
 
-prob = ODEProblem(ssys, [
-    collect(D.(body1.phid)) .=> 0;
-    D(p2.s) => 0;
-    D(D(p2.s)) => 0;
-    damper1.d => 2;
-], (0, 10))
+prob = ODEProblem(ssys,
+                  [collect(D.(body1.phid)) .=> 0;
+                   D(p2.s) => 0;
+                   D(D(p2.s)) => 0;
+                   damper1.d => 2], (0, 10))
 
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
-@test sol(sol.t[end], idxs = spring1.v) ≈ 0 atol=0.01 # damped oscillation
-
+@test sol(sol.t[end], idxs = spring1.v)≈0 atol=0.01 # damped oscillation
 
 isinteractive() && plot(sol, idxs = [spring1.s, spring2.s])
 isinteractive() && plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])

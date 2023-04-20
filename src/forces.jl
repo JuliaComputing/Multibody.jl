@@ -213,7 +213,7 @@ function Damper(d; name, kwargs...)
     @unpack s, f = plf
     @parameters d=d [description = "damping constant", bounds = (0, Inf)]
     eqs = [
-        f ~ d*D(s),
+        f ~ d * D(s),
     ]
     extend(ODESystem(eqs, t; name), plf)
 end
