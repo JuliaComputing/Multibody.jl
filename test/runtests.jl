@@ -760,3 +760,22 @@ prob = ODEProblem(ssys,
                       D(inertia2.flange_a.phi) => 0,
                       D(D(idealGear.phi_b)) => 0,
                   ], (0, 10))
+## Rolling wheel ===============================================================
+# ==============================================================================
+world = Multibody.world
+@named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
+                            I_long = 0.12,
+                            x0 = 0.2,
+                            y0 = 0.2,
+                            der_angles = [0, 5, 1])
+
+cwheel = complete(wheel)
+defs = [
+    world.n => [0, 0, -1],
+    collect(D.(cwheel.rollingWheel.angles)) => [0, 5, 1], # TODO: redundant since der_angles specified above, Yingbo
+]
+
+ssys = structural_simplify(IRSystem(wheel), alias_eliminate = false)
+
+@test_skip begin # ERROR: AssertionError: ex isa Number Yingbo
+prob = ODEProblem(ssys, defs, (0, 10)) end

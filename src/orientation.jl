@@ -154,6 +154,10 @@ function angularVelocity2(R::RotationMatrix)
     R.w
 end
 
+function angular_velocity1(R::RotationMatrix)
+    resolve1(R, R.w)
+end
+
 function orientation_constraint(R::RotationMatrix)
     T = R.R
     [T[:, 1]'T[:, 1] - 1
