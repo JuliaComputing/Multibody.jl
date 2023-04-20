@@ -588,7 +588,9 @@ version = "8.52.1"
 
 [[deps.ModelingToolkitStandardLibrary]]
 deps = ["IfElse", "LinearAlgebra", "ModelingToolkit", "Symbolics"]
-git-tree-sha1 = "51cf69844d478bb8916e5267a45604b84c471265"
+git-tree-sha1 = "89f1b24e3c5253499c36408ab891e30304ed9118"
+repo-rev = "main"
+repo-url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl.git"
 uuid = "16a59e39-deab-5bd0-87e4-056b12336739"
 version = "1.13.0"
 
