@@ -23,7 +23,10 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
         connect = Flow,
         description = "Driving torque in direction of axis of rotation",
     ]
-    @variables phi(t)=phi0 [state_priority = 20, description = "Relative rotation angle from frame_a to frame_b"]
+    @variables phi(t)=phi0 [
+        state_priority = 20,
+        description = "Relative rotation angle from frame_a to frame_b",
+    ]
     @variables w(t)=w0 [state_priority = 20, description = "angular velocity (rad/s)"]
     Rrel0 = planar_rotation(n, phi0, w0)
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
@@ -81,18 +84,18 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Tran
 The function returns an ODESystem representing the prismatic joint.
 """
 function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
-                   isroot = false)
+                   isroot = false, s0 = 0, v0 = 0)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description = "axis of motion"]
     n = collect(n)
 
-    @variables s(t)=0 [
+    @variables s(t)=s0 [
         state_priority = 10,
         description = "Relative distance between frame_a and frame_b",
     ]
-    @variables v(t)=0 [
+    @variables v(t)=v0 [
         state_priority = 10,
         description = "Relative velocity between frame_a and frame_b",
     ]

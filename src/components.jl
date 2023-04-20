@@ -47,10 +47,10 @@ const world = World(; name = :world)
 "Compute the gravity acceleration, resolved in world frame"
 gravity_acceleration(r) = world.g * world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
-function FixedTranslation(; name, r0)
+function FixedTranslation(; name, r)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r(t)[1:3]=r0 [
+    @parameters r(t)[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
     fa = frame_a.f |> collect
@@ -88,7 +88,10 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
         connect = Flow,
         description = "Driving torque in direction of axis of rotation",
     ]
-    @variables phi(t)=phi0 [state_priority = 20, description = "Relative rotation angle from frame_a to frame_b"]
+    @variables phi(t)=phi0 [
+        state_priority = 20,
+        description = "Relative rotation angle from frame_a to frame_b",
+    ]
     @variables w(t)=w0 [state_priority = 20, description = "angular velocity (rad/s)"]
     Rrel0 = planar_rotation(n, phi0, w0)
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
@@ -131,75 +134,7 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
 end
 
 """
-    Prismatic(; name, n = [0, 0, 1], useAxisFlange = false, isroot = false)
-
-Prismatic joint with 1 translational degree-of-freedom
-
-- `n`: The axis of motion (unit vector)
-- `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Translational, `axis` and `support`, between which translational components such as springs and dampers can be connected.
-- `isroot`: If true, the joint will be considered the root of the system.
-
-If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.TranslationalModelica are also available:
-- `axis`: 1-dim. translational flange that drives the joint
-- `support`: 1-dim. translational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
-
-The function returns an ODESystem representing the prismatic joint.
-"""
-function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
-                   isroot = false)
-    norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
-    @named frame_a = Frame()
-    @named frame_b = Frame()
-    @parameters n[1:3]=n [description = "axis of motion"]
-    n = collect(n)
-
-    @variables s(t)=0 [
-        state_priority = 10,
-        description = "Relative distance between frame_a and frame_b",
-    ]
-    @variables v(t)=0 [
-        state_priority = 10,
-        description = "Relative velocity between frame_a and frame_b",
-    ]
-    @variables a(t)=0 [
-        state_priority = 10,
-        description = "Relative acceleration between frame_a and frame_b",
-    ]
-    @variables f(t)=0 [
-        connect = Flow,
-        description = "Actuation force in direction of joint axis",
-    ]
-
-    eqs = [v ~ D(s)
-           a ~ D(v)
-
-           # relationships between kinematic quantities of frame_a and of frame_b
-           collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n * s)
-           ori(frame_b) ~ ori(frame_a)
-
-           # Force and torque balance
-           zeros(3) .~ collect(frame_a.f + frame_b.f)
-           zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n * s, frame_b.f))
-
-           # d'Alemberts principle
-           f .~ -n'collect(frame_b.f)]
-
-    if useAxisFlange
-        @named fixed = Translational.Fixed()
-        @named axis = Translational.Flange()
-        @named support = Translational.Flange()
-        push!(eqs, connect(fixed.flange, support))
-        push!(eqs, axis.s ~ s)
-        push!(eqs, axis.f ~ f)
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
-    else
-        push!(eqs, f ~ 0)
-        compose(ODESystem(eqs, t; name), frame_a, frame_b)
-    end
-end
-
-"""
-    Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3))
+    Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3))
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
@@ -210,9 +145,15 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 - `phi0`: Initial orientation, only applicable if `isroot = true`
 - `phid0`: Initial angular velocity
 """
-function Body(; name, m = 1, r_cm = [0, 0, 0], I = collect(0.001LinearAlgebra.I(3)),
-              isroot = false, phi0 = zeros(3), phid0 = zeros(3))
-    @variables r_0(t)[1:3]=0 [
+function Body(; name, m = 1, r_cm = [0, 0, 0],
+              I_11 = 0.001,
+              I_22 = 0.001,
+              I_33 = 0.001,
+              I_21 = 0,
+              I_31 = 0,
+              I_32 = 0,
+              isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = 0)
+    @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
@@ -237,12 +178,12 @@ function Body(; name, m = 1, r_cm = [0, 0, 0], I = collect(0.001LinearAlgebra.I(
     ]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
-    @parameters I_11=I[1, 1] [description = "Element (1,1) of inertia tensor"]
-    @parameters I_22=I[2, 2] [description = "Element (2,2) of inertia tensor"]
-    @parameters I_33=I[3, 3] [description = "Element (3,3) of inertia tensor"]
-    @parameters I_21=I[2, 1] [description = "Element (2,1) of inertia tensor"]
-    @parameters I_31=I[3, 1] [description = "Element (3,1) of inertia tensor"]
-    @parameters I_32=I[3, 2] [description = "Element (3,2) of inertia tensor"]
+    @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
+    @parameters I_22=I_22 [description = "Element (2,2) of inertia tensor"]
+    @parameters I_33=I_33 [description = "Element (3,3) of inertia tensor"]
+    @parameters I_21=I_21 [description = "Element (2,1) of inertia tensor"]
+    @parameters I_31=I_31 [description = "Element (3,1) of inertia tensor"]
+    @parameters I_32=I_32 [description = "Element (3,2) of inertia tensor"]
 
     I = [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]
 

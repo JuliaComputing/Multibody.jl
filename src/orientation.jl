@@ -92,6 +92,9 @@ resolve1(ori(frame_a), r_ab)
 """
 resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 
+resolve1(sys::ODESystem, v) = resolve1(ori(sys), v)
+resolve2(sys::ODESystem, v) = resolve2(ori(sys), v)
+
 skew(s) = [0 -s[3] s[2]; s[3] 0 -s[1]; -s[2] s[1] 0]
 skewcoords(R::AbstractMatrix) = [R[3, 2]; R[1, 3]; R[2, 1]]
 
@@ -116,6 +119,14 @@ function abs_rotation(R1, R_rel)
     # w = resolve2(R_rel, R1.w) + R_rel.w
     # RotationMatrix(R2, w)
     R_rel * R1
+end
+
+function relativeRotation(R1, R2)
+    R1 isa ODESystem && (R1 = ori(R1))
+    R2 isa ODESystem && (R2 = ori(R2))
+    R = R2'R1
+    w = R2.w - resolve2(R2, resolve1(R1, R1.w))
+    RotationMatrix(R.R, w)
 end
 
 function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
@@ -156,8 +167,6 @@ function angular_velocity2(q::AbstractVector, q̇)
     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
     2 * Q * q̇
 end
-
-
 
 function axesRotations(angles, der_angles, sequence = [1, 2, 3], name = :R_ar)
     R = axisRotation(sequence[3], angles[3]) *
