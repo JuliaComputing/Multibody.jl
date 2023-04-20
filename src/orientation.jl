@@ -128,6 +128,10 @@ function angular_velocity2(R::RotationMatrix)
     R.w
 end
 
+function angular_velocity1(R::RotationMatrix)
+    resolve1(R, R.w)
+end
+
 function orientation_constraint(R::RotationMatrix)
     T = R.R
     [T[:, 1]'T[:, 1] - 1
@@ -156,8 +160,6 @@ function angular_velocity2(q::AbstractVector, q̇)
     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
     2 * Q * q̇
 end
-
-
 
 function axesRotations(angles, der_angles, sequence = [1, 2, 3], name = :R_ar)
     R = axisRotation(sequence[3], angles[3]) *

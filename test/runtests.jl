@@ -173,12 +173,11 @@ connections = [connect(world.frame_b, rev.frame_a)
 modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-
-ssys = structural_simplify(IRSystem(modele), alias_eliminate=false)
+ssys = structural_simplify(IRSystem(modele), alias_eliminate = false)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                    (0, 100))
+                  (0, 100))
 sol2 = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol2)
 @test minimum(sol2[rev.phi]) > -π
@@ -227,7 +226,7 @@ modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model, allow_parameter = false)
 
 irsys = IRSystem(modele)
-ssys = structural_simplify(irsys, alias_eliminate=false)
+ssys = structural_simplify(irsys, alias_eliminate = false)
 D = Differential(t)
 prob = ODEProblem(ssys,
                   [
@@ -269,3 +268,24 @@ sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test sol[joint.s][end]≈-9.81 rtol=0.01 # gravitational acceleration since spring stiffness is 1
 isinteractive() && plot(sol, idxs = joint.s)
+
+# ==============================================================================
+## Rolling wheel ===============================================================
+# ==============================================================================
+world = Multibody.world
+@named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
+                            I_long = 0.12,
+                            x0 = 0.2,
+                            y0 = 0.2,
+                            der_angles = [0, 5, 1])
+
+cwheel = complete(wheel)
+defs = [
+    world.n => [0, 0, -1],
+    collect(D.(cwheel.rollingWheel.angles)) => [0, 5, 1], # TODO: redundant since der_angles specified above, Yingbo
+]
+
+ssys = structural_simplify(IRSystem(wheel), alias_eliminate = false)
+
+@test_skip begin # ERROR: AssertionError: ex isa Number Yingbo
+prob = ODEProblem(ssys, defs, (0, 10)) end
