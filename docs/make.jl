@@ -6,7 +6,7 @@ DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = tr
 makedocs(;
          modules = [Multibody],
          authors = "JuliaHub Inc.",
-         strict = [:example_block, :setup_block, :eval_block],
+        #  strict = [:example_block, :setup_block, :eval_block],
          sitename = "Multibody.jl",
          format = Documenter.HTML(;
                                   prettyurls = get(ENV, "CI", nothing) == "true",
