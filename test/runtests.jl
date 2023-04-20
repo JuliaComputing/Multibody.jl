@@ -120,11 +120,10 @@ isinteractive() && plot(sol, idxs = collect(joint.phi))
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
 # ==============================================================================
-using ModelingToolkitStandardLibrary.Mechanical.Rotational
 
 world = Multibody.world
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
-@named damper = Damper(d = 0.1)
+@named damper = Rotational.Damper(d = 0.1)
 @named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
 
 connections = [connect(world.frame_b, rev.frame_a)
@@ -155,12 +154,11 @@ isinteractive() && plot(sol, idxs = collect(rev.phi))
 # ==============================================================================
 ## Simple pendulum with rod ====================================================
 # ==============================================================================
-using ModelingToolkitStandardLibrary.Mechanical.Rotational
 
 world = Multibody.world
 @named rod = FixedTranslation(r = [0.5, 0, 0])
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
-@named damper = Damper(d = 0.1)
+@named damper = Rotational.Damper(d = 0.1)
 @named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
 
 connections = [connect(world.frame_b, rev.frame_a)
@@ -194,8 +192,8 @@ isinteractive() && plot(sol2, idxs = collect(rev.phi))
 @named rod2 = FixedTranslation(r = [1, 0, 0])
 @named body1 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
 @named body2 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
-@named damper1 = Damper(d = 0.1)
-@named damper2 = Damper(d = 0.1)
+@named damper1 = Rotational.Damper(d = 0.1)
+@named damper2 = Rotational.Damper(d = 0.1)
 @named rev1 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
 @named rev2 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
 
@@ -247,10 +245,9 @@ isinteractive() &&
 # ==============================================================================
 ## Linear mass-spring-damper ===================================================
 # ==============================================================================
-import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as T
 
-@named damper = T.Damper(0.5)
-@named spring = T.Spring(1)
+@named damper = Translational.Damper(0.5)
+@named spring = Translational.Spring(1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
