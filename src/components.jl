@@ -130,6 +130,21 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
     end
 end
 
+"""
+    Prismatic(; name, n = [0, 0, 1], useAxisFlange = false, isroot = false)
+
+Prismatic joint with 1 translational degree-of-freedom
+
+- `n`: The axis of motion (unit vector)
+- `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Translational, `axis` and `support`, between which translational components such as springs and dampers can be connected.
+- `isroot`: If true, the joint will be considered the root of the system.
+
+If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.TranslationalModelica are also available:
+- `axis`: 1-dim. translational flange that drives the joint
+- `support`: 1-dim. translational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
+
+The function returns an ODESystem representing the prismatic joint.
+"""
 function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
                    isroot = false)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
@@ -291,6 +306,16 @@ end
 
 axis(s) = float.(s .== (1:3))
 
+"""
+    axisRotation(sequence, angle; name = :R)
+
+Generate a rotation matrix for a rotation around the specified axis.
+
+- `sequence`: The axis to rotate around (1: x-axis, 2: y-axis, 3: z-axis)
+- `angle`: The angle of rotation (in radians)
+
+Returns a `RotationMatrix` object.
+"""
 function axisRotation(sequence, angle; name = :R)
     if sequence == 1
         return RotationMatrix(rotx(angle), zeros(3))
@@ -303,6 +328,16 @@ function axisRotation(sequence, angle; name = :R)
     end
 end
 
+"""
+    rotx(t, deg = false)
+
+Generate a rotation matrix for a rotation around the x-axis.
+
+- `t`: The angle of rotation (in radians, unless `deg` is set to true)
+- `deg`: (Optional) If true, the angle is in degrees
+
+Returns a 3x3 rotation matrix.
+"""
 function rotx(t, deg = false)
     if deg
         t *= pi / 180
@@ -314,6 +349,16 @@ function rotx(t, deg = false)
          0 st ct]
 end
 
+"""
+    roty(t, deg = false)
+
+Generate a rotation matrix for a rotation around the y-axis.
+
+- `t`: The angle of rotation (in radians, unless `deg` is set to true)
+- `deg`: (Optional) If true, the angle is in degrees
+
+Returns a 3x3 rotation matrix.
+"""
 function roty(t, deg = false)
     if deg
         t *= pi / 180
@@ -325,6 +370,16 @@ function roty(t, deg = false)
          -st 0 ct]
 end
 
+"""
+    rotz(t, deg = false)
+
+Generate a rotation matrix for a rotation around the z-axis.
+
+- `t`: The angle of rotation (in radians, unless `deg` is set to true)
+- `deg`: (Optional) If true, the angle is in degrees
+
+Returns a 3x3 rotation matrix.
+"""
 function rotz(t, deg = false)
     if deg
         t *= pi / 180
