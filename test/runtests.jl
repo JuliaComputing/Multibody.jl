@@ -174,18 +174,17 @@ modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
 
-@test_skip begin
-    ssys = structural_simplify(IRSystem(modele))
-    
-    D = Differential(t)
-    prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                      (0, 100))
-    sol2 = solve(prob, Rodas4())
-    @test SciMLBase.successful_retcode(sol2)
-    @test minimum(sol2[rev.phi]) > -π
-    @test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
-    isinteractive() && plot(sol2, idxs = collect(rev.phi))
-end
+ssys = structural_simplify(IRSystem(modele), alias_eliminate=false)
+
+D = Differential(t)
+prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
+                    (0, 100))
+sol2 = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol2)
+@test minimum(sol2[rev.phi]) > -π
+@test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
+isinteractive() && plot(sol2, idxs = collect(rev.phi))
+
 @info "TODO: write a test that checks that this solution is identical to the one without rod above"
 
 # ==============================================================================
@@ -227,26 +226,25 @@ connections = [connect(damper1.flange_b, rev1.axis)
 modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model, allow_parameter = false)
 
-# irsys = IRSystem(modele)
-# ssys = structural_simplify(irsys)
+irsys = IRSystem(modele)
+ssys = structural_simplify(irsys, alias_eliminate=false)
 D = Differential(t)
 prob = ODEProblem(ssys,
                   [
                       damper1.phi_rel => 1, D(rev1.phi) => 0, D(D(rev1.phi)) => 0,
-                      damper2.phi_rel => 1, D(rev2.phi) => 0, D(D(rev2.phi)) => 0,
-                  ], (0, 100))
+                      damper2.phi_rel => 0.5, D(rev2.phi) => 0, D(D(rev2.phi)) => 0,
+                      D(damper2.w_rel) => 0,
+                  ], (0, 600))
 
-du = prob.f.f.f_oop(prob.u0, prob.p, 0)
-@test all(isfinite, du)
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+@test minimum(sol[rev1.phi]) > -π
+@test sol[rev1.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
+@test_broken sol[rev2.phi][end]≈0 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium which is 0 relative rotation compared to rev1
+@test sol[body2.r_0[2]][end]≈-2 rtol=0.01 # sum of rod lengths = 2
+isinteractive() &&
+    plot(sol, idxs = [rev1.phi; rev2.phi; damper2.phi_rel; collect(body2.r_0[1:2])])
 
-@test_skip begin
-    sol = solve(prob, Rodas4())
-    @test SciMLBase.successful_retcode(sol)
-    @test minimum(sol[rev.phi]) > -π
-    @test sol[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
-    isinteractive() &&
-        plot(sol, idxs = [collect(rev1.phi); collect(rev2.phi); collect(body2.r_0[1:2])])
-end
 # ==============================================================================
 ## Linear mass-spring-damper ===================================================
 # ==============================================================================
