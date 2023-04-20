@@ -40,7 +40,7 @@ include("components.jl")
 export Revolute, Prismatic
 include("joints.jl")
 
-export Spring
+export Spring, Damper
 include("forces.jl")
 
 end

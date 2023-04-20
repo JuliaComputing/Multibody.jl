@@ -208,6 +208,24 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
     extend(ODESystem(eqs, t; name, systems = [lineForce, spring2d]), ptf)
 end
 
+
+"""
+    Damper(d; name, kwargs)
+
+Linear damper acting as line force between `frame_a` and `frame_b`.
+A force `f` is exerted on the origin of `frame_b` and with opposite sign
+on the origin of `frame_a` along the line from the origin of `frame_a` to the origin
+of `frame_b` according to the equation:
+```math
+f = d D(s)
+```
+where `d` is the (viscous) damping parameter, `s` is the
+distance between the origin of `frame_a` and the origin of `frame_b`
+and `D(s)` is the time derivative of `s`.
+
+# Arguments:
+- `d`: Damping coefficient
+"""
 function Damper(d; name, kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
