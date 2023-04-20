@@ -125,6 +125,36 @@ function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kw
     extend(ODESystem(eqs, t; name, systems = [flange_a, flange_b]), lfb)
 end
 
+function PartialLineForce(; name, kwargs...)
+    @named lfb = LineForceBase(; kwargs...)
+    @unpack length, s, r_rel_0, e_rel_0, frame_a, frame_b = lfb
+
+    @variables begin
+        (r_rel_a(t)[1:3] = 0),
+        [
+            description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
+        ]
+        (e_a(t)[1:3] = 0),
+        [
+            description = "Unit vector on the line connecting the origin of frame_a with the origin of frame_b resolved in frame_a (directed from frame_a to frame_b)",
+        ]
+        (f(t) = 0),
+        [
+            description = "Line force acting on frame_a and on frame_b (positive, if acting on frame_b and directed from frame_a to frame_b)",
+        ]
+    end
+    equations = [
+                 # Determine relative position vector between the two frames
+                 collect(r_rel_a) .~ resolve2(frame_a, r_rel_0)
+                 collect(e_a) .~ collect(r_rel_a ./ s)
+
+                 # Determine forces and torques at frame_a and frame_b
+                 collect(frame_a.f) .~ collect(-e_a * f)
+                 collect(frame_b.f) .~ -resolve2(relativeRotation(frame_a, frame_b),
+                                                 frame_a.f)]
+    extend(ODESystem(equations, t; name), lfb)
+end
+
 function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
@@ -152,6 +182,9 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
     @variables s(t) [
         description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
     ]
+    @variables v(t) [
+        description = "derivative of s",
+    ]
     @variables r_rel_0(t)[1:3] [
         description = "Position vector from frame_a to frame_b resolved in world frame",
     ]
@@ -159,7 +192,8 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
 
-    eqs = [r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
+    eqs = [D(s) ~ v
+           r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
            e_a .~ r_rel_a / s
            f ~ spring2d.f
            length ~ lineForce.length
@@ -172,4 +206,14 @@ function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs.
            connect(spring2d.flange_a, lineForce.flange_a)]
 
     extend(ODESystem(eqs, t; name, systems = [lineForce, spring2d]), ptf)
+end
+
+function Damper(d; name, kwargs...)
+    @named plf = PartialLineForce(; kwargs...)
+    @unpack s, f = plf
+    @parameters d=d [description = "damping constant", bounds = (0, Inf)]
+    eqs = [
+        f ~ d*D(s),
+    ]
+    extend(ODESystem(eqs, t; name), plf)
 end
