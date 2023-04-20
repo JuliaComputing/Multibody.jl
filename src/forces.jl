@@ -155,6 +155,32 @@ function PartialLineForce(; name, kwargs...)
     extend(ODESystem(equations, t; name), lfb)
 end
 
+
+"""
+    Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs)
+
+Linear spring acting as line force between `frame_a` and `frame_b`.
+A force `f` is exerted on the origin of `frame_b` and with opposite sign
+on the origin of `frame_a` along the line from the origin of `frame_a` to the origin
+of `frame_b` according to the equation:
+```math
+f = c s
+```
+where `c` is the spring stiffness parameter, `s` is the
+distance between the origin of `frame_a` and the origin of `frame_b`.
+
+Optionally, the mass of the spring is taken into account by a
+point mass located on the line between `frame_a` and `frame_b`
+(default: middle of the line). If the spring mass is zero, the
+additional equations to handle the mass are removed.
+
+# Arguments:
+- `c`: Spring stiffness
+- `m`: Mass of the spring (can be zero)
+- `lengthFraction`: Location of spring mass with respect to `frame_a` as a fraction of the distance from `frame_a` to `frame_b` (=0: at `frame_a`; =1: at `frame_b`)
+- `s_unstretched`: Length of the spring when it is unstretched
+- `kwargs`: are passed to `LineForceWithMass`
+"""
 function Spring(c; name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
