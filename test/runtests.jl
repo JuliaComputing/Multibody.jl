@@ -172,15 +172,14 @@ connections = [connect(world.frame_b, rev.frame_a)
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
 modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
-ssys = structural_simplify(IRSystem(modele))
 
-D = Differential(t)
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                  (0, 100))
 
-# du = prob.f.f.f_oop(prob.u0, prob.p, 0)
-# @test all(isfinite, du)
 @test_skip begin
+    ssys = structural_simplify(IRSystem(modele))
+    
+    D = Differential(t)
+    prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
+                      (0, 100))
     sol2 = solve(prob, Rodas4())
     @test SciMLBase.successful_retcode(sol2)
     @test minimum(sol2[rev.phi]) > -π
