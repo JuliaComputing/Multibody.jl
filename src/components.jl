@@ -29,7 +29,7 @@ function World(; name)
     # - (3+3) // (f+t)
     # = 12 equations 
     @named frame_b = Frame()
-    @parameters n[1:3]=[0, 1, 0] [description = "gravity direction of world"]
+    @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
     @parameters g=9.81 [description = "gravitational acceleration of world"]
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
@@ -40,28 +40,28 @@ function World(; name)
 end
 
 """
-The world component is the root of all multibody models. It is a fixed frame with a gravity vector specified by `world.n` and `world.g`.
+The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field and a gravity vector specified by the unit direction `world.n` (defaults to [0, -1, 0]) and magnitude `world.g` (defaults to 9.81).
 """
 const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 gravity_acceleration(r) = world.g * world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
-function FixedTranslation(; name)
+function FixedTranslation(; name, r0)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @variables r_ab(t)[1:3] [
+    @parameters r(t)[1:3]=r0 [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
-    fa = frame_a.f
-    fb = frame_b.f
-    taua = frame_a.tau
-    taub = frame_b.tau
-    eqs = Equation[frame_b.r_0 .~ frame_a.r_0 + resolve1(ori(frame_a), r_ab)
+    fa = frame_a.f |> collect
+    fb = frame_b.f |> collect
+    taua = frame_a.tau |> collect
+    taub = frame_b.tau |> collect
+    eqs = Equation[collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r)
                    ori(frame_b) ~ ori(frame_a)
                    0 .~ fa + fb
-                   0 .~ taua + taub + cross(r_ab, fb)]
-    compose(ODESystem(eqs, t; name), frame_b)
+                   0 .~ taua + taub + cross(r, fb)]
+    compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
 """
@@ -131,33 +131,43 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
 end
 
 function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
-    isroot = false)
+                   isroot = false)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description = "axis of motion"]
     n = collect(n)
 
-    @variables s(t)=0 [state_priority = 10, description = "Relative distance between frame_a and frame_b"]
-    @variables v(t)=0 [state_priority = 10, description = "Relative velocity between frame_a and frame_b"]
-    @variables a(t)=0 [state_priority = 10, description = "Relative acceleration between frame_a and frame_b"]
-    @variables f(t)=0 [connect = Flow, description = "Actuation force in direction of joint axis"]
-
-    eqs = [
-        v ~ D(s)
-        a ~ D(v)
-
-        # relationships between kinematic quantities of frame_a and of frame_b
-        collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n*s)
-        ori(frame_b) ~ ori(frame_a)
-
-        # Force and torque balance
-        zeros(3) .~ collect(frame_a.f + frame_b.f)
-        zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n*s, frame_b.f))
-
-        # d'Alemberts principle
-        f .~ -n'collect(frame_b.f)
+    @variables s(t)=0 [
+        state_priority = 10,
+        description = "Relative distance between frame_a and frame_b",
     ]
+    @variables v(t)=0 [
+        state_priority = 10,
+        description = "Relative velocity between frame_a and frame_b",
+    ]
+    @variables a(t)=0 [
+        state_priority = 10,
+        description = "Relative acceleration between frame_a and frame_b",
+    ]
+    @variables f(t)=0 [
+        connect = Flow,
+        description = "Actuation force in direction of joint axis",
+    ]
+
+    eqs = [v ~ D(s)
+           a ~ D(v)
+
+           # relationships between kinematic quantities of frame_a and of frame_b
+           collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n * s)
+           ori(frame_b) ~ ori(frame_a)
+
+           # Force and torque balance
+           zeros(3) .~ collect(frame_a.f + frame_b.f)
+           zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n * s, frame_b.f))
+
+           # d'Alemberts principle
+           f .~ -n'collect(frame_b.f)]
 
     if useAxisFlange
         @named fixed = Translational.Fixed()
