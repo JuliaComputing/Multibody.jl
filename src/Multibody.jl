@@ -34,7 +34,7 @@ include("frames.jl")
 
 include("interfaces.jl")
 
-export World, world, FixedTranslation, Body
+export World, world, FixedTranslation, Body, BodyShape
 include("components.jl")
 
 export Revolute, Prismatic
