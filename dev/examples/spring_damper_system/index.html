@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Spring-damper system · Multibody.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Multibody.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../pendulum/">Hello world: Pendulum</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Spring-damper system</a></li><li><a class="tocitem" href="../spring_mass_system/">Spring-mass system</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Spring-damper system</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Spring-damper system</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Spring-damper-system"><a class="docs-heading-anchor" href="#Spring-damper-system">Spring damper system</a><a id="Spring-damper-system-1"></a><a class="docs-heading-anchor-permalink" href="#Spring-damper-system" title="Permalink"></a></h1><p>This tutorial mirrors that of the following Modelica tutorial <a href="https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Elementary.html#Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem">Spring damper system</a> and demonstrates that a body can be freely moving without any connection to a joint. In this case body coordinates are used as states by setting the option <code>isroot=true</code> to the body.</p><pre><code class="language- hljs">using Multibody
+using ModelingToolkit
+using Plots
+using SymbolicIR
+using OrdinaryDiffEq
+
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
+@named begin
+    body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
+                 I_33 = 0.1, r_0 = [0.3, -0.2, 0]) # This is root since there is no joint parallel to the spring leading to this body
+    body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
+    bar1 = FixedTranslation(r = [0.3, 0, 0])
+    bar2 = FixedTranslation(r = [0.6, 0, 0])
+    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true, isroot = true)
+    spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
+    spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
+    damper1 = Multibody.Damper(d = 2)
+end
+eqs = [connect(world.frame_b, bar1.frame_a)
+       connect(bar1.frame_b, bar2.frame_a)
+       connect(bar2.frame_b, p2.frame_a)
+       connect(p2.frame_b, body2.frame_a)
+       connect(bar2.frame_b, spring2.frame_a)
+       connect(body2.frame_a, spring2.frame_b)
+       connect(damper1.frame_a, bar1.frame_b)
+       connect(spring1.frame_a, bar1.frame_b)
+       connect(damper1.frame_b, body1.frame_a)
+       connect(spring1.frame_b, body1.frame_a)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [
+                             world,
+                             body1,
+                             body2,
+                             bar1,
+                             bar2,
+                             p2,
+                             spring1,
+                             spring2,
+                             damper1,
+                         ])
+
+ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+
+prob = ODEProblem(ssys,
+                  [collect(D.(body1.phid)) .=&gt; 0;
+                   D(p2.s) =&gt; 0;
+                   D(D(p2.s)) =&gt; 0;
+                   damper1.d =&gt; 2], (0, 10))
+
+sol = solve(prob, Rodas4())
+@assert SciMLBase.successful_retcode(sol)
+
+plot(
+    plot(sol, idxs = [spring1.s, spring2.s]),
+    plot(sol, idxs = [body1.r_0[2], body2.r_0[2]]),
+    plot(sol, idxs = [spring1.f, spring2.f]),
+)</code></pre><p>This example has two parallel spring-mass parts, the first body (<code>body1</code>) is attached directly to the spring, with no joint in parallel with the spring. In this situation, we have to set <code>isroot=true</code> for <code>body1</code> to indicate that we want to use the body variables as state. The second body (<code>body2</code>) is attached to the spring with a joint in parallel with the spring, so we can use the joint variables as state, hence <code>isroot=false</code> for <code>body2</code>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../pendulum/">« Hello world: Pendulum</a><a class="docs-footer-nextpage" href="../spring_mass_system/">Spring-mass system »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Friday 21 April 2023 05:39">Friday 21 April 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
