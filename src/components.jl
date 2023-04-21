@@ -232,7 +232,6 @@ function Body(; name, m = 1, r_cm = [0, 0, 0],
     ODESystem(eqs, t; name, metadata = Dict(:isroot => isroot), systems = [frame_a])
 end
 
-
 """
     BodyShape(; name, m = 1, r, kwargs...)
 
@@ -241,25 +240,24 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 """
-function BodyShape(; name, m = 1, r = [0,0,0], r_0 = 0, kwargs...)
-
+function BodyShape(; name, m = 1, r = [0, 0, 0], r_0 = 0, kwargs...)
     systems = @named begin
-        frameTranslation = FixedTranslation(r=r)
+        frameTranslation = FixedTranslation(r = r)
         body = Body(; kwargs...)
         frame_a = Frame()
         frame_b = Frame()
     end
 
     @variables r_0(t)[1:3]=r_0 [
-    state_priority = 2,
-    description = "Position vector from origin of world frame to origin of frame_a",
+        state_priority = 2,
+        description = "Position vector from origin of world frame to origin of frame_a",
     ]
     @variables v_0(t)[1:3]=0 [
-    state_priority = 2,
-    description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        state_priority = 2,
+        description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
     @variables a_0(t)[1:3]=0 [
-    description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @parameters r[1:3]=r [
         description = "Vector from frame_a to frame_b resolved in frame_a",
@@ -267,13 +265,11 @@ function BodyShape(; name, m = 1, r = [0,0,0], r_0 = 0, kwargs...)
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
-    eqs = [
-        r_0 .~ collect(frame_a.r_0)
-        v_0 .~ D.(r_0)
-        a_0 .~ D.(v_0)
-        connect(frame_a, frameTranslation.frame_a)
-        connect(frame_b, frameTranslation.frame_b) 
-        connect(frame_a, body.frame_a)
-    ]
+    eqs = [r_0 .~ collect(frame_a.r_0)
+           v_0 .~ D.(r_0)
+           a_0 .~ D.(v_0)
+           connect(frame_a, frameTranslation.frame_a)
+           connect(frame_b, frameTranslation.frame_b)
+           connect(frame_a, body.frame_a)]
     ODESystem(eqs, t; name, systems)
 end
