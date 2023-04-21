@@ -58,7 +58,7 @@ function Fixed(; name, r = [0, 0, 0])
     compose(ODESystem(eqs, t; name), systems...)
 end
 
-function Mounting1D(; name, n = [1, 0, 0], phi0=0)
+function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
     systems = @named begin
         flange_b = Rotational.Flange()
         frame_a = Frame()

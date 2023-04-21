@@ -147,7 +147,8 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
 - `r_a`: Vector from frame `bearing` to `frame_a` resolved in bearing
 - `r_b`: Vector from frame `bearing` to `frame_b` resolved in bearing
 """
-function GearConstraint(; name, ratio, checkTotalPower = false, n_a = [1, 0, 0], n_b = [1, 0, 0], r_a = [0, 0, 0], r_b = [0, 0, 0])
+function GearConstraint(; name, ratio, checkTotalPower = false, n_a = [1, 0, 0],
+                        n_b = [1, 0, 0], r_a = [0, 0, 0], r_b = [0, 0, 0])
     @named ptf = PartialTwoFrames()
     systems = @named begin
         bearing = Frame() #"Coordinate system fixed in the bearing"

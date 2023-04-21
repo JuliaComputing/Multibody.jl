@@ -404,44 +404,42 @@ world = Multibody.world
     mounting1D = Mounting1D()
 end
 
-eqs = [
-    connect(world.frame_b, gearConstraint.bearing)
-    connect(cyl1.frame_a, gearConstraint.frame_a)
-    connect(gearConstraint.frame_b, cyl2.frame_a)
-    connect(torque1.frame_b, cyl1.frame_a)
-    connect(torque1.frame_a, world.frame_b)
-    # connect(sine.output, torque1.torque)
-    torque1.torque.u .~ [2sin(t), 0, 0]
-    connect(inertia1.flange_b, idealGear.flange_a)
-    connect(idealGear.flange_b, inertia2.flange_a)
-    connect(torque2.flange, inertia1.flange_a)
-    # connect(sine.output, torque2.tau)
-    torque2.tau.u ~ 2sin(t)
-    connect(mounting1D.flange_b, idealGear.support)
-    connect(mounting1D.flange_b, torque2.support)
-    connect(fixed.frame_b, mounting1D.frame_a)
-]
+eqs = [connect(world.frame_b, gearConstraint.bearing)
+       connect(cyl1.frame_a, gearConstraint.frame_a)
+       connect(gearConstraint.frame_b, cyl2.frame_a)
+       connect(torque1.frame_b, cyl1.frame_a)
+       connect(torque1.frame_a, world.frame_b)
+       # connect(sine.output, torque1.torque)
+       torque1.torque.u .~ [2sin(t), 0, 0]
+       connect(inertia1.flange_b, idealGear.flange_a)
+       connect(idealGear.flange_b, inertia2.flange_a)
+       connect(torque2.flange, inertia1.flange_a)
+       # connect(sine.output, torque2.tau)
+       torque2.tau.u ~ 2sin(t)
+       connect(mounting1D.flange_b, idealGear.support)
+       connect(mounting1D.flange_b, torque2.support)
+       connect(fixed.frame_b, mounting1D.frame_a)]
 
-@named model = ODESystem(eqs, t, systems = [
-    world;
-    gearConstraint;
-    cyl1;
-    cyl2;
-    torque1;
-    # sine;
-    fixed;
-    inertia1;
-    idealGear;
-    inertia2;
-    torque2;
-    mounting1D;
-])
+@named model = ODESystem(eqs, t,
+                         systems = [world;
+                                    gearConstraint;
+                                    cyl1;
+                                    cyl2;
+                                    torque1;
+                                    # sine;
+                                    fixed;
+                                    inertia1;
+                                    idealGear;
+                                    inertia2;
+                                    torque2;
+                                    mounting1D])
 
 # ssys = structural_simplify(model, allow_parameters=false)
 ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
 
-prob = ODEProblem(ssys, [
-    D(gearConstraint.actuatedRevolute_b.phi) => 0,
-    D(inertia2.flange_a.phi) => 0,
-    D(D(idealGear.phi_b)) => 0,
-], (0, 10))
+prob = ODEProblem(ssys,
+                  [
+                      D(gearConstraint.actuatedRevolute_b.phi) => 0,
+                      D(inertia2.flange_a.phi) => 0,
+                      D(D(idealGear.phi_b)) => 0,
+                  ], (0, 10))
