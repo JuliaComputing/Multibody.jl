@@ -1,17 +1,17 @@
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as TP
 
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
-                       fixedRotationAtFrame_b = false)
+                       fixedRotationAtFrame_b = false, r_rel_0=0, s0=0)
     @named frame_a = Frame()
     @named frame_b = Frame()
 
     @variables length(t) [
         description = "Distance between the origin of frame_a and the origin of frame_b",
     ]
-    @variables s(t) [
+    @variables s(t)=s0 [
         description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
     ]
-    @variables r_rel_0(t)[1:3] [
+    @variables r_rel_0(t)[1:3]=r_rel_0 [
         description = "Position vector from frame_a to frame_b resolved in world frame",
     ]
     @variables e_rel_0(t)[1:3] [
