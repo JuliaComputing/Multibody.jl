@@ -37,7 +37,7 @@ include("interfaces.jl")
 export World, world, Mounting1D, Fixed, FixedTranslation, Body
 include("components.jl")
 
-export Revolute, Prismatic
+export Revolute, Prismatic, Universal
 include("joints.jl")
 
 export Spring, Damper, Torque

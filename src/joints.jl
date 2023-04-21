@@ -21,6 +21,7 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
     @parameters n[1:3]=n [description = "axis of rotation"]
     @variables tau(t)=0 [
         connect = Flow,
+        state_priority = 2,
         description = "Driving torque in direction of axis of rotation",
     ]
     @variables phi(t)=phi0 [
@@ -134,4 +135,61 @@ function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
         push!(eqs, f ~ 0)
         compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
+end
+
+function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0])
+    @named begin
+        ptf = PartialTwoFrames()
+        revolute_a = Revolute(n=n_a, isroot=false)
+        revolute_b = Revolute(n=n_b, isroot=false)
+    end
+    @unpack frame_a, frame_b = ptf
+    @parameters begin
+        n_a = n_a,
+              [
+                  description = "Axis of revolute joint 1 resolved in frame_a",
+              ]
+        n_b = n_b,
+              [
+                  description = "Axis of revolute joint 2 resolved in frame_b",
+              ]
+    end
+    @variables begin
+        (phi_a(t) = 0), [
+            state_priority = 10,
+            description = "Relative rotation angle from frame_a to intermediate frame",
+        ]
+        (phi_b(t) = 0), [
+            state_priority = 10,
+            description = "Relative rotation angle from intermediate frame to frame_b",
+        ]
+        (w_a(t) = 0), [
+            state_priority = 10,
+            description = "First derivative of angle phi_a (relative angular velocity a)",
+        ]
+        (w_b(t) = 0), [
+            state_priority = 10,
+            description = "First derivative of angle phi_b (relative angular velocity b)",
+        ]
+        (a_a(t) = 0), [
+            state_priority = 10,
+            description = "Second derivative of angle phi_a (relative angular acceleration a)",
+        ]
+        (a_b(t) = 0), [
+            state_priority = 10,
+            description = "Second derivative of angle phi_b (relative angular acceleration b)",
+        ]
+    end
+    eqs = [
+        phi_a ~ revolute_a.phi
+        phi_b ~ revolute_b.phi
+        w_a ~ D(phi_a)
+        w_b ~ D(phi_b)
+        a_a ~ D(w_a)
+        a_b ~ D(w_b)
+        connect(frame_a, revolute_a.frame_a)
+        connect(revolute_b.frame_b, frame_b)
+        connect(revolute_a.frame_b, revolute_b.frame_a)
+    ]
+    extend(ODESystem(eqs, t; name, systems=[revolute_a, revolute_b]), ptf)
 end

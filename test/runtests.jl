@@ -333,3 +333,39 @@ sol = solve(prob, Rodas4())
 isinteractive() && plot(sol, idxs = [spring1.s, spring2.s])
 isinteractive() && plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
 isinteractive() && plot(sol, idxs = [spring1.f, spring2.f])
+
+
+# ==============================================================================
+## universal pendulum
+# ==============================================================================
+
+# NOTE: fails due to rotation matrix used as state
+
+using Multibody
+using ModelingToolkit
+using Plots
+using SymbolicIR
+using OrdinaryDiffEq
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
+@named begin
+    joint = Universal()
+    bar = FixedTranslation(r = [0, -1, 0])
+    body = Body(; m = 1, isroot = false)
+end
+connections = [connect(world.frame_b, joint.frame_a)
+            connect(joint.frame_b, bar.frame_a)
+            connect(bar.frame_b, body.frame_a)]
+@named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+prob = ODEProblem(ssys,
+                [
+                    joint.revolute_a.phi => 0;
+                    D(joint.revolute_a.phi) => 0;
+                    joint.revolute_b.phi => 0;
+                    D(joint.revolute_b.phi) => 0;
+                ], (0, 10))
+sol = solve(prob, Rodas4())
+@assert SciMLBase.successful_retcode(sol)
+plot(sol, idxs = [body.r_0...])
