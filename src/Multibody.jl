@@ -37,7 +37,7 @@ include("interfaces.jl")
 export World, world, FixedTranslation, Body
 include("components.jl")
 
-export Revolute, Prismatic
+export Revolute, Prismatic, Spherical
 include("joints.jl")
 
 export Spring, Damper

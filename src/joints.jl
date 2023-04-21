@@ -34,12 +34,12 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
 
     if isroot
         eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
-                       ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
+                       ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
                        collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
                        collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
     else
         eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-                       ori(frame_a) ~ abs_rotation(ori(frame_b), Rrel)
+                       ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
                        collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
                        collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
     end
@@ -134,4 +134,77 @@ function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
         push!(eqs, f ~ 0)
         compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
+end
+
+
+"""
+    Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates)
+
+Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential states. If parameter `enforceStates` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence_angleStates` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as states. If angles are used as states there is the slight disadvantage that a singular configuration is present leading to a division by zero.
+
+- `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `enforceStates = true`.
+- `sequence_angleStates`: Rotation sequence
+"""
+function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false,
+                   z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3])
+    @named begin
+        ptf = PartialTwoFrames()
+        R_rel = NumRotationMatrix()
+        R_rel_inv = NumRotationMatrix()
+    end
+    @unpack frame_a, frame_b = ptf
+    # @parameters begin # Currently not using parameters due to these appearing in if statements
+    #     sequence_angleStates[1:3] = sequence_angleStates
+    # end
+    @variables begin (w_rel(t)[1:3] = zeros(3)),
+                     [
+                         description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
+                     ] end
+
+    # torque balance
+    eqs = [zeros(3) .~ collect(frame_a.tau)
+           zeros(3) .~ collect(frame_b.tau)]
+
+    if enforceStates
+        @variables begin
+            (phi(t)[1:3] = zeros(3)),
+            [description = "3 angles to rotate frame_a into frame_b"]
+            (phi_d(t)[1:3] = zeros(3)), [description = "3 angle derivatives"]
+            (phi_dd(t)[1:3] = zeros(3)), [description = "3 angle second derivatives"]
+        end
+        append!(eqs,
+                [collect(frame_b.r_0) .~ collect(frame_a.r_0);
+                 R_rel ~ axesRotations(sequence_angleStates, phi, phi_d)
+                 collect(w_rel) .~ angularVelocity2(R_rel)
+                 collect(phi_d .~ D.(phi))
+                 collect(phi_dd .~ D.(phi_d))])
+        if isroot
+            append!(eqs,
+                    [R_rel_inv ~ nullRotation()
+                     ori(frame_b) ~ absoluteRotation(frame_a, R_rel)
+                     zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
+        else
+            append!(eqs,
+                    [R_rel_inv ~ inverseRotation(R_rel)
+                     ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv)
+                     zeros(3) .~ collect(frame_b.f) + resolve2(R_rel, frame_a.f)])
+        end
+
+    else
+        # Spherical joint does not have states
+        append!(eqs,
+                [collect(frame_b.r_0) .~ collect(frame_a.r_0);
+                 #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
+
+                 zeros(3) .~ collect(frame_a.f) +
+                             resolveRelative(frame_b.f, frame_b, frame_a)])
+        if w_rel_a_fixed || z_rel_a_fixed
+            append!(w_rel .~ angularVelocity2(frame_b) - resolve2(frame_b,
+                                      angularVelocity1(frame_a)))
+        else
+            append!(w_rel .~ zeros(3))
+        end
+    end
+
+    extend(ODESystem(eqs, t; name), ptf)
 end

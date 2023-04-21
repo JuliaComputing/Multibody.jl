@@ -33,7 +33,7 @@ function World(; name)
     @parameters g=9.81 [description = "gravitational acceleration of world"]
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
-                   O ~ nullrotation()
+                   O ~ nullRotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
                    ]
     ODESystem(eqs, t, [], [n; g]; name, systems = [frame_b])
@@ -99,12 +99,12 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
 
     if isroot
         eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
-                       ori(frame_b) ~ abs_rotation(ori(frame_a), Rrel)
+                       ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
                        collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
                        collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
     else
         eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-                       ori(frame_a) ~ abs_rotation(ori(frame_b), Rrel)
+                       ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
                        collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
                        collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
     end
@@ -162,10 +162,12 @@ function Body(; name, m = 1, r_cm = [0, 0, 0],
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
     @variables a_0(t)[1:3]=0 [
+        state_priority = 2,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3]=0 [description = "gravity acceleration"]
     @variables w_a(t)[1:3]=0 [
+        state_priority = 2,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3]=0 [
@@ -196,7 +198,7 @@ function Body(; name, m = 1, r_cm = [0, 0, 0],
         @variables phid(t)[1:3]=phid0 [state_priority = 10]
         @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
         phi, phid, phidd = collect.((phi, phid, phidd))
-        ar = axesRotations(phi, phid)
+        ar = axesRotations([1, 2, 3], phi, phid)
 
         @named frame_a = Frame(varw = true)
         Ra = ori(frame_a, true)
@@ -213,9 +215,9 @@ function Body(; name, m = 1, r_cm = [0, 0, 0],
         Ra = ori(frame_a)
         # This equation is defined here and not in the Rotation component since the branch above might use another equation
         Equation[
-                 # collect(w_a .~ DRa.w); # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
+                 # collect(w_a .~ DRa.w); # angularVelocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
                  # vec(DRa.R .~ 0)
-                 collect(w_a .~ angular_velocity2(Ra));]
+                 collect(w_a .~ angularVelocity2(Ra));]
     end
 
     eqs = [eqs;
