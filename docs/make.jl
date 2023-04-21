@@ -17,7 +17,7 @@ makedocs(;
                  "Hello world: Pendulum" => "examples/pendulum.md",
              ],
              "Examples" => [
-                "Spring-damper system" => "examples/spring_damper_system.md",
+                 "Spring-damper system" => "examples/spring_damper_system.md",
                  "Spring-mass system" => "examples/spring_mass_system.md",
              ],
          ])
