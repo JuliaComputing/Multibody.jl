@@ -98,7 +98,6 @@ function FixedTranslation(; name, r)
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
-
 """
     Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3))
 
