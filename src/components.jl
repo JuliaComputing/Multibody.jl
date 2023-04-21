@@ -233,7 +233,14 @@ function Body(; name, m = 1, r_cm = [0, 0, 0],
 end
 
 
+"""
+    BodyShape(; name, m = 1, r, kwargs...)
 
+The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames and a vector `r` that describes the translation between them, while the body has a single frame only.
+
+- `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
+- All `kwargs` are passed to the internal `Body` component.
+"""
 function BodyShape(; name, m = 1, r = [0,0,0], r_0 = 0, kwargs...)
 
     systems = @named begin
@@ -256,7 +263,7 @@ function BodyShape(; name, m = 1, r = [0,0,0], r_0 = 0, kwargs...)
     ]
     @parameters r[1:3]=r [
         description = "Vector from frame_a to frame_b resolved in frame_a",
-        ]
+    ]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
