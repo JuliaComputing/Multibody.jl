@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Spring mass system · Multibody.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Multibody.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../pendulum/">Hello world: Pendulum</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../pendulum/">Hello world: Pendulum</a></li><li class="is-active"><a class="tocitem" href>Spring mass system</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Spring mass system</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Spring mass system</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><p>This example mirrors that of the <a href="https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Elementary.html#Modelica.Mechanics.MultiBody.Examples.Elementary.SpringMassSystem">modelica spring-mass system</a> and demonstrates that we can model a spring-mass system in two different way.</p><ol><li>Using a prismatic joint and a 1-dimensional spring from the <code>Translational</code> submodule attached to the joint. The advantage of this approach is that the many elements from the Translational library can be easily used here and that this implementation is usually more efficient compared to when using 3-dimensional springs.</li><li>Using a 3-dimensional spring from the <code>Multibody</code> library.</li></ol><pre><code class="language- hljs">world = Multibody.world
+
+@named p1 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
+@named spring1 = Translational.Spring(30, s_rel0 = 0.1)
+@named spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
+@named body1 = Body(m = 1, r_cm = [0, 0, 0])
+@named bar1 = FixedTranslation(r = [0.3, 0, 0])
+@named bar2 = FixedTranslation(r = [0.3, 0, 0])
+@named body2 = Body(m = 1, r_cm = [0, 0, 0])
+@named p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
+
+eqs = [
+    connect(body1.frame_a, p1.frame_b)
+    connect(world.frame_b, bar1.frame_a)
+    connect(bar1.frame_b, p1.frame_a)
+    connect(spring1.flange_b, p1.axis)
+    connect(bar1.frame_b, bar2.frame_a)
+    connect(bar2.frame_b, p2.frame_a)
+    connect(p2.frame_b, body2.frame_a)
+    connect(bar2.frame_b, spring2.frame_a)
+    connect(body2.frame_a, spring2.frame_b)
+    connect(spring1.flange_a, p1.support)
+]
+
+@named model = ODESystem(eqs, t,
+                         systems = [
+                             world,
+                             body1,
+                             body2,
+                             bar1,
+                             bar2,
+                             p1,
+                             p2,
+                             spring1,
+                             spring2,
+                         ])
+ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+prob = ODEProblem(ssys,
+                  [
+                    D(p1.s) =&gt; 0,
+                    D(D(p1.s)) =&gt; 0,
+                    D(p2.s) =&gt; 0,
+                    D(D(p2.s)) =&gt; 0,
+                  ], (0, 10))
+
+sol = solve(prob, Rodas4())
+@assert SciMLBase.successful_retcode(sol)
+
+plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])</code></pre><p>The plot indicates that the two systems behave identically. </p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../pendulum/">« Hello world: Pendulum</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Friday 21 April 2023 05:37">Friday 21 April 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
