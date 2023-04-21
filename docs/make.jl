@@ -16,6 +16,10 @@ makedocs(;
              "Tutorials" => [
                  "Hello world: Pendulum" => "examples/pendulum.md",
              ],
+             "Examples" => [
+                 "Hello world: Pendulum" => "examples/pendulum.md",
+                 "Spring mass system" => "examples/spring_mass_system.md",
+             ],
          ])
 
 deploydocs(;
