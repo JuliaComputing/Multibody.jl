@@ -136,7 +136,6 @@ function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
     end
 end
 
-
 """
     Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates)
 
