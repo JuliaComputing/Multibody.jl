@@ -1,19 +1,29 @@
-This example mirrors that of the [modelica spring-mass system](https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Elementary.html#Modelica.Mechanics.MultiBody.Examples.Elementary.SpringMassSystem) and demonstrates that we can model a spring-mass system in two different way.
+This example mirrors that of the [modelica spring-mass system](https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.SpringMassSystem.html) and demonstrates that we can model a spring-mass system in two different way.
 
 1. Using a prismatic joint and a 1-dimensional spring from the `Translational` submodule attached to the joint. The advantage of this approach is that the many elements from the Translational library can be easily used here and that this implementation is usually more efficient compared to when using 3-dimensional springs.
 2. Using a 3-dimensional spring from the `Multibody` library.
 
 ```@example spring_mass_system
+using Multibody
+using ModelingToolkit
+using Plots
+using SymbolicIR
+using OrdinaryDiffEq
+
+t = Multibody.t
+D = Differential(t)
 world = Multibody.world
 
-@named p1 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
-@named spring1 = Translational.Spring(30, s_rel0 = 0.1)
-@named spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
-@named body1 = Body(m = 1, r_cm = [0, 0, 0])
-@named bar1 = FixedTranslation(r = [0.3, 0, 0])
-@named bar2 = FixedTranslation(r = [0.3, 0, 0])
-@named body2 = Body(m = 1, r_cm = [0, 0, 0])
-@named p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
+@named begin
+    p1      = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
+    spring1 = Translational.Spring(30, s_rel0 = 0.1)
+    spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
+    body1   = Body(m = 1, r_cm = [0, 0, 0])
+    bar1    = FixedTranslation(r = [0.3, 0, 0])
+    bar2    = FixedTranslation(r = [0.3, 0, 0])
+    body2   = Body(m = 1, r_cm = [0, 0, 0])
+    p2      = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
+end
 
 eqs = [
     connect(body1.frame_a, p1.frame_b)
