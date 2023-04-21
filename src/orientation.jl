@@ -98,12 +98,12 @@ resolve2(sys::ODESystem, v) = resolve2(ori(sys), v)
 skew(s) = [0 -s[3] s[2]; s[3] 0 -s[1]; -s[2] s[1] 0]
 skewcoords(R::AbstractMatrix) = [R[3, 2]; R[1, 3]; R[2, 1]]
 
-function planar_rotation(axis, phi, phi̇)
+function planar_rotation(axis, phi, der_angle)
     length(axis) == 3 || error("axis must be a 3-vector")
     axis = collect(axis)
     ee = collect(axis * axis')
     R = ee + (I(3) - ee) * cos(phi) - skew(axis) * sin(phi)
-    w = axis * phi̇
+    w = axis * phi
     RotationMatrix(R, w)
 end
 
@@ -118,6 +118,8 @@ function abs_rotation(R1, R_rel)
     # R2 = R_rel.R*R1.R
     # w = resolve2(R_rel, R1.w) + R_rel.w
     # RotationMatrix(R2, w)
+    R1 isa ODESystem && (R1 = ori(R1))
+    R_rel isa ODESystem && (R_rel = ori(R_rel))
     R_rel * R1
 end
 

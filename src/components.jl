@@ -81,6 +81,13 @@ function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
     compose(ODESystem(eqs, t; name), systems...)
 end
 
+"""
+    FixedTranslation(; name, r)
+
+Fixed translation of `frame_b` with respect to `frame_a` with position vector `r` resolved in `frame_a`.
+
+Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
+"""
 function FixedTranslation(; name, r)
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -95,6 +102,64 @@ function FixedTranslation(; name, r)
                    ori(frame_b) ~ ori(frame_a)
                    0 .~ fa + fb
                    0 .~ taua + taub + cross(r, fb)]
+    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+end
+
+
+"""
+    FixedRotation(; name, r, n, sequence, isroot = false, angle, n_x, n_y)
+
+Fixed translation followed by a fixed rotation of `frame_b` with respect to `frame_a`
+
+
+- `r`: Translation vector
+- `n`: Axis of rotation, resolved in frame_a
+- `sequence`: DESCRIPTION
+- `angle`: Angle of rotation around `n`, given in radians
+"""
+function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false, angle, n_x=[1,0,0], n_y = [0,1,0])
+    norm(n) ≈ 1 || error("n must be a unit vector")
+    @named frame_a = Frame()
+    @named frame_b = Frame()
+    @parameters r(t)[1:3]=r [
+        description = "position vector from frame_a to frame_b, resolved in frame_a",
+    ]
+    @parameters n(t)[1:3]=n [
+        description = "axis of rotation, resolved in frame_a",
+    ]
+    # @parameters n_x(t)=n_x [
+    #     description = "Vector along x-axis of frame_b resolved in frame_a",
+    # ]
+    # @parameters n_y(t)=n_y [
+    #     description = "Vector along y-axis of frame_b resolved in frame_a",
+    # ]
+    @variables angle(t)=angle [
+        description = "angle of rotation in radians",
+    ]
+    fa = frame_a.f |> collect
+    fb = frame_b.f |> collect
+    taua = frame_a.tau |> collect
+    taub = frame_b.tau |> collect
+
+    
+    # Relationships between quantities of frame_a and frame_b 
+    
+    if isroot
+        R_rel = planar_rotation(n, angle, 0)
+        eqs = [ori(frame_b) ~ absoluteRotation(frame_a, R_rel);
+               zeros(3) .~ fa + resolve1(R_rel, fb);
+               zeros(3) .~ taua + resolve1(R_rel, taub) - cross(r,
+                                                                fa)]
+    else
+        R_rel_inv = planar_rotation(n, -angle, 0)
+        eqs = [ori(frame_a) ~ abs_rotation(frame_b, R_rel_inv);
+               zeros(3) .~ fb + resolve1(R_rel_inv, fa);
+               zeros(3) .~ taub + resolve1(R_rel_inv, taua) +
+                           cross(resolve1(R_rel_inv, r), fb)]
+    end
+    eqs = collect(eqs)
+    append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))
+
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
