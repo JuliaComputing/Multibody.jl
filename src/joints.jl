@@ -69,7 +69,7 @@ function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange 
 end
 
 """
-    Prismatic(; name, n = [0, 0, 1], useAxisFlange = false, isroot = false)
+    Prismatic(; name, n = [0, 0, 1], useAxisFlange = false, isroot = true)
 
 Prismatic joint with 1 translational degree-of-freedom
 
@@ -84,7 +84,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Tran
 The function returns an ODESystem representing the prismatic joint.
 """
 function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
-                   isroot = false, s0 = 0, v0 = 0)
+                   isroot = true, s0 = 0, v0 = 0)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
