@@ -91,14 +91,23 @@ isinteractive() &&
 # ==============================================================================
 ## Simple pendulum =============================================================
 # ==============================================================================
-
+using LinearAlgebra
 @named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
+@named torksensor = CutTorque()
+@named forcesensor = CutForce()
 
 connections = [connect(world.frame_b, joint.frame_a)
-               connect(joint.frame_b, body.frame_a)]
+               connect(joint.frame_b, body.frame_a, torksensor.frame_a,
+                       forcesensor.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, body])
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, torksensor.frame_a)
+               connect(torksensor.frame_b, forcesensor.frame_a)
+               connect(forcesensor.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, torksensor, forcesensor])
 modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(model, allow_parameter = false)
 
@@ -115,6 +124,11 @@ sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test minimum(sol[joint.phi])≈-π rtol=0.01
 @test maximum(sol[joint.phi])≈0 atol=0.01
+@test all(x -> abs(x) < 1e-3, reduce(hcat, sol[torksensor.torque.u]))
+
+@test maximum(norm.(eachcol(reduce(hcat, sol[forcesensor.force.u])))) ≈
+      maximum(norm.(eachcol(reduce(hcat, sol[joint.frame_a.f]))))
+
 isinteractive() && plot(sol, idxs = collect(joint.phi))
 
 # ==============================================================================

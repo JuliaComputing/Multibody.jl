@@ -20,6 +20,7 @@ makedocs(;
                  "Spring-damper system" => "examples/spring_damper_system.md",
                  "Spring-mass system" => "examples/spring_mass_system.md",
                  "Three springs (series forces)" => "examples/three_springs.md",
+                 "Sensors" => "examples/sensors.md",
              ],
          ])
 
