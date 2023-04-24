@@ -393,54 +393,55 @@ using SymbolicIR
 using OrdinaryDiffEq
 
 # https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.ThreeSprings.html
-@test_skip begin # Unbalanced
-    t = Multibody.t
-    D = Differential(t)
-    world = Multibody.world
 
-    @named begin
-        body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
-                     r_cm = [0, -0.2, 0], isroot = true)
-        bar1 = FixedTranslation(r = [0.3, 0, 0])
-        bar2 = FixedTranslation(r = [0, 0, 0.3])
-        spring1 = Multibody.Spring(c = 20, m = 0.1, s_unstretched = 0.1,
-                                   r_rel_0 = [-0.2, -0.2, 0.2])
-        spring2 = Multibody.Spring(c = 40, m = 0.1, s_unstretched = 0.1)
-        spring3 = Multibody.Spring(c = 20, m = 0.1, s_unstretched = 0.1)
-    end
-    eqs = [connect(world.frame_b, bar1.frame_a)
-           connect(world.frame_b, bar2.frame_a)
-           connect(bar1.frame_b, spring1.frame_a)
-           connect(bar2.frame_b, spring3.frame_a)
-           connect(spring2.frame_b, body1.frame_a)
-           connect(spring3.frame_b, spring1.frame_b)
-           connect(spring2.frame_a, spring1.frame_b)]
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
 
-    @named model = ODESystem(eqs, t,
-                             systems = [
-                                 world,
-                                 body1,
-                                 bar1,
-                                 bar2,
-                                 spring1,
-                                 spring2,
-                                 spring3,
-                             ])
-    ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
-    ssys = structural_simplify(model, allow_parameters = false)
+@named begin
+    body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
+                    r_cm = [0, -0.2, 0], isroot = false)
+    bar1 = FixedTranslation(r = [0.3, 0, 0])
+    bar2 = FixedTranslation(r = [0, 0, 0.3])
+    spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1,
+                                r_rel_0 = [-0.2, -0.2, 0.2])
+    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1, fixedRotationAtFrame_a=true, fixedRotationAtFrame_b=true)
+    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1)
+end
+eqs = [connect(world.frame_b, bar1.frame_a)
+        connect(world.frame_b, bar2.frame_a)
+        connect(bar1.frame_b, spring1.frame_a)
+        connect(bar2.frame_b, spring3.frame_a)
+        connect(spring2.frame_b, body1.frame_a)
+        connect(spring3.frame_b, spring1.frame_b)
+        connect(spring2.frame_a, spring1.frame_b)]
+
+@named model = ODESystem(eqs, t,
+                            systems = [
+                                world,
+                                body1,
+                                bar1,
+                                bar2,
+                                spring1,
+                                spring2,
+                                spring3,
+                            ])
+ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
+# ssys = structural_simplify(model, allow_parameters = false)
+@test_skip begin # Impossible to provide initial condition for dummy variable, Yingbo
     prob = ODEProblem(ssys,
-                      [
-                          D(p1.s) => 0,
-                          D(D(p1.s)) => 0,
-                          D(p2.s) => 0,
-                          D(D(p2.s)) => 0,
-                      ], (0, 10))
+                        [
+                        D.(collect(spring1.frame_b.r_0));
+                        ], (0, 10))
 
     sol = solve(prob, Rodas4())
-    @assert SciMLBase.successful_retcode(sol)
+    @test SciMLBase.successful_retcode(sol)
 
-    plot(sol, idxs = [body1.r_0...])
+    isinteractive() && plot(sol, idxs = [body1.r_0...])
 end
+# TODO: add tutorial explaining what interesting things this demos illustrates
+# fixedRotationAtFrame_a and b = true required
+
 
 ## FreeBody
 #=
@@ -491,7 +492,7 @@ using Plots
 using SymbolicIR
 using OrdinaryDiffEq
 
-@test_skip begin # Fails with matrix contains Infs or NaNs during solve
+@test_skip begin # Fails with matrix contains Infs or NaNs during solve, Yingbo
     t = Multibody.t
     D = Differential(t)
     world = Multibody.world
@@ -529,5 +530,5 @@ using OrdinaryDiffEq
     sol = solve(prob, Rodas4())
     @assert SciMLBase.successful_retcode(sol)
 
-    plot(sol, idxs = [body.r_0...])
+    isinteractive() && plot(sol, idxs = [body.r_0...])
 end
