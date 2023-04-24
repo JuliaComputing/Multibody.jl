@@ -14,7 +14,7 @@ makedocs(;
          pages = [
              "Home" => "index.md",
              "Tutorials" => [
-                 "Hello world: Pendulum" => "examples/pendulum.md",
+                 "Getting started: Pendulum" => "examples/pendulum.md",
              ],
              "Examples" => [
                  "Spring-damper system" => "examples/spring_damper_system.md",
