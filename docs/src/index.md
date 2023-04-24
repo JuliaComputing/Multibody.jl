@@ -14,6 +14,14 @@ Built on top of the Julia language and the JuliaSim suite of tools for modeling,
 In this documentation, you will find everything you need to get started with Multibody.jl, from basic component descriptions to detailed examples showcasing the package's capabilities. As you explore this documentation, you'll learn how to create complex models, work with forces and torques, simulate various types of motions, and visualize your results in both 2D and 3D. Whether you are a seasoned researcher or a newcomer to the field, Multibody.jl will empower you to bring your ideas to life and unlock new possibilities in the fascinating world of multibody dynamics.
 
 
+
+
+## Notable difference from Modelica
+
+- The torque variable in Multibody.jl is typically called `tau` rather than `t` to not conflict with the often used independent variable `t` used to denote time.
+- Multibody.jl occasionally requires the user to specify which component should act as the root of the kinematic tree. This only occurs when bodies are connected directly to force components without a joint parallel to the force component.
+- In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using he function [`ori`](@ref).
+
 ```@index
 ```
 
