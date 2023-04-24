@@ -29,3 +29,16 @@
     ODESystem(Equation[], t, [r_0; f; tau], []; name,
               metadata = Dict(:orientation => R, :frame => true))
 end
+
+"""
+    Frame(; name)
+
+`Frame` is the fundamental 3D connector in the multibody library. Most components have one or several `Frame` connectors that can be connected together.
+
+The `Frame` connector has internal variables for
+- `r_0`: The position vector from the world frame to the frame origin, resolved in the world frame
+- `f`: The cut force resolved in the connector frame
+- `tau`: The cut torque resolved in the connector frame
+- Depending on usage, also rotation and rotational velocity variables.
+"""
+Frame
