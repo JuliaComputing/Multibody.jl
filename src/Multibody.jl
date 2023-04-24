@@ -26,7 +26,7 @@ function at_variables_t(args...; default = nothing)
     xs
 end
 
-export Orientation, RotationMatrix
+export Orientation, RotationMatrix, ori
 include("orientation.jl")
 
 export Frame
@@ -43,5 +43,8 @@ include("joints.jl")
 
 export Spring, Damper, Torque
 include("forces.jl")
+
+export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce
+include("sensors.jl")
 
 end
