@@ -42,6 +42,11 @@ Modules = [Multibody]
 Pages   = ["forces.jl"]
 ```
 
+## Sensors
+```@autodocs
+Modules = [Multibody]
+Pages   = ["sensors.jl"]
+```
 
 ## Orientation utilities
 ```@autodocs
