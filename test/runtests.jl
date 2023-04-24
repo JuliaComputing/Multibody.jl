@@ -388,7 +388,6 @@ end ThreeSprings;
 
 using Multibody
 using ModelingToolkit
-using Plots
 using SymbolicIR
 using OrdinaryDiffEq
 
