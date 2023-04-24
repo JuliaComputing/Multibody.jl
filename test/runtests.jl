@@ -485,7 +485,7 @@ end FreeBody;
 # https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.FreeBody.html
 using Multibody
 using ModelingToolkit
-using Plots
+# using Plots
 using SymbolicIR
 using OrdinaryDiffEq
 
