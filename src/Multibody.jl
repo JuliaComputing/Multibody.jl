@@ -41,7 +41,7 @@ include("components.jl")
 export Revolute, Prismatic
 include("joints.jl")
 
-export Spring, Damper, Torque
+export Spring, Damper, Torque, Force
 include("forces.jl")
 
 export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce

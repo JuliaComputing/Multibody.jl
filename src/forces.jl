@@ -43,7 +43,17 @@ function BasicTorque(; name, resolveInFrame = :world)
     extend(ODESystem(eqs, t, name = name, systems = [torque]), ptf)
 end
 
-function Torque(; name, resolveInFrame = :world)
+"""
+    Torque(; name, resolveInFrame = :frame_b)
+
+Torque acting between two frames, defined by 3 input signals and resolved in frame `world`, `frame_a`, `frame_b` (default)
+
+# Connectors:
+- `frame_a`
+- `frame_b`
+- `torque`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of torque resolved in frame defined by `resolveInFrame`.
+"""
+function Torque(; name, resolveInFrame = :frame_b)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named begin
@@ -55,6 +65,67 @@ function Torque(; name, resolveInFrame = :world)
            connect(basicTorque.frame_b, frame_b)
            connect(basicTorque.torque, torque)]
     extend(ODESystem(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
+end
+
+function BasicForce(; name, resolveInFrame = :frame_b)
+    @named ptf = PartialTwoFrames()
+    @named force = Blocks.RealInput(; nin = 3)
+    @unpack frame_a, frame_b = ptf
+    @variables begin
+        (r_0(t)[1:3] = zeros(3)),
+        [
+            description = "Position vector from origin of frame_a to origin of frame_b resolved in world frame",
+        ]
+        (f_b_0(t)[1:3] = zeros(3)), [
+            description = "frame_b.f resolved in world frame"]
+    end
+    r_0, f_b_0 = collect.((r_0, f_b_0))
+
+    eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
+           0 .~ collect(frame_a.f) + resolve2(frame_a, f_b_0)
+           0 .~ collect(frame_a.tau) + resolve2(frame_a, cross(r_0, f_b_0))]
+
+    if resolveInFrame == :frame_a
+        append!(eqs,
+                [f_b_0 .~ -resolve1(frame_a, force.u)
+                 collect(frame_b.tau) .~ resolve2(frame_b, f_b_0)])
+    elseif resolveInFrame == :frame_b
+        append!(eqs,
+                [f_b_0 .~ -resolve1(frame_b, force.u)
+                 collect(frame_b.tau) .~ collect(-force.u)])
+    elseif resolveInFrame == :world
+        append!(eqs,
+                [f_b_0 .~ collect(-force.u)
+                 collect(frame_b.tau) .~ resolve2(frame_b, f_b_0)])
+    else
+        error("Unknown value of argument resolveInFrame")
+    end
+
+    extend(ODESystem(eqs, t, name = name, systems = [force]), ptf)
+end
+
+"""
+    Force(; name, resolveInFrame = :frame_b)
+
+Force acting between two frames, defined by 3 input signals and resolved in frame `world`, `frame_a`, `frame_b` (default)
+
+# Connectors:
+- `frame_a`
+- `frame_b`
+- `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolveInFrame`.
+"""
+function Force(; name, resolveInFrame = :frame_b)
+    @named ptf = PartialTwoFrames()
+    @unpack frame_a, frame_b = ptf
+    @named begin
+        force = Blocks.RealInput(; nin = 3) # x-, y-, z-coordinates of force resolved in frame defined by resolveInFrame
+        basicForce = BasicForce(; resolveInFrame = resolveInFrame)
+    end
+
+    eqs = [connect(basicForce.frame_a, frame_a)
+           connect(basicForce.frame_b, frame_b)
+           connect(basicForce.force, force)]
+    extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
 end
 
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
