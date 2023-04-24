@@ -32,7 +32,7 @@ function PartialCutForceBaseSensor(; name, resolveInFrame = :frame_a)
 end
 
 """
-    BasicCutTorque(; name, resolveInFrame)
+    CutTorque(; name, resolveInFrame)
 
 Basic sensor to measure cut torque vector. Contains a connector of type `Blocks.RealOutput` with name `torque`.
 
