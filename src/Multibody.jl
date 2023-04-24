@@ -34,7 +34,6 @@ include("frames.jl")
 
 include("interfaces.jl")
 
-
 export World, world, Mounting1D, Fixed, FixedTranslation, Body, BodyShape
 
 include("components.jl")

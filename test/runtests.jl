@@ -400,39 +400,38 @@ world = Multibody.world
 
 @named begin
     body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
-                    r_cm = [0, -0.2, 0], isroot = false)
+                 r_cm = [0, -0.2, 0], isroot = false)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0, 0, 0.3])
     spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1,
-                                r_rel_0 = [-0.2, -0.2, 0.2])
-    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1, fixedRotationAtFrame_a=true, fixedRotationAtFrame_b=true)
+                               r_rel_0 = [-0.2, -0.2, 0.2])
+    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1,
+                               fixedRotationAtFrame_a = true, fixedRotationAtFrame_b = true)
     spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
-        connect(world.frame_b, bar2.frame_a)
-        connect(bar1.frame_b, spring1.frame_a)
-        connect(bar2.frame_b, spring3.frame_a)
-        connect(spring2.frame_b, body1.frame_a)
-        connect(spring3.frame_b, spring1.frame_b)
-        connect(spring2.frame_a, spring1.frame_b)]
+       connect(world.frame_b, bar2.frame_a)
+       connect(bar1.frame_b, spring1.frame_a)
+       connect(bar2.frame_b, spring3.frame_a)
+       connect(spring2.frame_b, body1.frame_a)
+       connect(spring3.frame_b, spring1.frame_b)
+       connect(spring2.frame_a, spring1.frame_b)]
 
 @named model = ODESystem(eqs, t,
-                            systems = [
-                                world,
-                                body1,
-                                bar1,
-                                bar2,
-                                spring1,
-                                spring2,
-                                spring3,
-                            ])
+                         systems = [
+                             world,
+                             body1,
+                             bar1,
+                             bar2,
+                             spring1,
+                             spring2,
+                             spring3,
+                         ])
 ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
 # ssys = structural_simplify(model, allow_parameters = false)
 @test_skip begin # Impossible to provide initial condition for dummy variable, Yingbo
     prob = ODEProblem(ssys,
-                        [
-                        D.(collect(spring1.frame_b.r_0));
-                        ], (0, 10))
+                      [D.(collect(spring1.frame_b.r_0));], (0, 10))
 
     sol = solve(prob, Rodas4())
     @test SciMLBase.successful_retcode(sol)
@@ -441,7 +440,6 @@ ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
 end
 # TODO: add tutorial explaining what interesting things this demos illustrates
 # fixedRotationAtFrame_a and b = true required
-
 
 ## FreeBody
 #=
@@ -523,9 +521,8 @@ using OrdinaryDiffEq
     # ssys = structural_simplify(model, allow_parameters = false)
     prob = ODEProblem(ssys,
                       [collect(D.(body.body.phid)) .=> 1;
-                      collect(D.(body.body.phi)) .=> 1;
-                       collect(D.(D.(body.body.phi))) .=> 1;
-                       ], (0, 10))
+                       collect(D.(body.body.phi)) .=> 1;
+                       collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
 
     sol = solve(prob, Rodas4())
     @assert SciMLBase.successful_retcode(sol)
