@@ -2,6 +2,8 @@
 
 This tutorial mirrors that of the following Modelica tutorial [Spring damper system](https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem.html) and demonstrates that a body can be freely moving without any connection to a joint. In this case body coordinates are used as states by setting the option `isroot=true` to the body.
 
+![Spring-damper system](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringDamperSystem.png)
+
 ```@example spring_damper_system
 using Multibody
 using ModelingToolkit

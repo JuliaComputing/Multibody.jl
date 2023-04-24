@@ -1,5 +1,9 @@
 # Pendulum--The "Hello World of multi-body dynamics"
-This beginners tutorial will model a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world. To start, we load the required packages
+This beginners tutorial will model a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world.
+
+![Pendulum](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/Pendulum.png)
+
+To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
 using Multibody
@@ -86,6 +90,8 @@ This time we see that the pendulum loses energy and eventually comes to rest at 
 ## A linear pendulum?
 When we think of a pendulum, we typically think of a rotary pendulum that is rotating around a pivot point like in the examples above. 
 A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device. This time around, we make use of a [`Prismatic`](@ref) joint rather than a [`Revolute`](@ref) joint. A [prismatic joint](https://en.wikipedia.org/wiki/Prismatic_joint) has one positional degree of freedom, compared to the single rotational degree of freedom for the revolute joint.
+
+![Spring with mass](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringWithMass.png)
 
 ```@example pendulum
 @named damper = Translational.Damper(0.5)
