@@ -1,5 +1,62 @@
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as TP
 
+import ModelingToolkitStandardLibrary.Blocks
+
+function BasicTorque(; name, resolveInFrame = :world)
+    @named ptf = PartialTwoFrames()
+    @named torque = Blocks.RealInput(; nin = 3)
+    @unpack frame_a, frame_b = ptf
+    @variables begin
+        (r_0(t)[1:3] = zeros(3)),
+        [
+            description = "Position vector from origin of frame_a to origin of frame_b resolved in world frame",
+        ]
+        (t_b_0(t)[1:3] = zeros(3)), [
+            description = "frame_b.tau resolved in world frame"]
+    end
+    r_0, t_b_0 = collect.((r_0, t_b_0))
+
+    eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
+           collect(frame_a.f .~ zeros(3))
+           collect(frame_b.f .~ zeros(3))
+           # torque balance
+           zeros(3) .~ collect(frame_a.tau) + resolve2(frame_a, t_b_0)]
+
+    if resolveInFrame == :frame_a
+        append!(eqs,
+                [t_b_0 .~ -resolve1(frame_a, torque.u)
+                 collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
+    elseif resolveInFrame == :frame_b
+        append!(eqs,
+                [t_b_0 .~ -resolve1(frame_b, torque.u)
+                 collect(frame_b.tau) .~ collect(-torque.u)])
+    elseif resolveInFrame == :world
+        append!(eqs,
+                [t_b_0 .~ collect(-torque.u)
+                 collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
+    else
+        error("Unknown value of argument resolveInFrame")
+        append!(eqs, [t_b_0 .~ zeros(3)
+                      collect(frame_b.tau) .~ zeros(3)])
+    end
+
+    extend(ODESystem(eqs, t, name = name, systems = [torque]), ptf)
+end
+
+function Torque(; name, resolveInFrame = :world)
+    @named ptf = PartialTwoFrames()
+    @unpack frame_a, frame_b = ptf
+    @named begin
+        torque = Blocks.RealInput(; nin = 3)
+        basicTorque = BasicTorque(; resolveInFrame = resolveInFrame)
+    end
+
+    eqs = [connect(basicTorque.frame_a, frame_a)
+           connect(basicTorque.frame_b, frame_b)
+           connect(basicTorque.torque, torque)]
+    extend(ODESystem(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
+end
+
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
                        fixedRotationAtFrame_b = false, r_rel_0 = 0, s0 = 0)
     @named frame_a = Frame()

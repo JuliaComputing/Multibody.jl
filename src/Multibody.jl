@@ -34,13 +34,15 @@ include("frames.jl")
 
 include("interfaces.jl")
 
-export World, world, FixedTranslation, Body, BodyShape
+
+export World, world, Mounting1D, Fixed, FixedTranslation, Body, BodyShape
+
 include("components.jl")
 
 export Revolute, Prismatic
 include("joints.jl")
 
-export Spring, Damper
+export Spring, Damper, Torque
 include("forces.jl")
 
 end

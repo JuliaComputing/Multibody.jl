@@ -47,6 +47,40 @@ const world = World(; name = :world)
 "Compute the gravity acceleration, resolved in world frame"
 gravity_acceleration(r) = world.g * world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
+function Fixed(; name, r = [0, 0, 0])
+    systems = @named begin frame_b = Frame() end
+    @parameters begin r[1:3] = r,
+                               [
+                                   description = "Position vector from world frame to frame_b, resolved in world frame",
+                               ] end
+    eqs = [collect(frame_b.r_0 .~ r)
+           ori(frame_b) ~ nullRotation()]
+    compose(ODESystem(eqs, t; name), systems...)
+end
+
+function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
+    systems = @named begin
+        flange_b = Rotational.Flange()
+        frame_a = Frame()
+        housing_frame_a = Frame()
+    end
+    @parameters begin
+        phi0 = phi0, [
+                   description = "Fixed offset angle of housing"]
+        n[1:3] = n,
+                 [
+                     description = "Axis of rotation = axis of support torque (resolved in frame_a)",
+                 ]
+    end
+    @variables begin (housing_tau(t)[1:3] = 0), [
+                         description = "Torque",
+                     ] end
+    eqs = [collect(housing_tau) .~ collect(-n * flange_b.tau)
+           flange_b.phi .~ phi0
+           connect(housing_frame_a, frame_a)]
+    compose(ODESystem(eqs, t; name), systems...)
+end
+
 function FixedTranslation(; name, r)
     @named frame_a = Frame()
     @named frame_b = Frame()
