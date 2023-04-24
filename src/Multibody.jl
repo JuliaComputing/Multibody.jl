@@ -32,10 +32,10 @@ include("orientation.jl")
 export Frame
 include("frames.jl")
 
+export PartialTwoFrames
 include("interfaces.jl")
 
 export World, world, Mounting1D, Fixed, FixedTranslation, Body, BodyShape
-
 include("components.jl")
 
 export Revolute, Prismatic
