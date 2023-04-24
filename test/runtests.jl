@@ -518,11 +518,12 @@ using OrdinaryDiffEq
                                  spring1,
                                  spring2,
                              ])
-    ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+    ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
     # ssys = structural_simplify(model, allow_parameters = false)
     prob = ODEProblem(ssys,
-                      [collect(D.(body.body.phid)) .=> 0;
-                       # collect(D.(D.(body.body.phi))) .=> 0;
+                      [collect(D.(body.body.phid)) .=> 1;
+                      collect(D.(body.body.phi)) .=> 1;
+                       collect(D.(D.(body.body.phi))) .=> 1;
                        ], (0, 10))
 
     sol = solve(prob, Rodas4())
