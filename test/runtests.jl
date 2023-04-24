@@ -542,3 +542,58 @@ using OrdinaryDiffEq
 
     isinteractive() && plot(sol, idxs = [body.r_0...])
 end
+
+# ==============================================================================
+## Four-bar system from https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Loops.html#Modelica.Mechanics.MultiBody.Examples.Loops.Fourbar1
+# ==============================================================================
+
+@named begin
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, isroot = true)
+    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
+    b1 = BodyShape(r = [0, 0.5, 0.1])
+    b2 = BodyShape(r = [0, 0.2, 0])
+    b3 = BodyShape(r = [-1, 0.3, 0.1])
+    rev = Revolute(n = [0, 1, 0])
+    rev1 = Revolute()
+    j3 = Revolute(n = [1, 0, 0])
+    j4 = Revolute(n = [0, 1, 0])
+    j5 = Revolute(n = [0, 0, 1])
+    b0 = FixedTranslation(r = [1.2, 0, 0])
+end
+
+connections = [connect(j2.frame_b, b2.frame_a)
+               connect(j1.frame_b, b1.frame_a)
+               Multibody.connect_loop(rev.frame_a, b2.frame_b)
+               connect(rev.frame_b, rev1.frame_a)
+               connect(rev1.frame_b, b3.frame_a)
+               connect(world.frame_b, j1.frame_a)
+               connect(b1.frame_b, j3.frame_a)
+               connect(j3.frame_b, j4.frame_a)
+               connect(j4.frame_b, j5.frame_a)
+               connect(j5.frame_b, b3.frame_b)
+               connect(b0.frame_a, world.frame_b)
+               connect(b0.frame_b, j2.frame_a)]
+@named model = ODESystem(connections, t,
+                         systems = [
+                             world,
+                             j1,
+                             j2,
+                             b1,
+                             b2,
+                             b3,
+                             rev,
+                             rev1,
+                             j3,
+                             j4,
+                             j5,
+                             b0,
+                         ])
+# ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+@test_skip begin # Currentl no handling of kinematic loops
+    ssys = structural_simplify(model, allow_parameters = false)
+
+    prob = ODEProblem(ssys,
+                    [
+                        spring.r_rel_0,
+                    ], (0, 10))
+end
