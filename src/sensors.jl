@@ -38,7 +38,7 @@ Basic sensor to measure cut torque vector. Contains a connector of type `Blocks.
 
 - `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
 """
-function BasicCutTorque(; name, resolveInFrame = :frame_a)
+function CutTorque(; name, resolveInFrame = :frame_a)
     @named pcfbs = PartialCutForceBaseSensor(; resolveInFrame)
     @named torque = Blocks.RealOutput(nout = 3) # "Cut torque resolved in frame defined by resolveInFrame"
     @unpack frame_a, frame_b = pcfbs
@@ -59,7 +59,7 @@ Basic sensor to measure cut force vector. Contains a connector of type `Blocks.R
 
 - `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
 """
-function BasicCutForce(; name, resolveInFrame = :frame_a)
+function CutForce(; name, resolveInFrame = :frame_a)
     @named pcfbs = PartialCutForceBaseSensor(; resolveInFrame)
     @named force = Blocks.RealOutput(nout = 3) # "Cut force resolved in frame defined by resolveInFrame"
     @unpack frame_a, frame_b = pcfbs
@@ -73,27 +73,7 @@ function BasicCutForce(; name, resolveInFrame = :frame_a)
     extend(compose(ODESystem(eqs, t; name), force), pcfbs)
 end
 
-"""
-    CutTorque(; name, kwargs)
 
-The cut-torque acting between the two frames to which this model is connected, is determined and provided at the output signal connector `torque`.
-
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
-"""
-function CutTorque(; name, kwargs...)
-    extend(ODESystem([], t; name), BasicCutTorque(; name = :null_island, kwargs...))
-end
-
-"""
-    CutForce(; name, kwargs)
-
-The cut-force acting between the two frames to which this model is connected, is determined and provided at the output signal connector `force`.
-
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
-"""
-function CutForce(; name, kwargs...)
-    extend(ODESystem([], t; name), BasicCutForce(; name = :null_island, kwargs...))
-end
 
 function RelativePosition(; name, resolveInFrame = :frame_a)
     @named begin prs = PartialRelativeBaseSensor(; name) end
