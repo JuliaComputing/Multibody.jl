@@ -597,3 +597,106 @@ function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
                          connect(rollingWheel.frame_a, frame_a)]
     compose(ODESystem(equations, t, sts, pars; name), frame_a, rollingWheel, body)
 end
+
+"""
+    FreeMotion(; name, enforceStates = false, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
+
+Joint which does not constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as states.
+
+Note, that bodies such as [`Body`](@ref), [`BodyShape`](@ref), have potential states describing the distance and orientation, and their derivatives, between the world frame and a body fixed frame. Therefore, if these potential state variables are suited, a `FreeMotion` joint is not needed.
+
+The states of the FreeMotion object are:
+
+The relative position vector `r_rel_a` from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_a` and the relative velocity `v_rel_a` of the origin of `frame_b` with respect to the origin of `frame_a`, resolved in `frame_a (= der(r_rel_a))`.
+
+# Arguments
+
+- `enforceStates`: Enforce this joint having states, this is often desired.
+- `sequence`: Rotation sequence
+- `w_rel_a_fixed`: = true, if `w_rel_a_start` are used as initial values, else as guess values
+- `z_rel_a_fixed`: = true, if `z_rel_a_start` are used as initial values, else as guess values
+
+# Initial codition arguments:
+- `phi`
+- `phi_d`
+- `phi_dd`
+- `w_rel_b`
+- `r_rel_a`
+- `v_rel_a`
+- `a_rel_a`
+"""
+function FreeMotion(; name, enforceStates = false, sequence = [1, 2, 3], isroot = true,
+                    w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
+                    phi_d = 0,
+                    phi_dd = 0,
+                    w_rel_b = 0,
+                    r_rel_a = 0,
+                    v_rel_a = 0,
+                    a_rel_a = 0)
+    @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+    @variables begin
+        (phi(t)[1:3] = phi),
+        [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
+        (phi_d(t)[1:3] = phi_d), [state_priority = 10, description = "Derivatives of phi"]
+        (phi_dd(t)[1:3] = phi_dd),
+        [state_priority = 10, description = "Second derivatives of phi"]
+        (w_rel_b(t)[1:3] = w_rel_b),
+        [
+            state_priority = 10,
+            description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
+        ]
+        (r_rel_a(t)[1:3] = r_rel_a),
+        [
+            description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
+        ]
+        (v_rel_a(t)[1:3] = v_rel_a),
+        [
+            description = "= der(r_rel_a), i.e., velocity of origin of frame_b with respect to origin of frame_a, resolved in frame_a",
+        ]
+        (a_rel_a(t)[1:3] = a_rel_a), [description = "= der(v_rel_a)"]
+    end
+
+    @named R_rel = NumRotationMatrix()
+    @named R_rel_inv = NumRotationMatrix()
+
+    eqs = [
+           # Cut-forces and cut-torques are zero
+           frame_a.f .~ 0
+           frame_a.tau .~ 0
+           frame_b.f .~ 0
+           frame_b.tau .~ 0
+           D.(r_rel_a) .~ v_rel_a
+           D.(v_rel_a) .~ a_rel_a
+
+           # Kinematic relationships
+           frame_b.r_0 .~ frame_a.r_0 .+ resolve1(frame_a, r_rel_a)]
+
+    if enforceStates
+        if isroot
+            append!(eqs,
+                    ori(frame_b) ~ absoluteRotation(frame_a, R_rel))
+        else
+            append!(eqs,
+                    [R_rel_inv ~ inverseRotation(R_rel)
+                     ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv)])
+        end
+
+        append!(eqs,
+                [phi_d .~ D.(phi)
+                 phi_dd .~ D.(phi_d)
+                 R_rel ~ axesRotations(sequence, phi, phi_d)
+                 w_rel_b .~ angularVelocity2(R_rel)])
+
+    else
+        # Free motion joint does not have states
+        if w_rel_a_fixed || z_rel_a_fixed
+            append!(eqs,
+                    w_rel_b .~ angularVelocity2(frame_b) - resolve2(frame_b.
+                                        R, angularVelocity1(frame_a)))
+        end
+    end
+    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+end
