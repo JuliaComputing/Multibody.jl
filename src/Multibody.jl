@@ -35,7 +35,8 @@ include("frames.jl")
 export PartialTwoFrames
 include("interfaces.jl")
 
-export World, world, Mounting1D, Fixed, FixedTranslation, Body, BodyShape
+
+export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape
 include("components.jl")
 
 export Revolute, Prismatic

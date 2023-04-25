@@ -169,6 +169,7 @@ isinteractive() && plot(sol, idxs = collect(rev.phi))
 ## Simple pendulum with rod ====================================================
 # ==============================================================================
 
+
 world = Multibody.world
 @named rod = FixedTranslation(r = [0.5, 0, 0])
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
@@ -179,7 +180,7 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(damper.flange_b, rev.axis)
                connect(rev.support, damper.flange_a)
                connect(rev.frame_b, rod.frame_a)
-               connect(body.frame_a, rod.frame_b)]
+               connect(rod.frame_b, body.frame_a)]
 
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
 modele = ModelingToolkit.expand_connections(model)
@@ -197,6 +198,39 @@ sol2 = solve(prob, Rodas4())
 isinteractive() && plot(sol2, idxs = collect(rev.phi))
 
 @info "TODO: write a test that checks that this solution is identical to the one without rod above"
+
+# ==============================================================================
+## Simple pendulum with rod from absolute rotation ====================================================
+# ==============================================================================
+
+
+world = Multibody.world
+@named rod = FixedRotation(r=[0.5,0,0], n=[0,0,1], angle=0)
+@named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
+@named damper = Rotational.Damper(d = 0.1)
+@named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+
+connections = [connect(world.frame_b, rev.frame_a)
+               connect(damper.flange_b, rev.axis)
+               connect(rev.support, damper.flange_a)
+               connect(rev.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
+# modele = ModelingToolkit.expand_connections(model)
+
+@test_skip begin # ERROR: AssertionError: diff_to_var[nv] isa Int Yingbo
+    ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+
+    D = Differential(t)
+    prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
+                    (0, 100))
+    sol2 = solve(prob, Rodas4())
+    @test SciMLBase.successful_retcode(sol2)
+    @test minimum(sol2[rev.phi]) > -π
+    @test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
+    isinteractive() && plot(sol2, idxs = collect(rev.phi))
+end
 
 # ==============================================================================
 ## Double pendulum =============================================================
