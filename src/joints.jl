@@ -163,25 +163,26 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
 
     # torque balance
     eqs = [zeros(3) .~ collect(frame_a.tau)
-           zeros(3) .~ collect(frame_b.tau)]
+           zeros(3) .~ collect(frame_b.tau)
+           collect(frame_b.r_0) .~ collect(frame_a.r_0)]
 
     if enforceStates
         @variables begin
             (phi(t)[1:3] = zeros(3)),
-            [description = "3 angles to rotate frame_a into frame_b"]
-            (phi_d(t)[1:3] = zeros(3)), [description = "3 angle derivatives"]
-            (phi_dd(t)[1:3] = zeros(3)), [description = "3 angle second derivatives"]
+            [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
+            (phi_d(t)[1:3] = zeros(3)),
+            [state_priority = 10, description = "3 angle derivatives"]
+            (phi_dd(t)[1:3] = zeros(3)),
+            [state_priority = 10, description = "3 angle second derivatives"]
         end
         append!(eqs,
-                [collect(frame_b.r_0) .~ collect(frame_a.r_0);
-                 R_rel ~ axesRotations(sequence_angleStates, phi, phi_d)
+                [R_rel ~ axesRotations(sequence_angleStates, phi, phi_d)
                  collect(w_rel) .~ angularVelocity2(R_rel)
                  collect(phi_d .~ D.(phi))
                  collect(phi_dd .~ D.(phi_d))])
         if isroot
             append!(eqs,
-                    [R_rel_inv ~ nullRotation()
-                     ori(frame_b) ~ absoluteRotation(frame_a, R_rel)
+                    [ori(frame_b) ~ absoluteRotation(frame_a, R_rel)
                      zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
         else
             append!(eqs,
@@ -193,11 +194,9 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
     else
         # Spherical joint does not have states
         append!(eqs,
-                [collect(frame_b.r_0) .~ collect(frame_a.r_0);
-                 #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
-
-                 zeros(3) .~ collect(frame_a.f) +
-                             resolveRelative(frame_b.f, frame_b, frame_a)])
+                [#frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
+                    zeros(3) .~ collect(frame_a.f) +
+                                resolveRelative(frame_b.f, frame_b, frame_a)])
         if w_rel_a_fixed || z_rel_a_fixed
             append!(w_rel .~ angularVelocity2(frame_b) - resolve2(frame_b,
                                       angularVelocity1(frame_a)))
