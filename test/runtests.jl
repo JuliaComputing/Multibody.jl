@@ -593,9 +593,9 @@ D = Differential(t)
 world = Multibody.world
 
 @named begin
-    joint = Spherical()
+    joint = Spherical(enforceStates = true, isroot = true)
     bar = FixedTranslation(r = [0, -1, 0])
-    body = Body(; m = 1, isroot = true)
+    body = Body(; m = 1, isroot = false)
 end
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -606,15 +606,15 @@ connections = [connect(world.frame_b, joint.frame_a)
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
 
-@test_skip begin # Fails due to impossible to set initial condition
-    prob = ODEProblem(ssys,
-                      [collect((body.phi)) .=> [0.5, 0.5, 0.5];
-                       # collect(D.(D.(body.r_0))) .=> 0;
-                       collect(D.(body.phi)) .=> 0;
-                       collect(D.(body.phid)) .=> 0
-                       # collect(body.frame_a.w₃) .=> 0;
-                       ], (0, 10))
-
+prob = ODEProblem(ssys,
+                  [
+                   # collect((body.phi)) .=> [0.5, 0.5, 0.5];
+                   collect(D.(D.(joint.phi))) .=> 0;
+                   collect(D.(joint.phi)) .=> 0
+                   #    collect(D.(body.phid)) .=> 0
+                   # collect(body.frame_a.w₃) .=> 0;
+                   ], (0, 10))
+@test_skip begin # Codegen leaves symbolic variables in function, Yingbo
     sol = solve(prob, Rodas4())
     @assert SciMLBase.successful_retcode(sol)
 
@@ -637,7 +637,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, bar.frame_a)
                connect(bar.frame_b, body.frame_a)]
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
-ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+ssys = structural_simplify(IRSystem(model))
 
 @test_skip begin # NOTE: fails due to rotation matrix used as state
     prob = ODEProblem(ssys,
@@ -646,7 +646,7 @@ ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
                        joint.revolute_b.phi => 0;
                        D(joint.revolute_b.phi) => 0], (0, 10))
     sol = solve(prob, Rodas4())
-    @assert SciMLBase.successful_retcode(sol)
+    @test SciMLBase.successful_retcode(sol)
     plot(sol, idxs = [body.r_0...])
 end
 
