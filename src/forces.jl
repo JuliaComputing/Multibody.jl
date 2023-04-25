@@ -392,7 +392,6 @@ function Damper(; d, name, kwargs...)
     extend(ODESystem(eqs, t; name), plf)
 end
 
-
 """
     SpringDamperParallel(; name, c, d, s_unstretched)
 
@@ -413,10 +412,9 @@ function SpringDamperParallel(; name, c, d, s_unstretched)
         bounds = (0, Inf),
     ]
 
-    eqs = [
-        f_d ~ d*D(s)
-        f ~ c*(s - s_unstretched) + f_d
-        # lossPower ~ f_d*der(s)
-    ]
+    eqs = [f_d ~ d * D(s)
+           f ~ c * (s - s_unstretched) + f_d
+           # lossPower ~ f_d*der(s)
+           ]
     extend(ODESystem(eqs, t; name), plf)
 end
