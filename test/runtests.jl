@@ -785,3 +785,25 @@ defs = [
     ssys = structural_simplify(IRSystem(wheel))
     prob = ODEProblem(ssys, defs, (0, 10))
 end
+
+
+# ===============================================================================
+## Force and Torque ============================================================
+# ===============================================================================
+# unbalanced example
+# @named begin
+#     body = Body(isroot=true)
+#     spring = Spring(; c = 1)
+#     ft = ForceAndTorque()
+# end
+# eqs = [
+#     connect(world.frame_b, spring.frame_a)
+#     connect(spring.frame_b, ft.frame_a)
+#     connect(ft.frame_b, body.frame_a)
+#     collect(ft.force.u) .~ [1,2,3]
+#     collect(ft.torque.u) .~ [4,5,6]
+#     ]
+# @named model = ODESystem(eqs, t, systems = [world, body, ft, spring])
+# ssys = structural_simplify(IRSystem(model))
+# ssys = structural_simplify(model, allow_parameters=false)
+# prob = ODEProblem(model, [], (0, 10))

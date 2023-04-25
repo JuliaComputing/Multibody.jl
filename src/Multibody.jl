@@ -42,7 +42,7 @@ export Revolute, Prismatic, Spherical, Universal, GearConstraint, RollingWheelJo
        RollingWheel
 include("joints.jl")
 
-export Spring, Damper, Torque, Force
+export Spring, Damper, Torque, Force, ForceAndTorque
 include("forces.jl")
 
 export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce

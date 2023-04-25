@@ -128,6 +128,35 @@ function Force(; name, resolveInFrame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
 end
 
+"""
+    ForceAndTorque(; name, resolveInFrame = :frame_b)
+
+A component that combines [`Force`](@ref) and [`Torque`](@ref) into one component.
+
+# Connectors:
+- `frame_a`
+- `frame_b`
+- `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolveInFrame`.
+- `torque`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of torque resolved in frame defined by `resolveInFrame`.
+"""
+function ForceAndTorque(; name, resolveInFrame = :frame_b)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+
+        force = Blocks.RealInput(; nin = 3)
+        torque = Blocks.RealInput(; nin = 3)
+
+        f = Force(; resolveInFrame)
+        tau = Torque(; resolveInFrame)
+    end
+    eqs = [connect(force, f.force)
+           connect(torque, tau.torque)
+           connect(f.frame_a, tau.frame_a, frame_a)
+           connect(f.frame_b, tau.frame_b, frame_b)]
+    compose(ODESystem(eqs, t; name), systems...)
+end
+
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
                        fixedRotationAtFrame_b = false, r_rel_0 = 0, s0 = 0)
     @named frame_a = Frame()
