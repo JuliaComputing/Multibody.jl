@@ -484,7 +484,7 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
                  # frame_a.R is computed from generalized coordinates
                  collect(frame_a.r_0) .~ [x, y, z]
                  collect(der_angles) .~ D.(angles)
-                 ori(frame_a) ~ axesRotations(angles, der_angles, [3, 2, 1])
+                 ori(frame_a) ~ axesRotations([3, 2, 1], angles, der_angles)
 
                  # Road description
                  collect(r_road_0) .~ [s, w, 0]

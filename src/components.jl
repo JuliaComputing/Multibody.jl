@@ -152,7 +152,7 @@ function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = 
                                                                 fa)]
     else
         R_rel_inv = planar_rotation(n, -angle, 0)
-        eqs = [ori(frame_a) ~ abs_rotation(frame_b, R_rel_inv);
+        eqs = [ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv);
                zeros(3) .~ fb + resolve1(R_rel_inv, fa);
                zeros(3) .~ taub + resolve1(R_rel_inv, taua) +
                            cross(resolve1(R_rel_inv, r), fb)]

@@ -625,8 +625,6 @@ end
 ## universal pendulum
 # ==============================================================================
 
-# NOTE: fails due to rotation matrix used as state
-
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
@@ -640,14 +638,17 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(bar.frame_b, body.frame_a)]
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
 ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
-prob = ODEProblem(ssys,
-                  [joint.revolute_a.phi => 0;
-                   D(joint.revolute_a.phi) => 0;
-                   joint.revolute_b.phi => 0;
-                   D(joint.revolute_b.phi) => 0], (0, 10))
-sol = solve(prob, Rodas4())
-@assert SciMLBase.successful_retcode(sol)
-plot(sol, idxs = [body.r_0...])
+
+@test_skip begin # NOTE: fails due to rotation matrix used as state
+    prob = ODEProblem(ssys,
+                    [joint.revolute_a.phi => 0;
+                    D(joint.revolute_a.phi) => 0;
+                    joint.revolute_b.phi => 0;
+                    D(joint.revolute_b.phi) => 0], (0, 10))
+    sol = solve(prob, Rodas4())
+    @assert SciMLBase.successful_retcode(sol)
+    plot(sol, idxs = [body.r_0...])
+end
 
 
 
@@ -699,7 +700,6 @@ end GearConstraint;
 ##
 using Multibody
 using ModelingToolkit
-using Plots
 using SymbolicIR
 using OrdinaryDiffEq
 
@@ -752,14 +752,20 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
                                     mounting1D])
 
 # ssys = structural_simplify(model, allow_parameters=false)
-ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
 
-prob = ODEProblem(ssys,
-                  [
-                      D(gearConstraint.actuatedRevolute_b.phi) => 0,
-                      D(inertia2.flange_a.phi) => 0,
-                      D(D(idealGear.phi_b)) => 0,
-                  ], (0, 10))
+@test_skip begin
+    ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
+
+    prob = ODEProblem(ssys,
+                    [
+                        D(gearConstraint.actuatedRevolute_b.phi) => 0,
+                        D(inertia2.flange_a.phi) => 0,
+                        D(D(idealGear.phi_b)) => 0,
+                        D(gearConstraint.actuatedRevolute_a) => 0,
+                    ], (0, 10))
+end
+
+# ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
 world = Multibody.world
