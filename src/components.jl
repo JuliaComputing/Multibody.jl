@@ -133,7 +133,7 @@ function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = 
     # @parameters n_y(t)=n_y [
     #     description = "Vector along y-axis of frame_b resolved in frame_a",
     # ]
-    @variables angle(t)=angle [
+    @parameters angle(t)=angle [
         description = "angle of rotation in radians",
     ]
     fa = frame_a.f |> collect

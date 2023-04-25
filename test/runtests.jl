@@ -215,14 +215,15 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
-# modele = ModelingToolkit.expand_connections(model)
+modele = ModelingToolkit.expand_connections(model)
 
-@test_skip begin # ERROR: AssertionError: diff_to_var[nv] isa Int Yingbo
-    ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+ssys = structural_simplify(model, allow_parameter = false)
+# ssys = structural_simplify(IRSystem(modele)) # Yingbo, this fails with SymbolicIR but not with MTK
 
-    D = Differential(t)
+D = Differential(t)
+@test_skip begin # Needs default dummy der
     prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                      (0, 100))
+                      (0, 100), default_dummy_der = 0)
     sol2 = solve(prob, Rodas4())
     @test SciMLBase.successful_retcode(sol2)
     @test minimum(sol2[rev.phi]) > -π
@@ -472,13 +473,15 @@ eqs = [connect(world.frame_b, bar1.frame_a)
                              spring2,
                              spring3,
                          ])
-ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
+ssys = structural_simplify(IRSystem(model))
 # ssys = structural_simplify(model, allow_parameters = false)
-@test_skip begin # Impossible to provide initial condition for dummy variable, Yingbo
-    prob = ODEProblem(ssys,
-                      [D.(collect(spring1.frame_b.r_0));], (0, 10))
+prob = ODEProblem(ssys,
+                  [D.(collect(spring1.frame_b.r_0)) .=> 0;
+                   D.(collect(spring3.frame_b.r_0)) .=> 0], (0, 10))
 
-    sol = solve(prob, Rodas4())
+@test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
+    # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
+    sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.())
     @test SciMLBase.successful_retcode(sol)
 
     isinteractive() && plot(sol, idxs = [body1.r_0...])
@@ -535,41 +538,42 @@ using ModelingToolkit
 using SymbolicIR
 using OrdinaryDiffEq
 
-@test_skip begin # Fails with matrix contains Infs or NaNs during solve, Yingbo
-    t = Multibody.t
-    D = Differential(t)
-    world = Multibody.world
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
 
-    @named begin
-        body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                         r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true)
-        bar2 = FixedTranslation(r = [0.8, 0, 0])
-        spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
-        spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
-    end
+@named begin
+    body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
+                     r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true)
+    bar2 = FixedTranslation(r = [0.8, 0, 0])
+    spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
+    spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
+end
 
-    eqs = [connect(bar2.frame_a, world.frame_b)
-           connect(spring1.frame_b, body.frame_a)
-           connect(bar2.frame_b, spring2.frame_a)
-           connect(spring1.frame_a, world.frame_b)
-           connect(body.frame_b, spring2.frame_b)]
+eqs = [connect(bar2.frame_a, world.frame_b)
+       connect(spring1.frame_b, body.frame_a)
+       connect(bar2.frame_b, spring2.frame_a)
+       connect(spring1.frame_a, world.frame_b)
+       connect(body.frame_b, spring2.frame_b)]
 
-    @named model = ODESystem(eqs, t,
-                             systems = [
-                                 world,
-                                 body,
-                                 bar2,
-                                 spring1,
-                                 spring2,
-                             ])
-    ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
-    # ssys = structural_simplify(model, allow_parameters = false)
-    prob = ODEProblem(ssys,
-                      [collect(D.(body.body.phid)) .=> 1;
-                       collect(D.(body.body.phi)) .=> 1;
-                       collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
+@named model = ODESystem(eqs, t,
+                         systems = [
+                             world,
+                             body,
+                             bar2,
+                             spring1,
+                             spring2,
+                         ])
+ssys = structural_simplify(IRSystem(model), alias_eliminate = true)
+# ssys = structural_simplify(model, allow_parameters = false)
+prob = ODEProblem(ssys,
+                  [collect(D.(body.body.phid)) .=> 1;
+                   collect(D.(body.body.phi)) .=> 1;
+                   collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
 
-    sol = solve(prob, Rodas4())
+@test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
+    # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
+    sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.())
     @assert SciMLBase.successful_retcode(sol)
 
     isinteractive() && plot(sol, idxs = [body.r_0...])
@@ -584,25 +588,25 @@ using Plots
 using SymbolicIR
 using OrdinaryDiffEq
 
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
+
+@named begin
+    joint = Spherical()
+    bar = FixedTranslation(r = [0, -1, 0])
+    body = Body(; m = 1, isroot = true)
+end
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, bar.frame_a)
+               connect(bar.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+# ssys = structural_simplify(model, allow_parameters = false)
+ssys = structural_simplify(IRSystem(model))
+
 @test_skip begin # Fails due to impossible to set initial condition
-    t = Multibody.t
-    D = Differential(t)
-    world = Multibody.world
-
-    @named begin
-        joint = Spherical()
-        bar = FixedTranslation(r = [0, -1, 0])
-        body = Body(; m = 1, isroot = true)
-    end
-
-    connections = [connect(world.frame_b, joint.frame_a)
-                   connect(joint.frame_b, bar.frame_a)
-                   connect(bar.frame_b, body.frame_a)]
-
-    @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
-    # ssys = structural_simplify(model, allow_parameters = false)
-    ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
-
     prob = ODEProblem(ssys,
                       [collect((body.phi)) .=> [0.5, 0.5, 0.5];
                        # collect(D.(D.(body.r_0))) .=> 0;
@@ -775,7 +779,9 @@ defs = [
     collect(D.(cwheel.rollingWheel.angles)) => [0, 5, 1], # TODO: redundant since der_angles specified above, Yingbo
 ]
 
-ssys = structural_simplify(IRSystem(wheel), alias_eliminate = false)
+# ssys = structural_simplify(model, allow_parameters=false)
 
-@test_skip begin # ERROR: AssertionError: ex isa Number Yingbo
-prob = ODEProblem(ssys, defs, (0, 10)) end
+@test_skip begin # ERROR: AssertionError: ex isa Number Yingbo. MTK simplification works
+    ssys = structural_simplify(IRSystem(wheel))
+    prob = ODEProblem(ssys, defs, (0, 10))
+end
