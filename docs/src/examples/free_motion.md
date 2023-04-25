@@ -35,12 +35,12 @@ sol = solve(prob, Rodas4())
 plot(sol, idxs = body.r_0[2], title="Free falling body")
 
 # Plot analytical solution
-tvec = sol.t
-plot(-9.81/2 .* tvec .^ 2, lab="Analytical solution")
+tvec = 0:0.1:sol.t[end]
+plot!(tvec, -9.81/2 .* tvec .^ 2, lab="Analytical solution")
 ```
 
 The figure indicates that the body is falling freely, experiencing a constant acceleration of -9.81 m/s² in the ``y`` direction, corresponding to the gravity parameters of the `world`:
 ```@example FREE_MOTION
-show(stdout, MIME"text/plain"(), world)
+show(stdout, MIME"text/plain"(), world) # hide
 nothing # hide
 ```
