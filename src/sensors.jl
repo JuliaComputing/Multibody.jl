@@ -73,8 +73,6 @@ function CutForce(; name, resolveInFrame = :frame_a)
     extend(compose(ODESystem(eqs, t; name), force), pcfbs)
 end
 
-
-
 function RelativePosition(; name, resolveInFrame = :frame_a)
     @named begin prs = PartialRelativeBaseSensor(; name) end
 
@@ -86,20 +84,18 @@ function RelativePosition(; name, resolveInFrame = :frame_a)
     extend(compose(ODESystem(equations, t; name), frame_a, frame_b), prs)
 end
 
-function RelativeAngles(; name, sequence = [1,2,3])
+function RelativeAngles(; name, sequence = [1, 2, 3])
     @named begin
         frame_a = Frame()
         frame_b = Frame()
         angles = Blocks.RealOutput(nout = 3)
     end
     @named R_rel = NumRotationMatrix()
-    eqs = [
-        frame_a.f .~ zeros(3) |> collect
-        frame_a.tau .~ zeros(3) |> collect
-        frame_b.f .~ zeros(3) |> collect
-        frame_b.tau .~ zeros(3) |> collect
-        R_rel ~ relativeRotation(frame_a, frame_b)
-        angles .~ axesRotationsAngles(R_rel, sequence, guessAngle1)
-    ]
+    eqs = [frame_a.f .~ zeros(3) |> collect
+           frame_a.tau .~ zeros(3) |> collect
+           frame_b.f .~ zeros(3) |> collect
+           frame_b.tau .~ zeros(3) |> collect
+           R_rel ~ relativeRotation(frame_a, frame_b)
+           angles .~ axesRotationsAngles(R_rel, sequence, guessAngle1)]
     compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
 end

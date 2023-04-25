@@ -169,7 +169,6 @@ isinteractive() && plot(sol, idxs = collect(rev.phi))
 ## Simple pendulum with rod ====================================================
 # ==============================================================================
 
-
 world = Multibody.world
 @named rod = FixedTranslation(r = [0.5, 0, 0])
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
@@ -203,9 +202,8 @@ isinteractive() && plot(sol2, idxs = collect(rev.phi))
 ## Simple pendulum with rod from absolute rotation ====================================================
 # ==============================================================================
 
-
 world = Multibody.world
-@named rod = FixedRotation(r=[0.5,0,0], n=[0,0,1], angle=0)
+@named rod = FixedRotation(r = [0.5, 0, 0], n = [0, 0, 1], angle = 0)
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Rotational.Damper(d = 0.1)
 @named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
@@ -224,7 +222,7 @@ connections = [connect(world.frame_b, rev.frame_a)
 
     D = Differential(t)
     prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                    (0, 100))
+                      (0, 100))
     sol2 = solve(prob, Rodas4())
     @test SciMLBase.successful_retcode(sol2)
     @test minimum(sol2[rev.phi]) > -π
@@ -577,8 +575,6 @@ using OrdinaryDiffEq
     isinteractive() && plot(sol, idxs = [body.r_0...])
 end
 
-
-
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
 # ==============================================================================
@@ -641,16 +637,14 @@ ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
 
 @test_skip begin # NOTE: fails due to rotation matrix used as state
     prob = ODEProblem(ssys,
-                    [joint.revolute_a.phi => 0;
-                    D(joint.revolute_a.phi) => 0;
-                    joint.revolute_b.phi => 0;
-                    D(joint.revolute_b.phi) => 0], (0, 10))
+                      [joint.revolute_a.phi => 0;
+                       D(joint.revolute_a.phi) => 0;
+                       joint.revolute_b.phi => 0;
+                       D(joint.revolute_b.phi) => 0], (0, 10))
     sol = solve(prob, Rodas4())
     @assert SciMLBase.successful_retcode(sol)
     plot(sol, idxs = [body.r_0...])
 end
-
-
 
 # ==============================================================================
 ## GearConstraint ===================================================
@@ -757,12 +751,12 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
     ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
 
     prob = ODEProblem(ssys,
-                    [
-                        D(gearConstraint.actuatedRevolute_b.phi) => 0,
-                        D(inertia2.flange_a.phi) => 0,
-                        D(D(idealGear.phi_b)) => 0,
-                        D(gearConstraint.actuatedRevolute_a) => 0,
-                    ], (0, 10))
+                      [
+                          D(gearConstraint.actuatedRevolute_b.phi) => 0,
+                          D(inertia2.flange_a.phi) => 0,
+                          D(D(idealGear.phi_b)) => 0,
+                          D(gearConstraint.actuatedRevolute_a) => 0,
+                      ], (0, 10))
 end
 
 # ==============================================================================

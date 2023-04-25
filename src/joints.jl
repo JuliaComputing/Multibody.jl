@@ -365,7 +365,6 @@ function GearConstraint(; name, ratio, checkTotalPower = false, n_a = [1, 0, 0],
     end
 
     extend(ODESystem(eqs, t; name, systems), ptf)
-
 end
 
 """

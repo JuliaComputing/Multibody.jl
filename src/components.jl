@@ -105,7 +105,6 @@ function FixedTranslation(; name, r)
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
-
 """
     FixedRotation(; name, r, n, sequence, isroot = false, angle, n_x, n_y)
 
@@ -117,7 +116,8 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 - `sequence`: DESCRIPTION
 - `angle`: Angle of rotation around `n`, given in radians
 """
-function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false, angle, n_x=[1,0,0], n_y = [0,1,0])
+function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
+                       angle, n_x = [1, 0, 0], n_y = [0, 1, 0])
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -141,9 +141,8 @@ function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = 
     taua = frame_a.tau |> collect
     taub = frame_b.tau |> collect
 
-    
     # Relationships between quantities of frame_a and frame_b 
-    
+
     if isroot
         R_rel = planar_rotation(n, angle, 0)
         eqs = [ori(frame_b) ~ absoluteRotation(frame_a, R_rel);
