@@ -70,3 +70,6 @@ plot(
 ```
 
 This example has two parallel spring-mass parts, the first body (`body1`) is attached directly to the spring, with no joint in parallel with the spring. In this situation, we have to set `isroot=true` for `body1` to indicate that we want to use the body variables as state. The second body (`body2`) is attached to the spring with a joint in parallel with the spring, so we can use the joint variables as state, hence `isroot=false` for `body2`.
+
+
+In this example we used separate springs and dampers, see also the component [`SpringDamperParallel`](@ref) which combines the two in one component.
