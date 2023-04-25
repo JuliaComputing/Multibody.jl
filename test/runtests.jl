@@ -584,7 +584,7 @@ end
 # ==============================================================================
 using Multibody
 using ModelingToolkit
-using Plots
+# using Plots
 using SymbolicIR
 using OrdinaryDiffEq
 
@@ -618,7 +618,7 @@ prob = ODEProblem(ssys,
     sol = solve(prob, Rodas4())
     @assert SciMLBase.successful_retcode(sol)
 
-    plot(sol, idxs = [body.r_0...])
+    isinteractive() && plot(sol, idxs = [body.r_0...])
 end
 
 # ==============================================================================
