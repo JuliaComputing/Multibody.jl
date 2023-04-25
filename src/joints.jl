@@ -599,7 +599,7 @@ function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
 end
 
 """
-    FreeMotion(; name, enforceStates = false, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
+    FreeMotion(; name, enforceStates = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
 
 Joint which does not constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as states.
 
@@ -611,7 +611,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 
 # Arguments
 
-- `enforceStates`: Enforce this joint having states, this is often desired.
+- `enforceStates`: Enforce this joint having states, this is often desired and is the default choice.
 - `sequence`: Rotation sequence
 - `w_rel_a_fixed`: = true, if `w_rel_a_start` are used as initial values, else as guess values
 - `z_rel_a_fixed`: = true, if `z_rel_a_start` are used as initial values, else as guess values
@@ -625,7 +625,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `v_rel_a`
 - `a_rel_a`
 """
-function FreeMotion(; name, enforceStates = false, sequence = [1, 2, 3], isroot = true,
+function FreeMotion(; name, enforceStates = true, sequence = [1, 2, 3], isroot = true,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
                     phi_d = 0,
                     phi_dd = 0,
