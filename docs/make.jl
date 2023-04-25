@@ -14,11 +14,13 @@ makedocs(;
          pages = [
              "Home" => "index.md",
              "Tutorials" => [
-                 "Hello world: Pendulum" => "examples/pendulum.md",
+                 "Getting started: Pendulum" => "examples/pendulum.md",
              ],
              "Examples" => [
                  "Spring-damper system" => "examples/spring_damper_system.md",
                  "Spring-mass system" => "examples/spring_mass_system.md",
+                 "Three springs (series forces)" => "examples/three_springs.md",
+                 "Sensors" => "examples/sensors.md",
              ],
          ])
 

@@ -26,21 +26,26 @@ function at_variables_t(args...; default = nothing)
     xs
 end
 
-export Orientation, RotationMatrix
+export Orientation, RotationMatrix, ori
 include("orientation.jl")
 
 export Frame
 include("frames.jl")
 
+export PartialTwoFrames
 include("interfaces.jl")
 
-export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body
+
+export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape
 include("components.jl")
 
 export Revolute, Prismatic
 include("joints.jl")
 
-export Spring, Damper, Torque
+export Spring, Damper, Torque, Force
 include("forces.jl")
+
+export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce
+include("sensors.jl")
 
 end
