@@ -22,6 +22,9 @@ In this documentation, you will find everything you need to get started with Mul
 - Multibody.jl occasionally requires the user to specify which component should act as the root of the kinematic tree. This only occurs when bodies are connected directly to force components without a joint parallel to the force component.
 - In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using he function [`ori`](@ref).
 
+
+
+## Index
 ```@index
 ```
 
