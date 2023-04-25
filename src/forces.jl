@@ -155,14 +155,14 @@ function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame
 
     if fixedRotationAtFrame_a
         # TODO: frame_a.R should be rooted here
-        eqs = [eqs; vec(ori(frame_a).R .~ nullrotation().R)]
+        eqs = [eqs; vec(ori(frame_a).R .~ nullRotation().R)]
     else
         eqs = [eqs; frame_a.tau .~ 0]
     end
 
     if fixedRotationAtFrame_b
         # TODO: frame_b.R should be rooted here
-        eqs = [eqs; vec(ori(frame_b).R .~ nullrotation().R)]
+        eqs = [eqs; vec(ori(frame_b).R .~ nullRotation().R)]
     else
         eqs = [eqs; frame_b.tau .~ 0]
     end
