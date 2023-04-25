@@ -23,6 +23,7 @@ makedocs(;
                  "Sensors" => "examples/sensors.md",
                  "Spherical pendulum" => "examples/spherical_pendulum.md",
                  "Gearbox" => "examples/gearbox.md",
+                 "Free motions" => "examples/free_motion.md",
              ],
          ])
 

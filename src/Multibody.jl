@@ -12,6 +12,23 @@ const t = let
 end
 const D = Differential(t)
 
+# Please please please Symbolic arrays, go away
+function Base.broadcasted(::typeof(~), lhs::Symbolics.Arr{Num, 1}, rhs)
+    collect(lhs) .~ collect(rhs)
+end
+function Base.broadcasted(::typeof(~), lhs, rhs::Symbolics.Arr{Num, 1})
+    collect(lhs) .~ collect(rhs)
+end
+
+function Base.broadcasted(::typeof(~), lhs::Symbolics.Arr{Num, 1},
+                          rhs::Symbolics.Arr{Num, 1})
+    collect(lhs) .~ collect(rhs)
+end
+
+function Base.broadcasted(D::Differential, x::Symbolics.Arr{Num, 1})
+    collect([D(x) for x in x])
+end
+
 """
     at_variables_t(args)
 
@@ -39,7 +56,7 @@ export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, B
 include("components.jl")
 
 export Revolute, Prismatic, Spherical, Universal, GearConstraint, RollingWheelJoint,
-       RollingWheel
+       RollingWheel, FreeMotion
 include("joints.jl")
 
 export Spring, Damper, Torque, Force
