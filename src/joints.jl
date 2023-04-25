@@ -207,6 +207,8 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
     end
 
     extend(ODESystem(eqs, t; name), ptf)
+end
+
 function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0])
     @named begin
         ptf = PartialTwoFrames()
@@ -266,4 +268,101 @@ function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0])
            connect(revolute_b.frame_b, frame_b)
            connect(revolute_a.frame_b, revolute_b.frame_a)]
     extend(ODESystem(eqs, t; name, systems = [revolute_a, revolute_b]), ptf)
+end
+
+"""
+    GearConstraint(; name, ratio, checkTotalPower = false, n_a, n_b, r_a, r_b)
+
+This ideal massless joint provides a gear constraint between frames `frame_a` and `frame_b`. The axes of rotation of `frame_a` and `frame_b` may be arbitrary.
+
+- `ratio`: Gear ratio
+- `n_a`: Axis of rotation of `frame_a`
+- `n_b`: Axis of rotation of `frame_b`
+- `r_a`: Vector from frame `bearing` to `frame_a` resolved in bearing
+- `r_b`: Vector from frame `bearing` to `frame_b` resolved in bearing
+"""
+function GearConstraint(; name, ratio, checkTotalPower = false, n_a = [1, 0, 0],
+                        n_b = [1, 0, 0], r_a = [0, 0, 0], r_b = [0, 0, 0])
+    @named ptf = PartialTwoFrames()
+    systems = @named begin
+        bearing = Frame() #"Coordinate system fixed in the bearing"
+
+        actuatedRevolute_a = Revolute(useAxisFlange = true,
+                                      n = n_a)
+        actuatedRevolute_b = Revolute(useAxisFlange = true,
+                                      n = n_b)
+
+        idealGear = Rotational.IdealGear(ratio = ratio)
+        fixedTranslation1 = FixedTranslation(r = r_b)
+        fixedTranslation2 = FixedTranslation(r = r_a)
+    end
+    @unpack frame_a, frame_b = ptf
+
+    @parameters begin
+        ratio = ratio, [description = "Gear speed ratio"]
+
+        n_a = n_a,
+              [
+                  description = "Axis of rotation of shaft a (same coordinates in frame_a, frame_b, bearing)",
+              ]
+        n_b = n_b,
+              [
+                  description = "Axis of rotation of shaft b (same coordinates in frame_a, frame_b, bearing)",
+              ]
+
+        r_a[1:3] = r_a,
+                   [
+                       description = "Vector from frame bearing to frame_a resolved in bearing",
+                   ]
+        r_b[1:3] = r_b,
+                   [
+                       description = "Vector from frame bearing to frame_b resolved in bearing",
+                   ]
+    end
+
+    @variables begin
+        (phi_b(t) = 0),
+        [
+            state_priority = 10,
+            description = "Relative rotation angle of revolute joint at frame_b",
+        ]
+
+        (w_b(t) = 0),
+        [
+            state_priority = 10,
+            description = "Relative angular velocity of revolute joint at frame_b",
+        ]
+        (a_b(t) = 0),
+        [
+            state_priority = 10,
+            description = "Relative angular acceleration of revolute joint at frame_b",
+        ]
+
+        (totalPower(t) = 0), [description = "Total power flowing into this element"]
+    end
+
+    eqs = [phi_b ~ actuatedRevolute_b.phi
+           w_b ~ D(phi_b)
+           a_b ~ D(w_b)
+           connect(actuatedRevolute_a.axis, idealGear.flange_a)
+           connect(idealGear.flange_b, actuatedRevolute_b.axis)
+           connect(actuatedRevolute_a.frame_a, fixedTranslation2.frame_b)
+           connect(fixedTranslation2.frame_a, bearing)
+           connect(fixedTranslation1.frame_a, bearing)
+           connect(fixedTranslation1.frame_b, actuatedRevolute_b.frame_a)
+           connect(frame_a, actuatedRevolute_a.frame_b)
+           connect(actuatedRevolute_b.frame_b, frame_b)]
+
+    # Measure power for test purposes
+    if checkTotalPower
+        push!(eqs,
+              totalPower ~ frame_a.f'resolve2(frame_a, D.(frame_a.r_0)) +
+                           frame_b.f'resolve2(frame_b, D.(frame_b.r_0)) +
+                           bearing.f'resolve2(bearing, D.(bearing.r_0)) +
+                           frame_a.tau'angularVelocity2(frame_a) +
+                           frame_b.tau'angularVelocity2(frame_b) +
+                           bearing.tau'angularVelocity2(bearing))
+    end
+
+    extend(ODESystem(eqs, t; name, systems), ptf)
 end

@@ -22,6 +22,7 @@ makedocs(;
                  "Three springs (series forces)" => "examples/three_springs.md",
                  "Sensors" => "examples/sensors.md",
                  "Spherical pendulum" => "examples/spherical_pendulum.md",
+                 "Gearbox" => "examples/gearbox.md",
              ],
          ])
 

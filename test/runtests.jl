@@ -648,3 +648,115 @@ prob = ODEProblem(ssys,
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 plot(sol, idxs = [body.r_0...])
+
+
+
+# ==============================================================================
+## GearConstraint ===================================================
+# ==============================================================================
+# https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Rotational3DEffects.GearConstraint.html
+
+#=
+model GearConstraint
+   extends Modelica.Icons.Example;
+  Joints.GearConstraint gearConstraint(                             ratio=10);
+  inner World world(                             driveTrainMechanics3D=true,
+      g=0);
+  Parts.BodyCylinder cyl1(
+    diameter=0.1,
+    color={0,128,0},
+    r={0.4,0,0});
+  Parts.BodyCylinder cyl2(                             r={0.4,0,0}, diameter=
+        0.2);
+  Forces.Torque torque1;
+  Blocks.Sources.Sine sine[         3](amplitude={2,0,0}, freqHz={1,1,1});
+  Parts.Fixed fixed;
+  Rotational.Components.Inertia inertia1(
+      J=cyl1.I[1, 1],
+    a(fixed=false),
+    phi(fixed=true),
+    w(fixed=true));
+  Rotational.Components.IdealGear idealGear(        ratio=10, useSupport=true);
+  Rotational.Components.Inertia inertia2(        J=cyl2.I[1, 1]);
+  Rotational.Sources.Torque torque2(useSupport=true);
+  Parts.Mounting1D mounting1D;
+equation 
+  connect(world.frame_b,gearConstraint. bearing);
+  connect(cyl1.frame_b,gearConstraint. frame_a);
+  connect(gearConstraint.frame_b,cyl2. frame_a);
+  connect(torque1.frame_b,cyl1. frame_a);
+  connect(torque1.frame_a,world. frame_b);
+  connect(sine.y,torque1. torque);
+  connect(inertia1.flange_b,idealGear. flange_a);
+  connect(idealGear.flange_b,inertia2. flange_a);
+  connect(torque2.flange,inertia1.   flange_a);
+  connect(sine[1].y,torque2. tau);
+  connect(mounting1D.flange_b,idealGear.support);
+  connect(mounting1D.flange_b,torque2.support);
+  connect(fixed.frame_b,mounting1D. frame_a);
+end GearConstraint;
+=#
+##
+using Multibody
+using ModelingToolkit
+using Plots
+using SymbolicIR
+using OrdinaryDiffEq
+
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
+
+@named begin
+    gearConstraint = GearConstraint(; ratio = 10)
+    cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
+    cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
+    torque1 = Torque(resolveInFrame = :frame_b)
+    # sine[1:3] = Blocks.Sine(frequency = 1)
+    fixed = Fixed() # TODO: implement
+    inertia1 = Rotational.Inertia(J = cyl1.I_11)
+    idealGear = Rotational.IdealGear(ratio = 10, use_support = true)
+    inertia2 = Rotational.Inertia(J = cyl2.I_11)
+    torque2 = Rotational.Torque(use_support = true)
+    mounting1D = Mounting1D()
+end
+
+eqs = [connect(world.frame_b, gearConstraint.bearing)
+       connect(cyl1.frame_a, gearConstraint.frame_a)
+       connect(gearConstraint.frame_b, cyl2.frame_a)
+       connect(torque1.frame_b, cyl1.frame_a)
+       connect(torque1.frame_a, world.frame_b)
+       # connect(sine.output, torque1.torque)
+       torque1.torque.u .~ [2sin(t), 0, 0]
+       connect(inertia1.flange_b, idealGear.flange_a)
+       connect(idealGear.flange_b, inertia2.flange_a)
+       connect(torque2.flange, inertia1.flange_a)
+       # connect(sine.output, torque2.tau)
+       torque2.tau.u ~ 2sin(t)
+       connect(mounting1D.flange_b, idealGear.support)
+       connect(mounting1D.flange_b, torque2.support)
+       connect(fixed.frame_b, mounting1D.frame_a)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [world;
+                                    gearConstraint;
+                                    cyl1;
+                                    cyl2;
+                                    torque1;
+                                    # sine;
+                                    fixed;
+                                    inertia1;
+                                    idealGear;
+                                    inertia2;
+                                    torque2;
+                                    mounting1D])
+
+# ssys = structural_simplify(model, allow_parameters=false)
+ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+
+prob = ODEProblem(ssys,
+                  [
+                      D(gearConstraint.actuatedRevolute_b.phi) => 0,
+                      D(inertia2.flange_a.phi) => 0,
+                      D(D(idealGear.phi_b)) => 0,
+                  ], (0, 10))
