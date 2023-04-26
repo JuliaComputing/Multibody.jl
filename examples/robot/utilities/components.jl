@@ -4,24 +4,22 @@ import ModelingToolkitStandardLibrary.Blocks
 using ModelingToolkitStandardLibrary.Electrical
 t = Multibody.t
 
-
 function AxisControlBus(; name)
     vars = @variables begin
-        (motion_ref(t)=0), [description="= true, if reference motion is not in rest"]
-        (angle_ref(t)=0), [description="Reference angle of axis flange"]
-        (angle(t)=0), [description="Angle of axis flange"]
-        (speed_ref(t)=0), [description="Reference speed of axis flange"]
-        (speed(t)=0), [description="Speed of axis flange"]
-        (acceleration_ref(t)=0), [description="Reference acceleration of axis flange"]
-        (acceleration(t)=0), [description="Acceleration of axis flange"]
-        (current_ref(t)=0), [description="Reference current of motor"]
-        (current(t)=0), [description="Current of motor"]
-        (motorAngle(t)=0), [description="Angle of motor flange"]
-        (motorSpeed(t)=0), [description="Speed of motor flange"]
+        (motion_ref(t) = 0), [description = "= true, if reference motion is not in rest"]
+        (angle_ref(t) = 0), [description = "Reference angle of axis flange"]
+        (angle(t) = 0), [description = "Angle of axis flange"]
+        (speed_ref(t) = 0), [description = "Reference speed of axis flange"]
+        (speed(t) = 0), [description = "Speed of axis flange"]
+        (acceleration_ref(t) = 0), [description = "Reference acceleration of axis flange"]
+        (acceleration(t) = 0), [description = "Acceleration of axis flange"]
+        (current_ref(t) = 0), [description = "Reference current of motor"]
+        (current(t) = 0), [description = "Current of motor"]
+        (motorAngle(t) = 0), [description = "Angle of motor flange"]
+        (motorSpeed(t) = 0), [description = "Speed of motor flange"]
     end
     ODESystem(Equation[], t, vars, []; name)
 end
-
 
 """
     AxisType2(; name)
@@ -194,7 +192,7 @@ function Motor(; name)
 
     #   Modelica.Electrical.Analog.Sources.SignalVoltage Vs
     #   Electrical.Analog.Basic.RotationalEMF emf(k=k, useSupport=false)
-    
+
     systems = @named begin
         flange_motor = Rotational.Flange()
         Vs = Voltage() # NOTE: should be SignalVoltage
@@ -265,5 +263,5 @@ function Motor(; name)
            connect(convert2.y, Vs.v)
            connect(emf.flange, Jmotor.flange_a)]
 
-        compose(ODESystem(eqs, t; name), systems)
+    compose(ODESystem(eqs, t; name), systems)
 end
