@@ -3,6 +3,7 @@ using Multibody
 import ModelingToolkitStandardLibrary.Blocks
 using ModelingToolkitStandardLibrary.Electrical
 t = Multibody.t
+D = Differential(t)
 
 function AxisControlBus(; name)
     vars = @variables begin
@@ -262,6 +263,158 @@ function Motor(; name)
            connect(convert2.u, axisControlBus.current_ref)
            connect(convert2.y, Vs.v)
            connect(emf.flange, Jmotor.flange_a)]
+
+    compose(ODESystem(eqs, t; name), systems)
+end
+
+function MechanicalStructure(; name)
+    # parameter Boolean animation=true "= true, if animation shall be enabled";
+    # parameter SI.Mass mLoad(min=0)=15 "Mass of load";
+    # parameter SI.Position rLoad[3]={0,0.25,0}
+    #   "Distance from last flange to load mass";
+    # parameter SI.Acceleration g=9.81 "Gravity acceleration";
+
+    @parameters begin
+        mLoad = 15, [description = "Mass of load"]
+        rLoad[1:3] = [0, 0.25, 0], [description = "Distance from last flange to load mass"]
+        g = 9.81, [description = "Gravity acceleration"]
+    end
+
+    @variables begin
+        (q(t)[1:6] = 0), [description = "Joint angles"]
+        (qd(t)[1:6] = 0), [description = "Joint speeds"]
+        (qdd(t)[1:6] = 0), [description = "Joint accelerations"]
+        (tau(t)[1:6] = 0), [description = "Joint driving torques"]
+    end
+
+    systems = @named begin
+        axis1 = Rotational.Flange()
+        axis2 = Rotational.Flange()
+        axis3 = Rotational.Flange()
+        axis4 = Rotational.Flange()
+        axis5 = Rotational.Flange()
+        axis6 = Rotational.Flange()
+        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true)
+        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true)
+        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true)
+        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true)
+        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true)
+        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true)
+        b0 = BodyShape(r = [0, 0.351, 0],
+                    #    r_shape = [0, 0, 0],
+                       #    lengthDirection = [1, 0, 0],
+                       #    widthDirection = [0, 1, 0],
+                       #    length = 0.225,
+                       #    width = 0.3,
+                       #    height = 0.3,
+                       r_cm = [0, 0, 0],
+                       m = 1)
+        b1 = BodyShape(r = [0, 0.324, 0.3],
+                       I_22 = 1.16,
+                       #    lengthDirection = [1, 0, 0],
+                       #    widthDirection = [0, 1, 0],
+                       #    length = 0.25,
+                       #    width = 0.15,
+                       #    height = 0.2,
+                       #    color = [255, 0, 0],
+                       r_cm = [0, 0, 0],
+                       m = 1)
+        b2 = BodyShape(r = [0, 0.65, 0],
+                       r_cm = [0.172, 0.205, 0],
+                       m = 56.5,
+                       I_11 = 2.58,
+                       I_22 = 0.64,
+                       I_33 = 2.73,
+                       I_21 = -0.46
+                       #    lengthDirection = [1, 0, 0],
+                       #    widthDirection = [0, 1, 0],
+                       #    length = 0.5,
+                       #    width = 0.2,
+                       #    height = 0.15,
+                       #    color = [255, 178, 0],
+                       )
+        b3 = BodyShape(r = [0, 0.414, -0.155],
+                       r_cm = [0.064, -0.034, 0],
+                       m = 26.4,
+                       I_11 = 0.279,
+                       I_22 = 0.245,
+                       I_33 = 0.413,
+                       I_21 = -0.070
+                       #    lengthDirection = [1, 0, 0],
+                       #    widthDirection = [0, 1, 0],
+                       #    length = 0.15,
+                       #    width = 0.15,
+                       #    height = 0.15,
+                       #    color = [255, 0, 0],
+                       )
+        b4 = BodyShape(r = [0, 0.186, 0],
+                       r_cm = [0, 0, 0],
+                       m = 28.7,
+                       I_11 = 1.67,
+                       I_22 = 0.081,
+                       I_33 = 1.67
+                       #   lengthDirection = [1, 0, 0],
+                       #   widthDirection = [0, 1, 0],
+                       #   length = 0.73,
+                       #   width = 0.1,
+                       #   height = 0.1,
+                       #   color = [255, 178, 0],
+                       )
+        b5 = BodyShape(r = [0, 0.125, 0],
+                       r_cm = [0, 0, 0],
+                       m = 5.2,
+                       I_11 = 1.25,
+                       I_22 = 0.81,
+                       I_33 = 1.53
+                       # lengthDirection = [1, 0, 0],
+                       # widthDirection = [0, 1, 0],
+                       # length = 0.225,
+                       # width = 0.075,
+                       # height = 0.1,
+                       # color = [0, 0, 255],
+                       )
+        b6 = BodyShape(r = [0, 0, 0],
+                       r_cm = [0.05, 0.05, 0.05],
+                       m = 0.5
+                       # lengthDirection = [1, 0, 0],
+                       # widthDirection = [0, 1, 0],
+                       # color = [0, 0, 255],
+                       )
+        load = BodyShape(r = [0, 0, 0],
+                         r_cm = rLoad,
+                         m = mLoad
+                         # widthDirection = [1, 0, 0],
+                         # width = 0.05,
+                         # height = 0.05,
+                         # color = [255, 0, 0],
+                         # lengthDirection = to_unit1(rLoad),
+                         # length = length(rLoad),
+                         )
+    end
+    eqs = [q .~ [r1.phi, r2.phi, r3.phi, r4.phi, r5.phi, r6.phi]
+           qd .~ D.(q)
+           qdd .~ D.(qd)
+           tau .~ [r1.tau, r2.tau, r3.tau, r4.tau, r5.tau, r6.tau]
+           connect(load.frame_a, b6.frame_b)
+           connect(world.frame_b, b0.frame_a)
+           connect(b0.frame_b, r1.frame_a)
+           connect(b1.frame_b, r2.frame_a)
+           connect(r1.frame_b, b1.frame_a)
+           connect(r2.frame_b, b2.frame_a)
+           connect(b2.frame_b, r3.frame_a)
+           connect(r2.axis, axis2)
+           connect(r1.axis, axis1)
+           connect(r3.frame_b, b3.frame_a)
+           connect(b3.frame_b, r4.frame_a)
+           connect(r3.axis, axis3)
+           connect(r4.axis, axis4)
+           connect(r4.frame_b, b4.frame_a)
+           connect(b4.frame_b, r5.frame_a)
+           connect(r5.axis, axis5)
+           connect(r5.frame_b, b5.frame_a)
+           connect(b5.frame_b, r6.frame_a)
+           connect(r6.axis, axis6)
+           connect(r6.frame_b, b6.frame_a)]
 
     compose(ODESystem(eqs, t; name), systems)
 end

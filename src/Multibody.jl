@@ -26,7 +26,7 @@ function Base.broadcasted(::typeof(~), lhs::Symbolics.Arr{Num, 1},
 end
 
 function Base.broadcasted(D::Differential, x::Symbolics.Arr{Num, 1})
-    collect([D(x) for x in x])
+    collect([D(x) for x in collect(x)])
 end
 
 """
