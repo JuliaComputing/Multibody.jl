@@ -22,12 +22,25 @@ D = Differential(t)
     ODESystem(Equation[], t, vars, []; name)
 end
 
+@connector function ControlBus(; name)
+    systems = @named begin
+        axisControlBus1 = AxisControlBus()
+        axisControlBus2 = AxisControlBus()
+        axisControlBus3 = AxisControlBus()
+        axisControlBus4 = AxisControlBus()
+        axisControlBus5 = AxisControlBus()
+        axisControlBus6 = AxisControlBus()
+    end
+    ODESystem(Equation[], t; systems, name)
+end
+
 """
     AxisType2(; name)
 
 Axis model of the r3 joints 4,5,6
 """
-function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6, J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
+function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
+                   J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
     @parameters begin
         kp = kp, [description = "Gain of position controller"]
         ks = ks, [description = "Gain of speed controller"]
@@ -39,7 +52,8 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
         ratio = ratio, [description = "Gear ratio"]
         Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
         Rv1 = Rv1, [description = "Viscous friction coefficient"]
-        peak = peak, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+        peak = peak,
+               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
     end
 
     systems = @named begin
@@ -81,7 +95,7 @@ function AxisType1(; name, c = 43, cd = 0.005)
     # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd)) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
 end
 
-function Controller(; name, kp=10, ks=1, Ts=0.01, ratio=1)
+function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
     @parameters begin
         kp = kp, [description = "Gain of position controller"]
         ks = ks, [description = "Gain of speed controller"]
@@ -156,7 +170,8 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
         Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
         Rv1 = Rv1,
               [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
-        peak = peak, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+        peak = peak,
+               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
     end
 
     #   Modelica.Mechanics.Rotational.Components.BearingFriction bearingFriction(
