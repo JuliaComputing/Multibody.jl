@@ -89,24 +89,24 @@ function Controller(; name)
         ratio = 1, [description = "Gear ratio of gearbox"]
     end
     systems = @named begin
-        gain1 = Blocks.Gain(k = ratio)
+        gain1 = Blocks.Gain(ratio)
         PI = Blocks.PI(k = ks, T = Ts)
         feedback1 = Blocks.Feedback()
-        P = Blocks.Gain(k = kp)
+        P = Blocks.Gain(kp)
         add3 = Blocks.Add3(k3 = -1)
-        gain2 = Blocks.Gain(k = ratio)
+        gain2 = Blocks.Gain(ratio)
         axisControlBus = AxisControlBus()
     end
 
-    eqs = [connect(gain1.y, feedback1.u1)
-           connect(feedback1.y, P.u)
-           connect(gain2.y, add3.u1)
-           connect(add3.y, PI.u)
-           (gain2.u ~ axisControlBus.speed_ref)
-           (gain1.u ~ axisControlBus.angle_ref)
-           (feedback1.u2 ~ axisControlBus.motorAngle)
-           (add3.u3 ~ axisControlBus.motorSpeed)
-           (PI.y ~ axisControlBus.current_ref)]
+    eqs = [connect(gain1.output, feedback1.input1)
+           connect(feedback1.output, P.input)
+           connect(gain2.output, add3.input1)
+           connect(add3.output, PI.err_input)
+           (gain2.input.u ~ axisControlBus.speed_ref)
+           (gain1.input.u ~ axisControlBus.angle_ref)
+           (feedback1.input2.u ~ axisControlBus.motorAngle)
+           (add3.input3.u ~ axisControlBus.motorSpeed)
+           (PI.ctr_output.u ~ axisControlBus.current_ref)]
 
     compose(ODESystem(eqs, t; name), systems)
 end
@@ -177,9 +177,6 @@ function GearType1(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-# TODO: MechanicalStructure
-
-# TODO: Motor
 
 function Motor(; name)
     @parameters begin
@@ -196,7 +193,7 @@ function Motor(; name)
 
     systems = @named begin
         flange_motor = Rotational.Flange()
-        Vs = Voltage() # NOTE: should be SignalVoltage
+        Vs = Voltage() # was SignalVoltage
         power = IdealOpAmp()
         diff = IdealOpAmp()
         emf = Electrical.EMF(; k = k) # Was RotationalEMF(k, useSupport=false), which differs from EMF in that it can be instantiated without support
@@ -210,7 +207,7 @@ function Motor(; name)
         Rp1 = Resistor(; R = 200)
         Rp2 = Resistor(; R = 50)
         Rd4 = Resistor(; R = 100)
-        hall2 = Voltage() # NOTE: should be SignalVoltage
+        hall2 = Voltage() # was SignalVoltage
         Rd3 = Resistor(; R = 100)
         g1 = Ground()
         g2 = Ground()
@@ -428,3 +425,4 @@ end
 
 @named structure = MechanicalStructure()
 @named motor = Motor()
+@named controller = Controller()
