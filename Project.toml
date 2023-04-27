@@ -12,7 +12,7 @@ SymbolicIR = "f7e81a98-b176-4533-a916-1afd54a23a03"
 
 [compat]
 ModelingToolkit = "8.30"
-ModelingToolkitStandardLibrary = "1.8"
+ModelingToolkitStandardLibrary = "1.14"
 Rotations = "1.4"
 SymbolicIR = "0.1"
 julia = "1"
