@@ -38,7 +38,6 @@ end
 function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
                        angleEndDeg = ones(naxis), speedMax = fill(3, naxis),
                        accMax = fill(2.5, naxis), startTime = 0, swingTime = 0.5)
-
     @parameters begin
         naxis = naxis, [description = "Number of driven axis"]
         angleBegDeg[1:naxis] = angleBegDeg, [description = "Start angles"]
@@ -67,7 +66,8 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
         pathToAxis4 = PathToAxisControlBus(nAxis = naxis, axisUsed = 4)
         pathToAxis5 = PathToAxisControlBus(nAxis = naxis, axisUsed = 5)
         pathToAxis6 = PathToAxisControlBus(nAxis = naxis, axisUsed = 6)
-        terminateSimulation = TerminateSimulation(condition = time >= path.endTime + swingTime)
+        terminateSimulation = TerminateSimulation(condition = time >=
+                                                              path.endTime + swingTime)
     end
 
     eqs = [connect(path.q, pathToAxis1.q)
@@ -100,4 +100,34 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
            connect(pathToAxis4.axisControlBus, controlBus.axisControlBus4)
            connect(pathToAxis5.axisControlBus, controlBus.axisControlBus5)
            connect(pathToAxis6.axisControlBus, controlBus.axisControlBus6)]
+end
+
+function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
+    @parameters begin
+        nAxis = nAxis, [description = "Number of driven axis"]
+        axisUsed = axisUsed,
+                   [description = "Map path planning of axisUsed to axisControlBus"]
+    end
+
+    systems = @named begin
+        q = RealInput(nAxis)
+        qd = RealInput(nAxis)
+        qdd = RealInput(nAxis)
+        axisControlBus = AxisControlBus()
+        q_axisUsed = RealPassThrough()
+        qd_axisUsed = RealPassThrough()
+        qdd_axisUsed = RealPassThrough()
+        moving = BooleanInput(nAxis)
+        motion_ref_axisUsed = BooleanPassThrough()
+    end
+
+    eqs = [connect(q_axisUsed.u, q[axisUsed])
+           connect(qd_axisUsed.u, qd[axisUsed])
+           connect(qdd_axisUsed.u, qdd[axisUsed])
+           connect(motion_ref_axisUsed.u, moving[axisUsed])
+           connect(motion_ref_axisUsed.y, axisControlBus.motion_ref)
+           connect(qdd_axisUsed.y, axisControlBus.acceleration_ref)
+           connect(qd_axisUsed.y, axisControlBus.speed_ref)
+           connect(q_axisUsed.y, axisControlBus.angle_ref)]
+    ODESystem(eqs, t; systems, name)
 end
