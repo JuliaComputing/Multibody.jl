@@ -5,7 +5,7 @@ using ModelingToolkitStandardLibrary.Electrical
 t = Multibody.t
 D = Differential(t)
 
-function AxisControlBus(; name)
+@connector function AxisControlBus(; name)
     vars = @variables begin
         (motion_ref(t) = 0), [description = "= true, if reference motion is not in rest"]
         (angle_ref(t) = 0), [description = "Reference angle of axis flange"]
@@ -27,24 +27,24 @@ end
 
 Axis model of the r3 joints 4,5,6
 """
-function AxisType2(; name)
+function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6, J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
     @parameters begin
-        kp = 10, [description = "Gain of position controller"]
-        ks = 1, [description = "Gain of speed controller"]
-        Ts = 0.01, [description = "Time constant of integrator of speed controller"]
-        k = 1.1616, [description = "Gain of motor"]
-        w = 4590, [description = "Time constant of motor"]
-        D = 0.6, [description = "Damping constant of motor"]
-        J = 0.0013, [description = "Moment of inertia of motor"]
-        ratio = -105, [description = "Gear ratio"]
-        Rv0 = 0.4, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = 0.13 / 160, [description = "Viscous friction coefficient"]
-        peak = 1, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+        kp = kp, [description = "Gain of position controller"]
+        ks = ks, [description = "Gain of speed controller"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller"]
+        k = k, [description = "Gain of motor"]
+        w = w, [description = "Time constant of motor"]
+        D = D, [description = "Damping constant of motor"]
+        J = J, [description = "Moment of inertia of motor"]
+        ratio = ratio, [description = "Gear ratio"]
+        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+        Rv1 = Rv1, [description = "Viscous friction coefficient"]
+        peak = peak, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
     end
 
     systems = @named begin
-        flange_b = Flange()
-        gear = GearType2(; Rv0, Rv1, peak, i)
+        flange = Rotational.Flange()
+        gear = GearType2(; Rv0, Rv1, peak, i = ratio)
         motor = Motor(; J, k, w, D)
         controller = Controller(; kp, ks, Ts, ratio)
         angleSensor = Rotational.AngleSensor()
@@ -60,9 +60,9 @@ function AxisType2(; name)
            connect(motor.flange_motor, gear.flange_a)
            connect(gear.flange_b, accSensor.flange)
            connect(motor.axisControlBus, axisControlBus)
-           connect(angleSensor.phi, axisControlBus.angle)
-           connect(speedSensor.w, axisControlBus.speed)
-           connect(accSensor.a, axisControlBus.acceleration)
+           (angleSensor.phi.u ~ axisControlBus.angle)
+           (speedSensor.w.u ~ axisControlBus.speed)
+           (accSensor.a.u ~ axisControlBus.acceleration)
            #    connect(axisControlBus.angle_ref, initializeFlange.phi_start)
            #    connect(axisControlBus.speed_ref, initializeFlange.w_start)
            #    connect(initializeFlange.flange, flange)
@@ -72,21 +72,21 @@ function AxisType2(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-function AxisType1(; name)
+function AxisType1(; name, c = 43, cd = 0.005)
     @parameters begin
-        c = 43, [description = "Spring constant"]
-        cd = 0.005, [description = "Damper constant"]
+        c = c, [description = "Spring constant"]
+        cd = cd, [description = "Damper constant"]
     end
     error("Not implemented")
     # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd)) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
 end
 
-function Controller(; name)
+function Controller(; name, kp=10, ks=1, Ts=0.01, ratio=1)
     @parameters begin
-        kp = 10, [description = "Gain of position controller"]
-        ks = 1, [description = "Gain of speed controller"]
-        Ts = 0.01, [description = "Time constant of integrator of speed controller"]
-        ratio = 1, [description = "Gear ratio of gearbox"]
+        kp = kp, [description = "Gain of position controller"]
+        ks = ks, [description = "Gain of speed controller"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller"]
+        ratio = ratio, [description = "Gear ratio of gearbox"]
     end
     systems = @named begin
         gain1 = Blocks.Gain(ratio)
@@ -111,7 +111,10 @@ function Controller(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-function GearType2(; name)
+function GearType2(; name, i = -99,
+                   Rv0 = 21.8,
+                   Rv1 = 9.8,
+                   peak = (26.7 / 21.8))
     #     Modelica.Mechanics.Rotational.Components.BearingFriction bearingFriction(
     #       tau_pos=[0,
     #            Rv0/unitTorque; 1, (Rv0 + Rv1*unitAngularVelocity)/unitTorque], peak=peak,
@@ -120,16 +123,16 @@ function GearType2(; name)
     unitAngularVelocity = 1
 
     @parameters begin
-        i = -99, [description = "Gear ratio"]
-        Rv0 = 21.8, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = 9.8, [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
-        peak = (26.7 / 21.8),
+        i = i, [description = "Gear ratio"]
+        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+        Rv1 = Rv1, [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
+        peak = peak,
                [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
     end
     systems = @named begin
-        flange_a = Flange()
-        flange_b = Flange()
-        gear = Rotational.IdealGear(; ratio = i, useSupport = false)
+        flange_a = Rotational.Flange()
+        flange_b = Rotational.Flange()
+        gear = Rotational.IdealGear(; ratio = i, use_support = false)
         # bearingFriction = Rotational.BearingFriction(; tau_pos=[0, Rv0; 1, (Rv0 + Rv1*unitAngularVelocity)], peak=peak, useSupport=false) # Not yet supported
         bearingFriction = Rotational.RotationalFriction(; f = Rv1, tau_brk = peak * Rv0,
                                                         tau_c = Rv0, w_brk = 0.1) # NOTE: poorly chosen w_brk
@@ -140,17 +143,20 @@ function GearType2(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-function GearType1(; name)
+function GearType1(; name, i = -105, c = 43, d = 0.005,
+                   Rv0 = 0.4,
+                   Rv1 = (0.13 / 160),
+                   peak = 1)
     unitAngularVelocity = 1
     unitTorque = 1
     @parameters begin
-        i = -105, [description = "Gear ratio"]
-        c = 43, [description = "Spring constant"]
-        d = 0.005, [description = "Damper constant"]
-        Rv0 = 0.4, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = (0.13 / 160),
+        i = i, [description = "Gear ratio"]
+        c = c, [description = "Spring constant"]
+        d = d, [description = "Damper constant"]
+        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+        Rv1 = Rv1,
               [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
-        peak = 1, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+        peak = peak, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
     end
     @variables a_rel=D(spring.w_rel) [
         description = "Relative angular acceleration of spring",
@@ -177,15 +183,14 @@ function GearType1(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-
-function Motor(; name)
+function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
     @parameters begin
-        J = 0.0013, [description = "Moment of inertia of motor"]
-        k = 1.1616, [description = "Gain of motor"]
-        w = 4590, [description = "Time constant of motor"]
-        D = 0.6, [description = "Damping constant of motor"]
-        w_max = 315, [description = "Maximum speed of motor"]
-        i_max = 9, [description = "Maximum current of motor"]
+        J = J, [description = "Moment of inertia of motor"]
+        k = k, [description = "Gain of motor"]
+        w = w, [description = "Time constant of motor"]
+        D = D, [description = "Damping constant of motor"]
+        w_max = w_max, [description = "Maximum speed of motor"]
+        i_max = i_max, [description = "Maximum current of motor"]
     end
 
     #   Modelica.Electrical.Analog.Sources.SignalVoltage Vs
@@ -200,7 +205,7 @@ function Motor(; name)
         La = Inductor(; L = (250 / (2 * D * w)))
         Ra = Resistor(; R = 250)
         Rd2 = Resistor(; R = 100)
-        C = Capacitor(C=0.004*D/w)
+        C = Capacitor(C = 0.004 * D / w)
         OpI = IdealOpAmp()
         Ri = Resistor(; R = 10)
         Rd1 = Resistor(; R = 100)
@@ -266,7 +271,7 @@ function Motor(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-function MechanicalStructure(; name)
+function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     # parameter Boolean animation=true "= true, if animation shall be enabled";
     # parameter SI.Mass mLoad(min=0)=15 "Mass of load";
     # parameter SI.Position rLoad[3]={0,0.25,0}
@@ -274,9 +279,9 @@ function MechanicalStructure(; name)
     # parameter SI.Acceleration g=9.81 "Gravity acceleration";
 
     @parameters begin
-        mLoad = 15, [description = "Mass of load"]
-        rLoad[1:3] = [0, 0.25, 0], [description = "Distance from last flange to load mass"]
-        g = 9.81, [description = "Gravity acceleration"]
+        mLoad = mLoad, [description = "Mass of load"]
+        rLoad = rLoad, [description = "Distance from last flange to load mass"]
+        g = g, [description = "Gravity acceleration"]
     end
 
     @variables begin
@@ -300,7 +305,7 @@ function MechanicalStructure(; name)
         r5 = Revolute(n = [1, 0, 0], useAxisFlange = true)
         r6 = Revolute(n = [0, 1, 0], useAxisFlange = true)
         b0 = BodyShape(r = [0, 0.351, 0],
-                    #    r_shape = [0, 0, 0],
+                       #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],
                        #    widthDirection = [0, 1, 0],
                        #    length = 0.225,
@@ -405,7 +410,6 @@ function MechanicalStructure(; name)
            connect(r1.axis, axis1)
            connect(r3.frame_b, b3.frame_a)
            connect(b3.frame_b, r4.frame_a)
-
            connect(r3.axis, axis3)
            connect(r4.axis, axis4)
            connect(r4.frame_b, b4.frame_a)
@@ -419,10 +423,7 @@ function MechanicalStructure(; name)
     compose(ODESystem(eqs, t; name), systems)
 end
 
-
-
-
-
 @named structure = MechanicalStructure()
 @named motor = Motor()
 @named controller = Controller()
+@named axis2 = AxisType2()
