@@ -149,7 +149,7 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
                    peak = 1)
     unitAngularVelocity = 1
     unitTorque = 1
-    @parameters begin
+    pars = @parameters begin
         i = i, [description = "Gear ratio"]
         c = c, [description = "Spring constant"]
         d = d, [description = "Damper constant"]
@@ -158,9 +158,6 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
               [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
         peak = peak, [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
     end
-    @variables a_rel=D(spring.w_rel) [
-        description = "Relative angular acceleration of spring",
-    ]
 
     #   Modelica.Mechanics.Rotational.Components.BearingFriction bearingFriction(
     #     tau_pos=[0,
@@ -168,19 +165,23 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
     #       useSupport=false) 
 
     systems = @named begin
-        flange_a = Flange()
-        flange_b = Flange()
-        gear = Rotational.IdealGear(; ratio = i, useSupport = false)
+        flange_a = Rotational.Flange()
+        flange_b = Rotational.Flange()
+        gear = Rotational.IdealGear(; ratio = i, use_support = false)
         spring = Rotational.SpringDamper(; c, d)
         # bearingFriction = Rotational.BearingFriction(; tau_pos=[0, Rv0; 1, (Rv0 + Rv1*unitAngularVelocity)], useSupport=false) # Not yet supported
         bearingFriction = Rotational.RotationalFriction(; f = Rv1, tau_brk = peak * Rv0,
                                                         tau_c = Rv0, w_brk = 0.1) # NOTE: poorly chosen w_brk
     end
+    vars = @variables a_rel(t)=D(spring.w_rel) [ # This is only used inside "initial equation" block
+        description = "Relative angular acceleration of spring",
+    ]
+
     eqs = [connect(spring.flange_b, gear.flange_a)
            connect(bearingFriction.flange_b, spring.flange_a)
            connect(gear.flange_b, flange_b)
            connect(bearingFriction.flange_a, flange_a)]
-    compose(ODESystem(eqs, t; name), systems)
+    compose(ODESystem(eqs, t, vars, pars; name), systems)
 end
 
 function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
@@ -427,3 +428,6 @@ end
 @named motor = Motor()
 @named controller = Controller()
 @named axis2 = AxisType2()
+@named gear2 = GearType2()
+# @named axis1 = AxisType1()
+@named gear1 = GearType1()
