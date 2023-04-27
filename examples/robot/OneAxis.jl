@@ -32,27 +32,22 @@ function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0
         refAccMax = refAccMax, [description = "Maximum reference acceleration"]
     end
 
-
     systems = @named begin
-        axis = AxisType1(
-            w = 5500,
-            ratio = 210,
-            c = 8,
-            cd = 0.01,
-            Rv0 = 0.5,
-            Rv1 = (0.1 / 130),
-            kp = kp,
-            ks = ks,
-            Ts = Ts,
-        )
+        axis = AxisType1(w = 5500,
+                         ratio = 210,
+                         c = 8,
+                         cd = 0.01,
+                         Rv0 = 0.5,
+                         Rv1 = (0.1 / 130),
+                         kp = kp,
+                         ks = ks,
+                         Ts = Ts)
         load = Inertia(J = 1.3 * mLoad)
-        pathPlanning = PathPlanning1( # TODO: not yet implemented
-            swingTime = swingTime,
-            angleBegDeg = startAngle,
-            angleEndDeg = endAngle,
-            speedMax = refSpeedMax,
-            accMax = refAccMax,
-        )
+        pathPlanning = PathPlanning1(swingTime = swingTime,
+                                     angleBegDeg = startAngle,
+                                     angleEndDeg = endAngle,
+                                     speedMax = refSpeedMax,
+                                     accMax = refAccMax)
         controlBus = ControlBus()
     end
     eqs = [
