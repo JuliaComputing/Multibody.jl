@@ -209,7 +209,6 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         i_max = i_max, [description = "Maximum current of motor"]
     end
 
-    #   Modelica.Electrical.Analog.Sources.SignalVoltage Vs
     #   Electrical.Analog.Basic.RotationalEMF emf(k=k, useSupport=false)
 
     systems = @named begin
@@ -288,12 +287,6 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
 end
 
 function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
-    # parameter Boolean animation=true "= true, if animation shall be enabled";
-    # parameter SI.Mass mLoad(min=0)=15 "Mass of load";
-    # parameter SI.Position rLoad[3]={0,0.25,0}
-    #   "Distance from last flange to load mass";
-    # parameter SI.Acceleration g=9.81 "Gravity acceleration";
-
     @parameters begin
         mLoad = mLoad, [description = "Mass of load"]
         rLoad = rLoad, [description = "Distance from last flange to load mass"]
