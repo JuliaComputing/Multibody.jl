@@ -215,7 +215,7 @@ function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
                    w_a = 0,
                    w_b = 0,
                    a_a = 0,
-                   a_b)
+                   a_b = 0)
     @named begin
         ptf = PartialTwoFrames()
         revolute_a = Revolute(n = n_a, isroot = false)

@@ -196,7 +196,8 @@ sol2 = solve(prob, Rodas4())
 @test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 isinteractive() && plot(sol2, idxs = collect(rev.phi))
 
-@info "TODO: write a test that checks that this solution is identical to the one without rod above"
+@test sol2(1:10, idxs=rev.phi).u ≈ sol(1:10, idxs=rev.phi).u atol=1e-3
+
 
 # ==============================================================================
 ## Simple pendulum with rod from absolute rotation ====================================================
@@ -217,19 +218,18 @@ connections = [connect(world.frame_b, rev.frame_a)
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
 modele = ModelingToolkit.expand_connections(model)
 
-ssys = structural_simplify(model, allow_parameter = false)
-# ssys = structural_simplify(IRSystem(modele)) # Yingbo, this fails with SymbolicIR but not with MTK
+# ssys = structural_simplify(model, allow_parameter = false)
+ssys = structural_simplify(IRSystem(modele)) # Yingbo, this fails with SymbolicIR but not with MTK
 
 D = Differential(t)
-@test_skip begin # Needs default dummy der
-    prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                      (0, 100), default_dummy_der = 0)
-    sol2 = solve(prob, Rodas4())
-    @test SciMLBase.successful_retcode(sol2)
-    @test minimum(sol2[rev.phi]) > -π
-    @test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
-    isinteractive() && plot(sol2, idxs = collect(rev.phi))
-end
+
+prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 100))
+sol3 = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol2)
+@test minimum(sol3[rev.phi]) > -π
+@test sol3[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
+isinteractive() && plot(sol3, idxs = rev.phi)
+@test sol3(1:10, idxs=rev.phi).u ≈ sol(1:10, idxs=rev.phi).u atol=1e-2
 
 # ==============================================================================
 ## Double pendulum =============================================================
@@ -766,6 +766,7 @@ defs = [
 ssys = structural_simplify(IRSystem(wheel)) # SymbolicIR chooses 38 states, Yingbo
 prob = ODEProblem(ssys, defs, (0, 10))
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-1 .* randn.(), p = prob.p .+ 1e-2 .* randn.()) # TODO: fails to initialize
+@test_broken length(sol.t) > 1
 # isinteractive() && plot(sol, idxs=[cwheel.x, cwheel.y])
 
 # ==============================================================================
