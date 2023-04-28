@@ -758,16 +758,15 @@ world = Multibody.world
 
 cwheel = complete(wheel)
 defs = [
-    world.n => [0, 0, -1],
-    collect(D.(cwheel.rollingWheel.angles)) => [0, 5, 1], # TODO: redundant since der_angles specified above, Yingbo
+    collect(world.n .=> [0, 0, -1]);
+    collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-# ssys = structural_simplify(model, allow_parameters=false)
-
-@test_skip begin # ERROR: AssertionError: ex isa Number Yingbo. MTK simplification works
-    ssys = structural_simplify(IRSystem(wheel))
-    prob = ODEProblem(ssys, defs, (0, 10))
-end
+# ssys = structural_simplify(wheel, allow_parameters=false) # MTK fails
+ssys = structural_simplify(IRSystem(wheel)) # SymbolicIR chooses 38 states, Yingbo
+prob = ODEProblem(ssys, defs, (0, 10))
+sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-1 .* randn.(), p = prob.p .+ 1e-2 .* randn.()) # TODO: fails to initialize
+# isinteractive() && plot(sol, idxs=[cwheel.x, cwheel.y])
 
 # ==============================================================================
 ## FreeMotion ==================================================================
