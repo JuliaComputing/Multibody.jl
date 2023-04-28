@@ -158,13 +158,13 @@ function traj5(t; q0 = 0.0, q1 = one(q0), q̇0 = zero(q0), q̇1 = zero(q0), q̈0
     evalpoly.(t, ((a1, 2a2, 3a3, 4a4, 5a5),)),
     evalpoly.(t, ((2a2, 6a3, 12a4, 20a5),))
 end
-t = 0:100;
-q, qd, qdd = traj5(t, q0 = 1, q1 = 2, q̇0 = 3, q̇1 = 4, q̈0 = 5, q̈1 = 6);
-plot(t, q, label = "q", layout = (3, 1), sp = 1)
-plot!(t, qd, label = "qd", sp = 2)
-plot!(t, qdd, label = "qdd", sp = 3)
-plot!(t, centraldiff(q), sp = 2)
-plot!(t, centraldiff(centraldiff(q)), sp = 3)
+# t = 0:100;
+# q, qd, qdd = traj5(t, q0 = 1, q1 = 2, q̇0 = 3, q̇1 = 4, q̈0 = 5, q̈1 = 6);
+# plot(t, q, label = "q", layout = (3, 1), sp = 1)
+# plot!(t, qd, label = "qd", sp = 2)
+# plot!(t, qdd, label = "qdd", sp = 3)
+# plot!(t, centraldiff(q), sp = 2)
+# plot!(t, centraldiff(centraldiff(q)), sp = 3)
 
 """
     KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0, qdd_begin = 0, qdd_end = 0)

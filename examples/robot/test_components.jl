@@ -2,7 +2,7 @@ using Multibody
 cd(@__DIR__)
 t = Multibody.t
 world = Multibody.world
-# include("OneAxis.jl")
+include("OneAxis.jl")
 include("FullRobot.jl")
 @named structure = MechanicalStructure()
 @named motor = Motor()
@@ -14,6 +14,11 @@ include("FullRobot.jl")
 
 @named pp = PathPlanning1(; )
 @named pp6 = PathPlanning6(; )
+
+
+@named oneaxis = OneAxis()
+
+ssys = structural_simplify(IRSystem(oneaxis))
 
 
 @named robot = FullRobot()

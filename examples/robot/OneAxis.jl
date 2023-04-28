@@ -22,14 +22,14 @@ function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0
         kp = kp, [description = "Gain of position controller of axis"]
         ks = ks, [description = "Gain of speed controller of axis"]
         Ts = Ts, [description = "Time constant of integrator of speed controller of axis"]
-        startAngle = startAngle, [description = "Start angle of axis"]
-        endAngle = endAngle, [description = "End angle of axis"]
+        # startAngle = startAngle, [description = "Start angle of axis"]
+        # endAngle = endAngle, [description = "End angle of axis"]
         swingTime = swingTime,
                     [
                         description = "Additional time after reference motion is in rest before simulation is stopped",
                     ]
-        refSpeedMax = refSpeedMax, [description = "Maximum reference speed"]
-        refAccMax = refAccMax, [description = "Maximum reference acceleration"]
+        # refSpeedMax = refSpeedMax, [description = "Maximum reference speed"]
+        # refAccMax = refAccMax, [description = "Maximum reference acceleration"]
     end
 
     systems = @named begin
@@ -42,16 +42,18 @@ function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0
                          kp = kp,
                          ks = ks,
                          Ts = Ts)
-        load = Inertia(J = 1.3 * mLoad)
+        load = Rotational.Inertia(J = 1.3 * mLoad)
         pathPlanning = PathPlanning1(swingTime = swingTime,
                                      angleBegDeg = startAngle,
                                      angleEndDeg = endAngle,
-                                     speedMax = refSpeedMax,
-                                     accMax = refAccMax)
+                                    #  speedMax = refSpeedMax,
+                                    #  accMax = refAccMax
+                                    )
         controlBus = ControlBus()
     end
     eqs = [
         connect(axis.flange, load.flange_a),
         connect(controlBus.axisControlBus1, axis.axisControlBus),
     ]
+    ODESystem(eqs, t; systems, name)
 end
