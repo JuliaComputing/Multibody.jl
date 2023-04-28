@@ -39,7 +39,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [], (0, 10))
 
-sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-3*randn(length(prob.u0)))
+sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
 @assert SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [body1.r_0...])

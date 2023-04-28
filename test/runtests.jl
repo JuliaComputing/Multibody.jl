@@ -481,7 +481,7 @@ prob = ODEProblem(ssys,
 
 @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
     # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
-    sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.())
+    sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-1 .* rand.())
     @test SciMLBase.successful_retcode(sol)
 
     isinteractive() && plot(sol, idxs = [body1.r_0...])
@@ -707,7 +707,7 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@named begin
+systems = @named begin
     gearConstraint = GearConstraint(; ratio = 10)
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
@@ -737,32 +737,14 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(mounting1D.flange_b, torque2.support)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
-@named model = ODESystem(eqs, t,
-                         systems = [world;
-                                    gearConstraint;
-                                    cyl1;
-                                    cyl2;
-                                    torque1;
-                                    # sine;
-                                    fixed;
-                                    inertia1;
-                                    idealGear;
-                                    inertia2;
-                                    torque2;
-                                    mounting1D])
+@named model = ODESystem(eqs, t, systems = [world; systems])
 
 # ssys = structural_simplify(model, allow_parameters=false)
 
 @test_skip begin
     ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
 
-    prob = ODEProblem(ssys,
-                      [
-                          D(gearConstraint.actuatedRevolute_b.phi) => 0,
-                          D(inertia2.flange_a.phi) => 0,
-                          D(D(idealGear.phi_b)) => 0,
-                          D(gearConstraint.actuatedRevolute_a) => 0,
-                      ], (0, 10))
+    prob = ODEProblem(ssys, [], (0, 10))
 end
 
 # ==============================================================================
