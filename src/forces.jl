@@ -196,42 +196,11 @@ function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kw
            flange_b.s ~ length]
 
     # Determine translational flange forces
-    # if cardinality(flange_a) > 0 && cardinality(flange_b) > 0
-    # the cardinality of a flange is the number of connections to a flange
     eqs = [eqs
            fa ~ flange_a.f
            fb ~ flange_b.f]
-    # elseif cardinality(flange_a) > 0 && cardinality(flange_b) == 0
-    #   fa ~ flange_a.f
-    #   fb ~ -fa
-    # elseif cardinality(flange_a) == 0 && cardinality(flange_b) > 0
-    #   fa ~ -fb
-    #   fb ~ flange_b.f
-    # else
-    #   fa ~ 0
-    #   fb ~ 0
-    # end
 
-    #= Force and torque balance of point mass
-       - Kinematics for center of mass CM of point mass including gravity
-         r_CM_0 = frame_a.r0 + r_rel_CM_0;
-         v_CM_0 = D.(r_CM_0);
-         ag_CM_0 = D.(v_CM_0) - world.gravityAcceleration(r_CM_0);
-       - Power balance for the connection line
-         (f1=force on frame_a side, f2=force on frame_b side, h=lengthFraction)
-         0 = f1*va - m*ag_CM*(va+(vb-va)*h) + f2*vb
-           = (f1 - m*ag_CM*(1-h))*va + (f2 - m*ag_CM*h)*vb
-         since va and vb are completely independent from other
-         the parenthesis must vanish:
-           f1 := m*ag_CM*(1-h)
-           f2 := m*ag_CM*h
-       - Force balance on frame_a and frame_b finally results in
-           0 = frame_a.f + e_rel_a*fa - f1_a
-           0 = frame_b.f + e_rel_b*fb - f2_b
-         and therefore
-           frame_a.f = -e_rel_a*fa + m*ag_CM_a*(1-h)
-           frame_b.f = -e_rel_b*fb + m*ag_CM_b*h
-    =#
+    # NOTE, both frames are assumed to be connected, while modelica has special handling if they aren't
     if m0 > 0
         eqs = [eqs
                r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthFraction

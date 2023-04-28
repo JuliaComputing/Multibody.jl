@@ -593,7 +593,7 @@ D = Differential(t)
 world = Multibody.world
 
 @named begin
-    joint = Spherical(enforceStates = true, isroot = true)
+    joint = Spherical(enforceStates = true, isroot = true, phi = 1)
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 end
@@ -614,12 +614,13 @@ prob = ODEProblem(ssys,
                    #    collect(D.(body.phid)) .=> 0
                    # collect(body.frame_a.w₃) .=> 0;
                    ], (0, 10))
-@test_skip begin # Codegen leaves symbolic variables in function, Yingbo
-    sol = solve(prob, Rodas4())
-    @assert SciMLBase.successful_retcode(sol)
 
-    isinteractive() && plot(sol, idxs = [body.r_0...])
-end
+sol = solve(prob, Rodas4())
+@assert SciMLBase.successful_retcode(sol)
+
+isinteractive() && plot(sol, idxs = [body.r_0...])
+
+@info "TODO: write tests"
 
 # ==============================================================================
 ## universal pendulum
@@ -639,16 +640,17 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
 ssys = structural_simplify(IRSystem(model))
 
-@test_skip begin # NOTE: fails due to rotation matrix used as state
-    prob = ODEProblem(ssys,
-                      [joint.revolute_a.phi => 0;
-                       D(joint.revolute_a.phi) => 0;
-                       joint.revolute_b.phi => 0;
-                       D(joint.revolute_b.phi) => 0], (0, 10))
-    sol = solve(prob, Rodas4())
-    @test SciMLBase.successful_retcode(sol)
-    plot(sol, idxs = [body.r_0...])
-end
+prob = ODEProblem(ssys,
+                  [joint.phi_b => 1;
+                   joint.revolute_a.phi => 1;
+                   D(joint.revolute_a.phi) => 0;
+                   joint.revolute_b.phi => 0;
+                   D(joint.revolute_b.phi) => 0], (0, 10))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+plot(sol, idxs = [body.r_0...])
+
+@info "TODO, write test"
 
 # ==============================================================================
 ## GearConstraint ===================================================

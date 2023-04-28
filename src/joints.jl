@@ -138,7 +138,7 @@ function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
 end
 
 """
-    Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates)
+    Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates, phi = 0, phi_d = 0, phi_dd = 0)
 
 Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential states. If parameter `enforceStates` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence_angleStates` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as states. If angles are used as states there is the slight disadvantage that a singular configuration is present leading to a division by zero.
 
@@ -146,7 +146,9 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `sequence_angleStates`: Rotation sequence
 """
 function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false,
-                   z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3])
+                   z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3], phi = 0,
+                   phi_d = 0,
+                   phi_dd = 0)
     @named begin
         ptf = PartialTwoFrames()
         R_rel = NumRotationMatrix()
@@ -168,11 +170,11 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
 
     if enforceStates
         @variables begin
-            (phi(t)[1:3] = zeros(3)),
+            (phi(t)[1:3] = phi),
             [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-            (phi_d(t)[1:3] = zeros(3)),
+            (phi_d(t)[1:3] = phi_d),
             [state_priority = 10, description = "3 angle derivatives"]
-            (phi_dd(t)[1:3] = zeros(3)),
+            (phi_dd(t)[1:3] = phi_dd),
             [state_priority = 10, description = "3 angle second derivatives"]
         end
         append!(eqs,
@@ -208,7 +210,12 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
     extend(ODESystem(eqs, t; name), ptf)
 end
 
-function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0])
+function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
+                   phi_b = 0,
+                   w_a = 0,
+                   w_b = 0,
+                   a_a = 0,
+                   a_b)
     @named begin
         ptf = PartialTwoFrames()
         revolute_a = Revolute(n = n_a, isroot = false)
@@ -226,32 +233,32 @@ function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0])
               ]
     end
     @variables begin
-        (phi_a(t) = 0),
+        (phi_a(t) = phi_a),
         [
             state_priority = 10,
             description = "Relative rotation angle from frame_a to intermediate frame",
         ]
-        (phi_b(t) = 0),
+        (phi_b(t) = phi_b),
         [
             state_priority = 10,
             description = "Relative rotation angle from intermediate frame to frame_b",
         ]
-        (w_a(t) = 0),
+        (w_a(t) = w_a),
         [
             state_priority = 10,
             description = "First derivative of angle phi_a (relative angular velocity a)",
         ]
-        (w_b(t) = 0),
+        (w_b(t) = w_b),
         [
             state_priority = 10,
             description = "First derivative of angle phi_b (relative angular velocity b)",
         ]
-        (a_a(t) = 0),
+        (a_a(t) = a_a),
         [
             state_priority = 10,
             description = "Second derivative of angle phi_a (relative angular acceleration a)",
         ]
-        (a_b(t) = 0),
+        (a_b(t) = a_b),
         [
             state_priority = 10,
             description = "Second derivative of angle phi_b (relative angular acceleration b)",
