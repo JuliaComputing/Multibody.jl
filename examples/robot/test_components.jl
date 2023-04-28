@@ -1,6 +1,10 @@
+using ModelingToolkit
 using Multibody
-cd(@__DIR__)
+using Test
+using SymbolicIR
 t = Multibody.t
+
+cd(@__DIR__)
 world = Multibody.world
 include("OneAxis.jl")
 include("FullRobot.jl")
@@ -23,7 +27,9 @@ ssys = structural_simplify(oneaxis, allow_parameters = false)
 
 @named robot = FullRobot()
 
-ssys = structural_simplify(IRSystem(robot))
+# ssys = structural_simplify(IRSystem(robot))
 ssys = structural_simplify(robot, allow_parameters = false)
 
+prob = ODEProblem(ssys, [], (0.0, 10.0))
 
+sol = solve(prob, Rodas4())
