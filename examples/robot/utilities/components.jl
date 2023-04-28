@@ -5,6 +5,22 @@ using ModelingToolkitStandardLibrary.Electrical
 t = Multibody.t
 D = Differential(t)
 
+
+"""
+    @connector AxisControlBus(; name)    
+
+- `motion_ref(t) = 0`: = true, if reference motion is not in rest
+- `angle_ref(t) = 0`: Reference angle of axis flange
+- `angle(t) = 0`: Angle of axis flange
+- `speed_ref(t) = 0`: Reference speed of axis flange
+- `speed(t) = 0`: Speed of axis flange
+- `acceleration_ref(t) = 0`: Reference acceleration of axis flange
+- `acceleration(t) = 0`: Acceleration of axis flange
+- `current_ref(t) = 0`: Reference current of motor
+- `current(t) = 0`: Current of motor
+- `motorAngle(t) = 0`: Angle of motor flange
+- `motorSpeed(t) = 0`: Speed of motor flange
+"""
 @connector function AxisControlBus(; name)
     vars = @variables begin
         (motion_ref(t) = 0), [description = "= true, if reference motion is not in rest"]
@@ -64,7 +80,7 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
         angleSensor = Rotational.AngleSensor()
         speedSensor = Rotational.SpeedSensor()
         accSensor = Rotational.AccSensor()
-        Const = Blocks.Constant(k = 0)
+        # Const = Blocks.Constant(k = 0)
         axisControlBus = AxisControlBus()
     end
 
@@ -91,7 +107,7 @@ function AxisType1(; name, c = 43, cd = 0.005, kwargs...)
         c = c, [description = "Spring constant"]
         cd = cd, [description = "Damper constant"]
     end
-    # error("Not implemented")
+    @warn "Axis type 1 is currently identical to type 2" maxlog=2
     # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd), kwargs...) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
     axisType2 = AxisType2(; name, kwargs...) 
 end
@@ -430,5 +446,5 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
            connect(r6.axis, axis6)
            connect(r6.frame_b, b6.frame_a)]
 
-    compose(ODESystem(eqs, t; name), systems)
+    compose(ODESystem(eqs, t; name), [world; systems])
 end
