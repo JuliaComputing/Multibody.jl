@@ -6,7 +6,7 @@ This beginners tutorial will model a pendulum pivoted around the origin in the w
 To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
-using Multibody
+using Multibody, SymbolicIR
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 ```
