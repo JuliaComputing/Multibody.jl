@@ -86,13 +86,14 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
     compose(ODESystem(eqs, t; name), systems)
 end
 
-function AxisType1(; name, c = 43, cd = 0.005)
+function AxisType1(; name, c = 43, cd = 0.005, kwargs...)
     @parameters begin
         c = c, [description = "Spring constant"]
         cd = cd, [description = "Damper constant"]
     end
-    error("Not implemented")
-    # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd)) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
+    # error("Not implemented")
+    # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd), kwargs...) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
+    axisType2 = AxisType2(; name, kwargs...) 
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
@@ -154,7 +155,7 @@ function GearType2(; name, i = -99,
     eqs = [connect(gear.flange_b, bearingFriction.flange_a)
            connect(bearingFriction.flange_b, flange_b)
            connect(gear.flange_a, flange_a)]
-    compose(ODESystem(eqs, t; name), systems)
+    ODESystem(eqs, t; name, systems)
 end
 
 function GearType1(; name, i = -105, c = 43, d = 0.005,

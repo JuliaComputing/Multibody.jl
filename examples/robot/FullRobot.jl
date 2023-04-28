@@ -1,4 +1,5 @@
-include("components.jl")
+include("utilities/components.jl")
+include("utilities/path_planning.jl")
 
 function FullRobot(; name)
     @parameters begin
@@ -11,18 +12,18 @@ function FullRobot(; name)
                        [
                            description = "Additional time after reference motion is in rest before simulation is stopped",
                        ]
-        startAngle1 = -60, [description = "Start angle of axis 1"]
-        startAngle2 = 20, [description = "Start angle of axis 2"]
-        startAngle3 = 90, [description = "Start angle of axis 3"]
-        startAngle4 = 0, [description = "Start angle of axis 4"]
-        startAngle5 = -110, [description = "Start angle of axis 5"]
-        startAngle6 = 0, [description = "Start angle of axis 6"]
-        endAngle1 = 60, [description = "End angle of axis 1"]
-        endAngle2 = -70, [description = "End angle of axis 2"]
-        endAngle3 = -35, [description = "End angle of axis 3"]
-        endAngle4 = 45, [description = "End angle of axis 4"]
-        endAngle5 = 110, [description = "End angle of axis 5"]
-        endAngle6 = 45, [description = "End angle of axis 6"]
+        # startAngle1 = -60, [description = "Start angle of axis 1"]
+        # startAngle2 = 20, [description = "Start angle of axis 2"]
+        # startAngle3 = 90, [description = "Start angle of axis 3"]
+        # startAngle4 = 0, [description = "Start angle of axis 4"]
+        # startAngle5 = -110, [description = "Start angle of axis 5"]
+        # startAngle6 = 0, [description = "Start angle of axis 6"]
+        # endAngle1 = 60, [description = "End angle of axis 1"]
+        # endAngle2 = -70, [description = "End angle of axis 2"]
+        # endAngle3 = -35, [description = "End angle of axis 3"]
+        # endAngle4 = 45, [description = "End angle of axis 4"]
+        # endAngle5 = 110, [description = "End angle of axis 5"]
+        # endAngle6 = 45, [description = "End angle of axis 6"]
         refSpeedMax[1:6] = [3, 1.5, 5, 3.1, 3.1, 4.1],
                            [description = "Maximum reference speeds of all joints"]
         refAccMax[1:6] = [15, 15, 15, 60, 60, 60],
@@ -46,6 +47,19 @@ function FullRobot(; name)
         ks6 = 0.5, [description = "Gain of speed controller"]
         Ts6 = 0.05, [description = "Time constant of integrator of speed controller"]
     end
+
+    startAngle1 = -60 # Can't yet have these as parameters
+    startAngle2 = 20 # Can't yet have these as parameters
+    startAngle3 = 90 # Can't yet have these as parameters
+    startAngle4 = 0 # Can't yet have these as parameters
+    startAngle5 = -110 # Can't yet have these as parameters
+    startAngle6 = 0 # Can't yet have these as parameters
+    endAngle1 = 60 # Can't yet have these as parameters
+    endAngle2 = -70 # Can't yet have these as parameters
+    endAngle3 = -35 # Can't yet have these as parameters
+    endAngle4 = 45 # Can't yet have these as parameters
+    endAngle5 = 110 # Can't yet have these as parameters
+    endAngle6 = 45 # Can't yet have these as parameters
 
     systems = @named begin
         mechanics = MechanicalStructure(mLoad = mLoad,
