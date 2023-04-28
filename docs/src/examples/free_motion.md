@@ -29,6 +29,7 @@ prob = ODEProblem(ssys, [
     D.(D.(freeMotion.r_rel_a)) .=> randn();
     D.(freeMotion.phi) .=> randn();
     D.(D.(freeMotion.phi)) .=> randn();
+    D.(body.w_a) .=> randn();
 ], (0, 10))
 
 sol = solve(prob, Rodas4())
