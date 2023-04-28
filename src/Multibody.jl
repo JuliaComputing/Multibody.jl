@@ -44,38 +44,37 @@ function at_variables_t(args...; default = nothing)
     xs
 end
 
-using ModelingToolkit.SciMLBase
-import SymbolicIR: InitialType
-
+# using ModelingToolkit.SciMLBase
+# import SymbolicIR: InitialType
 # """
 # This method exist only temporarily so that we can set default values for dummy derivatives
 # """
-function SymbolicIR.SciMLBase.ODEProblem{true}(ss::SymbolicIR.ScheduledSystem, u0, tspan,
-                                               p = SciMLBase.NullParameters;
-                                               kwargs...)
-    fun = ODEFunction{true}(ss)
-    defs = ss.state.sys.info.defaults
-    if u0 !== nothing && !(u0 isa InitialType)
-        error("`u0` must be an array or a dictionary")
-    end
-    if p !== SciMLBase.NullParameters && !(p isa InitialType)
-        error("`p` must be an array or a dictionary")
-    end
-    if u0 isa InitialType && eltype(u0) <: Pair
-        u0 = Dict{SymbolicIR.IRElement, Any}(SymbolicIR.IRElement(SymbolicIR.SymbolicsConversion.extract_ir(k)) => v
-                                             for (k, v) in u0)
-        defs = merge(defs, u0)
-    end
-    if p isa InitialType && eltype(p) <: Pair
-        p = Dict{SymbolicIR.IRElement, Any}(SymbolicIR.IRElement(SymbolicIR.SymbolicsConversion.SymbolicIR.extract_ir(k)) => v
-                                            for (k, v) in p)
-        defs = merge(defs, p)
-    end
-    u0 = Float64[get(defs, SymbolicIR.to_normal(v), 0.0)
-                 for v in ModelingToolkit.states(ss)]
-    ps = Float64[defs[v] for v in ModelingToolkit.parameters(ss)]
-    ODEProblem{true}(fun, u0, tspan, ps; kwargs...)
-end
+# function SymbolicIR.SciMLBase.ODEProblem{true}(ss::SymbolicIR.ScheduledSystem, u0, tspan,
+#                                                p = SciMLBase.NullParameters;
+#                                                kwargs...)
+#     fun = ODEFunction{true}(ss)
+#     defs = ss.state.sys.info.defaults
+#     if u0 !== nothing && !(u0 isa InitialType)
+#         error("`u0` must be an array or a dictionary")
+#     end
+#     if p !== SciMLBase.NullParameters && !(p isa InitialType)
+#         error("`p` must be an array or a dictionary")
+#     end
+#     if u0 isa InitialType && eltype(u0) <: Pair
+#         u0 = Dict{SymbolicIR.IRElement, Any}(SymbolicIR.IRElement(SymbolicIR.SymbolicsConversion.extract_ir(k)) => v
+#                                              for (k, v) in u0)
+#         defs = merge(defs, u0)
+#     end
+#     if p isa InitialType && eltype(p) <: Pair
+#         p = Dict{SymbolicIR.IRElement, Any}(SymbolicIR.IRElement(SymbolicIR.SymbolicsConversion.SymbolicIR.extract_ir(k)) => v
+#                                             for (k, v) in p)
+#         defs = merge(defs, p)
+#     end
+#     u0 = Float64[get(defs, SymbolicIR.to_normal(v), 0.0)
+#                  for v in ModelingToolkit.states(ss)]
+#     ps = Float64[defs[v] for v in ModelingToolkit.parameters(ss)]
+#     ODEProblem{true}(fun, u0, tspan, ps; kwargs...)
+# end
 
 export Orientation, RotationMatrix, ori
 include("orientation.jl")

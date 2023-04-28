@@ -798,3 +798,34 @@ sol = solve(prob, Rodas4())
 isinteractive() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
 y = sol(0:0.1:10, idxs = body.r_0[2])
 @test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
+
+
+# ==============================================================================
+## Dzhanibekov effect ==========================================================
+# ==============================================================================
+world = Multibody.world
+@named freeMotion = FreeMotion(enforceStates = true, isroot = true)
+@named body = Body(m = 1, isroot = false, I_11 = 1, I_22 = 10, I_33 = 100)
+
+eqs = [connect(world.frame_b, freeMotion.frame_a)
+       connect(freeMotion.frame_b, body.frame_a)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [world;
+                                    freeMotion;
+                                    body])
+# ssys = structural_simplify(model, allow_parameters = false)
+ssys = structural_simplify(IRSystem(model))
+
+# Can't get initial condition to bite, Yingbo
+prob = ODEProblem(ssys,
+                  [
+                    freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
+                    freeMotion.phi_d .=> [0.01, 3.0, 0.02] # Rotation around y axis
+                    freeMotion.phi .=> 0.001randn.() 
+                    world.g => 0 # In space
+                  ], 
+                  (0, 100))
+
+sol = solve(prob, Rodas4())
+isinteractive() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effect")
