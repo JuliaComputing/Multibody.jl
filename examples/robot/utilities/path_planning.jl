@@ -133,40 +133,37 @@ function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
     ODESystem(eqs, t; systems, name)
 end
 
-
-
 """
     q, qd, qdd = traj5(t; q0, q1, q̇0 = zero(q0), q̇1 = zero(q0), q̈0 = zero(q0), q̈1 = zero(q0))
 
 Generate a 5:th order polynomial trajectory with specified end points, vels and accs.
 """
-function traj5(t; q0=0.0, q1=one(q0), q̇0=zero(q0), q̇1=zero(q0), q̈0=zero(q0), q̈1=zero(q0))
+function traj5(t; q0 = 0.0, q1 = one(q0), q̇0 = zero(q0), q̇1 = zero(q0), q̈0 = zero(q0),
+               q̈1 = zero(q0))
     t[1] == 0 || throw(ArgumentError("t must start at 0"))
     tf = t[end]
     a0 = q0
     a1 = q̇0
-    a2 = @. q̈0/2
-    a3 = @. (20q1 - 20q0 - (8q̇1 + 12q̇0)*tf - (3q̈0 - q̈1)*tf^2)/2tf^3
-    a4 = @. (30q0 - 30q1 + (14q̇1 + 16q̇0)*tf + (3q̈0 - 2q̈1)*tf^2)/2tf^4
-    a5 = @. (12q1 - 12q0 - (6q̇1 + 6q̇0)*tf - (q̈0 - q̈1)*tf^2)/2tf^5
-    evalpoly.(t, ((a0,a1,a2,a3,a4,a5), )),
-    evalpoly.(t, ((a1,2a2,3a3,4a4,5a5), )),
-    evalpoly.(t, ((2a2,6a3,12a4,20a5), ))
+    a2 = @. q̈0 / 2
+    a3 = @. (20q1 - 20q0 - (8q̇1 + 12q̇0) * tf - (3q̈0 - q̈1) * tf^2) / 2tf^3
+    a4 = @. (30q0 - 30q1 + (14q̇1 + 16q̇0) * tf + (3q̈0 - 2q̈1) * tf^2) / 2tf^4
+    a5 = @. (12q1 - 12q0 - (6q̇1 + 6q̇0) * tf - (q̈0 - q̈1) * tf^2) / 2tf^5
+    evalpoly.(t, ((a0, a1, a2, a3, a4, a5),)),
+    evalpoly.(t, ((a1, 2a2, 3a3, 4a4, 5a5),)),
+    evalpoly.(t, ((2a2, 6a3, 12a4, 20a5),))
 end
 t = 0:100;
-q, qd, qdd = traj5(t, q0=1, q1=2, q̇0 = 3, q̇1 = 4, q̈0 = 5, q̈1 = 6);
-plot(t, q, label="q", layout=(3,1), sp=1)
-plot!(t, qd, label="qd", sp=2)
-plot!(t, qdd, label="qdd", sp=3)
-plot!(t, centraldiff(q), sp=2)
-plot!(t, centraldiff(centraldiff(q)), sp=3)
-
+q, qd, qdd = traj5(t, q0 = 1, q1 = 2, q̇0 = 3, q̇1 = 4, q̈0 = 5, q̈1 = 6);
+plot(t, q, label = "q", layout = (3, 1), sp = 1)
+plot!(t, qd, label = "qd", sp = 2)
+plot!(t, qdd, label = "qdd", sp = 3)
+plot!(t, centraldiff(q), sp = 2)
+plot!(t, centraldiff(centraldiff(q)), sp = 3)
 
 function KinematicPTP(; time, name, q_begin = 0
-                       q_end = 1
-                       qd_max = 1
-                       qdd_max = 1)
-
+                      q_end = 1
+                      qd_max = 1
+                      qdd_max = 1)
     nout = max(length(q_begin), length(q_end), length(qd_max), length(qdd_max))
     #       parameter Real p_q_begin[nout]=(if size(q_begin, 1) == 1 then ones(nout)*
     #       q_begin[1] else q_begin);
@@ -177,7 +174,7 @@ function KinematicPTP(; time, name, q_begin = 0
     #   parameter Real p_qdd_max[nout]=(if size(qdd_max, 1) == 1 then ones(nout)*
     #       qdd_max[1] else qdd_max);
     #   parameter Real p_deltaq[nout]=p_q_end - p_q_begin;
-    
+
     # @parameters begin
     #     q_begin = q_begin, [description = "Start position"]
     #     q_end = q_end, [description = "End position"]
@@ -307,22 +304,40 @@ function KinematicPTP(; time, name, q_begin = 0
     time0 = time .- startTime # traj5 wants time vector to start at 0
 
     interp_eqs = map(1:nout) do i
-
-        q_vec, qd_vec, qdd_vec = traj5(time0, q_begin[i], q_end[i], qd_begin=zero(q_begin[i]), qd_end=zero(q_begin[i]), qdd_begin=zero(q_begin[i]), qdd_end=zero(q_begin[i]))
+        q_vec, qd_vec, qdd_vec = traj5(time0, q_begin[i], q_end[i],
+                                       qd_begin = zero(q_begin[i]),
+                                       qd_end = zero(q_begin[i]),
+                                       qdd_begin = zero(q_begin[i]),
+                                       qdd_end = zero(q_begin[i]))
 
         qfun = CubicInterpolation(time, q_vec)
         qdfun = CubicInterpolation(time, qd_vec)
         qddfun = CubicInterpolation(time, qdd_vec)
 
-        [
-            q.u[i] ~ qfun(t)
-            qd.u[i] ~ qdfun(t)
-            qdd.u[i] ~ qddfun(t)
-        ]
+        [q.u[i] ~ qfun(t)
+         qd.u[i] ~ qdfun(t)
+         qdd.u[i] ~ qddfun(t)]
     end
     eqs = reduce(vcat, interp_eqs)
 
     push!(eqs, moving.u ~ (time[1] < t < time[end]))
 
     ODESystem(eqs, t; name, systems)
+end
+
+
+"""
+    RealPassThrough(; name)
+
+Pass a Real signal through without modification
+
+# Connectors
+- `input`
+- `output`
+"""
+@component function RealPassThrough(; name)
+    @named siso = SISO()
+    @unpack u, y = siso
+    eqs = [y ~ u]
+    extend(ODESystem(eqs, t; name), siso)
 end
