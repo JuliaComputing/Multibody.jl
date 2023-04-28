@@ -17,3 +17,7 @@ include("FullRobot.jl")
 
 
 @named robot = FullRobot()
+
+ssys = structural_simplify(IRSystem(robot))
+
+ssys = structural_simplify(robot, allow_parameters = false)

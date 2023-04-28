@@ -323,9 +323,9 @@ function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end
         qdfun = CubicSpline(qd_vec, time)
         qddfun = CubicSpline(qdd_vec, time)
 
-        [q.u[i] ~ qfun(t)
-         qd.u[i] ~ qdfun(t)
-         qdd.u[i] ~ qddfun(t)]
+        [q.u[i] ~ 1#qfun(t) # TODO: SymbolicIR does not handle the interpolation https://github.com/JuliaComputing/SymbolicIR.jl/issues/2
+         qd.u[i] ~ 0#qdfun(t)
+         qdd.u[i] ~ 0]#qddfun(t)]
     end
     eqs = reduce(vcat, interp_eqs)
 
