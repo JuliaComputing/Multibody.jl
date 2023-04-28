@@ -740,10 +740,9 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 @named model = ODESystem(eqs, t, systems = [world; systems])
 
 # ssys = structural_simplify(model, allow_parameters=false)
+ssys = structural_simplify(IRSystem(model))
 
-@test_skip begin
-    ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
-
+@test_skip begin # MethodError: Cannot `convert` an object of type SymbolicUtils.BasicSymbolic{Real} to an object of type Float64 Yingbo
     prob = ODEProblem(ssys, [], (0, 10))
 end
 
