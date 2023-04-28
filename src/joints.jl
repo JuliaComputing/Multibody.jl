@@ -196,9 +196,9 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
     else
         # Spherical joint does not have states
         append!(eqs,
-                [#frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
-                    zeros(3) .~ collect(frame_a.f) +
-                                resolveRelative(frame_b.f, frame_b, frame_a)])
+                #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
+                zeros(3) .~ collect(frame_a.f) +
+                            resolveRelative(frame_b.f, frame_b, frame_a))
         if w_rel_a_fixed || z_rel_a_fixed
             append!(w_rel .~ angularVelocity2(frame_b) - resolve2(frame_b,
                                       angularVelocity1(frame_a)))
