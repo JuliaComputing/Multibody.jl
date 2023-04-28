@@ -1,6 +1,7 @@
-"Generate reference angles for fastest kinematic movement"
-function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, speedMax = 3,
-                       accMax = 2.5, startTime = 0, swingTime = 0.5)
+using DataInterpolations
+"Generate reference angles for specified kinematic movement"
+function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:10,
+                       swingTime = 0.5)
     @parameters begin
         angleBegDeg = angleBegDeg, [description = "Start angle"]
         angleEndDeg = angleEndDeg, [description = "End angle"]
@@ -17,11 +18,12 @@ function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, speedMax = 3,
 
     systems = @named begin
         controlBus = ControlBus()
-        path = KinematicPTP2(q_end = angleEnd,
-                             qd_max = speedMax,
-                             qdd_max = accMax,
-                             startTime = startTime,
-                             q_begin = angleBeg)
+        path = KinematicPTP(; q_end = angleEnd,
+                            time,
+                            #  qd_max = speedMax,
+                            #  qdd_max = accMax,
+                            #  startTime = startTime,
+                            q_begin = angleBeg)
         pathToAxis1 = PathToAxisControlBus(nAxis = 1, axisUsed = 1)
         terminateSimulation = TerminateSimulation(condition = time >=
                                                               path.endTime + swingTime)
@@ -36,7 +38,7 @@ function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, speedMax = 3,
 end
 
 function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
-                       angleEndDeg = ones(naxis), speedMax = fill(3, naxis),
+                       angleEndDeg = ones(naxis), time = 0:0.01:10, speedMax = fill(3, naxis),
                        accMax = fill(2.5, naxis), startTime = 0, swingTime = 0.5)
     @parameters begin
         naxis = naxis, [description = "Number of driven axis"]
@@ -55,11 +57,12 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
 
     systems = @named begin
         controlBus = ControlBus()
-        path = KinematicPTP2(q_end = angleEnd,
-                             qd_max = speedMax,
-                             qdd_max = accMax,
-                             startTime = startTime,
-                             q_begin = angleBeg)
+        path = KinematicPTP(; q_end = angleEnd,
+                            time,
+                            #  qd_max = speedMax,
+                            #  qdd_max = accMax,
+                            #  startTime = startTime,
+                            q_begin = angleBeg)
         pathToAxis1 = PathToAxisControlBus(nAxis = naxis, axisUsed = 1)
         pathToAxis2 = PathToAxisControlBus(nAxis = naxis, axisUsed = 2)
         pathToAxis3 = PathToAxisControlBus(nAxis = naxis, axisUsed = 3)
@@ -160,11 +163,14 @@ plot!(t, qdd, label = "qdd", sp = 3)
 plot!(t, centraldiff(q), sp = 2)
 plot!(t, centraldiff(centraldiff(q)), sp = 3)
 
-function KinematicPTP(; time, name, q_begin = 0
-                      q_end = 1
-                      qd_max = 1
-                      qdd_max = 1)
-    nout = max(length(q_begin), length(q_end), length(qd_max), length(qdd_max))
+"""
+    KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0, qdd_begin = 0, qdd_end = 0)
+
+A simple trajectory planner that plans a 5:th order polynomial trajectory between two points, subject to specified boundary conditions on the position, velocity and acceleration.
+"""
+function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0,
+                      qdd_begin = 0, qdd_end = 0)
+    nout = max(length(q_begin), length(q_end), length(qd_end), length(qdd_end))
     #       parameter Real p_q_begin[nout]=(if size(q_begin, 1) == 1 then ones(nout)*
     #       q_begin[1] else q_begin);
     #   parameter Real p_q_end[nout]=(if size(q_end, 1) == 1 then ones(nout)*q_end[
@@ -324,7 +330,6 @@ function KinematicPTP(; time, name, q_begin = 0
 
     ODESystem(eqs, t; name, systems)
 end
-
 
 """
     RealPassThrough(; name)
