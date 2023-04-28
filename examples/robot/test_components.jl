@@ -19,10 +19,11 @@ include("FullRobot.jl")
 @named oneaxis = OneAxis()
 
 ssys = structural_simplify(IRSystem(oneaxis))
-
+ssys = structural_simplify(oneaxis, allow_parameters = false)
 
 @named robot = FullRobot()
 
 ssys = structural_simplify(IRSystem(robot))
-
 ssys = structural_simplify(robot, allow_parameters = false)
+
+

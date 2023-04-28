@@ -53,6 +53,7 @@ function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0
     end
     eqs = [
         connect(axis.flange, load.flange_a),
+        connect(pathPlanning.controlBus, controlBus),
         connect(controlBus.axisControlBus1, axis.axisControlBus),
     ]
     ODESystem(eqs, t; systems, name)

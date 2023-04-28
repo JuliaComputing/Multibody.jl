@@ -51,6 +51,26 @@ end
 end
 
 """
+    AccSensor(;name)
+
+Ideal sensor to measure the absolute flange angular acceleration
+
+# Connectors:
+
+  - `flange`: [Flange](@ref) Flange of shaft from which sensor information shall be measured
+  - `a`: [RealOutput](@ref) Absolute angular acceleration of flange
+"""
+@component function AccSensor(; name)
+    @named flange = Flange()
+    @variables w(t) [description = "Absolute angular velocity of flange"]
+    @named a = RealOutput() #[description = "Absolute angular acceleration of flange"]
+    eqs = [D(flange.phi) ~ w
+           a.u ~ D(w)]
+    return ODESystem(eqs, t, [], []; name = name, systems = [flange, a])
+end
+
+
+"""
     AxisType2(; name)
 
 Axis model of the r3 joints 4,5,6
@@ -79,7 +99,7 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
         controller = Controller(; kp, ks, Ts, ratio)
         angleSensor = Rotational.AngleSensor()
         speedSensor = Rotational.SpeedSensor()
-        accSensor = Rotational.AccSensor()
+        accSensor = AccSensor() # TODO: shift to MTKstdlib version when merged
         # Const = Blocks.Constant(k = 0)
         axisControlBus = AxisControlBus()
     end
@@ -131,6 +151,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
 
     eqs = [connect(gain1.output, feedback1.input1)
            connect(feedback1.output, P.input)
+           connect(P.output, add3.input2)
            connect(gain2.output, add3.input1)
            connect(add3.output, PI.err_input)
            (gain2.input.u ~ axisControlBus.speed_ref)
@@ -205,15 +226,15 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
         bearingFriction = Rotational.RotationalFriction(; f = Rv1, tau_brk = peak * Rv0,
                                                         tau_c = Rv0, w_brk = 0.1) # NOTE: poorly chosen w_brk
     end
-    vars = @variables a_rel(t)=D(spring.w_rel) [ # This is only used inside "initial equation" block
-        description = "Relative angular acceleration of spring",
-    ]
+    # vars = @variables a_rel(t)=D(spring.w_rel) [ # This is only used inside "initial equation" block
+    #     description = "Relative angular acceleration of spring",
+    # ]
 
     eqs = [connect(spring.flange_b, gear.flange_a)
            connect(bearingFriction.flange_b, spring.flange_a)
            connect(gear.flange_b, flange_b)
            connect(bearingFriction.flange_a, flange_a)]
-    compose(ODESystem(eqs, t, vars, pars; name), systems)
+    ODESystem(eqs, t; name, systems)
 end
 
 function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
@@ -233,6 +254,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         Vs = Voltage() # was SignalVoltage
         power = IdealOpAmp()
         diff = IdealOpAmp()
+        fixed = Rotational.Fixed() # NOTE: this was added to account for the fixed frame that is added to RotationalEMF when useSupport=false
         emf = Electrical.EMF(; k = k) # Was RotationalEMF(k, useSupport=false), which differs from EMF in that it can be instantiated without support
         La = Inductor(; L = (250 / (2 * D * w)))
         Ra = Resistor(; R = 250)
@@ -260,7 +282,8 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         convert2 = Blocks.Gain(1)
     end
 
-    eqs = [connect(La.n, emf.p)
+    eqs = [connect(fixed.flange, emf.support) # NOTE: extra equation added 
+           connect(La.n, emf.p)
            connect(Ra.n, La.p)
            connect(Rd2.n, diff.n1)
            connect(C.n, OpI.p2)
@@ -311,10 +334,10 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     end
 
     @variables begin
-        (q(t)[1:6] = 0), [description = "Joint angles"]
-        (qd(t)[1:6] = 0), [description = "Joint speeds"]
-        (qdd(t)[1:6] = 0), [description = "Joint accelerations"]
-        (tau(t)[1:6] = 0), [description = "Joint driving torques"]
+        (q(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint angles"]
+        (qd(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint speeds"]
+        (qdd(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint accelerations"]
+        (tau(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint driving torques"]
     end
 
     systems = @named begin
@@ -324,12 +347,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         axis4 = Rotational.Flange()
         axis5 = Rotational.Flange()
         axis6 = Rotational.Flange()
-        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true)
-        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true)
-        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true)
-        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true)
-        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true)
-        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true)
+        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot=false)
+        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot=false)
+        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot=false)
+        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot=false)
+        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot=false)
+        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot=false)
         b0 = BodyShape(r = [0, 0.351, 0],
                        #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],
