@@ -431,11 +431,3 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
 
     compose(ODESystem(eqs, t; name), systems)
 end
-
-@named structure = MechanicalStructure()
-@named motor = Motor()
-@named controller = Controller()
-@named axis2 = AxisType2()
-@named gear2 = GearType2()
-# @named axis1 = AxisType1()
-@named gear1 = GearType1()
