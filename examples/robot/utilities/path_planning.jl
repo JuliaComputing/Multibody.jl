@@ -4,17 +4,17 @@ using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
 function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:10,
                        swingTime = 0.5)
     # @parameters begin
-        # angleBegDeg = angleBegDeg, [description = "Start angle"]
-        # angleEndDeg = angleEndDeg, [description = "End angle"]
-        # speedMax = speedMax, [description = "Maximum axis speed"]
-        # accMax = accMax, [description = "Maximum axis acceleration"]
-        # startTime = startTime, [description = "Start time of movement"]
-        # swingTime = swingTime,
-                    # [
-                    #     description = "Additional time after reference motion is in rest before simulation is stopped",
-                    # ]
-        # angleBeg = deg2rad(angleBegDeg), [description = "Start angles"]
-        # angleEnd = deg2rad(angleEndDeg), [description = "End angles"]
+    # angleBegDeg = angleBegDeg, [description = "Start angle"]
+    # angleEndDeg = angleEndDeg, [description = "End angle"]
+    # speedMax = speedMax, [description = "Maximum axis speed"]
+    # accMax = accMax, [description = "Maximum axis acceleration"]
+    # startTime = startTime, [description = "Start time of movement"]
+    # swingTime = swingTime,
+    # [
+    #     description = "Additional time after reference motion is in rest before simulation is stopped",
+    # ]
+    # angleBeg = deg2rad(angleBegDeg), [description = "Start angles"]
+    # angleEnd = deg2rad(angleEndDeg), [description = "End angles"]
     # end
 
     systems = @named begin
@@ -33,13 +33,14 @@ function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:1
     eqs = [connect(path.q, pathToAxis1.q)
            connect(path.qd, pathToAxis1.qd)
            connect(path.qdd, pathToAxis1.qdd)
-        #    connect(path.moving, pathToAxis1.moving)
+           #    connect(path.moving, pathToAxis1.moving)
            connect(pathToAxis1.axisControlBus, controlBus.axisControlBus1)]
     ODESystem(eqs, t; name, systems)
 end
 
 function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
-                       angleEndDeg = ones(naxis), time = 0:0.01:10, speedMax = fill(3, naxis),
+                       angleEndDeg = ones(naxis), time = 0:0.01:10,
+                       speedMax = fill(3, naxis),
                        accMax = fill(2.5, naxis), startTime = 0, swingTime = 0.5)
     # @parameters begin
     #     naxis = naxis, [description = "Number of driven axis"]
@@ -77,27 +78,27 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
     eqs = [connect(path.q, pathToAxis1.q)
            connect(path.qd, pathToAxis1.qd)
            connect(path.qdd, pathToAxis1.qdd)
-        #    connect(path.moving, pathToAxis1.moving)
+           #    connect(path.moving, pathToAxis1.moving)
            connect(path.q, pathToAxis2.q)
            connect(path.qd, pathToAxis2.qd)
            connect(path.qdd, pathToAxis2.qdd)
-        #    connect(path.moving, pathToAxis2.moving)
+           #    connect(path.moving, pathToAxis2.moving)
            connect(path.q, pathToAxis3.q)
            connect(path.qd, pathToAxis3.qd)
            connect(path.qdd, pathToAxis3.qdd)
-        #    connect(path.moving, pathToAxis3.moving)
+           #    connect(path.moving, pathToAxis3.moving)
            connect(path.q, pathToAxis4.q)
            connect(path.qd, pathToAxis4.qd)
            connect(path.qdd, pathToAxis4.qdd)
-        #    connect(path.moving, pathToAxis4.moving)
+           #    connect(path.moving, pathToAxis4.moving)
            connect(path.q, pathToAxis5.q)
            connect(path.qd, pathToAxis5.qd)
            connect(path.qdd, pathToAxis5.qdd)
-        #    connect(path.moving, pathToAxis5.moving)
+           #    connect(path.moving, pathToAxis5.moving)
            connect(path.q, pathToAxis6.q)
            connect(path.qd, pathToAxis6.qd)
            connect(path.qdd, pathToAxis6.qdd)
-        #    connect(path.moving, pathToAxis6.moving)
+           #    connect(path.moving, pathToAxis6.moving)
            connect(pathToAxis1.axisControlBus, controlBus.axisControlBus1)
            connect(pathToAxis2.axisControlBus, controlBus.axisControlBus2)
            connect(pathToAxis3.axisControlBus, controlBus.axisControlBus3)
@@ -124,7 +125,7 @@ function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
         q_axisUsed = RealPassThrough()
         qd_axisUsed = RealPassThrough()
         qdd_axisUsed = RealPassThrough()
-        moving = Blocks.Constant(k=1) # Blocks.BooleanInput(nAxis) # NOTE
+        moving = Blocks.Constant(k = 1) # Blocks.BooleanInput(nAxis) # NOTE
         motion_ref_axisUsed = RealPassThrough() # Blocks.BooleanPassThrough()
     end
 
@@ -313,7 +314,7 @@ function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end
     time0 = time .- startTime # traj5 wants time vector to start at 0
 
     interp_eqs = map(1:nout) do i
-        q_vec, qd_vec, qdd_vec = traj5(time0; q0=q_begin[i], q1=q_end[i],
+        q_vec, qd_vec, qdd_vec = traj5(time0; q0 = q_begin[i], q1 = q_end[i],
                                        q̇0 = zero(q_begin[i]),
                                        q̇1 = zero(q_begin[i]),
                                        q̈0 = zero(q_begin[i]),

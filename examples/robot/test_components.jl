@@ -16,20 +16,20 @@ include("FullRobot.jl")
 # @named axis1 = AxisType1()
 @named gear1 = GearType1()
 
-@named pp = PathPlanning1(; )
-@named pp6 = PathPlanning6(; )
-
+@named pp = PathPlanning1(;)
+@named pp6 = PathPlanning6(;)
 
 @named oneaxis = OneAxis()
 
 ssys = structural_simplify(IRSystem(oneaxis))
-ssys = structural_simplify(oneaxis, allow_parameters = false)
+# ssys = structural_simplify(oneaxis, allow_parameters = false)
 
 @named robot = FullRobot()
+# ssys = structural_simplify(robot, allow_parameters = false)
 
-# ssys = structural_simplify(IRSystem(robot))
-ssys = structural_simplify(robot, allow_parameters = false)
+ssys = structural_simplify(IRSystem(robot))
 
 prob = ODEProblem(ssys, [], (0.0, 10.0))
 
+using OrdinaryDiffEq
 sol = solve(prob, Rodas4())

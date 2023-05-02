@@ -45,10 +45,10 @@ function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0
         load = Rotational.Inertia(J = 1.3 * mLoad)
         pathPlanning = PathPlanning1(swingTime = swingTime,
                                      angleBegDeg = startAngle,
-                                     angleEndDeg = endAngle,
-                                    #  speedMax = refSpeedMax,
-                                    #  accMax = refAccMax
-                                    )
+                                     angleEndDeg = endAngle
+                                     #  speedMax = refSpeedMax,
+                                     #  accMax = refAccMax
+                                     )
         controlBus = ControlBus()
     end
     eqs = [

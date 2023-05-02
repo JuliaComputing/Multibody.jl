@@ -5,7 +5,6 @@ using ModelingToolkitStandardLibrary.Electrical
 t = Multibody.t
 D = Differential(t)
 
-
 """
     @connector AxisControlBus(; name)    
 
@@ -61,14 +60,13 @@ Ideal sensor to measure the absolute flange angular acceleration
   - `a`: [RealOutput](@ref) Absolute angular acceleration of flange
 """
 @component function AccSensor(; name)
-    @named flange = Flange()
+    @named flange = Rotational.Flange()
     @variables w(t) [description = "Absolute angular velocity of flange"]
-    @named a = RealOutput() #[description = "Absolute angular acceleration of flange"]
+    @named a = Blocks.RealOutput() #[description = "Absolute angular acceleration of flange"]
     eqs = [D(flange.phi) ~ w
            a.u ~ D(w)]
     return ODESystem(eqs, t, [], []; name = name, systems = [flange, a])
 end
-
 
 """
     AxisType2(; name)
@@ -77,20 +75,20 @@ Axis model of the r3 joints 4,5,6
 """
 function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
                    J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
-    @parameters begin
-        kp = kp, [description = "Gain of position controller"]
-        ks = ks, [description = "Gain of speed controller"]
-        Ts = Ts, [description = "Time constant of integrator of speed controller"]
-        k = k, [description = "Gain of motor"]
-        w = w, [description = "Time constant of motor"]
-        D = D, [description = "Damping constant of motor"]
-        J = J, [description = "Moment of inertia of motor"]
-        ratio = ratio, [description = "Gear ratio"]
-        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = Rv1, [description = "Viscous friction coefficient"]
-        peak = peak,
-               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
-    end
+    # @parameters begin
+    #     kp = kp, [description = "Gain of position controller"]
+    #     ks = ks, [description = "Gain of speed controller"]
+    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
+    #     k = k, [description = "Gain of motor"]
+    #     w = w, [description = "Time constant of motor"]
+    #     D = D, [description = "Damping constant of motor"]
+    #     J = J, [description = "Moment of inertia of motor"]
+    #     ratio = ratio, [description = "Gear ratio"]
+    #     Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+    #     Rv1 = Rv1, [description = "Viscous friction coefficient"]
+    #     peak = peak,
+    #            [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+    # end
 
     systems = @named begin
         flange = Rotational.Flange()
@@ -129,16 +127,16 @@ function AxisType1(; name, c = 43, cd = 0.005, kwargs...)
     end
     @warn "Axis type 1 is currently identical to type 2" maxlog=2
     # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd), kwargs...) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
-    axisType2 = AxisType2(; name, kwargs...) 
+    axisType2 = AxisType2(; name, kwargs...)
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
-    @parameters begin
-        kp = kp, [description = "Gain of position controller"]
-        ks = ks, [description = "Gain of speed controller"]
-        Ts = Ts, [description = "Time constant of integrator of speed controller"]
-        ratio = ratio, [description = "Gear ratio of gearbox"]
-    end
+    # @parameters begin
+    #     kp = kp, [description = "Gain of position controller"]
+    #     ks = ks, [description = "Gain of speed controller"]
+    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
+    #     ratio = ratio, [description = "Gear ratio of gearbox"]
+    # end
     systems = @named begin
         gain1 = Blocks.Gain(ratio)
         PI = Blocks.PI(k = ks, T = Ts)
@@ -174,13 +172,13 @@ function GearType2(; name, i = -99,
 
     unitAngularVelocity = 1
 
-    @parameters begin
-        i = i, [description = "Gear ratio"]
-        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = Rv1, [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
-        peak = peak,
-               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
-    end
+    # @parameters begin
+    #     i = i, [description = "Gear ratio"]
+    #     Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+    #     Rv1 = Rv1, [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
+    #     peak = peak,
+    #            [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+    # end
     systems = @named begin
         flange_a = Rotational.Flange()
         flange_b = Rotational.Flange()
@@ -201,16 +199,16 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
                    peak = 1)
     unitAngularVelocity = 1
     unitTorque = 1
-    pars = @parameters begin
-        i = i, [description = "Gear ratio"]
-        c = c, [description = "Spring constant"]
-        d = d, [description = "Damper constant"]
-        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = Rv1,
-              [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
-        peak = peak,
-               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
-    end
+    # pars = @parameters begin
+    #     i = i, [description = "Gear ratio"]
+    #     c = c, [description = "Spring constant"]
+    #     d = d, [description = "Damper constant"]
+    #     Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+    #     Rv1 = Rv1,
+    #           [description = "Viscous friction coefficient (R=Rv0+Rv1*abs(qd))"]
+    #     peak = peak,
+    #            [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+    # end
 
     #   Modelica.Mechanics.Rotational.Components.BearingFriction bearingFriction(
     #     tau_pos=[0,
@@ -238,14 +236,14 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
 end
 
 function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
-    @parameters begin
-        J = J, [description = "Moment of inertia of motor"]
-        k = k, [description = "Gain of motor"]
-        w = w, [description = "Time constant of motor"]
-        D = D, [description = "Damping constant of motor"]
-        w_max = w_max, [description = "Maximum speed of motor"]
-        i_max = i_max, [description = "Maximum current of motor"]
-    end
+    # @parameters begin
+    #     J = J, [description = "Moment of inertia of motor"]
+    #     k = k, [description = "Gain of motor"]
+    #     w = w, [description = "Time constant of motor"]
+    #     D = D, [description = "Damping constant of motor"]
+    #     w_max = w_max, [description = "Maximum speed of motor"]
+    #     i_max = i_max, [description = "Maximum current of motor"]
+    # end
 
     #   Electrical.Analog.Basic.RotationalEMF emf(k=k, useSupport=false)
 
@@ -327,17 +325,19 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
 end
 
 function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
-    @parameters begin
-        mLoad = mLoad, [description = "Mass of load"]
-        rLoad = rLoad, [description = "Distance from last flange to load mass"]
-        g = g, [description = "Gravity acceleration"]
-    end
+    # @parameters begin
+    #     mLoad = mLoad, [description = "Mass of load"]
+    #     rLoad[1:3] = rLoad, [description = "Distance from last flange to load mass"]
+    #     g = g, [description = "Gravity acceleration"]
+    # end
 
     @variables begin
         (q(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint angles"]
         (qd(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint speeds"]
-        (qdd(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint accelerations"]
-        (tau(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint driving torques"]
+        (qdd(t)[1:6] = 0),
+        [state_priority = typemax(Int), description = "Joint accelerations"]
+        (tau(t)[1:6] = 0),
+        [state_priority = typemax(Int), description = "Joint driving torques"]
     end
 
     systems = @named begin
@@ -347,12 +347,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         axis4 = Rotational.Flange()
         axis5 = Rotational.Flange()
         axis6 = Rotational.Flange()
-        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot=false)
-        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot=false)
-        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot=false)
-        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot=false)
-        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot=false)
-        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot=false)
+        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false)
+        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false)
+        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false)
+        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false)
+        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false)
+        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false)
         b0 = BodyShape(r = [0, 0.351, 0],
                        #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],
