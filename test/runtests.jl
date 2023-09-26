@@ -71,7 +71,8 @@ D = Differential(t)
 defs = Dict(collect(spring.r_rel_0 .=> [0, 1, 0])...,
             collect(body.r_0 .=> [0, 0, 0])...,
             collect((D.(body.phi)) .=> [0, 0, 0])...,
-            collect(D.(D.(body.phi)) .=> [0, 0, 0])...)
+            collect((D.(body.phid)) .=> [0, 3, 0])...,
+            collect(D.(D.(body.phi)) .=> [0, 3, 0])...)
 prob = ODEProblem(ssys, defs, (0, 10))
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
