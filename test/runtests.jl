@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using SymbolicIR
+using JuliaSimCompiler
 t = Multibody.t
 
 world = Multibody.world
@@ -91,7 +91,7 @@ isinteractive() &&
 # ==============================================================================
 ## Simple pendulum =============================================================
 # ==============================================================================
-using LinearAlgebra
+using LinearAlgebra, ModelingToolkit
 @named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named torksensor = CutTorque()
@@ -535,7 +535,7 @@ end FreeBody;
 using Multibody
 using ModelingToolkit
 # using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
