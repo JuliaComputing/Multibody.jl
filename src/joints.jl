@@ -138,14 +138,14 @@ function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
 end
 
 """
-    Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates, phi = 0, phi_d = 0, phi_dd = 0)
+    Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates, phi = 0, phi_d = 0, phi_dd = 0)
 
-Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential states. If parameter `enforceStates` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence_angleStates` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as states. If angles are used as states there is the slight disadvantage that a singular configuration is present leading to a division by zero.
+Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential state variables. If parameter `enforceState` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence_angleStates` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as state. If angles are used as state there is the slight disadvantage that a singular configuration is present leading to a division by zero.
 
-- `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `enforceStates = true`.
+- `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `enforceState = true`.
 - `sequence_angleStates`: Rotation sequence
 """
-function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed = false,
+function Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3], phi = 0,
                    phi_d = 0,
                    phi_dd = 0)
@@ -168,7 +168,7 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
            zeros(3) .~ collect(frame_b.tau)
            collect(frame_b.r_0) .~ collect(frame_a.r_0)]
 
-    if enforceStates
+    if enforceState
         @variables begin
             (phi(t)[1:3] = phi),
             [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
@@ -194,7 +194,7 @@ function Spherical(; name, enforceStates = false, isroot = true, w_rel_a_fixed =
         end
 
     else
-        # Spherical joint does not have states
+        # Spherical joint does not have state
         append!(eqs,
                 #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
                 zeros(3) .~ collect(frame_a.f) +
@@ -606,19 +606,19 @@ function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
 end
 
 """
-    FreeMotion(; name, enforceStates = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
+    FreeMotion(; name, enforceState = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
 
-Joint which does not constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as states.
+Joint which does not constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as state.
 
-Note, that bodies such as [`Body`](@ref), [`BodyShape`](@ref), have potential states describing the distance and orientation, and their derivatives, between the world frame and a body fixed frame. Therefore, if these potential state variables are suited, a `FreeMotion` joint is not needed.
+Note, that bodies such as [`Body`](@ref), [`BodyShape`](@ref), have potential state variables describing the distance and orientation, and their derivatives, between the world frame and a body fixed frame. Therefore, if these potential state variables are suited, a `FreeMotion` joint is not needed.
 
-The states of the FreeMotion object are:
+The state of the FreeMotion object consits of:
 
 The relative position vector `r_rel_a` from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_a` and the relative velocity `v_rel_a` of the origin of `frame_b` with respect to the origin of `frame_a`, resolved in `frame_a (= der(r_rel_a))`.
 
 # Arguments
 
-- `enforceStates`: Enforce this joint having states, this is often desired and is the default choice.
+- `enforceState`: Enforce this joint having state, this is often desired and is the default choice.
 - `sequence`: Rotation sequence
 - `w_rel_a_fixed`: = true, if `w_rel_a_start` are used as initial values, else as guess values
 - `z_rel_a_fixed`: = true, if `z_rel_a_start` are used as initial values, else as guess values
@@ -632,7 +632,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `v_rel_a`
 - `a_rel_a`
 """
-function FreeMotion(; name, enforceStates = true, sequence = [1, 2, 3], isroot = true,
+function FreeMotion(; name, enforceState = true, sequence = [1, 2, 3], isroot = true,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
                     phi_d = 0,
                     phi_dd = 0,
@@ -681,7 +681,7 @@ function FreeMotion(; name, enforceStates = true, sequence = [1, 2, 3], isroot =
            # Kinematic relationships
            frame_b.r_0 .~ frame_a.r_0 .+ resolve1(frame_a, r_rel_a)]
 
-    if enforceStates
+    if enforceState
         if isroot
             append!(eqs,
                     ori(frame_b) ~ absoluteRotation(frame_a, R_rel))
@@ -698,7 +698,7 @@ function FreeMotion(; name, enforceStates = true, sequence = [1, 2, 3], isroot =
                  w_rel_b .~ angularVelocity2(R_rel)])
 
     else
-        # Free motion joint does not have states
+        # Free motion joint does not have state
         if w_rel_a_fixed || z_rel_a_fixed
             append!(eqs,
                     w_rel_b .~ angularVelocity2(frame_b) - resolve2(frame_b.

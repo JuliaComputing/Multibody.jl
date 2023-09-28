@@ -28,7 +28,7 @@ Our simple pendulum will initially consist of a [`Body`](@ref) and a [`Revolute`
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 nothing # hide
 ```
-The `n` argument to [`Revolute`](@ref) denotes the rotational axis of the joint, this vector must have `norm(n) == 1`. We also indicate that the revolute joint is the root of the kinematic tree, i.e., the potential states of the joint will serve as the state variables for the system.
+The `n` argument to [`Revolute`](@ref) denotes the rotational axis of the joint, this vector must have `norm(n) == 1`. We also indicate that the revolute joint is the root of the kinematic tree, i.e., the potential state of the joint will serve as the state variables for the system.
 
 The [`Body`](@ref) is constructed by providing its mass, `m`, and the vector `r_cm` from its first frame, `body.frame_a`, to the center of mass. Since the world by default has the gravity field pointing along the negative ``y`` axis, we place the center of mass along the ``x``-axis to make the pendulum swing back and forth. The body is not selected as the root of the kinematic tree, since we have a joint in this system, but if we had attached the body directly to, e.g., a spring, we could set the body to be the root and avoid having to introduce an "artificial joint".
 

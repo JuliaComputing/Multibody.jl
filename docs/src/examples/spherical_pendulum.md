@@ -13,7 +13,7 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    joint = Spherical(enforceStates=true, isroot=true, phi = 1)
+    joint = Spherical(enforceState=true, isroot=true, phi = 1)
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 end

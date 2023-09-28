@@ -27,7 +27,7 @@ ssys = structural_simplify(model)
 # ==============================================================================
 #=
 The multibody paper mentions this as an interesting example, figure 8:
-    "The non-standard feature to have potential states
+    "The non-standard feature to have potential state
     both in joints and in bodies is especially useful for
     inexperienced users, since they do not have to
     introduce a “virtual” joint with 6 degrees of
@@ -594,7 +594,7 @@ D = Differential(t)
 world = Multibody.world
 
 @named begin
-    joint = Spherical(enforceStates = true, isroot = true, phi = 1)
+    joint = Spherical(enforceState = true, isroot = true, phi = 1)
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 end
@@ -783,7 +783,7 @@ defs = [
 
 # Model a free-falling body
 world = Multibody.world
-@named freeMotion = FreeMotion(enforceStates = true, isroot = true)
+@named freeMotion = FreeMotion(enforceState = true, isroot = true)
 @named body = Body(m = 1, isroot = false)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
@@ -812,7 +812,7 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 ## Dzhanibekov effect ==========================================================
 # ==============================================================================
 world = Multibody.world
-@named freeMotion = FreeMotion(enforceStates = true, isroot = true)
+@named freeMotion = FreeMotion(enforceState = true, isroot = true)
 @named body = Body(m = 1, isroot = false, I_11 = 1, I_22 = 10, I_33 = 100)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
