@@ -6,7 +6,7 @@ This beginners tutorial will model a pendulum pivoted around the origin in the w
 To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
-using Multibody, SymbolicIR
+using Multibody, JuliaSimCompiler
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 ```
@@ -94,8 +94,8 @@ A mass suspended in a spring can be though of as a linear pendulum (often referr
 ![Spring with mass](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringWithMass.png)
 
 ```@example pendulum
-@named damper = Translational.Damper(0.5)
-@named spring = Translational.Spring(1)
+@named damper = Translational.Damper(d=0.5)
+@named spring = Translational.Spring(c=1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -117,7 +117,6 @@ As is hopefully evident from the little code snippet above, this linear pendulum
 ### Why do we need a joint?
 In the example above, we introduced a prismatic joint to model the oscillating motion of the mass-spring system. In reality, we can suspend a mass in a spring without any joint, so why do we need one here? The answer is that we do not, in fact, need the joint, but if we connect the spring directly to the world, we need to make the body (mass) the root object of the kinematic tree instead:
 ```@example pendulum
-using SymbolicIR
 @named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0])
 @named multibody_spring = Multibody.Spring(c=1)
 

@@ -7,7 +7,6 @@ The example below adds a force and a torque sensor to the pivot point of a pendu
 using Multibody
 using ModelingToolkit
 using Plots
-using SymbolicIR
 using OrdinaryDiffEq
 using LinearAlgebra
 

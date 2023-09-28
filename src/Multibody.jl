@@ -2,7 +2,7 @@ module Multibody
 
 using LinearAlgebra
 using ModelingToolkit
-using SymbolicIR
+using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 

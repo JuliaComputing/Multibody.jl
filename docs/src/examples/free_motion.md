@@ -5,7 +5,7 @@ This example demonstrates how a free-floating [`Body`](@ref) can be simulated. T
 using Multibody
 using ModelingToolkit
 using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

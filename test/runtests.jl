@@ -269,7 +269,7 @@ connections = [connect(damper1.flange_b, rev1.axis)
                              damper2,
                          ])
 modele = ModelingToolkit.expand_connections(model)
-ssys = structural_simplify(model, allow_parameter = false)
+# ssys = structural_simplify(model, allow_parameter = false)
 
 irsys = IRSystem(modele)
 ssys = structural_simplify(irsys, alias_eliminate = false)
@@ -294,8 +294,8 @@ isinteractive() &&
 ## Linear mass-spring-damper ===================================================
 # ==============================================================================
 
-@named damper = Translational.Damper(0.5)
-@named spring = Translational.Spring(1)
+@named damper = Translational.Damper(d=0.5)
+@named spring = Translational.Spring(c=1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -433,7 +433,7 @@ equation
   connect(spring2.frame_a, spring1.frame_b);
 end ThreeSprings;
 =#
-
+##
 using Multibody
 using ModelingToolkit
 using JuliaSimCompiler
