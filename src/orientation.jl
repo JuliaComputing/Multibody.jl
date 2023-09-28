@@ -4,6 +4,17 @@ const R3{T} = RotMatrix{3, T}
 
 abstract type Orientation end
 
+"""
+    RotationMatrix
+
+A struct representing a 3D orientation as a rotation matrix.
+
+If `ODESystem` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
+
+# Fields:
+- `R::R3`: The rotation 3×3 matrix ∈ SO(3)
+- `w`: The angular velocity vector
+"""
 struct RotationMatrix <: Orientation
     R::R3
     w::Any
@@ -13,6 +24,16 @@ RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
 RotationMatrix() = RotationMatrix(R3(1.0I(3)), zeros(3))
 
+
+"""
+    NumRotationMatrix(; R = collect(1.0 * I(3)), w = zeros(3), name, varw = false)
+
+Create a new [`RotationMatrix`](@ref) struct with symbolic elements. `R,w` determine default values.
+
+The primary difference between `NumRotationMatrix` and `RotationMatrix` is that the `NumRotationMatrix` constructor is used in the constructor of a [`Frame`](@ref) in order to introduce the frame variables, whereas `RorationMatrix` (the struct) only wraps existing variables.
+
+- `varw`: If true, `w` is a variable, otherwise it is derived from the derivative of `R` as `w = get_w(R)`.
+"""
 function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = false)
     R = at_variables_t(:R, 1:3, 1:3, default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
@@ -54,6 +75,11 @@ function (D::Differential)(RM::RotationMatrix)
     RotationMatrix(DR, Dw)
 end
 
+"""
+    get_w(R)
+
+Compute the angular velocity `w` from the rotation matrix `R` and its derivative `DR = D.(R)`.
+"""
 function get_w(R::AbstractMatrix)
     R = collect(R)
     DR = collect(D.(R))
