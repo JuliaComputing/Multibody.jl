@@ -6,7 +6,7 @@ This beginners tutorial will model a pendulum pivoted around the origin in the w
 To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
-using Multibody
+using Multibody, SymbolicIR
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 ```
@@ -104,10 +104,9 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(body.frame_a, joint.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper, spring])
-ssys = structural_simplify(model, allow_parameter = false)
+ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0],
-                  (0, 30))
+prob = ODEProblem(ssys, [damper.s_rel => 1], (0, 30))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = joint.s, title="Mass-spring-damper system")
@@ -120,13 +119,13 @@ In the example above, we introduced a prismatic joint to model the oscillating m
 ```@example pendulum
 using SymbolicIR
 @named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0])
-@named multibody_spring = Multibody.Spring(1)
+@named multibody_spring = Multibody.Spring(c=1)
 
 connections = [connect(world.frame_b, multibody_spring.frame_a)
                 connect(root_body.frame_a, multibody_spring.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
-ssys = structural_simplify(IRSystem(expand_connections(model)))
+ssys = structural_simplify(IRSystem(model))
 
 defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
             collect(root_body.r_0 .=> [0, 0, 0])...,
@@ -146,7 +145,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_a, damper.flange_a))
 push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
-ssys = structural_simplify(IRSystem(expand_connections(model)))
+ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, defs, (0, 30))
 
 sol = solve(prob, Rodas4())

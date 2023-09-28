@@ -197,7 +197,8 @@ sol2 = solve(prob, Rodas4())
 @test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 isinteractive() && plot(sol2, idxs = collect(rev.phi))
 
-@info "TODO: write a test that checks that this solution is identical to the one without rod above"
+@test sol2(1:10, idxs=rev.phi).u ≈ sol(1:10, idxs=rev.phi).u atol=1e-3
+
 
 # ==============================================================================
 ## Simple pendulum with rod from absolute rotation ====================================================
@@ -218,19 +219,18 @@ connections = [connect(world.frame_b, rev.frame_a)
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
 modele = ModelingToolkit.expand_connections(model)
 
-ssys = structural_simplify(model, allow_parameter = false)
-# ssys = structural_simplify(IRSystem(modele)) # Yingbo, this fails with SymbolicIR but not with MTK
+# ssys = structural_simplify(model, allow_parameter = false)
+ssys = structural_simplify(IRSystem(modele)) # Yingbo, this fails with SymbolicIR but not with MTK
 
 D = Differential(t)
-@test_skip begin # Needs default dummy der
-    prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                      (0, 100), default_dummy_der = 0)
-    sol2 = solve(prob, Rodas4())
-    @test SciMLBase.successful_retcode(sol2)
-    @test minimum(sol2[rev.phi]) > -π
-    @test sol2[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
-    isinteractive() && plot(sol2, idxs = collect(rev.phi))
-end
+
+prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 100))
+sol3 = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol2)
+@test minimum(sol3[rev.phi]) > -π
+@test sol3[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
+isinteractive() && plot(sol3, idxs = rev.phi)
+@test sol3(1:10, idxs=rev.phi).u ≈ sol(1:10, idxs=rev.phi).u atol=1e-2
 
 # ==============================================================================
 ## Double pendulum =============================================================
@@ -482,7 +482,7 @@ prob = ODEProblem(ssys,
 
 @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
     # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
-    sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.())
+    sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-1 .* rand.())
     @test SciMLBase.successful_retcode(sol)
 
     isinteractive() && plot(sol, idxs = [body1.r_0...])
@@ -594,7 +594,7 @@ D = Differential(t)
 world = Multibody.world
 
 @named begin
-    joint = Spherical(enforceStates = true, isroot = true)
+    joint = Spherical(enforceStates = true, isroot = true, phi = 1)
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 end
@@ -615,12 +615,13 @@ prob = ODEProblem(ssys,
                    #    collect(D.(body.phid)) .=> 0
                    # collect(body.frame_a.w₃) .=> 0;
                    ], (0, 10))
-@test_skip begin # Codegen leaves symbolic variables in function, Yingbo
-    sol = solve(prob, Rodas4())
-    @assert SciMLBase.successful_retcode(sol)
 
-    isinteractive() && plot(sol, idxs = [body.r_0...])
-end
+sol = solve(prob, Rodas4())
+@assert SciMLBase.successful_retcode(sol)
+
+isinteractive() && plot(sol, idxs = [body.r_0...])
+
+@info "TODO: write tests"
 
 # ==============================================================================
 ## universal pendulum
@@ -640,16 +641,17 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
 ssys = structural_simplify(IRSystem(model))
 
-@test_skip begin # NOTE: fails due to rotation matrix used as state
-    prob = ODEProblem(ssys,
-                      [joint.revolute_a.phi => 0;
-                       D(joint.revolute_a.phi) => 0;
-                       joint.revolute_b.phi => 0;
-                       D(joint.revolute_b.phi) => 0], (0, 10))
-    sol = solve(prob, Rodas4())
-    @test SciMLBase.successful_retcode(sol)
-    plot(sol, idxs = [body.r_0...])
-end
+prob = ODEProblem(ssys,
+                  [joint.phi_b => 1;
+                   joint.revolute_a.phi => 1;
+                   D(joint.revolute_a.phi) => 0;
+                   joint.revolute_b.phi => 0;
+                   D(joint.revolute_b.phi) => 0], (0, 10))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+plot(sol, idxs = [body.r_0...])
+
+@info "TODO, write test"
 
 # ==============================================================================
 ## GearConstraint ===================================================
@@ -706,7 +708,7 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@named begin
+systems = @named begin
     gearConstraint = GearConstraint(; ratio = 10)
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
@@ -736,21 +738,9 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(mounting1D.flange_b, torque2.support)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
-@named model = ODESystem(eqs, t,
-                         systems = [world;
-                                    gearConstraint;
-                                    cyl1;
-                                    cyl2;
-                                    torque1;
-                                    # sine;
-                                    fixed;
-                                    inertia1;
-                                    idealGear;
-                                    inertia2;
-                                    torque2;
-                                    mounting1D])
+@named model = ODESystem(eqs, t, systems = [world; systems])
 
-# ssys = structural_simplify(model, allow_parameters=false)
+
 
 # @test_skip begin
     ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
@@ -776,16 +766,16 @@ world = Multibody.world
 
 cwheel = complete(wheel)
 defs = [
-    world.n => [0, 0, -1],
-    collect(D.(cwheel.rollingWheel.angles)) => [0, 5, 1], # TODO: redundant since der_angles specified above, Yingbo
+    collect(world.n .=> [0, 0, -1]);
+    collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-# ssys = structural_simplify(model, allow_parameters=false)
 
 # @test_skip begin # ERROR: AssertionError: ex isa Number Yingbo. MTK simplification works
     ssys = structural_simplify(IRSystem(wheel))
     prob = ODEProblem(ssys, defs, (0, 10))
 # end
+
 
 # ==============================================================================
 ## FreeMotion ==================================================================
@@ -816,3 +806,34 @@ sol = solve(prob, Rodas4())
 isinteractive() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
 y = sol(0:0.1:10, idxs = body.r_0[2])
 @test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
+
+
+# ==============================================================================
+## Dzhanibekov effect ==========================================================
+# ==============================================================================
+world = Multibody.world
+@named freeMotion = FreeMotion(enforceStates = true, isroot = true)
+@named body = Body(m = 1, isroot = false, I_11 = 1, I_22 = 10, I_33 = 100)
+
+eqs = [connect(world.frame_b, freeMotion.frame_a)
+       connect(freeMotion.frame_b, body.frame_a)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [world;
+                                    freeMotion;
+                                    body])
+# ssys = structural_simplify(model, allow_parameters = false)
+ssys = structural_simplify(IRSystem(model))
+
+# Can't get initial condition to bite, Yingbo
+prob = ODEProblem(ssys,
+                  [
+                    freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
+                    freeMotion.phi_d .=> [0.01, 3.0, 0.02] # Rotation around y axis
+                    freeMotion.phi .=> 0.001randn.() 
+                    world.g => 0 # In space
+                  ], 
+                  (0, 100))
+
+sol = solve(prob, Rodas4())
+isinteractive() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effect")

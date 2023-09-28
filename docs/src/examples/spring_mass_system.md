@@ -17,7 +17,7 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@named begin
+systems = @named begin
     p1      = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
     spring1 = Translational.Spring(30, s_rel0 = 0.1)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
@@ -41,21 +41,9 @@ eqs = [
     connect(spring1.flange_a, p1.support)
 ]
 
-@named model = ODESystem(eqs, t,
-                         systems = [
-                             world,
-                             body1,
-                             body2,
-                             bar1,
-                             bar2,
-                             p1,
-                             p2,
-                             spring1,
-                             spring2,
-                         ])
-ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
-prob = ODEProblem(ssys,
-                  [
+@named model = ODESystem(eqs, t, systems = [world; systems])
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys,[
                     D(p1.s) => 0,
                     D(D(p1.s)) => 0,
                     D(p2.s) => 0,

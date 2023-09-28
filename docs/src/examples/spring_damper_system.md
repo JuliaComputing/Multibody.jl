@@ -51,10 +51,11 @@ eqs = [connect(world.frame_b, bar1.frame_a)
                              damper1,
                          ])
 
-ssys = structural_simplify(IRSystem(model), alias_eliminate = false)
+ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys,
-                  [collect(D.(body1.phid)) .=> 0;
+                  [D.(body1.phi) .=> 0;
+                   D.(D.(body1.phi)) .=> 0;
                    D(p2.s) => 0;
                    D(D(p2.s)) => 0;
                    damper1.d => 2], (0, 10))
@@ -70,3 +71,6 @@ plot(
 ```
 
 This example has two parallel spring-mass parts, the first body (`body1`) is attached directly to the spring, with no joint in parallel with the spring. In this situation, we have to set `isroot=true` for `body1` to indicate that we want to use the body variables as state. The second body (`body2`) is attached to the spring with a joint in parallel with the spring, so we can use the joint variables as state, hence `isroot=false` for `body2`.
+
+
+In this example we used separate springs and dampers, see also the component [`SpringDamperParallel`](@ref) which combines the two in one component.

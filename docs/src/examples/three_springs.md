@@ -16,7 +16,7 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@named begin
+systems = @named begin
     body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
                  r_cm = [0, -0.2, 0], isroot = false)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
@@ -35,21 +35,11 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(spring3.frame_b, spring1.frame_b)
        connect(spring2.frame_a, spring1.frame_b)]
 
-@named model = ODESystem(eqs, t,
-                         systems = [
-                             world,
-                             body1,
-                             bar1,
-                             bar2,
-                             spring1,
-                             spring2,
-                             spring3,
-                         ])
+@named model = ODESystem(eqs, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys,
-                    [D.(collect(spring1.frame_b.r_0));], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
 @assert SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [body1.r_0...])
