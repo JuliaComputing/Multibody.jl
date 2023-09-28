@@ -13,6 +13,15 @@ function PartialRelativeBaseSensor(; name)
     compose(ODESystem(equations, t; name), frame_a, frame_b)
 end
 
+function PartialAbsoluteSensor(; name, n_out)
+    @named begin
+        frame_a = Frame()
+        y = Blocks.RealOutput(nout = n_out)
+    end
+    equations = []
+    compose(ODESystem(equations, t; name), frame_a, y)
+end
+
 """
     PartialCutForceBaseSensor(; name, resolveInFrame = :frame_a)
 
@@ -98,4 +107,17 @@ function RelativeAngles(; name, sequence = [1, 2, 3])
            R_rel ~ relativeRotation(frame_a, frame_b)
            angles .~ axesRotationsAngles(R_rel, sequence, guessAngle1)]
     compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
+end
+
+function AbsoluteAngles(; name, sequence = [1, 2, 3])
+    @named begin
+        pas = PartialAbsoluteSensor(; name)
+        angles = Blocks.RealOutput(nout = 3)
+    end
+    @unpack frame_a = pas
+    @named R_abs = NumRotationMatrix()
+    eqs = [collect(frame_a.f .~ 0)
+           collect(frame_a.tau .~ 0)
+           angles.u .~ axesRotationsAngles(ori(frame_a), [1, 2, 3])]
+    extend(compose(ODESystem(eqs, t; name)), pas)
 end

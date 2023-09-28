@@ -284,7 +284,7 @@ function Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwarg
     @unpack frame_a, frame_b = ptf
     @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
                                          kwargs...)
-    @named spring2d = TP.Spring(c; s_rel0 = s_unstretched)
+    @named spring2d = TP.Spring(; c, s_rel0 = s_unstretched)
     @parameters c=c [description = "spring constant", bounds = (0, Inf)]
     @parameters s_unstretched=s_unstretched [
         description = "unstretched length of spring",

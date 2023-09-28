@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using SymbolicIR
+using JuliaSimCompiler
 t = Multibody.t
 
 world = Multibody.world
@@ -71,7 +71,8 @@ D = Differential(t)
 defs = Dict(collect(spring.r_rel_0 .=> [0, 1, 0])...,
             collect(body.r_0 .=> [0, 0, 0])...,
             collect((D.(body.phi)) .=> [0, 0, 0])...,
-            collect(D.(D.(body.phi)) .=> [0, 0, 0])...)
+            collect((D.(body.phid)) .=> [0, 3, 0])...,
+            collect(D.(D.(body.phi)) .=> [0, 3, 0])...)
 prob = ODEProblem(ssys, defs, (0, 10))
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
@@ -91,7 +92,7 @@ isinteractive() &&
 # ==============================================================================
 ## Simple pendulum =============================================================
 # ==============================================================================
-using LinearAlgebra
+using LinearAlgebra, ModelingToolkit
 @named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named torksensor = CutTorque()
@@ -435,7 +436,7 @@ end ThreeSprings;
 
 using Multibody
 using ModelingToolkit
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 # https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.ThreeSprings.html
@@ -535,7 +536,7 @@ end FreeBody;
 using Multibody
 using ModelingToolkit
 # using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -585,7 +586,7 @@ end
 using Multibody
 using ModelingToolkit
 # using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -700,7 +701,7 @@ end GearConstraint;
 ##
 using Multibody
 using ModelingToolkit
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -739,12 +740,19 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
 
-# ssys = structural_simplify(model, allow_parameters=false)
-ssys = structural_simplify(IRSystem(model))
 
-@test_skip begin # MethodError: Cannot `convert` an object of type SymbolicUtils.BasicSymbolic{Real} to an object of type Float64 Yingbo
-    prob = ODEProblem(ssys, [], (0, 10))
-end
+
+# @test_skip begin
+    ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
+
+    prob = ODEProblem(ssys,
+                      [
+                          D(gearConstraint.actuatedRevolute_b.phi) => 0,
+                          D(inertia2.flange_a.phi) => 0,
+                          D(D(idealGear.phi_b)) => 0,
+                          D(gearConstraint.actuatedRevolute_a) => 0,
+                      ], (0, 10))
+# end
 
 # ==============================================================================
 ## Rolling wheel ===============================================================
@@ -762,12 +770,12 @@ defs = [
     collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-# ssys = structural_simplify(wheel, allow_parameters=false) # MTK fails
-ssys = structural_simplify(IRSystem(wheel)) # SymbolicIR chooses 38 states, Yingbo
-prob = ODEProblem(ssys, defs, (0, 10))
-sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-1 .* randn.(), p = prob.p .+ 1e-2 .* randn.()) # TODO: fails to initialize
-@test_broken length(sol.t) > 1
-# isinteractive() && plot(sol, idxs=[cwheel.x, cwheel.y])
+
+# @test_skip begin # ERROR: AssertionError: ex isa Number Yingbo. MTK simplification works
+    ssys = structural_simplify(IRSystem(wheel))
+    prob = ODEProblem(ssys, defs, (0, 10))
+# end
+
 
 # ==============================================================================
 ## FreeMotion ==================================================================
