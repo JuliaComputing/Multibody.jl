@@ -2,6 +2,11 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as TP
 
 import ModelingToolkitStandardLibrary.Blocks
 
+"""
+    BasicTorque(; name, resolveInFrame = :world)
+
+Low-level torque component used to build [`Torque`](@ref)
+"""
 function BasicTorque(; name, resolveInFrame = :world)
     @named ptf = PartialTwoFrames()
     @named torque = Blocks.RealInput(; nin = 3)
@@ -52,6 +57,9 @@ Torque acting between two frames, defined by 3 input signals and resolved in fra
 - `frame_a`
 - `frame_b`
 - `torque`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of torque resolved in frame defined by `resolveInFrame`.
+
+# Keyword arguments:
+- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
 """
 function Torque(; name, resolveInFrame = :frame_b)
     @named ptf = PartialTwoFrames()
@@ -113,6 +121,9 @@ Force acting between two frames, defined by 3 input signals and resolved in fram
 - `frame_a`
 - `frame_b`
 - `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolveInFrame`.
+
+# Keyword arguments:
+- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
 """
 function Force(; name, resolveInFrame = :frame_b)
     @named ptf = PartialTwoFrames()

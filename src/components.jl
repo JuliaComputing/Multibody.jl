@@ -5,6 +5,15 @@ function isroot(sys)
     get(sys.metadata, :isroot, false)
 end
 
+"""
+    ori(frame, varw = false)
+
+Get the orientation of `sys` as a `RotationMatrix` object.
+
+For frames, the orientation is stored in the metadata field of the system as `sys.metadata[:orientation]`.
+
+If `varw = true`, the angular velocity variables `w` of the frame is also included in the `RotationMatrix` object, otherwise `w` is derived as the time derivative of `R`. `varw = true` is primarily used when selecting a component as root.
+"""
 function ori(sys, varw = false)
     if sys.metadata isa Dict && (O = get(sys.metadata, :orientation, nothing)) !== nothing
         R = collect(O.R)
