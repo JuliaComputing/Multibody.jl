@@ -22,14 +22,20 @@ include("FullRobot.jl")
 @named oneaxis = OneAxis()
 
 ssys = structural_simplify(IRSystem(oneaxis))
-# ssys = structural_simplify(oneaxis, allow_parameters = false)
+ssys = structural_simplify(oneaxis, allow_parameters = false)
 
 @named robot = FullRobot()
-# ssys = structural_simplify(robot, allow_parameters = false)
 
+ssys = structural_simplify(robot, allow_parameters = false)
 ssys = structural_simplify(IRSystem(robot))
 
-prob = ODEProblem(ssys, [], (0.0, 10.0))
+
+
+dummyder = setdiff(states(ssys), states(oneaxis))
+op = merge(ModelingToolkit.defaults(oneaxis), Dict(x => 0.0 for x in dummyder))
+prob = ODEProblem(ssys, op, (0.0, 10.0))
 
 using OrdinaryDiffEq
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas4(), u0=prob.u0 .+ 0.01.*randn.())
+
+

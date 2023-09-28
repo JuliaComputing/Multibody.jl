@@ -436,7 +436,7 @@ end ThreeSprings;
 
 using Multibody
 using ModelingToolkit
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 # https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.ThreeSprings.html
@@ -586,7 +586,7 @@ end
 using Multibody
 using ModelingToolkit
 # using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -699,7 +699,7 @@ end GearConstraint;
 ##
 using Multibody
 using ModelingToolkit
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -752,7 +752,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 
 # ssys = structural_simplify(model, allow_parameters=false)
 
-@test_skip begin
+# @test_skip begin
     ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
 
     prob = ODEProblem(ssys,
@@ -762,7 +762,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
                           D(D(idealGear.phi_b)) => 0,
                           D(gearConstraint.actuatedRevolute_a) => 0,
                       ], (0, 10))
-end
+# end
 
 # ==============================================================================
 ## Rolling wheel ===============================================================
@@ -782,10 +782,10 @@ defs = [
 
 # ssys = structural_simplify(model, allow_parameters=false)
 
-@test_skip begin # ERROR: AssertionError: ex isa Number Yingbo. MTK simplification works
+# @test_skip begin # ERROR: AssertionError: ex isa Number Yingbo. MTK simplification works
     ssys = structural_simplify(IRSystem(wheel))
     prob = ODEProblem(ssys, defs, (0, 10))
-end
+# end
 
 # ==============================================================================
 ## FreeMotion ==================================================================
