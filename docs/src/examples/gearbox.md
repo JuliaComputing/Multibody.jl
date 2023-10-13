@@ -48,9 +48,11 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
-
+cm = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [
+    D(cm.idealGear.phi_b) => 0
+], (0, 10))
 sol = solve(prob, Rodas4())
 plot(sol)
 ```

@@ -141,7 +141,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
     # end
     systems = @named begin
         gain1 = Blocks.Gain(ratio)
-        PI = Blocks.PI(k = ks, T = Ts)
+        PI = Blocks.PI(gainPI.k = ks, T = Ts)
         feedback1 = Blocks.Feedback()
         P = Blocks.Gain(kp)
         add3 = Blocks.Add3(k3 = -1)

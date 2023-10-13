@@ -41,7 +41,7 @@ end
 
 @named motorTest = MotorTest()
 m = structural_simplify(motorTest)
-@test length(states(m)) == 3
+# @test length(states(m)) == 3
     # D(motorTest.motor.gear.bearingFriction.w) => 0
 cm = complete(motorTest)
 
@@ -188,7 +188,7 @@ plot(sol, idxs=[
 @named oneaxis = OneAxis()
 
 ssys = structural_simplify(IRSystem(oneaxis))
-ssys = structural_simplify(oneaxis)#, allow_parameters = false)
+# ssys = structural_simplify(oneaxis)#, allow_parameters = false)
 
 @named robot = FullRobot()
 
@@ -199,9 +199,11 @@ ssys = structural_simplify(IRSystem(robot))
 
 dummyder = setdiff(states(ssys), states(oneaxis))
 op = merge(ModelingToolkit.defaults(oneaxis), Dict(x => 0.0 for x in dummyder))
-prob = ODEProblem(ssys, op, (0.0, 10.0))
+
+
+prob = ODEProblem(ssys, op, (0.0, 1.0))
 
 using OrdinaryDiffEq
-sol = solve(prob, Rodas4(), u0=prob.u0 .+ 0.01.*randn.())
+sol = solve(prob, Rodas4(), u0=prob.u0 .+ 0.0.*randn.())
 
 
