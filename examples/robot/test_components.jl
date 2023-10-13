@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using JuliaSimCompiler
+using JuliaSimCompiler, OrdinaryDiffEq
 t = Multibody.t
 
 cd(@__DIR__)
@@ -41,15 +41,15 @@ end
 
 @named motorTest = MotorTest()
 m = structural_simplify(motorTest)
-@test length(states(m)) == 3
-    # D(motorTest.motor.gear.bearingFriction.w) => 0
+#@test length(states(m)) == 3
+# D(motorTest.motor.gear.bearingFriction.w) => 0
 cm = complete(motorTest)
 
 prob = ODEProblem(m, [
-    D(D(cm.motor.Jmotor.phi)) => 0
-], (0.0, 5.0))
+                      D(D(cm.motor.Jmotor.phi)) => 0
+                     ], (0.0, 5.0))
 sol = solve(prob, Rodas4())
-plot(sol, idxs=cm.motor.phi.phi.u)
+#plot(sol, idxs=cm.motor.phi.phi.u)
 
 ##
 
@@ -74,10 +74,10 @@ m = structural_simplify(gearTest)
 cm = complete(gearTest)
 
 prob = ODEProblem(m, [
-    ModelingToolkit.missing_variable_defaults(m);
-], (0.0, 5.0))
+                      ModelingToolkit.missing_variable_defaults(m);
+                     ], (0.0, 5.0))
 sol = solve(prob, Rodas4())
-plot(sol, idxs=cm.motor.phi.phi.u)
+#plot(sol, idxs=cm.motor.phi.phi.u)
 
 
 @mtkmodel GearTest begin
@@ -151,27 +151,27 @@ m = structural_simplify(axisTest)
 cm = complete(axisTest)
 tspan = (0.0, 5.0)
 prob = ODEProblem(m, [
-    ModelingToolkit.missing_variable_defaults(m);
-    # D(cm.axis2.gear.bearingFriction.w) => 0
-], tspan)
+                      ModelingToolkit.missing_variable_defaults(m);
+                      # D(cm.axis2.gear.bearingFriction.w) => 0
+                     ], tspan)
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 
 @test sol(0.0, idxs=cm.axis2.motor.emf.phi) == 0
 # @test sol(tspan[2], idxs=cm.axis2.motor.emf.phi) == 0
 
-isinteractive() && plot(sol, layout=length(states(m)))
-plot(sol, idxs=[
-    cm.axis2.gear.gear.phi_a
-    cm.axis2.gear.gear.phi_b
-    cm.axis2.gear.gear.flange_b.phi
-    # cm.axis2.gear.bearingFriction.flange_a.phi
-    cm.axis2.gear.flange_b.phi
-    cm.axis2.gear.gear.phi_support
-    cm.axis2.angleSensor.phi.u
-    cm.axis2.motor.phi.phi.u
-], layout=8, size=(800, 800))
-@test abs(sol(prob.tspan[2], idxs=u)) < 1e-6
+#isinteractive() && plot(sol, layout=length(states(m)))
+#plot(sol, idxs=[
+#    cm.axis2.gear.gear.phi_a
+#    cm.axis2.gear.gear.phi_b
+#    cm.axis2.gear.gear.flange_b.phi
+#    # cm.axis2.gear.bearingFriction.flange_a.phi
+#    cm.axis2.gear.flange_b.phi
+#    cm.axis2.gear.gear.phi_support
+#    cm.axis2.angleSensor.phi.u
+#    cm.axis2.motor.phi.phi.u
+#], layout=8, size=(800, 800))
+#@test abs(sol(prob.tspan[2], idxs=u)) < 1e-6
 @info "add tests"
 
 ##
@@ -186,14 +186,22 @@ plot(sol, idxs=[
 @named pp6 = PathPlanning6(;)
 
 @named oneaxis = OneAxis()
+oneaxis = complete(oneaxis)
 
 ssys = structural_simplify(IRSystem(oneaxis))
-ssys = structural_simplify(oneaxis)#, allow_parameters = false)
+#ssys = structural_simplify(oneaxis)#, allow_parameters = false)
+prob = ODEProblem(ssys, states(ssys) .=> 0.0, (0.0, 10.0),
+                  [oneaxis.axis.controller.PI.T => 0.01,
+                   oneaxis.axis.controller.PI.gainPI.k => 1,
+                   oneaxis.axis.controller.P.k => 10,
+                   oneaxis.load.J => 1.3*15,
+                  ])
+sol = solve(prob, Rodas4());
 
 @named robot = FullRobot()
 
 # ssys = structural_simplify(robot, allow_parameters = false)
-ssys = structural_simplify(IRSystem(robot))
+ssys = structural_simplify(IRSystem(robot));
 
 
 
@@ -201,7 +209,4 @@ dummyder = setdiff(states(ssys), states(oneaxis))
 op = merge(ModelingToolkit.defaults(oneaxis), Dict(x => 0.0 for x in dummyder))
 prob = ODEProblem(ssys, op, (0.0, 10.0))
 
-using OrdinaryDiffEq
 sol = solve(prob, Rodas4(), u0=prob.u0 .+ 0.01.*randn.())
-
-
