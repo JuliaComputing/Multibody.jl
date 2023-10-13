@@ -102,11 +102,9 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
         axisControlBus = AxisControlBus()
     end
 
-    eqs = [connect(gear.flange_b, flange)
-           connect(gear.flange_b, angleSensor.flange)
-           connect(gear.flange_b, speedSensor.flange)
+    eqs = [
+           connect(gear.flange_b, flange, angleSensor.flange, speedSensor.flange, accSensor.flange)
            connect(motor.flange_motor, gear.flange_a)
-           connect(gear.flange_b, accSensor.flange)
            connect(motor.axisControlBus, axisControlBus)
            (angleSensor.phi.u ~ axisControlBus.angle)
            (speedSensor.w.u ~ axisControlBus.speed)

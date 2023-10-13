@@ -220,7 +220,7 @@ connections = [connect(world.frame_b, rev.frame_a)
 modele = ModelingToolkit.expand_connections(model)
 
 # ssys = structural_simplify(model)#, allow_parameter = false)
-ssys = structural_simplify(IRSystem(modele)) # Yingbo, this fails with SymbolicIR but not with MTK
+ssys = structural_simplify(IRSystem(modele)) # Yingbo, Rotation-matrix dummy derivatives
 
 D = Differential(t)
 
@@ -744,7 +744,8 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 
 
 # @test_skip begin
-    ssys = structural_simplify(IRSystem(model)) # Index out of bounds, Yingbo
+    ssys = structural_simplify(model) # Yingbo: Sym doesn't have a operation or arguments! 
+    ssys = structural_simplify(IRSystem(model)) # Yingbo: Not a well formed derivative expression
 
     prob = ODEProblem(ssys,
                       [
@@ -826,7 +827,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
 
-# Can't get initial condition to bite, Yingbo
+# Yingbo: acceleration dummy derivatives
 prob = ODEProblem(ssys,
                   [
                     freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
