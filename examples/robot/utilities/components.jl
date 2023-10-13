@@ -187,9 +187,15 @@ function GearType2(; name, i = -99,
         bearingFriction = Rotational.RotationalFriction(; f = Rv1, tau_brk = peak * Rv0,
                                                         tau_c = Rv0, w_brk = 0.1) # NOTE: poorly chosen w_brk
     end
-    eqs = [connect(gear.flange_b, bearingFriction.flange_a)
-           connect(bearingFriction.flange_b, flange_b)
-           connect(gear.flange_a, flange_a)]
+    eqs = [
+        connect(gear.flange_b, bearingFriction.flange_a)
+        connect(bearingFriction.flange_b, flange_b)
+        connect(gear.flange_a, flange_a)
+
+        # Equations below are the save as above, but without the gear
+        # connect(bearingFriction.flange_b, flange_b)
+        # connect(bearingFriction.flange_a, flange_a)
+    ]
     ODESystem(eqs, t; name, systems)
 end
 

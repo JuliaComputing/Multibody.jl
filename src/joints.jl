@@ -124,7 +124,7 @@ function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
            f .~ -n'collect(frame_b.f)]
 
     if useAxisFlange
-        @named fixed = Translational.Fixed()
+        @named fixed = Translational.Fixed(s0=0)
         @named axis = Translational.Flange()
         @named support = Translational.Flange()
         push!(eqs, connect(fixed.flange, support))
