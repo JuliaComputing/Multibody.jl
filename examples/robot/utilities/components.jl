@@ -64,7 +64,9 @@ Ideal sensor to measure the absolute flange angular acceleration
     @variables w(t) [description = "Absolute angular velocity of flange"]
     @named a = Blocks.RealOutput() #[description = "Absolute angular acceleration of flange"]
     eqs = [D(flange.phi) ~ w
-           a.u ~ D(w)]
+           a.u ~ D(w)
+           flange.tau ~ 0
+           ]
     return ODESystem(eqs, t, [], []; name = name, systems = [flange, a])
 end
 
@@ -103,8 +105,10 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
     end
 
     eqs = [
-           connect(gear.flange_b, flange, angleSensor.flange, speedSensor.flange, accSensor.flange)
+           connect(flange, gear.flange_b, angleSensor.flange, speedSensor.flange, accSensor.flange)
            connect(motor.flange_motor, gear.flange_a)
+
+
            connect(motor.axisControlBus, axisControlBus)
            (angleSensor.phi.u ~ axisControlBus.angle)
            (speedSensor.w.u ~ axisControlBus.speed)
@@ -182,13 +186,17 @@ function GearType2(; name, i = -99,
         flange_b = Rotational.Flange()
         gear = Rotational.IdealGear(; ratio = i, use_support = false)
         # bearingFriction = Rotational.BearingFriction(; tau_pos=[0, Rv0; 1, (Rv0 + Rv1*unitAngularVelocity)], peak=peak, useSupport=false) # Not yet supported
-        bearingFriction = Rotational.RotationalFriction(; f = Rv1, tau_brk = peak * Rv0,
-                                                        tau_c = Rv0, w_brk = 0.1) # NOTE: poorly chosen w_brk
+        # bearingFriction = BearingFriction(; f = Rv1, tau_brk = peak * Rv0, tau_c = Rv0, w_brk = 0.1) # NOTE: poorly chosen w_brk            
+        bearingFriction = BearingFriction(;)
     end
+    #=
+    NOTE: We do not yet have the bearingFriction component, bearingFriction this component extends PartialElementaryTwoFlangesAndSupport2 which is implicitly grounded when use_support=false. This component has a relative angle state. Instead, we use a RotationalFriction component, which extends PartialCompliantWithRelativeStates that does not have implicit grounding. We therefore add the explicit grounding using a fixed component
+    =#
     eqs = [
+        connect(flange_a, gear.flange_a)
         connect(gear.flange_b, bearingFriction.flange_a)
         connect(bearingFriction.flange_b, flange_b)
-        connect(gear.flange_a, flange_a)
+
 
         # Equations below are the save as above, but without the gear
         # connect(bearingFriction.flange_b, flange_b)
@@ -196,6 +204,51 @@ function GearType2(; name, i = -99,
     ]
     ODESystem(eqs, t; name, systems)
 end
+
+using ModelingToolkitStandardLibrary.Mechanical.Rotational: PartialElementaryTwoFlangesAndSupport2
+import ModelingToolkitStandardLibrary.Mechanical.Rotational.Flange as fl
+@mtkmodel BearingFriction begin
+    # @extend flange_a, flange_b, phi_support = partial_comp = PartialElementaryTwoFlangesAndSupport2(;use_support = false)
+    # @parameters begin
+    #     f, [description = "Viscous friction coefficient"]
+    #     tau_c, [description = "Coulomb friction torque"]
+    #     w_brk, [description = "Breakaway friction velocity"]
+    #     tau_brk, [description = "Breakaway friction torque"]
+    # end
+    # @variables begin
+    #     phi(t) = 0.0, [description = "Angle between shaft flanges (flange_a, flange_b) and support"]
+    #     tau(t) = 0.0, [description = "Torque between flanges"]
+    #     w(t) = 0.0
+    #     a(t) = 0.0
+    # end
+
+    # begin
+    #     str_scale = sqrt(2 * exp(1)) * (tau_brk - tau_c)
+    #     w_st = w_brk * sqrt(2)
+    #     w_coul = w_brk / 10
+    # end
+    # @equations begin
+    #     tau ~ str_scale * (exp(-(w / w_st)^2) * w / w_st) +
+    #           tau_c * tanh(w / w_coul) + f * w # Stribeck friction + Coulomb friction + Viscous friction
+
+    #     phi ~ flange_a.phi - phi_support;
+    #     flange_b.phi ~ flange_a.phi;
+    
+    #     # Angular velocity and angular acceleration of flanges
+    #     w ~ D(phi)
+    #     a ~ D(w)
+
+    #     flange_a.tau + flange_b.tau - tau ~ 0
+    # end
+    @components begin
+        flange_a = fl()
+        flange_b = fl()
+    end
+    @equations begin
+        connect(flange_a, flange_b)
+    end
+end
+
 
 function GearType1(; name, i = -105, c = 43, d = 0.005,
                    Rv0 = 0.4,

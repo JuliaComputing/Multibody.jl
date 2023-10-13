@@ -19,17 +19,22 @@ using ModelingToolkitStandardLibrary.Blocks
 
 myfixed(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotational.Fixed(args...; kwargs...)
 
+myinertia(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotational.Inertia(args...; kwargs...)
+
+mytorque(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotational.ConstantTorque(args...; kwargs...)
 
 ##
 
 @mtkmodel MotorTest begin
     @components begin
         motor = Motor()
-        fixed = myfixed() # bug in @mtkmodel
+        # fixed = myfixed() # bug in @mtkmodel
+        inertia = myinertia(J=1)
         constant = Constant(k=1)
     end
     @equations begin
-        connect(motor.flange_motor, fixed.flange)
+        # connect(motor.flange_motor, fixed.flange)
+        connect(motor.flange_motor, inertia.flange_a)
         constant.output.u ~ motor.axisControlBus.current_ref
     end
 end
@@ -37,22 +42,42 @@ end
 @named motorTest = MotorTest()
 m = structural_simplify(motorTest)
 @test length(states(m)) == 3
+    # D(motorTest.motor.gear.bearingFriction.w) => 0
+cm = complete(motorTest)
+
+prob = ODEProblem(m, [
+    D(D(cm.motor.Jmotor.phi)) => 0
+], (0.0, 5.0))
+sol = solve(prob, Rodas4())
+plot(sol, idxs=cm.motor.phi.phi.u)
 
 ##
 
 @mtkmodel GearTest begin
     @components begin
-        gear2 = GearType2()
-        fixed = myfixed() # bug in @mtkmodel
+        motor = Motor()
+        inertia = myinertia(J=1)
+        gear = GearType2()
+        # fixed = myfixed() # bug in @mtkmodel
         constant = Constant(k=1)
     end
     @equations begin
-        connect(gear2.flange_a, fixed.flange)
+        constant.output.u ~ motor.axisControlBus.current_ref
+        connect(motor.flange_motor, gear.flange_a)
+        connect(gear.flange_b, inertia.flange_a)
+        # connect(gear2.flange_a, fixed.flange)
     end
 end
 
 @named gearTest = GearTest()
 m = structural_simplify(gearTest)
+cm = complete(gearTest)
+
+prob = ODEProblem(m, [
+    ModelingToolkit.missing_variable_defaults(m);
+], (0.0, 5.0))
+sol = solve(prob, Rodas4())
+plot(sol, idxs=cm.motor.phi.phi.u)
 
 
 @mtkmodel GearTest begin
@@ -92,31 +117,30 @@ m = structural_simplify(controllerTest)
 m = structural_simplify(IRSystem(controllerTest))
 
 
-##
-myinertia(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotational.Inertia(args...; kwargs...)
+## Test Axis
 
-mytorque(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotational.ConstantTorque(args...; kwargs...)
 
 @mtkmodel AxisTest2 begin
     @components begin
         axis2 = AxisType2()
-        fixed = myfixed() # bug in @mtkmodel
+        # fixed = myfixed() # bug in @mtkmodel
         # fixed = mytorque(tau_constant=1, use_support=true) # bug in @mtkmodel
-        # inertia = myinertia(J=1)
+        inertia = myinertia(J=1)
         # constant1 = Constant(k=1)
         constant2 = Constant(k=0)
-        constant3 = Constant(k=1)
+        constant3 = Constant(k=2)
         constant4 = Constant(k=1)
         constant5 = Constant(k=0)
     end
     @equations begin
-        connect(axis2.flange, fixed.flange)
-        # connect(axis2.flange, inertia.flange_a)
+        # connect(axis2.flange, fixed.flange)
+        connect(axis2.flange, inertia.flange_a)
         # constant1.output.u ~ motor.axisControlBus.current_ref # This is connected to the controller output
         constant2.output.u ~ axis2.axisControlBus.speed_ref
         constant3.output.u ~ axis2.axisControlBus.angle_ref
         constant4.output.u ~ axis2.axisControlBus.motion_ref
         constant5.output.u ~ axis2.axisControlBus.acceleration_ref
+        # axis2.motor.emf.support.phi ~ 0
     end
 end
 
@@ -125,14 +149,30 @@ m = structural_simplify(axisTest)
 # m = structural_simplify(IRSystem(axisTest)) # Yingbo: solution unstable with IRSystem simplification
 
 cm = complete(axisTest)
+tspan = (0.0, 5.0)
 prob = ODEProblem(m, [
-    D(D(cm.axis2.gear.gear.phi_b)) => 0
-], (0.0, 5))
+    ModelingToolkit.missing_variable_defaults(m);
+    # D(cm.axis2.gear.bearingFriction.w) => 0
+], tspan)
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
-plot(sol, layout=length(states(m)))
-u = cm.axis2.controller.PI.ctr_output.u
+
+@test sol(0.0, idxs=cm.axis2.motor.emf.phi) == 0
+# @test sol(tspan[2], idxs=cm.axis2.motor.emf.phi) == 0
+
+isinteractive() && plot(sol, layout=length(states(m)))
+plot(sol, idxs=[
+    cm.axis2.gear.gear.phi_a
+    cm.axis2.gear.gear.phi_b
+    cm.axis2.gear.gear.flange_b.phi
+    # cm.axis2.gear.bearingFriction.flange_a.phi
+    cm.axis2.gear.flange_b.phi
+    cm.axis2.gear.gear.phi_support
+    cm.axis2.angleSensor.phi.u
+    cm.axis2.motor.phi.phi.u
+], layout=8, size=(800, 800))
 @test abs(sol(prob.tspan[2], idxs=u)) < 1e-6
+@info "add tests"
 
 ##
 
@@ -152,7 +192,7 @@ ssys = structural_simplify(oneaxis)#, allow_parameters = false)
 
 @named robot = FullRobot()
 
-ssys = structural_simplify(robot, allow_parameters = false)
+# ssys = structural_simplify(robot, allow_parameters = false)
 ssys = structural_simplify(IRSystem(robot))
 
 
