@@ -597,6 +597,8 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
+@test length(states(ssys)) == 6
+
 
 prob = ODEProblem(ssys,
                   [
@@ -612,7 +614,10 @@ sol = solve(prob, Rodas4())
 
 isinteractive() && plot(sol, idxs = [body.r_0...])
 
-@info "TODO: write tests"
+@test norm(sol(0, idxs = [body.r_0...])) ≈ 1
+@test norm(sol(10, idxs = [body.r_0...])) ≈ 1
+
+@test norm(sol(0, idxs = [joint.phi...])) ≈ √(3)
 
 # ==============================================================================
 ## universal pendulum
@@ -633,16 +638,20 @@ connections = [connect(world.frame_b, joint.frame_a)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys,
-                  [joint.phi_b => 1;
-                   joint.revolute_a.phi => 1;
+                  [
+                    joint.phi_b => sqrt(2);
+                   joint.revolute_a.phi => sqrt(2);
                    D(joint.revolute_a.phi) => 0;
                    joint.revolute_b.phi => 0;
-                   D(joint.revolute_b.phi) => 0], (0, 10))
-sol = solve(prob, Rodas4())
-@test SciMLBase.successful_retcode(sol)
-plot(sol, idxs = [body.r_0...])
+                   D(joint.revolute_b.phi) => 0
+                   ], (0, 10))
+sol2 = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol2)
+plot(sol2, idxs = [body.r_0...])
 
-@info "TODO, write test"
+@test norm(sol2(0, idxs = [body.r_0...])) ≈ 1
+@test norm(sol2(10, idxs = [body.r_0...])) ≈ 1
+
 
 # ==============================================================================
 ## GearConstraint ===================================================
@@ -821,7 +830,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
 
-# Yingbo: acceleration dummy derivatives
+# Yingbo: 15 state variables chosen, but only 6 required
 prob = ODEProblem(ssys,
                   [
                     freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
@@ -834,3 +843,5 @@ prob = ODEProblem(ssys,
 sol = solve(prob, Rodas4())
 isinteractive() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effect")
 @info "Write tests"
+
+@test_broken sol(0, idxs = collect(freeMotion.phi)) != zeros(3)
