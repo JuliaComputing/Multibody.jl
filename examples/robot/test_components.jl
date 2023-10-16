@@ -206,7 +206,7 @@ matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_
 # bodeplot(S)
 
 
-ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with IRSystem simplification
+# ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with IRSystem simplification, IRSystem also does not handle the DataInterpolations.CubicSpline
 ssys = structural_simplify(oneaxis)
 # cm = oneaxis
 # prob = ODEProblem(ssys, [
@@ -214,19 +214,31 @@ ssys = structural_simplify(oneaxis)
 #     D(cm.axis.flange.phi) => 0
 # ], (0.0, 5.0))
 
-prob = ODEProblem(ssys, op, (0.0, 10),)
+zdd = ModelingToolkit.missing_variable_defaults(ssys)
+
+prob = ODEProblem(ssys, [zdd; collect(op)], (0.0, 10.5),)
 sol = solve(prob, Rodas4());
-isinteractive() && plot(sol, layout=length(states(ssys)))
+if isinteractive()
+    plot(sol, layout=length(states(ssys)), size=(1900, 1200))
+    plot!(sol, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref)
+end
 @test SciMLBase.successful_retcode(sol)
-@test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
+# @test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
+
+tv = 0:0.1:10.0
+control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref-oneaxis.pathPlanning.controlBus.axisControlBus1.angle)
+
+@test sol(tv[1], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
+@test sol(tv[end], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
+@test maximum(abs, control_error) < 1e-5
 
 
 
 
 @named robot = FullRobot()
 
-# ssys = structural_simplify(robot, allow_parameters = false)
-ssys = structural_simplify(IRSystem(robot))
+ssys = structural_simplify(robot, allow_parameters = false)
+# ssys = structural_simplify(IRSystem(robot))
 
 
 
@@ -237,6 +249,6 @@ op = merge(ModelingToolkit.defaults(oneaxis), Dict(x => 0.0 for x in dummyder))
 prob = ODEProblem(ssys, op, (0.0, 1.0))
 
 using OrdinaryDiffEq
-sol = solve(prob, Rodas4(), u0=prob.u0 .+ 0.0.*randn.())
+sol = solve(prob, Rodas4())#, u0=prob.u0 .+ 0.0.*randn.())
 
 
