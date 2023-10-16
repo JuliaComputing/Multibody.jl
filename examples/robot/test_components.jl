@@ -161,7 +161,7 @@ sol = solve(prob, Rodas4())
 # @test sol(tspan[2], idxs=cm.axis2.motor.emf.phi) == 0
 
 isinteractive() && plot(sol, layout=length(states(m)))
-plot(sol, idxs=[
+isinteractive() && plot(sol, idxs=[
     cm.axis2.gear.gear.phi_a
     cm.axis2.gear.gear.phi_b
     cm.axis2.gear.gear.flange_b.phi
@@ -171,8 +171,8 @@ plot(sol, idxs=[
     cm.axis2.angleSensor.phi.u
     cm.axis2.motor.phi.phi.u
 ], layout=8, size=(800, 800))
-@test abs(sol(prob.tspan[2], idxs=u)) < 1e-6
-@info "add tests"
+u = cm.axis2.controller.PI.ctr_output.u
+@test abs(sol(prob.tspan[2], idxs=u)) < 1e-6 # test control output is zero at the end of simulation
 
 ##
 
@@ -186,9 +186,42 @@ plot(sol, idxs=[
 @named pp6 = PathPlanning6(;)
 
 @named oneaxis = OneAxis()
+oneaxis = complete(oneaxis)
+op = Dict([
+    oneaxis.axis.flange.phi => 0
+    D(oneaxis.axis.flange.phi) => 0
+    D(D(oneaxis.axis.flange.phi)) => 0
+    D(D(oneaxis.load.phi)) => 0
+    oneaxis.axis.controller.PI.T => 0.01
+    oneaxis.axis.controller.PI.gainPI.k => 1
+    oneaxis.axis.controller.P.k => 10
+    oneaxis.load.J => 1.3*15
+])
+matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
 
-ssys = structural_simplify(IRSystem(oneaxis))
-# ssys = structural_simplify(oneaxis)#, allow_parameters = false)
+
+# using ControlSystemsBase 
+# S = ss(matrices_S...) |> minreal
+# @test isstable(S)
+# bodeplot(S)
+
+
+ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with IRSystem simplification
+ssys = structural_simplify(oneaxis)
+# cm = oneaxis
+# prob = ODEProblem(ssys, [
+#     cm.axis.flange.phi => 0
+#     D(cm.axis.flange.phi) => 0
+# ], (0.0, 5.0))
+
+prob = ODEProblem(ssys, op, (0.0, 10),)
+sol = solve(prob, Rodas4());
+isinteractive() && plot(sol, layout=length(states(ssys)))
+@test SciMLBase.successful_retcode(sol)
+@test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
+
+
+
 
 @named robot = FullRobot()
 
