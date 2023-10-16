@@ -1,7 +1,7 @@
 include("utilities/components.jl")
 
 function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0,
-                 endAngle = 120, swingTime = 0.5, refSpeedMax = 3, refAccMax = 10)
+                 endAngle = 120, swingTime = 0.5, refSpeedMax = 3, refAccMax = 10, kwargs...)
 
     # parameter SI.Mass mLoad(min=0)=15 "Mass of load";
     # parameter Real kp=5 "Gain of position controller of axis";
@@ -43,11 +43,12 @@ function OneAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0
                          ks = ks,
                          Ts = Ts)
         load = Rotational.Inertia(J = 1.3 * mLoad)
-        pathPlanning = PathPlanning1(swingTime = swingTime,
+        pathPlanning = PathPlanning1(;swingTime = swingTime,
                                      angleBegDeg = startAngle,
-                                     angleEndDeg = endAngle
+                                     angleEndDeg = endAngle,
                                      #  speedMax = refSpeedMax,
                                      #  accMax = refAccMax
+                                     kwargs...
                                      )
         controlBus = ControlBus()
     end

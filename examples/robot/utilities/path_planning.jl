@@ -2,7 +2,7 @@ using DataInterpolations
 using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
 "Generate reference angles for specified kinematic movement"
 function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:10,
-                       swingTime = 0.5)
+                       swingTime = 0.5, kwargs...)
     # @parameters begin
     # angleBegDeg = angleBegDeg, [description = "Start angle"]
     # angleEndDeg = angleEndDeg, [description = "End angle"]
@@ -24,7 +24,7 @@ function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:1
                             #  qd_max = speedMax,
                             #  qdd_max = accMax,
                             #  startTime = startTime,
-                            q_begin = deg2rad.(angleBegDeg))
+                            q_begin = deg2rad.(angleBegDeg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = 1, axisUsed = 1)
         # terminateSimulation = TerminateSimulation(condition = time >=
         #                                                       path.endTime + swingTime)
@@ -41,7 +41,7 @@ end
 function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
                        angleEndDeg = ones(naxis), time = 0:0.01:10,
                        speedMax = fill(3, naxis),
-                       accMax = fill(2.5, naxis), startTime = 0, swingTime = 0.5)
+                       accMax = fill(2.5, naxis), startTime = 0, swingTime = 0.5, kwargs...)
     # @parameters begin
     #     naxis = naxis, [description = "Number of driven axis"]
     #     angleBegDeg[1:naxis] = angleBegDeg, [description = "Start angles"]
@@ -64,7 +64,7 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
                             #  qd_max = speedMax,
                             #  qdd_max = accMax,
                             #  startTime = startTime,
-                            q_begin = deg2rad.(angleBegDeg))
+                            q_begin = deg2rad.(angleBegDeg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = naxis, axisUsed = 1)
         pathToAxis2 = PathToAxisControlBus(nAxis = naxis, axisUsed = 2)
         pathToAxis3 = PathToAxisControlBus(nAxis = naxis, axisUsed = 3)
@@ -173,7 +173,7 @@ end
 A simple trajectory planner that plans a 5:th order polynomial trajectory between two points, subject to specified boundary conditions on the position, velocity and acceleration.
 """
 function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0,
-                      qdd_begin = 0, qdd_end = 0)
+                      qdd_begin = 0, qdd_end = 0, trivial = false)
     nout = max(length(q_begin), length(q_end), length(qd_end), length(qdd_end))
     #       parameter Real p_q_begin[nout]=(if size(q_begin, 1) == 1 then ones(nout)*
     #       q_begin[1] else q_begin);
@@ -324,9 +324,15 @@ function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end
         qdfun = CubicSpline(qd_vec, time)
         qddfun = CubicSpline(qdd_vec, time)
 
-        [q.u[i] ~ qfun(t) # TODO: SymbolicIR does not handle the interpolation https://github.com/JuliaComputing/SymbolicIR.jl/issues/2
-         qd.u[i] ~ qdfun(t)
-         qdd.u[i] ~ qddfun(t)]
+        if trivial
+            [q.u[i] ~ 1 # TODO: SymbolicIR does not handle the interpolation https://github.com/JuliaComputing/SymbolicIR.jl/issues/2
+            qd.u[i] ~ 0
+            qdd.u[i] ~ 0]
+        else
+            [q.u[i] ~ qfun(t) # TODO: SymbolicIR does not handle the interpolation https://github.com/JuliaComputing/SymbolicIR.jl/issues/2
+            qd.u[i] ~ qdfun(t)
+            qdd.u[i] ~ qddfun(t)]
+        end
     end
     eqs = reduce(vcat, interp_eqs)
 

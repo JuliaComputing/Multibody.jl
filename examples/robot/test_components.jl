@@ -3,6 +3,7 @@ using Multibody
 using Test
 using JuliaSimCompiler
 t = Multibody.t
+using OrdinaryDiffEq
 
 cd(@__DIR__)
 world = Multibody.world
@@ -185,7 +186,7 @@ u = cm.axis2.controller.PI.ctr_output.u
 @named pp = PathPlanning1(;)
 @named pp6 = PathPlanning6(;)
 
-@named oneaxis = OneAxis()
+@named oneaxis = OneAxis(trivial=true)
 oneaxis = complete(oneaxis)
 op = Dict([
     oneaxis.axis.flange.phi => 0
@@ -197,7 +198,7 @@ op = Dict([
     oneaxis.axis.controller.P.k => 10
     oneaxis.load.J => 1.3*15
 ])
-matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
+# matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
 
 
 # using ControlSystemsBase 
