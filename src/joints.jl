@@ -623,7 +623,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `w_rel_a_fixed`: = true, if `w_rel_a_start` are used as initial values, else as guess values
 - `z_rel_a_fixed`: = true, if `z_rel_a_start` are used as initial values, else as guess values
 
-# Initial codition arguments:
+# Initial condition arguments:
 - `phi`
 - `phi_d`
 - `phi_dd`

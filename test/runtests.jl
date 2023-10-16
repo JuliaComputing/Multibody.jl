@@ -787,7 +787,32 @@ end
 # ==============================================================================
 
 # Model a free-falling body
+# Test 1, enforce state = false
 world = Multibody.world
+@named freeMotion = FreeMotion(enforceState = false, isroot = false)
+@named body = Body(m = 1, isroot = true)
+
+eqs = [connect(world.frame_b, freeMotion.frame_a)
+       connect(freeMotion.frame_b, body.frame_a)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [world;
+                                    freeMotion;
+                                    body])
+# ssys = structural_simplify(model, allow_parameters = false)
+ssys = structural_simplify(IRSystem(model))
+@test length(states(ssys)) == 12
+
+prob = ODEProblem(ssys, [], (0, 10))
+
+sol = solve(prob, Rodas4())
+isinteractive() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
+y = sol(0:0.1:10, idxs = body.r_0[2])
+@test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
+
+
+
+## test 2 enforce state = true
 @named freeMotion = FreeMotion(enforceState = true, isroot = true)
 @named body = Body(m = 1, isroot = false)
 
@@ -800,17 +825,16 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
+@test_broken length(states(ssys)) == 12 # This test passes when the body states are used, but not with joint states
 
-prob = ODEProblem(ssys,
-                  [D.(freeMotion.r_rel_a) .=> randn();
-                   D.(D.(freeMotion.r_rel_a)) .=> randn();
-                   D.(freeMotion.phi) .=> randn();
-                   D.(D.(freeMotion.phi)) .=> randn()], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
 sol = solve(prob, Rodas4())
 isinteractive() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
 y = sol(0:0.1:10, idxs = body.r_0[2])
 @test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
+
+
 
 
 # ==============================================================================
@@ -830,7 +854,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
 
-# Yingbo: 15 state variables chosen, but only 6 required
+# Yingbo: 15 state variables chosen, but only 12 required. OpenModelica chooses 12
 prob = ODEProblem(ssys,
                   [
                     freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
