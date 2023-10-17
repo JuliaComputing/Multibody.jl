@@ -170,11 +170,11 @@ isinteractive() && plot(sol)
 # render(fourbar, sol; framerate=60)
 
 ## Now close the loop
-# When we do, we can only select one joint as root. We must also replace one joint with a RevolutePlanarLoopConstraint 
+# We must also replace one joint with a RevolutePlanarLoopConstraint 
 systems = @named begin
     j1 = Revolute(isroot = true)
-    j2 = Revolute(isroot = false)
-    j3 = Revolute(isroot = false)
+    j2 = Revolute(isroot = true)
+    j3 = Revolute(isroot = true)
     j4 = RevolutePlanarLoopConstraint()
     b1 = BodyShape(r = [1.0, 0, 0])
     b2 = BodyShape(r = [1.0, 0, 0])
