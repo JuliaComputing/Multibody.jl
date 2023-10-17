@@ -1,7 +1,7 @@
 include("utilities/components.jl")
 include("utilities/path_planning.jl")
 
-function FullRobot(; name)
+function FullRobot(; name, kwargs...)
     @parameters begin
         # mLoad = 15, [description = "Mass of load"]
         # rLoad[1:3] = [0.1, 0.25, 0.1],
@@ -91,7 +91,7 @@ function FullRobot(; name)
         mechanics = MechanicalStructure(mLoad = (mLoad),
                                         rLoad = (rLoad),
                                         g = (g))
-        pathPlanning = PathPlanning6(naxis = 6,
+        pathPlanning = PathPlanning6(;naxis = 6,
                                      angleBegDeg = [
                                          startAngle1,
                                          startAngle2,
@@ -111,7 +111,8 @@ function FullRobot(; name)
                                      speedMax = refSpeedMax,
                                      accMax = refAccMax,
                                      startTime = refStartTime,
-                                     swingTime = refSwingTime)
+                                     swingTime = refSwingTime,
+                                     kwargs...)
 
         axis1 = AxisType1(w = 4590,
                           ratio = -105,

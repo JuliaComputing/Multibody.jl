@@ -207,8 +207,8 @@ op = Dict([
 # bodeplot(S)
 
 
-# ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with IRSystem simplification, IRSystem also does not handle the DataInterpolations.CubicSpline
-ssys = structural_simplify(oneaxis)
+ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with IRSystem simplification, IRSystem also does not handle the DataInterpolations.CubicSpline
+# ssys = structural_simplify(oneaxis)
 # cm = oneaxis
 # prob = ODEProblem(ssys, [
 #     cm.axis.flange.phi => 0
@@ -235,21 +235,10 @@ control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.ang
 
 
 
-
-@named robot = FullRobot()
-
-ssys = structural_simplify(robot, allow_parameters = false)
-# ssys = structural_simplify(IRSystem(robot))
-
-
-
-dummyder = setdiff(states(ssys), states(oneaxis))
-op = merge(ModelingToolkit.defaults(oneaxis), Dict(x => 0.0 for x in dummyder))
-
-
-prob = ODEProblem(ssys, op, (0.0, 1.0))
-
 using OrdinaryDiffEq
-sol = solve(prob, Rodas4())#, u0=prob.u0 .+ 0.0.*randn.())
+@named robot = FullRobot(trivial=true)
+ssys = structural_simplify(IRSystem(robot))
+prob = ODEProblem(ssys, [], (0.0, 1.0))
+sol = solve(prob, Rodas4())
 
 

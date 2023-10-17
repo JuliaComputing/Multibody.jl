@@ -144,6 +144,7 @@ connections = [
 # m = structural_simplify(fourbar)
 m = structural_simplify(IRSystem(fourbar))
 @test length(states(m)) == 8
+prob = ODEProblem(m, [], (0.0, 10))
 
 
 ## Now close the loop
