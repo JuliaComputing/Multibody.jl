@@ -66,11 +66,11 @@ systems = @named begin
     b1 = BodyShape(r = [0, 0.5, 0.1])
     b2 = BodyShape(r = [0, 0.2, 0])
     b3 = BodyShape(r = [-1, 0.3, 0.1])
-    rev = Revolute(n = [0, 1, 0], isroot = false, iscut=true)
+    rev = Revolute(n = [0, 1, 0], isroot = true, iscut=true)
     rev1 = Revolute()
-    j3 = Revolute(n = [1, 0, 0])
-    j4 = Revolute(n = [0, 1, 0])
-    j5 = Revolute(n = [0, 0, 1])
+    j3 = Revolute(n = [1, 0, 0], isroot = true)
+    j4 = Revolute(n = [0, 1, 0], isroot = true)
+    j5 = Revolute(n = [0, 0, 1], isroot = true)
     b0 = FixedTranslation(r = [1.2, 0, 0])
 end
 
@@ -85,7 +85,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(rev.frame_b, rev1.frame_a)
                connect(rev1.frame_b, b3.frame_a)
                connect(world.frame_b, j1.frame_a)
-               connect(b1.frame_b, j3.frame_a)
+               connect(b1.frame_b, j3.frame_a)m.mass
                connect(j3.frame_b, j4.frame_a)
                connect(j4.frame_b, j5.frame_a)
                connect(j5.frame_b, b3.frame_b)
@@ -99,7 +99,30 @@ m = structural_simplify(IRSystem(fourbar))
 
 prob = ODEProblem(m, [], (0.0, 5.0))
 
-sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 0.01 .* randn.())
+du = zero(prob.u0)
+prob.f(du, prob.u0, prob.p, 0.0) 
+
+sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
+
+# using SeeToDee, NonlinearSolve
+# function dynamics(x,u,p,t)
+#     dx = similar(x)
+#     prob.f(dx,x,p,t)
+# end
+
+# Ts = 0.001
+# nx = 2
+# na = 7
+# nu = 0
+# x_inds = findall(!iszero, prob.f.mass_matrix.diag)
+# a_inds = findall(iszero, prob.f.mass_matrix.diag)
+# discrete_dynamics = SeeToDee.SimpleColloc2(dynamics, Ts, x_inds, a_inds, nu; n=3, solver=NonlinearSolve.NewtonRaphson())
+
+# X = [prob.u0]
+# i = 0
+# for i in 1:1000
+#     push!(X, discrete_dynamics(X[end], [], prob.p, i*Ts))
+# end
 
 
 
