@@ -217,7 +217,7 @@ ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with I
 
 zdd = ModelingToolkit.missing_variable_defaults(ssys)
 
-prob = ODEProblem(ssys, [zdd; collect(op)], (0.0, 10.5),)
+prob = ODEProblem(ssys, collect(op), (0.0, 10.5),)
 sol = solve(prob, Rodas4());
 if isinteractive()
     plot(sol, layout=length(states(ssys)), size=(1900, 1200))
@@ -239,6 +239,11 @@ using OrdinaryDiffEq
 @named robot = FullRobot(trivial=true)
 ssys = structural_simplify(IRSystem(robot))
 prob = ODEProblem(ssys, [], (0.0, 1.0))
-sol = solve(prob, Rodas4())
+
+out = similar(prob.u0)
+prob.f(out, prob.u0, prob.p, 0.0)
+
+
+@time sol = solve(prob, Rodas4())
 
 
