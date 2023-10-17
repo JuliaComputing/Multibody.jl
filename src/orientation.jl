@@ -210,16 +210,23 @@ function residue(R1, R2)
     # https://github.com/modelica/ModelicaStandardLibrary/blob/master/Modelica/Mechanics/MultiBody/Frames/Orientation.mo
     R1 isa ODESystem && (R1 = ori(R1))
     R2 isa ODESystem && (R2 = ori(R2))
-    R1 = R1.R.mat
-    R2 = R2.R.mat
+    R1 = R1.R
+    R2 = R2.R
     [atan(cross(R1[1, :], R1[2, :]) ⋅ R2[2, :], R1[1, :] ⋅ R2[1, :])
      atan(-cross(R1[1, :], R1[2, :]) ⋅ R2[1, :], R1[2, :] ⋅ R2[2, :])
      atan(R1[2, :] ⋅ R2[1, :], R1[3, :] ⋅ R2[3, :])]
+
+    # [
+    # cross(R1[1, :], R1[2, :])'R2[2, :]
+    # -cross(R1[1, :], R1[2, :])'R2[1, :]
+    # R1[2, :]'R2[1, :]
+    # ]
 end
 
 function connect_loop(F1, F2)
     F1.metadata[:loop_opening] = true
     # connect(F1, F2)
+    # orientation_constraint(ori(F1)'ori(F2)) .~ 0
     residue(F1, F2) .~ 0
 end
 

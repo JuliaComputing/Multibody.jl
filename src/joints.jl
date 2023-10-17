@@ -14,7 +14,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
-                  isroot = true, radius = 0.1)
+                  isroot = true, iscut = false, radius = 0.1)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -34,16 +34,23 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
-    if isroot
-        eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
-                       ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
-                       collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
-                       collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
-    else
+    if iscut
         eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-                       ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
-                       collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
-                       collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+            residue(ori(frame_a), absoluteRotation(ori(frame_b), Rrel)) .~ 0 # If joint is a cut joint, this equation is replaced
+                collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
+                collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+    else
+        if isroot
+            eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
+                        ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
+                        collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
+                        collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
+        else
+            eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
+                        ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
+                        collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
+                        collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+        end
     end
     moreeqs = [collect(frame_a.r_0 .~ frame_b.r_0)
                D(phi) ~ w
@@ -122,7 +129,7 @@ The function returns an ODESystem representing the prismatic joint.
            zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n * s, frame_b.f))
 
            # d'Alemberts principle
-           f .~ -n'collect(frame_b.f)]
+           f ~ -(n'collect(frame_b.f))[]]
 
     if useAxisFlange
         @named fixed = Translational.Fixed(s0=0)

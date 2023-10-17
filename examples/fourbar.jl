@@ -60,13 +60,13 @@ W(args...; kwargs...) = Multibody.world
 # end
 
 # @named fourbar = FourBar()
-@named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, isroot = false)
-    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2, isroot=true)
+systems = @named begin
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, isroot = true)
+    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2, isroot=false)
     b1 = BodyShape(r = [0, 0.5, 0.1])
     b2 = BodyShape(r = [0, 0.2, 0])
     b3 = BodyShape(r = [-1, 0.3, 0.1])
-    rev = Revolute(n = [0, 1, 0])
+    rev = Revolute(n = [0, 1, 0], isroot = false, iscut=true)
     rev1 = Revolute()
     j3 = Revolute(n = [1, 0, 0])
     j4 = Revolute(n = [0, 1, 0])
@@ -75,9 +75,13 @@ W(args...; kwargs...) = Multibody.world
 end
 
 connections = [connect(j2.frame_b, b2.frame_a)
+
+            #    Multibody.connect_loop2(j1.frame_b, b1.frame_a)
                connect(j1.frame_b, b1.frame_a)
-               Multibody.connect_loop(rev.frame_a, b2.frame_b)
-            #    connect(rev.frame_a, b2.frame_b)
+            
+            #    Multibody.connect_loop(rev.frame_a, b2.frame_b)
+               connect(rev.frame_a, b2.frame_b)
+
                connect(rev.frame_b, rev1.frame_a)
                connect(rev1.frame_b, b3.frame_a)
                connect(world.frame_b, j1.frame_a)
@@ -86,22 +90,9 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(j4.frame_b, j5.frame_a)
                connect(j5.frame_b, b3.frame_b)
                connect(b0.frame_a, world.frame_b)
-               connect(b0.frame_b, j2.frame_a)]
-@named fourbar = ODESystem(connections, t,
-                         systems = [
-                             world,
-                             j1,
-                             j2,
-                             b1,
-                             b2,
-                             b3,
-                             rev,
-                             rev1,
-                             j3,
-                             j4,
-                             j5,
-                             b0,
-                         ])
+               connect(b0.frame_b, j2.frame_a)
+               ]
+@named fourbar = ODESystem(connections, t, systems = [world; systems])
 
 # m = structural_simplify(fourbar)
 m = structural_simplify(IRSystem(fourbar))
