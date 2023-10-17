@@ -2,6 +2,7 @@ using Multibody, OrdinaryDiffEq, JuliaSimCompiler
 using ModelingToolkit
 using Multibody: connect_loop
 using Test
+using Plots
 t = Multibody.t
 
 world = Multibody.world
@@ -155,35 +156,42 @@ isinteractive() && plot(sol)
 # render(fourbar, sol; framerate=60)
 
 ## Now close the loop
-# When we do, we can only select one joint as root. The loop closure must not use a regular connect statement, instead, we use connect_loop
-# For unknown reason, we must also change the connection to the world to use connect_loop for the system to balance
+# When we do, we can only select one joint as root. We must also replace one joint with a RevolutePlanarLoopConstraint 
 systems = @named begin
     j1 = Revolute(isroot = true)
     j2 = Revolute(isroot = false)
     j3 = Revolute(isroot = false)
-    j4 = Revolute(isroot = false)
+    j4 = RevolutePlanarLoopConstraint()
     b1 = BodyShape(r = [1.0, 0, 0])
     b2 = BodyShape(r = [1.0, 0, 0])
-    b3 = BodyShape(r = [1.0, 0, 0])
+    b3 = BodyShape(r = [-1.0, 0, 0])
     b4 = BodyShape(r = [1.0, 0, 0])
 end
 
 connections = [
-    # connect(world.frame_b, j1.frame_a)
+    connect(world.frame_b, j1.frame_a)
+    # Multibody.connect_loop(world.frame_b, j1.frame_a)
+    
     connect(j1.frame_b, b1.frame_a)
     connect(b1.frame_b, j2.frame_a)
     connect(j2.frame_b, b2.frame_a)
     connect(b2.frame_b, j3.frame_a)
     connect(j3.frame_b, b3.frame_a)
     connect(b3.frame_b, j4.frame_a)
+    
     connect(j4.frame_b, b4.frame_a)
-    # connect(b4.frame_b, j1.frame_a)
-    Multibody.connect_loop(b4.frame_b, j1.frame_a)
-    Multibody.connect_loop(world.frame_b, j1.frame_a)
+    # Multibody.connect_loop(j4.frame_b, b4.frame_a)
+    
+    connect(b4.frame_b, j1.frame_a)
+    # Multibody.connect_loop(b4.frame_b, j1.frame_a)
+    
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 
-m = structural_simplify(IRSystem(fourbar))
+##
+
+# m = structural_simplify((fourbar), allow_parameter=false)
+m = structural_simplify(IRSystem(fourbar)) # It does simplify
 
 @test_broken length(states(m)) == 2
 
@@ -191,8 +199,8 @@ prob = ODEProblem(m, [], (0.0, 5.0))
 
 # Try the generated dynamics
 du = zero(prob.u0)
-prob.f.f(du, prob.u0, prob.p, 0)
+@time prob.f.f(du, prob.u0, prob.p, 0) # Yingbo: Singular
 
 
 sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
-isinteractive() && plot(sol, vars = [j1.phi, j2.phi, j3.phi, j4.phi])
+isinteractive() && plot(sol, vars = [j1.phi, j2.phi, j3.phi])
