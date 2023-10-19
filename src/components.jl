@@ -32,7 +32,7 @@ function ori(sys, varw = false)
     end
 end
 
-function World(; name)
+@component function World(; name)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
@@ -56,7 +56,7 @@ const world = World(; name = :world)
 "Compute the gravity acceleration, resolved in world frame"
 gravity_acceleration(r) = world.g * world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
-function Fixed(; name, r = [0, 0, 0])
+@component function Fixed(; name, r = [0, 0, 0])
     systems = @named begin frame_b = Frame() end
     @parameters begin r[1:3] = r,
                                [
@@ -67,7 +67,7 @@ function Fixed(; name, r = [0, 0, 0])
     compose(ODESystem(eqs, t; name), systems...)
 end
 
-function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
+@component function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
     systems = @named begin
         flange_b = Rotational.Flange()
         frame_a = Frame()
@@ -97,7 +97,7 @@ Fixed translation of `frame_b` with respect to `frame_a` with position vector `r
 
 Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
-function FixedTranslation(; name, r)
+@component function FixedTranslation(; name, r)
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters r(t)[1:3]=r [
@@ -125,7 +125,7 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 - `sequence`: DESCRIPTION
 - `angle`: Angle of rotation around `n`, given in radians
 """
-function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
+@component function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
                        angle, n_x = [1, 0, 0], n_y = [0, 1, 0])
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
@@ -183,7 +183,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 - `phi0`: Initial orientation, only applicable if `isroot = true`
 - `phid0`: Initial angular velocity
 """
-function Body(; name, m = 1, r_cm = [0, 0, 0],
+@component function Body(; name, m = 1, r_cm = [0, 0, 0],
               I_11 = 0.001,
               I_22 = 0.001,
               I_33 = 0.001,
@@ -280,7 +280,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 """
-function BodyShape(; name, m = 1, r = [0, 0, 0], r_0 = 0, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_0 = 0, kwargs...)
     systems = @named begin
         frameTranslation = FixedTranslation(r = r)
         body = Body(; kwargs...)

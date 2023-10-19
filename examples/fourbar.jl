@@ -123,10 +123,10 @@ systems = @named begin
     j2 = Revolute(isroot = true)
     j3 = Revolute(isroot = true)
     j4 = Revolute(isroot = true)
-    b1 = BodyShape(r = [1.0, 0, 0])
-    b2 = BodyShape(r = [1.0, 0, 0])
-    b3 = BodyShape(r = [1.0, 0, 0])
-    b4 = BodyShape(r = [1.0, 0, 0])
+    b1 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0])
+    b2 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0])
+    b3 = BodyShape(r = [-1.0, 0, 0], r_cm = 0.5*[-1.0, 0, 0])
+    b4 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0])
 end
 
 connections = [
@@ -146,6 +146,10 @@ m = structural_simplify(IRSystem(fourbar))
 @test length(states(m)) == 8
 prob = ODEProblem(m, [], (0.0, 10))
 
+@time sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
+isinteractive() && plot(sol)
+
+# render(fourbar, sol; framerate=60)
 
 ## Now close the loop
 # When we do, we can only select one joint as root. The loop closure must not use a regular connect statement, instead, we use connect_loop

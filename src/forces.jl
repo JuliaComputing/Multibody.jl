@@ -290,7 +290,7 @@ additional equations to handle the mass are removed.
 
 See also [`SpringDamperParallel`](@ref)
 """
-function Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
+@component function Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
@@ -362,7 +362,7 @@ and `D(s)` is the time derivative of `s`.
 
 See also [`SpringDamperParallel`](@ref)
 """
-function Damper(; d, name, kwargs...)
+@component function Damper(; d, name, kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
     @parameters d=d [description = "damping constant", bounds = (0, Inf)]
@@ -381,7 +381,7 @@ f = c (s - s_unstretched) + d*D(s)
 ```
 where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between the origin of `frame_a` and the origin of `frame_b` and `D(s)` is the time derivative of `s`.
 """
-function SpringDamperParallel(; name, c, d, s_unstretched)
+@component function SpringDamperParallel(; name, c, d, s_unstretched)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
 

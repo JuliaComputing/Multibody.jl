@@ -13,7 +13,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 - `axis`: 1-dim. rotational flange that drives the joint
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
-function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
+@component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
                   isroot = false)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
@@ -84,7 +84,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Tran
 
 The function returns an ODESystem representing the prismatic joint.
 """
-function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
+@component function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
                    isroot = true, s0 = 0, v0 = 0)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
@@ -145,7 +145,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `enforceState = true`.
 - `sequence_angleStates`: Rotation sequence
 """
-function Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false,
+@component function Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3], phi = 0,
                    phi_d = 0,
                    phi_dd = 0)
@@ -210,7 +210,7 @@ function Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = 
     extend(ODESystem(eqs, t; name), ptf)
 end
 
-function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
+@component function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
                    phi_b = 0,
                    w_a = 0,
                    w_b = 0,
@@ -287,7 +287,7 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
 - `r_a`: Vector from frame `bearing` to `frame_a` resolved in bearing
 - `r_b`: Vector from frame `bearing` to `frame_b` resolved in bearing
 """
-function GearConstraint(; name, ratio, checkTotalPower = false, n_a = [1, 0, 0],
+@component function GearConstraint(; name, ratio, checkTotalPower = false, n_a = [1, 0, 0],
                         n_b = [1, 0, 0], r_a = [0, 0, 0], r_b = [0, 0, 0])
     @named ptf = PartialTwoFrames()
     systems = @named begin
@@ -427,7 +427,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
+@component function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
     @named frame_a = Frame()
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
@@ -565,7 +565,7 @@ with the wheel itself.
 - `frame_a`: Frame for the wheel component
 - `rollingWheel`: Rolling wheel joint representing the wheel's contact with the road surface
 """
-function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
+@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
     @named begin
         frame_a = Frame()
@@ -632,7 +632,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `v_rel_a`
 - `a_rel_a`
 """
-function FreeMotion(; name, enforceState = true, sequence = [1, 2, 3], isroot = true,
+@component function FreeMotion(; name, enforceState = true, sequence = [1, 2, 3], isroot = true,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
                     phi_d = 0,
                     phi_dd = 0,
