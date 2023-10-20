@@ -51,6 +51,33 @@ function render(model, sol;
     # end
 end
 
+function render(model, sol, time::Real;
+    framerate = 30,
+    )
+
+    fig = Figure()
+    scene = LScene(fig[1, 1]).scene
+
+    steps = range(sol.t[1], sol.t[end], length=300)
+
+    t = Slider(fig[2, 1], range = steps, startvalue = time).value
+    
+    cam3d!(scene)
+    scene.camera.view[] = [
+        1 0 0 0
+        0 1 0 0
+        0 0 1 -10
+        0 0 0 1
+    ]
+    # t = Observable(time)
+
+    for subsys in model.systems
+        system_type = get_systemtype(subsys)
+        render!(scene, system_type, subsys, sol, t)
+    end
+    fig, t
+end
+
 
 """
     render!(scene, ::typeof(ComponentConstructor), sys, sol, t)
