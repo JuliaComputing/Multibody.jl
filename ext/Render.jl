@@ -64,10 +64,7 @@ function render(model, sol,
         t = 0.0
         t = Observable(timevec[1])
 
-        for subsys in model.systems
-            system_type = get_systemtype(subsys)
-            render!(scene, system_type, subsys, sol, t)
-        end
+        recursive_render!(scene, model, sol, t)
 
         record(scene, filename, timevec; framerate) do time
             t[] = time
@@ -95,16 +92,28 @@ function render(model, sol, time::Real;
     ]
     # t = Observable(time)
 
-    for subsys in model.systems
-        system_type = get_systemtype(subsys)
-        render!(scene, system_type, subsys, sol, t)
-    end
+    recursive_render!(scene, model, sol, t)
     fig, t
 end
 
+"""
+Internal function: Recursively render all subsystem components of a multibody system. If a particular component returns `true` from its `render!` method, indicating that the component performaed rendering, the recursion stops.
+"""
+function recursive_render!(scene, model, sol, t)
+    for subsys in model.systems
+        system_type = get_systemtype(subsys)
+        did_render = render!(scene, system_type, subsys, sol, t)
+        if !did_render
+            recursive_render!(scene, subsys, sol, t)
+        end
+    end
+end
+
+render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
+
 
 """
-    render!(scene, ::typeof(ComponentConstructor), sys, sol, t)
+    did_render::Bool = render!(scene, ::typeof(ComponentConstructor), sys, sol, t)
 
 Each component that can be rendered must have a `render!` method. This method is called by `render` for each component in the system.
 
@@ -117,6 +126,9 @@ thing = @lift begin
 end
 mesh!(scene, thing; style...)
 ```
+
+# Returns
+A boolean indicating whether or not the component performed any rendering. Typically, all custom methods of this function should return `true`, while the default fallback method is the only one returning false.
 """
 function render!(scene, ::typeof(Body), sys, sol, t)
     thing = @lift begin # Sphere
@@ -150,6 +162,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     #     Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     # end
     # mesh!(scene, thing, color=:purple)
+    true
 end
 
 function render!(scene, ::typeof(World), sys, sol, t)
@@ -174,6 +187,7 @@ function render!(scene, ::typeof(World), sys, sol, t)
         Makie.GeometryBasics.Cylinder(O, z, radius)
     end
     mesh!(scene, thing, color=:blue)
+    true
 end
 
 function render!(scene, ::typeof(Revolute), sys, sol, t)
@@ -185,6 +199,7 @@ function render!(scene, ::typeof(Revolute), sys, sol, t)
         Sphere(point, 0.1)
     end
     mesh!(scene, thing, color=:red)
+    true
 end
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
@@ -195,9 +210,10 @@ function render!(scene, ::typeof(Spherical), sys, sol, t)
         Sphere(point, 0.1)
     end
     mesh!(scene, thing, color=:yellow)
+    true
 end
 
-render!(scene, ::typeof(FreeMotion), sys, sol, t) = ()
+render!(scene, ::typeof(FreeMotion), sys, sol, t) = true
 
 
 function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
@@ -210,6 +226,7 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
     mesh!(scene, thing, color=:purple)
+    true
 end
 
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
@@ -231,6 +248,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
     #     Makie.GeometryBasics.Sphere((r1+r2) ./ 2, 0.1f0)
     # end
     # mesh!(scene, thing, color=:purple)
+    true
 end
 
 
@@ -245,6 +263,7 @@ function render!(scene, ::typeof(Damper), sys, sol, t)
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
     mesh!(scene, thing, color=:gray)
+    true
 end
 
 
@@ -255,11 +274,9 @@ function render!(scene, ::typeof(Spring), sys, sol, t)
         spring_mesh(r1,r2)
     end
     plot!(scene, thing, color=:blue)
+    true
 end
 
-
-
-render!(scene, ::Any, args...) = () # Fallback for systems that have no rendering
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
     count(ModelingToolkit.isframe, sys.systems) == 2 || return
@@ -275,6 +292,7 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
         mesh!(scene, thing, color=:green, alpha=0.5)
     catch
     end
+    true
 end
 
 function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)

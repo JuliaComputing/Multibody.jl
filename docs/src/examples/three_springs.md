@@ -51,6 +51,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 ```@example spring_mass_system
 import WGLMakie
 Multibody.render(model, sol; z = -5, filename = "three_springs.gif") # Use "three_springs.mp4" for a video file
+nothing # hide
 ```
 
 ![animation](three_springs.gif)
