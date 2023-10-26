@@ -281,10 +281,10 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_0 = 0, radius = 0.08, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, kwargs...)
     systems = @named begin
         frameTranslation = FixedTranslation(r = r)
-        body = Body(; kwargs...)
+        body = Body(; r_cm, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
     end
