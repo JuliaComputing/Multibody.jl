@@ -22,8 +22,7 @@ systems = @named begin
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
     torque1 = Torque(resolveInFrame = :frame_b)
-    # sine[1:3] = Blocks.Sine(frequency = 1)
-    fixed = Fixed() # TODO: implement
+    fixed = Fixed() 
     inertia1 = Rotational.Inertia(J = cyl1.I_11)
     idealGear = Rotational.IdealGear(ratio = 10, use_support = true)
     inertia2 = Rotational.Inertia(J = cyl2.I_11)
