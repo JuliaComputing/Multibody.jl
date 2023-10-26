@@ -2,7 +2,7 @@
 
 julia_version = "1.10.0-beta3"
 manifest_format = "2.0"
-project_hash = "2722c4c20f9f37455cc8e5e8d1b1a81036c80f24"
+project_hash = "214cc8fea2909c2dc41d280131bd19bf33b2b5df"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "5d2e21d7b0d8c22f67483ef95ebdc39c0e6b6003"
@@ -182,6 +182,12 @@ weakdeps = ["IntervalSets", "StaticArrays"]
     [deps.ConstructionBase.extensions]
     ConstructionBaseIntervalSetsExt = "IntervalSets"
     ConstructionBaseStaticArraysExt = "StaticArrays"
+
+[[deps.CoordinateTransformations]]
+deps = ["LinearAlgebra", "StaticArrays"]
+git-tree-sha1 = "f9d7112bfff8a19a3a4ea4e03a8e6a91fe8456bf"
+uuid = "150eb455-5306-5404-9cee-2592286d6298"
+version = "0.6.3"
 
 [[deps.CpuId]]
 deps = ["Markdown"]

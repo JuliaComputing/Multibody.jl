@@ -32,3 +32,14 @@ sol = solve(prob, Rodas4())
 
 plot(sol, idxs = [body.r_0...])
 ```
+
+
+## Render
+Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
+
+```@example spring_mass_system
+import WGLMakie
+Multibody.render(model, sol; z = -5, filename = "spherical.gif") # Use "spherical.mp4" for a video file
+```
+
+![animation](spherical.gif)

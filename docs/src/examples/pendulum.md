@@ -65,6 +65,16 @@ plot(sol, idxs = joint.phi, title="Pendulum")
 ```
 The solution `sol` can be plotted directly if the Plots package is loaded. The figure indicates that the pendulum swings back and forth without any damping. To add damping as well, we could add a `Damper` from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module to the revolute joint. We do this below
 
+## 3d Animation
+Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
+
+```@example spring_mass_system
+import WGLMakie
+Multibody.render(model, sol; z = -5, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
+```
+
+![animation](spherical.gif)
+
 ## Adding damping
 To add damping to the pendulum such that the pendulum will eventually come to rest, we add a [`Damper`](@ref) to the revolute joint. The damping coefficient is given by `d`, and the damping force is proportional to the angular velocity of the joint. To add the damper to the revolute joint, we must create the joint with the keyword argument `useAxisFlange = true`, this adds two internal flanges to the joint to which you can attach components from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module. We then connect one of the flanges of the damper to the axis flange of the joint, and the other damper flange to the support flange which is rigidly attached to the world.
 ```@example pendulum

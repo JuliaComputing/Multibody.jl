@@ -42,5 +42,15 @@ prob = ODEProblem(ssys, [], (0, 10))
 sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
 @assert SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs = [body1.r_0...])
+Plots.plot(sol, idxs = [body1.r_0...])
 ```
+
+## Render
+Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
+
+```@example spring_mass_system
+import WGLMakie
+Multibody.render(model, sol; z = -5, filename = "three_springs.gif") # Use "three_springs.mp4" for a video file
+```
+
+![animation](three_springs.gif)

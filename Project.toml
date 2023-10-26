@@ -4,6 +4,7 @@ authors = ["JuliaHub Inc."]
 version = "0.1.0"
 
 [deps]
+CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 JuliaSimCompiler = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -11,10 +12,17 @@ ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ModelingToolkitStandardLibrary = "16a59e39-deab-5bd0-87e4-056b12336739"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 
+[weakdeps]
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+
+[extensions]
+Render = ["Makie"]
+
 [compat]
 ModelingToolkit = "8.30"
 ModelingToolkitStandardLibrary = "2"
 Rotations = "1.4"
+CoordinateTransformations = "0.6"
 julia = "1"
 
 [extras]

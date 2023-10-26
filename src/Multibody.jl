@@ -8,6 +8,10 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
 export Rotational, Translational
 
+export render
+function render end
+function render! end
+
 const t = let
     (@variables t)[1]
 end

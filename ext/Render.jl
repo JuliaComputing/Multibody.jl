@@ -1,5 +1,11 @@
-using GLMakie
+module Render
+using Makie
+using Multibody
+import Multibody: render, render!
+using Rotations
 using LinearAlgebra
+using ModelingToolkit
+export render
 
 """
     get_frame(sol, frame, t)
@@ -10,6 +16,14 @@ function get_frame(sol, frame, t)
     R = reshape(sol(t, idxs = vec(ori(frame).R.mat)), 3, 3)
     t = sol(t, idxs = collect(frame.r_0))
     [R' t; 0 0 0 1]
+end
+
+
+"get_systemtype(sys): Get the constructor of a component for dispatch purposes. This only supports components that have the `gui_metadata` property set. If no metadata is available, nothing is returned."
+function get_systemtype(sys)
+    meta = getfield(sys, :gui_metadata)
+    meta === nothing && return nothing
+    eval(meta.type)
 end
 
 
@@ -32,6 +46,7 @@ function render(model, sol,
     x = 0,
     y = 0,
     z = -10,
+    filename = "multibody_$(model.name).mp4",
     )
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end], step=1/framerate)
@@ -54,7 +69,7 @@ function render(model, sol,
             render!(scene, system_type, subsys, sol, t)
         end
 
-        record(scene, "multibody_$(model.name).mp4", timevec; framerate) do time
+        record(scene, filename, timevec; framerate) do time
             t[] = time
         end
     # end
@@ -243,12 +258,6 @@ function render!(scene, ::typeof(Spring), sys, sol, t)
 end
 
 
-"get_systemtype(sys): Get the constructor of a component for dispatch purposes. This only supports components that have the `gui_metadata` property set. If no metadata is available, nothing is returned."
-function get_systemtype(sys)
-    meta = getfield(sys, :gui_metadata)
-    meta === nothing && return nothing
-    eval(meta.type)
-end
 
 render!(scene, ::Any, args...) = () # Fallback for systems that have no rendering
 
@@ -267,9 +276,6 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
     catch
     end
 end
-
-
-
 
 function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)
     phi = range(0, n_wind*2π, length=N)
@@ -306,4 +312,5 @@ function rot_from_line(d)
     y = cross(d, x)
     y = y ./ norm(y)
     RotMatrix{3}([x y d])
+end
 end
