@@ -46,6 +46,7 @@ function render(model, sol,
     x = 0,
     y = 0,
     z = -10,
+    R = I(3),
     filename = "multibody_$(model.name).mp4",
     )
     if timevec === nothing
@@ -56,10 +57,7 @@ function render(model, sol,
         
         cam3d!(scene)
         scene.camera.view[] = [
-            1 0 0 x
-            0 1 0 y
-            0 0 1 z
-            0 0 0 1
+            R [x,y,z]; 0 0 0 1
         ]
         t = 0.0
         t = Observable(timevec[1])
@@ -193,6 +191,7 @@ end
 function render!(scene, ::typeof(Revolute), sys, sol, t)
     # TODO: change to cylinder
     thing = @lift begin
+        # radius = sol($t, idxs=sys.radius)
         O = sol($t, idxs=collect(sys.frame_a.r_0))
         n_a = sol($t, idxs=collect(sys.n))
         R_w_a = get_frame(sol, sys.frame_a, $t)[1:3, 1:3]
