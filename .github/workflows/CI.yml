@@ -34,16 +34,6 @@ jobs:
       - uses: webfactory/ssh-agent@v0.8.0 
         with: 
           ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
-      - uses: actions/cache@v1
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
       - uses: PumasAI/add-private-registry@main
         with:
           juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
