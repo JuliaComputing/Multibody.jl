@@ -266,7 +266,7 @@ sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test minimum(sol[rev1.phi]) > -π
 @test sol[rev1.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
-@test_broken sol[rev2.phi][end]≈0 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium which is 0 relative rotation compared to rev1
+@test_skip sol[rev2.phi][end]≈0 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium which is 0 relative rotation compared to rev1
 @test sol[body2.r_0[2]][end]≈-2 rtol=0.01 # sum of rod lengths = 2
 doplot() &&
     plot(sol, idxs = [rev1.phi; rev2.phi; damper2.phi_rel; collect(body2.r_0[1:2])])

@@ -10,7 +10,7 @@ This example mirrors that of the [modelica spring-mass system](https://doc.model
 using Multibody
 using ModelingToolkit
 using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
