@@ -95,7 +95,7 @@ end
 
 Fixed translation of `frame_b` with respect to `frame_a` with position vector `r` resolved in `frame_a`.
 
-Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
+Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
 @component function FixedTranslation(; name, r, radius=0.08f0, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0])
     @named frame_a = Frame()
@@ -371,4 +371,64 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
            connect(frame_b, frameTranslation.frame_b)
            connect(frame_a, body.frame_a)]
     ODESystem(eqs, t, [r_0; v_0; a_0], pars; name, systems)
+end
+
+
+"""
+    Rope(; name, l = 1, n = 10, m = 1, c = 0, d = 0, kwargs)
+
+Model a rope (string / cable) of length `l` and mass `m`.
+
+The rope is modeled as a series of `n` links, each connected by a [`Spherical`](@ref) joint. The links are either fixed in length (default, modeled using [`BodyShape`](@ref)) or flexible, in which case they are modeled as a [`Spring`](@ref) and [`Damper`](@ref) in parallel. The flexibility is controlled by the parameters `c` and `d`, which are the stiffness and damping coefficients of the spring and damper, respectively. The default values are `c = 0` and `d = 0`, which corresponds to a fixed rope.
+
+
+- `l`: Unstretched length of rope
+- `n`: Number of links used to model the rope. For accurate approximations to continuously flexible ropes, a large number may be required.
+- `m`: The total mass of the rope. Each rope segment will have mass `m / n`.
+- `c`: The equivalent stiffness of the rope, i.e., the rope will act like a spring with stiffness `c`. 
+- `d`: The equivalent damping of the rope, i.e., the rope will act like a damper with damping `d`.
+"""
+function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, kwargs...)
+
+    @assert n >= 1
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+
+    li = l / n # Segment length
+    mi = m / n # Segment mass
+
+    joints = [Spherical(name=Symbol("joint_$i"), isroot=true, enforceState=true) for i = 1:n+1]
+
+    eqs = [
+        connect(frame_a, joints[1].frame_a)
+        connect(frame_b, joints[end].frame_b)
+    ]
+    
+    if c > 0
+        m > 0 || error("A rope with flexibility (c > 0) requires a non-zero mass (m > 0)")
+        ci = n * c # Segment stiffness
+        di = n * d # Segment damping
+        links = [Spring(c = ci, m = mi, s_unstretched=li, name=Symbol("link_$i")) for i = 1:n]
+        dampers = [Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
+        linkjoints = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i")) for i = 1:n]
+        for i = 1:n
+            push!(eqs, connect(links[i].frame_a, linkjoints[i].frame_a, dampers[i].frame_a))
+            push!(eqs, connect(links[i].frame_b, linkjoints[i].frame_b, dampers[i].frame_b))
+        end
+        links = [links; linkjoints; dampers]
+    # elseif m == 0
+    #     links = [FixedTranslation(r = [0, -li, 0], name=Symbol("link_$i")) for i = 1:n]
+    else
+        links = [BodyShape(m = mi, r = [0, -li, 0], name=Symbol("link_$i"), isroot=false) for i = 1:n]
+    end
+
+
+    for i = 1:n
+        push!(eqs, connect(joints[i].frame_b, links[i].frame_a))
+        push!(eqs, connect(links[i].frame_b, joints[i+1].frame_a))
+    end
+
+    ODESystem(eqs, t; name, systems = [systems; links; joints])
 end

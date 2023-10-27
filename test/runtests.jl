@@ -865,3 +865,62 @@ doplot() && plot(sol) |> display
 
 
 end
+
+
+# ==============================================================================
+## Rope pendulum ===============================================================
+# ==============================================================================
+
+# Stiff rope
+world = Multibody.world
+@named rope = Multibody.Rope(l = 1, m = 1, n=1, c=0, d=0)
+@named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
+
+connections = [connect(world.frame_b, rope.frame_a)
+               connect(rope.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t, systems = [world, body, rope])
+# ssys = structural_simplify(model, allow_parameter = false)
+
+ssys = structural_simplify(IRSystem(model))
+
+D = Differential(t)
+prob = ODEProblem(ssys, [
+    # D.(D.(collect(rope.r))) .=> 0;
+    body.r_0 .=> [1,1,1]
+], (0, 10))
+@time "Rope pendulum" sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 0.1 .* randn.())
+
+
+du = zero(prob.u0)
+prob.f(du, prob.u0 .+ 0.001 .* randn.(), prob.p, 0)
+
+@test SciMLBase.successful_retcode(sol)
+
+
+
+## Flexible rope
+world = Multibody.world
+@named rope = Multibody.Rope(l = 1, m = 1, n=1, c=1.0, d=1)
+@named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
+
+connections = [connect(world.frame_b, rope.frame_a)
+               connect(rope.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t, systems = [world, body, rope])
+# ssys = structural_simplify(model, allow_parameter = false)
+
+ssys = structural_simplify(IRSystem(model))
+
+D = Differential(t)
+prob = ODEProblem(ssys, [
+    # D.(D.(collect(rope.r))) .=> 0;
+    body.r_0 .=> [1,1,1]
+], (0, 10))
+@time "Rope pendulum" sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 0.1 .* randn.())
+
+
+du = zero(prob.u0)
+prob.f(du, prob.u0 .+ 0.001 .* randn.(), prob.p, 0)
+
+@test SciMLBase.successful_retcode(sol)
