@@ -10,7 +10,7 @@ This tutorial mirrors that of the following Modelica tutorial [Spring damper sys
 using Multibody
 using ModelingToolkit
 using Plots
-using SymbolicIR
+using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
