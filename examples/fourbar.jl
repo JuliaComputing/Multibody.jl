@@ -60,23 +60,35 @@ W(args...; kwargs...) = Multibody.world
 # end
 
 # @named fourbar = FourBar()
-systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, isroot = true)
-    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2, isroot=false)
-    b1 = BodyShape(r = [0, 0.5, 0.1])
-    b2 = BodyShape(r = [0, 0.2, 0])
-    b3 = BodyShape(r = [-1, 0.3, 0.1])
-    rev = Revolute(n = [0, 1, 0], isroot = true, iscut=true)
-    rev1 = Revolute()
-    j3 = Revolute(n = [1, 0, 0], isroot = true)
-    j4 = Revolute(n = [0, 1, 0], isroot = true)
-    j5 = Revolute(n = [0, 0, 1], isroot = true)
-    b0 = FixedTranslation(r = [1.2, 0, 0])
+begin
+    @named j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989)
+    @named j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
+    @named b1 = BodyShape(r = [0, 0.5, 0.1])
+    @named b2 = BodyShape(r = [0, 0.2, 0])
+    @named b3 = BodyShape(r = [-1, 0.3, 0.1])
+    @named rev = Revolute(n = [0, 1, 0], isroot = true, iscut=true)
+    @named rev1 = Revolute()
+    @named j3 = Revolute(n = [1, 0, 0], isroot = true)
+    @named j4 = Revolute(n = [0, 1, 0], isroot = true)
+    @named j5 = Revolute(n = [0, 0, 1], isroot = true)
+    @named b0 = FixedTranslation(r = [1.2, 0, 0])
 end
+systems = [j1
+    j2
+    b1
+    b2
+    b3
+    rev
+    rev1
+    j3
+    j4
+    j5
+    b0
+]
 
 connections = [connect(j2.frame_b, b2.frame_a)
 
-            #    Multibody.connect_loop2(j1.frame_b, b1.frame_a)
+            #    Multibody.connect_loop(j1.frame_b, b1.frame_a)
                connect(j1.frame_b, b1.frame_a)
             
             #    Multibody.connect_loop(rev.frame_a, b2.frame_b)
@@ -85,7 +97,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(rev.frame_b, rev1.frame_a)
                connect(rev1.frame_b, b3.frame_a)
                connect(world.frame_b, j1.frame_a)
-               connect(b1.frame_b, j3.frame_a)m.mass
+               connect(b1.frame_b, j3.frame_a)
                connect(j3.frame_b, j4.frame_a)
                connect(j4.frame_b, j5.frame_a)
                connect(j5.frame_b, b3.frame_b)
@@ -102,7 +114,7 @@ prob = ODEProblem(m, [], (0.0, 5.0))
 du = zero(prob.u0)
 prob.f(du, prob.u0, prob.p, 0.0) 
 
-sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
+sol = solve(prob, Rodas4(autodiff=false))#, u0 = prob.u0 .+ 0.01 .* randn.())
 
 # using SeeToDee, NonlinearSolve
 # function dynamics(x,u,p,t)
@@ -172,14 +184,17 @@ isinteractive() && plot(sol)
 ## Now close the loop
 # We must also replace one joint with a RevolutePlanarLoopConstraint 
 systems = @named begin
-    j1 = Revolute(isroot = true)
-    j2 = Revolute(isroot = true)
-    j3 = Revolute(isroot = true)
+    j1 = Revolute()
+    j2 = Revolute()
+    j3 = Revolute()
+    # j4 = Revolute(iscut=true)
+    # j2 = RevolutePlanarLoopConstraint()
+    # j3 = RevolutePlanarLoopConstraint()
     j4 = RevolutePlanarLoopConstraint()
-    b1 = BodyShape(r = [1.0, 0, 0])
-    b2 = BodyShape(r = [1.0, 0, 0])
-    b3 = BodyShape(r = [-1.0, 0, 0])
-    b4 = BodyShape(r = [1.0, 0, 0])
+    b1 = BodyShape(m=1, r = [1.0, 0, 0])
+    b2 = BodyShape(m=1, r = [1.0, 0, 0])
+    b3 = BodyShape(m=1, r = [-1.0, 0, 0])
+    b4 = BodyShape(m=1, r = [1.0, 0, 0])
 end
 
 connections = [
@@ -209,12 +224,12 @@ m = structural_simplify(IRSystem(fourbar)) # It does simplify
 
 @test_broken length(states(m)) == 2
 
-prob = ODEProblem(m, [], (0.0, 5.0))
+prob = ODEProblem(m, [], (0.0, 1.0))
 
 # Try the generated dynamics
 du = zero(prob.u0)
-@time prob.f.f(du, prob.u0, prob.p, 0) # Yingbo: Singular
+prob.f.f(du, prob.u0 .+ 0.0001 .* randn.(), prob.p, 0) 
 
 
-sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
+sol = solve(prob, Rodas4(autodiff=false), u0 = prob.u0 .+ 0.0001 .* randn.())
 isinteractive() && plot(sol, vars = [j1.phi, j2.phi, j3.phi])
