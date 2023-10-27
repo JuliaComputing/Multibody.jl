@@ -64,7 +64,7 @@ function render(model, sol,
         t = 0.0
         t = Observable(timevec[1])
 
-        recursive_render!(scene, model, sol, t)
+        recursive_render!(scene, complete(model), sol, t)
 
         record(scene, filename, timevec; framerate) do time
             t[] = time
@@ -92,7 +92,7 @@ function render(model, sol, time::Real;
     ]
     # t = Observable(time)
 
-    recursive_render!(scene, model, sol, t)
+    recursive_render!(scene, complete(model), sol, t)
     fig, t
 end
 
@@ -102,9 +102,11 @@ Internal function: Recursively render all subsystem components of a multibody sy
 function recursive_render!(scene, model, sol, t)
     for subsys in model.systems
         system_type = get_systemtype(subsys)
-        did_render = render!(scene, system_type, subsys, sol, t)
-        if !did_render
-            recursive_render!(scene, subsys, sol, t)
+        # did_render = render!(scene, system_type, subsys, sol, t)
+        did_render = render!(scene, system_type, getproperty(model, subsys.name), sol, t)
+        if !something(did_render, false)
+            @show model.name, subsys.name
+            recursive_render!(scene, getproperty(model, subsys.name), sol, t)
         end
     end
 end
