@@ -568,7 +568,7 @@ version = "1.0.40"
 deps = ["ChainRules", "ConstructionBase", "DataStructures", "DiffEqCallbacks", "DocStringExtensions", "Expronicon", "ForwardDiff", "Graphs", "IfElse", "Libdl", "LinearAlgebra", "ModelingToolkit", "OffsetArrays", "Preferences", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SparseDiffTools", "SpecialFunctions", "StaticArrays", "StrideArraysCore", "Symbolics", "UnPack"]
 git-tree-sha1 = "5d84502e5d30d40cca3b20c398be2fa542e9e88e"
 repo-rev = "master"
-repo-url = "https://github.com/JuliaComputing/JuliaSimCompiler.jl.git"
+repo-url = "git@github.com:JuliaComputing/JuliaSimCompiler.jl.git"
 uuid = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
 version = "0.1.3"
 
