@@ -73,7 +73,7 @@ function render(model, sol,
 end
 
 function render(model, sol, time::Real;
-    framerate = 30,
+    kwargs...,
     )
 
     fig = Figure()
@@ -90,7 +90,6 @@ function render(model, sol, time::Real;
         0 0 1 -10
         0 0 0 1
     ]
-    # t = Observable(time)
 
     recursive_render!(scene, complete(model), sol, t)
     fig, t
@@ -105,7 +104,6 @@ function recursive_render!(scene, model, sol, t)
         # did_render = render!(scene, system_type, subsys, sol, t)
         did_render = render!(scene, system_type, getproperty(model, subsys.name), sol, t)
         if !something(did_render, false)
-            @show model.name, subsys.name
             recursive_render!(scene, getproperty(model, subsys.name), sol, t)
         end
     end
@@ -195,10 +193,13 @@ end
 function render!(scene, ::typeof(Revolute), sys, sol, t)
     # TODO: change to cylinder
     thing = @lift begin
-        vars = collect(sys.frame_a.r_0)
-        coords = sol($t, idxs=vars)
-        point = Point3f(coords)
-        Sphere(point, 0.1)
+        O = sol($t, idxs=collect(sys.frame_a.r_0))
+        n_a = sol($t, idxs=collect(sys.n))
+        R_w_a = get_frame(sol, sys.frame_a, $t)[1:3, 1:3]
+        n_w = R_w_a*n_a # Rotate to the world frame
+        p1 = Point3f(O + 0.1*n_w)
+        p2 = Point3f(O - 0.1*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, 0.1f0)
     end
     mesh!(scene, thing, color=:red)
     true
@@ -281,7 +282,7 @@ end
 
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
-    count(ModelingToolkit.isframe, sys.systems) == 2 || return
+    count(ModelingToolkit.isframe, sys.systems) == 2 || return false
     try
         thing = @lift begin
             r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
@@ -292,9 +293,11 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
             Makie.GeometryBasics.Cylinder(origin, extremity, radius)
         end
         mesh!(scene, thing, color=:green, alpha=0.5)
+        return true
     catch
+        return false
     end
-    true
+    false
 end
 
 function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)

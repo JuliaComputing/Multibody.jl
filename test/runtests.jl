@@ -216,14 +216,14 @@ doplot() && plot(sol3, idxs = rev.phi)
 # ==============================================================================
 ## Double pendulum =============================================================
 # ==============================================================================
-
+using LinearAlgebra
 @named rod1 = FixedTranslation(r = [1, 0, 0])
 @named rod2 = FixedTranslation(r = [1, 0, 0])
 @named body1 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
 @named body2 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
 @named damper1 = Rotational.Damper(d = 5)
 @named damper2 = Rotational.Damper(d = 1)
-@named rev1 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+@named rev1 = Multibody.Revolute(n = normalize([0.1, 0, 1]), useAxisFlange = true, isroot = true)
 @named rev2 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
 
 connections = [connect(damper1.flange_b, rev1.axis)
