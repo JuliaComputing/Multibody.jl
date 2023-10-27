@@ -461,7 +461,7 @@ ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
 prob = ODEProblem(ssys,
                   [collect(D.(body.body.phid)) .=> 1;
                    collect(D.(body.body.phi)) .=> 1;
-                   collect((body.body.r_0)) .=> collect((body.r_0));
+                #    collect((body.body.r_0)) .=> collect((body.r_0));
                    collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK

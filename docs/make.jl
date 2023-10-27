@@ -1,5 +1,6 @@
 using Multibody
 using Documenter
+using WGLMakie
 
 DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = true)
 
@@ -26,6 +27,7 @@ makedocs(;
                  "Gearbox" => "examples/gearbox.md",
                  "Free motions" => "examples/free_motion.md",
              ],
+             "3D rendering" => "rendering.md",
          ])
 
 deploydocs(;
