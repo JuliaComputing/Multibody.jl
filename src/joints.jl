@@ -609,7 +609,7 @@ end
 """
     FreeMotion(; name, enforceState = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
 
-Joint which does not constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as state.
+Joint which _does not_ constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as state.
 
 Note, that bodies such as [`Body`](@ref), [`BodyShape`](@ref), have potential state variables describing the distance and orientation, and their derivatives, between the world frame and a body fixed frame. Therefore, if these potential state variables are suited, a `FreeMotion` joint is not needed.
 
