@@ -49,7 +49,7 @@ Plots.plot(sol, idxs = [body1.r_0...])
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
-import WGLMakie
+import CairoMakie
 Multibody.render(model, sol; z = -5, filename = "three_springs.gif") # Use "three_springs.mp4" for a video file
 nothing # hide
 ```

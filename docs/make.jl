@@ -1,6 +1,7 @@
 using Multibody
 using Documenter
-using WGLMakie
+using CairoMakie
+ENV["JULIA_DEBUG"]=Documenter # Enable this for debugging
 
 DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = true)
 

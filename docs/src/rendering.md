@@ -8,7 +8,7 @@ using GLMakie
 ```
 or 
 ```julia
-using WGLMakie
+using CairoMakie
 ```
 
 After that, the [`render`](@ref) function is the main entry point to create 3D renderings. This function has the following methods:

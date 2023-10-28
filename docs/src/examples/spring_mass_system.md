@@ -54,7 +54,7 @@ prob = ODEProblem(ssys,[
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
+Plots.plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
 ```
 The plot indicates that the two systems behave identically. 
 
@@ -62,9 +62,6 @@ The plot indicates that the two systems behave identically.
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
-import WGLMakie
-Multibody.render(model, sol; z = -5, filename = "springmass.gif") # Use "springmass.mp4" for a video file
-nothing # hide
+import CairoMakie
+Multibody.render(model, sol; z = -5, filename = "springmass.mp4")
 ```
-
-![animation](springmass.gif)

@@ -79,10 +79,7 @@ In this example we used separate springs and dampers, see also the component [`S
 ## Render
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
-```@example spring_mass_system
-import WGLMakie
-Multibody.render(model, sol; z = -5, filename = "springdamper.gif") # Use "springdamper.mp4" for a video file
-nothing # hide
+```@example spring_damper_system
+import CairoMakie
+Multibody.render(model, sol; z = -5, filename = "springdamper.mp4")
 ```
-
-![animation](springdamper.gif)

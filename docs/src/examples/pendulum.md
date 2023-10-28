@@ -69,7 +69,7 @@ The solution `sol` can be plotted directly if the Plots package is loaded. The f
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
-import WGLMakie # GLMakie is another alternative, suitable for interactive plots
+import CairoMakie # GLMakie is another alternative, suitable for interactive plots
 Multibody.render(model, sol; z = -5, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
 nothing # hide
 ```
@@ -215,7 +215,7 @@ plot(sol, layout=4)
 ```
 
 ```@example spring_mass_system
-import WGLMakie
+import CairoMakie
 Multibody.render(model, sol, z=-5, R = Rotations.RotXYZ(-0.8,0.3,0)', filename = "furuta.gif")
 nothing # hide
 ```
