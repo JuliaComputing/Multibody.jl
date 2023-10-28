@@ -68,13 +68,13 @@ The solution `sol` can be plotted directly if the Plots package is loaded. The f
 ## 3d Animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
-```@example spring_mass_system
+```@example pendulum
 import CairoMakie # GLMakie is another alternative, suitable for interactive plots
 Multibody.render(model, sol; z = -5, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
 nothing # hide
 ```
 
-![animation](spherical.gif)
+![animation](pendulum.gif)
 
 By default, the world frame is indicated using the convention x: red, y: green, z: blue.
 
@@ -214,7 +214,7 @@ sol = solve(prob, Rodas4())
 plot(sol, layout=4)
 ```
 
-```@example spring_mass_system
+```@example pendulum
 import CairoMakie
 Multibody.render(model, sol, z=-5, R = Rotations.RotXYZ(-0.8,0.3,0)', filename = "furuta.gif")
 nothing # hide

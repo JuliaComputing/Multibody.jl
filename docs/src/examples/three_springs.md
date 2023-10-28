@@ -37,7 +37,9 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [
+    D.(spring3.lineForce.r_rel_0) .=> 0;
+], (0, 10))
 
 sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
 @assert SciMLBase.successful_retcode(sol)

@@ -25,7 +25,10 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [
+                    D.(joint.phi) .=> 0;
+                    D.(D.(joint.phi)) .=> 0;
+], (0, 10))
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)

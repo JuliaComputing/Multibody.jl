@@ -56,6 +56,7 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys,
                   [D.(body1.phi) .=> 0;
                    D.(D.(body1.phi)) .=> 0;
+                   D.(body1.phid) .=> 0;
                    D(p2.s) => 0;
                    D(D(p2.s)) => 0;
                    damper1.d => 2], (0, 10))
@@ -81,5 +82,8 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example spring_damper_system
 import CairoMakie
-Multibody.render(model, sol; z = -5, filename = "springdamper.mp4")
+Multibody.render(model, sol; z = -5, filename = "springdamper.gif")
+nothing # hide
 ```
+
+![animation](springdamper.gif)

@@ -63,5 +63,8 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example spring_mass_system
 import CairoMakie
-Multibody.render(model, sol; z = -5, filename = "springmass.mp4")
+Multibody.render(model, sol; z = -5, filename = "springmass.gif")
+nothing # hide
 ```
+
+![animation](springmass.gif)
