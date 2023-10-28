@@ -65,6 +65,19 @@ plot(sol, idxs = joint.phi, title="Pendulum")
 ```
 The solution `sol` can be plotted directly if the Plots package is loaded. The figure indicates that the pendulum swings back and forth without any damping. To add damping as well, we could add a `Damper` from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module to the revolute joint. We do this below
 
+## 3d Animation
+Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
+
+```@example spring_mass_system
+import CairoMakie # GLMakie is another alternative, suitable for interactive plots
+Multibody.render(model, sol; z = -5, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
+nothing # hide
+```
+
+![animation](spherical.gif)
+
+By default, the world frame is indicated using the convention x: red, y: green, z: blue.
+
 ## Adding damping
 To add damping to the pendulum such that the pendulum will eventually come to rest, we add a [`Damper`](@ref) to the revolute joint. The damping coefficient is given by `d`, and the damping force is proportional to the angular velocity of the joint. To add the damper to the revolute joint, we must create the joint with the keyword argument `useAxisFlange = true`, this adds two internal flanges to the joint to which you can attach components from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module. We then connect one of the flanges of the damper to the axis flange of the joint, and the other damper flange to the support flange which is rigidly attached to the world.
 ```@example pendulum
@@ -152,3 +165,125 @@ plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without 
 ```
 
 The figure above should look identical to the simulation of the mass-spring-damper further above.
+
+## Going 3D
+The systems we have modeled so far have all been _planar_ mechanisms. We now extend this to a 3-dimensional system, the [_Furuta pendulum_](https://en.wikipedia.org/wiki/Furuta_pendulum).
+
+This pendulum has two joints, one in the "shoulder", which is typically configured to rotate around the gravitational axis, and one in the "elbow", which is typically configured to rotate around the axis of the upper arm. The upper arm is attached to the shoulder joint, and the lower arm is attached to the elbow joint. The tip of the pendulum is attached to the lower arm.
+
+```@example pendulum
+using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
+import ModelingToolkitStandardLibrary.Mechanical.Rotational.Damper as RDamper
+import Multibody.Rotations
+W(args...; kwargs...) = Multibody.world
+
+@mtkmodel FurutaPendulum begin
+    @components begin
+        world = W()
+        shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, useAxisFlange = true)
+        elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, useAxisFlange = true, phi0=0.1)
+        upper_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0, 0.6], radius=0.05)
+        lower_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0.6, 0], radius=0.05)
+        tip = Body(; m = 0.3, isroot = false)
+
+        damper1 = RDamper(d = 0.07)
+        damper2 = RDamper(d = 0.07)
+    end
+    @equations begin
+        connect(world.frame_b, shoulder_joint.frame_a)
+        connect(shoulder_joint.frame_b, upper_arm.frame_a)
+        connect(upper_arm.frame_b, elbow_joint.frame_a)
+        connect(elbow_joint.frame_b, lower_arm.frame_a)
+        connect(lower_arm.frame_b, tip.frame_a)
+
+        connect(shoulder_joint.axis, damper1.flange_a)
+        connect(shoulder_joint.support, damper1.flange_b)
+
+        connect(elbow_joint.axis, damper2.flange_a)
+        connect(elbow_joint.support, damper2.flange_b)
+
+    end
+end
+
+@named model = FurutaPendulum()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
+prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 12))
+sol = solve(prob, Rodas4())
+plot(sol, layout=4)
+```
+
+```@example spring_mass_system
+import CairoMakie
+Multibody.render(model, sol, z=-5, R = Rotations.RotXYZ(-0.8,0.3,0)', filename = "furuta.gif")
+nothing # hide
+```
+![furuta](furuta.gif)
+
+
+### Orientations and directions
+Let's break down how to think about directions and orientations when building 3D mechanisms. In the example above, we started with the shoulder joint, this joint rotated around the gravitational axis, `n = [0, 1, 0]`. When this joint is positioned in joint coordinate `shoulder_joint.phi = 0`, its `frame_a` and `frame_b` will coincide. When the joint rotates, `frame_b` will rotate around the axis `n` of `frame_a`. The `frame_a` of the joint is attached to the world, so the joint will rotate around the world's `y`-axis:
+
+```@example pendulum
+function get_R(frame, t)
+    reshape(sol(t, idxs=vec(ori(frame).R.mat')), 3, 3)
+end
+function get_r(frame, t)
+    sol(t, idxs=collect(frame.r_0))
+end
+get_R(model.shoulder_joint.frame_b)
+```
+we see that at time $t = 0$, we have no rotation of `frame_b` around the $y$ axis of the world (frames are always resolved in the world frame), but a second into the simulation, we do:
+```@example pendulum
+get_R(model.shoulder_joint.frame_b, 1)
+```
+
+The next body is the upper arm. This body has an extent of `0.6` in the $z$ direction, as measured in its local `frame_a`
+```@example pendulum
+get_r(model.upper_arm.frame_b, 0)
+```
+One second into the simulation, the upper arm has rotated around the $y$ axis of the world
+```@example pendulum
+get_r(model.upper_arm.frame_b, 1)
+```
+
+If we look at the variable `model.upper_arm.r`, we do not see this rotation!
+```@example pendulum
+arm_r = sol(1, idxs=collect(model.upper_arm.r))
+```
+The reason is that this variable is resolved in the local `frame_a` and not in the world frame. To transform this variable to the world frame, we may multiply with the rotation matrix of `frame_a`
+```@example pendulum
+get_R(model.upper_arm.frame_a, 1)*arm_r
+```
+
+
+Slightly more formally, let $R_A^B$ denote the rotation matrix that rotates a vector expressed in a frame $A$ into one that is expressed in frame $B$, i.e., $r_B = R_B^A r_A$. We have then just performed the transformation $r_W = R_W^A r_A$, where $W$ denotes the world frame, and $A$ denotes `body.frame_a`.
+
+The next joint, the elbow joint, has the rotational axis `n = [0, 0, 1]`. This indicates that the joint rotates around the $z$-axis of its `frame_a`. Since the upper arm was oriented along the $z$ direction, the joint is rotating around the axis that coincides with the upper arm. 
+
+The lower arm is finally having an extent in the $y$-axis. At the final time when the pendulum motion has been full damped, we see that the second frame of this body ends up with an $y$-coordinate of `-0.6`:
+```@example pendulum
+get_r(model.lower_arm.frame_b, 12)
+```
+
+If we rotate the vector of extent of the lower arm to the world frame, we indeed see that the only coordinate that is nonzero is the $y$ coordinate:
+```@example pendulum
+get_R(model.lower_arm.frame_a, 12)*sol(12, idxs=collect(model.lower_arm.r))
+```
+
+The reason that the latter vector differs from `get_r(model.lower_arm.frame_b, 12)` above is that `get_r(model.lower_arm.frame_b, 12)` has been _translated_ as well. To both translate and rotate `model.lower_arm.r` into the world frame, we must use the full transformation matrix $T_W_A \in SE(3)$:
+
+```@example pendulum
+function get_T(frame, t)
+    R = get_R(frame, t)
+    r = get_r(frame, t)
+    [R r; 0 0 0 1]
+end
+
+r_A = sol(12, idxs=collect(model.lower_arm.r))
+r_A = [r_A; 1] # Homogeneous coordinates
+
+get_T(model.lower_arm.frame_a, 12)*r_A
+```
+the vector is now coinciding with `get_r(model.lower_arm.frame_b, 12)`.

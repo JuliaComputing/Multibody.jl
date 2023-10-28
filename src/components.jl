@@ -272,6 +272,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     ODESystem(eqs, t; name, metadata = Dict(:isroot => isroot), systems = [frame_a])
 end
 
+
 """
     BodyShape(; name, m = 1, r, kwargs...)
 
@@ -280,10 +281,10 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_0 = 0, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, kwargs...)
     systems = @named begin
         frameTranslation = FixedTranslation(r = r)
-        body = Body(; kwargs...)
+        body = Body(; r_cm, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
     end
@@ -299,9 +300,15 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @variables a_0(t)[1:3]=0 [
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
-    @parameters r[1:3]=r [
-        description = "Vector from frame_a to frame_b resolved in frame_a",
-    ]
+    @parameters begin
+        r[1:3]=r, [
+            description = "Vector from frame_a to frame_b resolved in frame_a",
+        ]
+        radius = radius, [description = "Radius of the body in animations"]
+        # color = color, [description = "Color of the body in animations"]
+    end
+
+    pars = [r; radius]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
@@ -311,5 +318,5 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
            connect(frame_a, frameTranslation.frame_a)
            connect(frame_b, frameTranslation.frame_b)
            connect(frame_a, body.frame_a)]
-    ODESystem(eqs, t; name, systems)
+    ODESystem(eqs, t, [r_0; v_0; a_0], pars; name, systems)
 end

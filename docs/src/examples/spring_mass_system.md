@@ -10,7 +10,8 @@ This example mirrors that of the [modelica spring-mass system](https://doc.model
 using Multibody
 using ModelingToolkit
 using Plots
-using SymbolicIR
+using JuliaSimCompiler
+using ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -19,7 +20,7 @@ world = Multibody.world
 
 systems = @named begin
     p1      = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true)
-    spring1 = Translational.Spring(30, s_rel0 = 0.1)
+    spring1 = TranslationalModelica.Spring(c=30, s_rel0 = 0.1)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     body1   = Body(m = 1, r_cm = [0, 0, 0])
     bar1    = FixedTranslation(r = [0.3, 0, 0])
@@ -53,6 +54,14 @@ prob = ODEProblem(ssys,[
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
+Plots.plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
 ```
 The plot indicates that the two systems behave identically. 
+
+## Render
+Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
+
+```@example spring_mass_system
+import CairoMakie
+Multibody.render(model, sol; z = -5, filename = "springmass.mp4")
+```

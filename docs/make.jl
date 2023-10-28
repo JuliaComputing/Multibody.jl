@@ -1,5 +1,7 @@
 using Multibody
 using Documenter
+using CairoMakie
+ENV["JULIA_DEBUG"]=Documenter # Enable this for debugging
 
 DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = true)
 
@@ -8,6 +10,7 @@ makedocs(;
          authors = "JuliaHub Inc.",
          #  strict = [:example_block, :setup_block, :eval_block],
          sitename = "Multibody.jl",
+         warnonly = [:missing_docs, :cross_references, :example_block, :docs_block],
          format = Documenter.HTML(;
                                   prettyurls = get(ENV, "CI", nothing) == "true",
                                   edit_link = nothing),
@@ -25,6 +28,7 @@ makedocs(;
                  "Gearbox" => "examples/gearbox.md",
                  "Free motions" => "examples/free_motion.md",
              ],
+             "3D rendering" => "rendering.md",
          ])
 
 deploydocs(;
