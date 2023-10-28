@@ -124,7 +124,7 @@ systems = @named begin
     j3 = Revolute(isroot = true)
     j4 = Revolute(isroot = true)
     b1 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0])
-    b2 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0])
+    b2 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0], radius=0.3)
     b3 = BodyShape(r = [-1.0, 0, 0], r_cm = 0.5*[-1.0, 0, 0])
     b4 = BodyShape(r = [1.0, 0, 0], r_cm = 0.5*[1.0, 0, 0])
 end

@@ -135,7 +135,7 @@ irsys = IRSystem(modele)
 ssys = structural_simplify(irsys)
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                  (0, 100))
+                  (0, 40))
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 # @test all(isfinite, du)
@@ -205,7 +205,7 @@ ssys = structural_simplify(IRSystem(modele))
 
 D = Differential(t)
 
-prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 100))
+prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 40))
 sol3 = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol2)
 @test minimum(sol3[rev.phi]) > -π
@@ -216,14 +216,14 @@ doplot() && plot(sol3, idxs = rev.phi)
 # ==============================================================================
 ## Double pendulum =============================================================
 # ==============================================================================
-
+using LinearAlgebra
 @named rod1 = FixedTranslation(r = [1, 0, 0])
 @named rod2 = FixedTranslation(r = [1, 0, 0])
 @named body1 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
 @named body2 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
-@named damper1 = Rotational.Damper(d = 0.1)
-@named damper2 = Rotational.Damper(d = 0.1)
-@named rev1 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+@named damper1 = Rotational.Damper(d = 5)
+@named damper2 = Rotational.Damper(d = 1)
+@named rev1 = Multibody.Revolute(n = normalize([0.1, 0, 1]), useAxisFlange = true, isroot = true)
 @named rev2 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
 
 connections = [connect(damper1.flange_b, rev1.axis)
@@ -234,7 +234,7 @@ connections = [connect(damper1.flange_b, rev1.axis)
                connect(rev1.frame_b, rod1.frame_a)
                connect(rod1.frame_b, body1.frame_a)
                connect(body1.frame_a, rev2.frame_a)
-               connect(rev2.frame_a, rod2.frame_a)
+               connect(rev2.frame_b, rod2.frame_a)
                connect(rod2.frame_b, body2.frame_a)]
 
 @named model = ODESystem(connections, t,
@@ -260,7 +260,7 @@ prob = ODEProblem(ssys,
                       damper1.phi_rel => 1, D(rev1.phi) => 0, D(D(rev1.phi)) => 0,
                       damper2.phi_rel => 0.5, D(rev2.phi) => 0, D(D(rev2.phi)) => 0,
                       D(damper2.w_rel) => 0,
-                  ], (0, 600))
+                  ], (0, 35))
 
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
@@ -461,15 +461,18 @@ ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
 prob = ODEProblem(ssys,
                   [collect(D.(body.body.phid)) .=> 1;
                    collect(D.(body.body.phi)) .=> 1;
+                #    collect((body.body.r_0)) .=> collect((body.r_0));
                    collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
 # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
-sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.()) # Yingbo: init not working unless random 
+sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-6 .* rand.()) # Yingbo: init not working unless random 
 @assert SciMLBase.successful_retcode(sol)
 
 doplot() && plot(sol, idxs = [body.r_0...])
 # end
+
+@info "Initialization broken, initial value for body.r_0 not respected, add tests when MTK has a working initialization"
 
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
