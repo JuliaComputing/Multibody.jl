@@ -8,8 +8,41 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
 export Rotational, Translational
 
-export render
+export render, render!
+
+"""
+    scene, time = render(model, sol, t::Real; framerate = 30)
+    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30)
+
+Create a 3D animation of a multibody system
+
+# Arguments:
+- `model`: The unsimplified multibody model
+- `sol`: The `ODESolution` produced by simulating the system using `solve`
+- `t`: If a single number `t` is provided, the mechanism at this time is rendered and a scene is returned together with the time as an `Observable`. Modify `time[] = new_time` to change the rendering.
+- `timevec`: If a vector of times is provided, an animation is created and the path to the file on disk is returned.
+- `framerate`: Number of frames per second.
+"""
 function render end
+
+"""
+    did_render::Bool = render!(scene, ::typeof(ComponentConstructor), sys, sol, t)
+
+Each component that can be rendered must have a `render!` method. This method is called by `render` for each component in the system.
+
+This method is responsible for drawing the component onto the scene the way it's supposed to look at time `t` in the solution `sol`.
+`t` is an Observable. It's recommended to follow the pattern
+```julia
+thing = @lift begin
+    acces relevant coordinates from sol at time t
+    create a geometric object that can be rendered
+end
+mesh!(scene, thing; style...)
+```
+
+# Returns
+A boolean indicating whether or not the component performed any rendering. Typically, all custom methods of this function should return `true`, while the default fallback method is the only one returning false.
+"""
 function render! end
 
 const t = let
