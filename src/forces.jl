@@ -377,7 +377,7 @@ end
 
 Linear spring and linear damper in parallel acting as line force between `frame_a` and `frame_b`. A force `f` is exerted on the origin of `frame_b` and with opposite sign on the origin of `frame_a` along the line from the origin of `frame_a` to the origin of `frame_b` according to the equation:
 ```math
-f = c (s - s_unstretched) + d*D(s)
+f = c (s - s_{unstretched}) + d\cdot D(s)
 ```
 where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between the origin of `frame_a` and the origin of `frame_b` and `D(s)` is the time derivative of `s`.
 """

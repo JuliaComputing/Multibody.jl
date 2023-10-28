@@ -3,6 +3,8 @@ This example mirrors that of the [modelica three-springs](https://doc.modelica.o
 
 ![three springs](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/ThreeSprings.png)
 
+![animation](three_springs.gif)
+
 The example connects three springs together in a single point. The springs are all massless and do normally not have any state variables, but we can insist on one of the springs being stateful, in this case, we must tell the lower spring component to act as root by setting `fixedRotationAtFrame_a = fixedRotationAtFrame_b = true`.
 
 ```@example spring_mass_system
@@ -47,7 +49,7 @@ sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
 Plots.plot(sol, idxs = [body1.r_0...])
 ```
 
-## Render
+## 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system

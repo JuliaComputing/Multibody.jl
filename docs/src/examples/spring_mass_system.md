@@ -58,7 +58,7 @@ Plots.plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
 ```
 The plot indicates that the two systems behave identically. 
 
-## Render
+## 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system

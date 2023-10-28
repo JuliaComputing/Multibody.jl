@@ -77,7 +77,7 @@ This example has two parallel spring-mass parts, the first body (`body1`) is att
 In this example we used separate springs and dampers, see also the component [`SpringDamperParallel`](@ref) which combines the two in one component.
 
 
-## Render
+## 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_damper_system
