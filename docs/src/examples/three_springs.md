@@ -1,9 +1,11 @@
-# Spring-mass system
+# Three springs
+![animation](three_springs.gif)
+
 This example mirrors that of the [modelica three-springs](https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.ThreeSprings.html) and demonstrates that we can connect mass-less force elements together.
 
 ![three springs](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/ThreeSprings.png)
 
-![animation](three_springs.gif)
+
 
 The example connects three springs together in a single point. The springs are all massless and do normally not have any state variables, but we can insist on one of the springs being stateful, in this case, we must tell the lower spring component to act as root by setting `fixedRotationAtFrame_a = fixedRotationAtFrame_b = true`.
 

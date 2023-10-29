@@ -1,5 +1,9 @@
 # Spherical pendulum
+
+![animation](spherical.gif)
+
 This example models a spherical pendulum. The pivot point is modeled using a [`Spherical`](@ref) joint, the pendulum rod is modeled using a [`FixedTranslation`](@ref) and the mass is modeled using a [`Body`](@ref). In this example, we choose the joint to be the root (joints are often better root objects than bodies).
+
 
 ```@example spring_mass_system
 using Multibody
@@ -37,7 +41,7 @@ plot(sol, idxs = [body.r_0...])
 ```
 
 
-## Render
+## 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system

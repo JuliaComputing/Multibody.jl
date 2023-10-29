@@ -1,5 +1,7 @@
 # Spring-damper system
 
+![animation](springdamper.gif)
+
 Welcome to the spring-damper system example, where we will show you the process of modeling and simulating a basic yet essential mechanical system using the powerful Multibody.jl package in JuliaSim. By understanding the underlying principles of spring-damper systems, you will gain valuable insights into the behavior of various real-world systems, such as suspension systems in vehicles, vibration isolation mechanisms, and biomechanical structures.
 
 This tutorial mirrors that of the following Modelica tutorial [Spring damper system](https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem.html) and demonstrates that a body can be freely moving without any connection to a joint. In this case body coordinates are used as state by setting the option `isroot=true` to the body.
