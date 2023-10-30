@@ -1,6 +1,8 @@
 # Swing
 
+In this example, we will model a swing consisting of a rigid seat suspended in 4 ropes, mounted symmetrically in a ceiling. Each rope is modeled as a stiff rod with a small point mass at the center of gravity, terminated by a parallel spring-damper to model slight flexibility in the ropes. The ceiling mounting points are modeled as spherical joints, i.e., they do not transmit any torque in any direction. The rim of the seat is modeled as 4 rigid bodies configured in a square, as well as one point mass representing the load, located slightly below the rim assembly.
 
+![animation](swing.gif)
 
 ```@example SWING
 using Multibody
@@ -23,7 +25,6 @@ W(args...; kwargs...) = Multibody.world
         rope = BodyShape(r=[0.0,-1,0], m=0.05, isroot=false, radius=0.01)
         spring = Spring(c = inv(0.04/60))
         damper = Damper(d = 10.0)
-        # spring = SpringDamperParallel(c = inv(0.04/60), d = 1, s_unstretched=0)
     end
     @equations begin
         connect(frame_a, joint1.frame_a)
@@ -38,7 +39,7 @@ end
 
 # @named rope = Rope(rope.r = [0, -2, 0])
 
-@mtkmodel Swing begin # Simple
+@mtkmodel SimpleSwing begin # Simple
     @structural_parameters begin
         h = 2
         w = 0.4
@@ -60,7 +61,7 @@ end
         connect(body.frame_a, damper.frame_b)
     end
 end
-@named model = Swing()
+@named model = SimpleSwing()
 # ssys = structural_simplify(model, allow_parameters=false)
 # prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 1))
 # sol = solve(prob, Rodas4())
@@ -86,16 +87,31 @@ plot(sol, layout=21, size=(1900, 1000), legend=false, link=:x)
         rope2 = Rope(rope.r=[-w/2, -h,  w/2])
         rope3 = Rope(rope.r=[ w/2, -h, -w/2])
         rope4 = Rope(rope.r=[ w/2, -h,  w/2])
-        body  = Body(m=6, isroot=true, I_11=1, I_22=1, I_33=1)
+
+        body_back  = BodyShape(m=0.1, r = [w, 0, 0])
+        body_front = BodyShape(m=0.1, r = [w, 0, 0])
+        body_left  = BodyShape(m=0.1, r = [0, 0, w])
+        body_right = BodyShape(m=0.1, r = [0, 0, -w])
+
+
+        body  = Body(m=6, isroot=true, r_cm = [w/2, w/2, w/2])
 
         damper = Damper(d=50.0)
     end
     @equations begin
+        # Rope assembly
         connect(world.frame_b, upper_trans1.frame_a, upper_trans2.frame_a)
         connect(rope1.frame_a, rope2.frame_a, upper_trans1.frame_b)
         connect(rope3.frame_a, rope4.frame_a, upper_trans2.frame_b)
-        connect(rope1.frame_b, rope2.frame_b, rope3.frame_b, rope4.frame_b, body.frame_a)
 
+        # Body assembly
+        connect(body_back.frame_a, body_left.frame_a, rope1.frame_b)
+        connect(body_left.frame_b, body_front.frame_a, rope2.frame_b)
+        connect(body_front.frame_b, body_right.frame_a, rope4.frame_b)
+        connect(body_right.frame_b, rope3.frame_b) # Don't close the rigid kinematic loop
+        connect(body_back.frame_a, body.frame_a)
+
+        # World damping (damps swing motion)
         connect(world.frame_b, damper.frame_a)
         connect(body.frame_a, damper.frame_b)
     end
@@ -108,19 +124,18 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(model.body.r_0) .=> [0, -2, -0.5];
 ], (0, 10))
-prob.u0[2] = -2
 prob.u0[1] = -0.5
+prob.u0[2] = -2
 
 
-sol = solve(prob, Rodas4())
+@time sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs = [body.r_0...])
+plot(sol, idxs = [model.body.r_0...])
 ```
 
 
 ## 3D animation
-Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
 import CairoMakie

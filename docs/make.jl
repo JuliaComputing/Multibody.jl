@@ -27,6 +27,7 @@ makedocs(;
                  "Sensors" => "examples/sensors.md",
                  "Spherical pendulum" => "examples/spherical_pendulum.md",
                  "Gearbox" => "examples/gearbox.md",
+                 "Swing" => "examples/swing.md",
                  "Free motions" => "examples/free_motion.md",
              ],
              "3D rendering" => "rendering.md",
