@@ -65,7 +65,7 @@ function render(model, sol, time::Real;
     fig = Figure()
     scene = LScene(fig[1, 1]).scene
 
-    steps = range(sol.t[1], sol.t[end], length=300)
+    steps = range(sol.t[1], sol.t[end], length=3000)
 
     t = Slider(fig[2, 1], range = steps, startvalue = time).value
     

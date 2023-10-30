@@ -275,6 +275,7 @@ doplot() &&
 ## Linear mass-spring-damper ===================================================
 # ==============================================================================
 
+@named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Translational.Damper(d=0.5)
 @named spring = Translational.Spring(c=1)
 @named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
