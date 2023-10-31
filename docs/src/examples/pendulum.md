@@ -217,7 +217,7 @@ plot(sol, layout=4)
 
 ```@example pendulum
 import CairoMakie
-Multibody.render(model, sol, z=-5, R = Rotations.RotXYZ(-0.8,0.3,0)', filename = "furuta.gif")
+Multibody.render(model, sol, z=-5, framerate=60, R = Rotations.RotXYZ(0.2, -0.2, 0), filename = "furuta.gif")
 nothing # hide
 ```
 ![furuta](furuta.gif)

@@ -295,12 +295,13 @@ See also [`SpringDamperParallel`](@ref)
     @unpack frame_a, frame_b = ptf
     @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
                                          kwargs...)
+    
+    # @parameters c=c [description = "spring constant", bounds = (0, Inf)]
+    # @parameters s_unstretched=s_unstretched [
+    #     description = "unstretched length of spring",
+    #     bounds = (0, Inf),
+    # ] # Bug in MTK where parameters only passed to sub components are ignored
     @named spring2d = TP.Spring(; c, s_rel0 = s_unstretched)
-    @parameters c=c [description = "spring constant", bounds = (0, Inf)]
-    @parameters s_unstretched=s_unstretched [
-        description = "unstretched length of spring",
-        bounds = (0, Inf),
-    ]
 
     @variables r_rel_a(t)[1:3]=0 [
         description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
@@ -381,7 +382,7 @@ f = c (s - s_{unstretched}) + d \\cdot D(s)
 ```
 where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between the origin of `frame_a` and the origin of `frame_b` and `D(s)` is the time derivative of `s`.
 """
-@component function SpringDamperParallel(; name, c, d, s_unstretched)
+@component function SpringDamperParallel(; name, c, d, s_unstretched=0, kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
 
@@ -392,7 +393,8 @@ where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between t
         bounds = (0, Inf),
     ]
 
-    eqs = [f_d ~ d * D(s)
+    f_d = d * D(s)
+    eqs = [
            f ~ c * (s - s_unstretched) + f_d
            # lossPower ~ f_d*der(s)
            ]
