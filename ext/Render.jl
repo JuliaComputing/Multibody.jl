@@ -41,7 +41,8 @@ function render(model, sol,
         timevec = range(sol.t[1], sol.t[end], step=1/framerate)
     end
     # with_theme(theme_dark()) do
-        scene = Scene()
+        fig = Figure()
+        scene = LScene(fig[1, 1]).scene
         
         cam3d!(scene)
         scene.camera.view[] = [
@@ -64,12 +65,13 @@ function render(model, sol, time::Real;
 
     fig = Figure()
     scene = LScene(fig[1, 1]).scene
+    cam3d!(scene)
+    # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
 
     t = Slider(fig[2, 1], range = steps, startvalue = time).value
     
-    cam3d!(scene)
     scene.camera.view[] = [
         1 0 0 0
         0 1 0 0
