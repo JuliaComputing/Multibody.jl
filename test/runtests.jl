@@ -1019,8 +1019,6 @@ tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
 
 
-
-
 # ==============================================================================
 ## Simple motion with quaternions=============================================================
 # ==============================================================================
@@ -1152,10 +1150,6 @@ n = Matrix(sol(ts, idxs = [joint.n...]))
 
 Matrix(sol(ts, idxs = [joint.w_rel_b...]))
 
-
-
-
-
 ## Spherical joint pendulum with quaternions
 
 using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
@@ -1216,3 +1210,26 @@ irsys = IRSystem(model)
 
     # render(model, sol)
 end
+
+
+# ==============================================================================
+## BodyCylinder ================================================================
+# ==============================================================================
+
+world = Multibody.world
+
+@mtkmodel CylinderPend begin
+    @components begin
+        world = W()
+        body = BodyCylinder(m = 1)
+        joint = Revolute()
+    end
+end
+
+@named model = CylinderPend()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
+prob = ODEProblem(ssys, [], (0, 10))
+sol = solve(prob, Rodas4())
+

@@ -448,4 +448,81 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     end
 
     ODESystem(eqs, t; name, systems = [systems; links; joints])
+@component function BodyCylinder(; name, m = 1, r = [0.1, 0, 0], r_0 = 0, kwargs...)
+
+
+    @parameters begin
+        r[1:3]=r, [
+            description = "Vector from frame_a to frame_b resolved in frame_a",
+        ]
+        r_shape[1:3]=zeros(3), [
+            description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+        ]
+    end
+    r, r_shape = collect.((r, r_shape))
+    @parameters begin
+        lengthDirection[1:3] = r - r_shape, [
+            description = "Vector in length direction of cylinder, resolved in frame_a",
+        ]
+        length = _norm(r - r_shape), [
+            description = "Length of cylinder",
+        ]
+        diameter = length/5, [
+            description = "Diameter of cylinder",
+        ]
+        innerDiameter = 0, [
+            description = "Inner diameter of cylinder (0 <= innerDiameter <= Diameter)",
+        ]
+        density = 7700, [
+            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+        ]
+        
+    end
+    lengthDirection = collect(lengthDirection)
+    radius = diameter/2
+    innerRadius = innerDiameter/2
+    mo = density*pi*length*radius^2
+    mi = density*pi*length*innerRadius^2
+    I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
+    m = mo - mi
+    R = from_nxy(r, [0, 1, 0]) 
+    r_cm = r_shape + _normalize(lengthDirection)*length/2
+    I = resolveDyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22])) # TODO
+
+    @variables begin
+        r_0(t)[1:3]=r_0, [
+            state_priority = 2,
+            description = "Position vector from origin of world frame to origin of frame_a",
+        ]
+        v_0(t)[1:3]=0, [
+            state_priority = 2,
+            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        ]
+        a_0(t)[1:3]=0, [
+            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        ]
+    end
+
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        frameTranslation = FixedTranslation(r = r)
+        body = Body(; r_cm, m, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], kwargs...)
+
+    end
+    r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
+
+    eqs = [r_0 .~ collect(frame_a.r_0)
+           v_0 .~ D.(r_0)
+           a_0 .~ D.(v_0)
+           connect(frame_a, frameTranslation.frame_a)
+           connect(frame_b, frameTranslation.frame_b)
+           connect(frame_a, body.frame_a)]
+
+    pars = [
+        r; r_shape; lengthDirection; length; diameter; innerDiameter; density
+    ] # NOTE: have to collect and scalaraize array parameters and provide them to ODESystem due to numerous MTK bugs
+    vars = [r_0; v_0; a_0]
+    ODESystem(eqs, t, vars, pars; name, systems)
 end
