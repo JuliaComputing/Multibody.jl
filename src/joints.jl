@@ -533,8 +533,6 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
     compose(ODESystem(equations, t; name), frame_a)
 end
 
-_norm(x) = sqrt(sum(abs2.(x)))
-
 """
     RollingWheel(; name, radius, m, I_axis, I_long, width=0.035, x0, y0, kwargs...)
 

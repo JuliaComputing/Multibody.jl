@@ -1,5 +1,8 @@
 using Rotations
 
+_norm(x) = sqrt(sum(abs2.(x)))
+_normalize(x) = x ./ _norm(x)
+
 const R3{T} = RotMatrix{3, T}
 
 abstract type Orientation end
@@ -61,7 +64,8 @@ function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     ODESystem(Equation[], t, [vec(R); w], []; name, defaults)
 end
 
-Base.:*(R1::RotationMatrix, x::AbstractVector) = R1.R * x
+Base.:*(R1::RotationMatrix, x::AbstractArray) = R1.R * x
+Base.:*(x::AbstractArray, R2::RotationMatrix) = x * R2.R
 function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
     RotationMatrix(R1.R.mat * R2.R.mat, R1 * R2.w + collect(R1.w))
 end
@@ -319,4 +323,29 @@ function rotz(t, deg = false)
     R = [ct -st 0
          st ct 0
          0 0 1]
+end
+
+
+function from_nxy(n_x, n_y)
+    e_x = length(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
+    e_y = length(n_y) < 1e-10 ? [0, 1.0, 0] : _normalize(n_y)
+    n_z_aux = cross(e_x, e_y)
+    n_y_aux = #if n_z_aux' * n_z_aux > 1.0e-6 # TODO: MTK too buggy with ifelse to handle this logic
+        e_y
+    # elseif abs(e_x[1]) > 1.0e-6
+    #     [0, 1.0, 0]
+    # else
+    #     [1.0, 0, 0]
+    # end
+    e_z_aux = cross(e_x, n_y_aux)
+    e_z = _normalize(e_z_aux)
+    RotationMatrix([e_x e_y e_z], zeros(3))
+end
+
+function resolveDyade1(R, D2)
+    R'D2*R
+end
+
+function resolveDyade2(R, D1)
+    R*D1*R'
 end
