@@ -4,6 +4,9 @@ In this example, we will model a swing consisting of a rigid seat suspended in 4
 
 ![animation](swing.gif)
 
+
+We start by defining a single rope component and attach it to a body in order to verify that it's working.
+
 ```@example SWING
 using Multibody
 using ModelingToolkit
@@ -62,18 +65,22 @@ end
     end
 end
 @named model = SimpleSwing()
-# ssys = structural_simplify(model, allow_parameters=false)
-# prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 1))
-# sol = solve(prob, Rodas4())
-
-
-
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [], (0, 200))
+prob = ODEProblem(ssys, [], (0, 50))
 sol = solve(prob, Rodas4(), abstol=1e-8, reltol=1e-8)
 plot(sol, layout=21, size=(1900, 1000), legend=false, link=:x)
+```
+This makes for a rather interesting-looking springy pendulum!
 
+```@example SWING
+import CairoMakie
+Multibody.render(model, sol; z = -5, filename = "simple_swing.gif") # Use "swing.mp4" for a video file
+nothing # hide
+```
 
+Next, we create the full swing assembly
+
+```@example SWING
 @mtkmodel Swing begin
     @structural_parameters begin
         h = 2
@@ -123,19 +130,16 @@ ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [
     collect(model.body.r_0) .=> [0, -2, -0.5];
-], (0, 10))
-prob.u0[1] = -0.5
-prob.u0[2] = -2
+], (0.0, 0.1))
+# prob.u0[1+3] = -0.5
+# prob.u0[2+3] = -2
 
 
-@time sol = solve(prob, Rodas4())
+@time sol = solve(prob, Rodas4(), dtmin=1e-5, dt=1e-5, force_dtmin=true)
 @assert SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs = [model.body.r_0...])
+Plots.plot(sol, idxs = [model.body.r_0...])
 ```
-
-
-## 3D animation
 
 ```@example spring_mass_system
 import CairoMakie
