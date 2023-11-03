@@ -616,25 +616,28 @@ sol = solve(prob, Rodas4())
 # ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
-world = Multibody.world
+# The wheel does not need the world
 @named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
-                            I_long = 0.12,
-                            x0 = 0.2,
-                            y0 = 0.2,
-                            der_angles = [0, 5, 1])
+                        I_long = 0.12,
+                        x0 = 0.2,
+                        y0 = 0.2,
+                        der_angles = [0, 5, 1])
 
-cwheel = complete(wheel)
+
+wheel = complete(wheel)
+
 defs = [
     # collect(world.n .=> [0, 0, -1]);
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-
-
 ssys = structural_simplify(IRSystem(wheel))
 prob = ODEProblem(ssys, defs, (0, 10))
+
+
+prob.u0 .+= 0.001 .* randn.()
 @test_skip begin # Does not initialize
-  sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 1e-2 .* rand.())
+  sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.())
   @info "Write tests"
 end
 
@@ -726,4 +729,4 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effect")
 @info "Write tests"
 
-@test_broken sol(0, idxs = collect(freeMotion.phi)) != zeros(3)
+@test_broken sol(0, idxs = collect(freeMotion.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored

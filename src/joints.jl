@@ -450,10 +450,10 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
         ]
         (f_long(t) = 0),
         [description = "Contact force acting on wheel in longitudinal direction"]
-        (err(t) = 0),
-        [
-            description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
-        ]
+        # (err(t) = 0),
+        # [
+        #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
+        # ]
         (e_axis_0(t)[1:3] = zeros(3)),
         [description = "Unit vector along wheel axis, resolved in world frame"]
         (delta_0(t)[1:3] = zeros(3)),
@@ -500,7 +500,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
                  # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
                  collect(e_axis_0) .~ resolve1(ori(frame_a), [0, 1, 0])
                  collect(aux) .~ collect(cross(e_n_0, e_axis_0))
-                 collect(e_long_0) .~ collect(aux ./ norm(aux))
+                 collect(e_long_0) .~ collect(aux ./ _norm(aux))
                  collect(e_lat_0) .~ collect(cross(e_long_0, e_n_0))
 
                  # Determine point on road where the wheel is in contact with the road
@@ -512,7 +512,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
                  0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
 
                  # only for testing
-                 err ~ norm(delta_0) - radius
+                #  err ~ norm(delta_0) - radius
 
                  # Slip velocities
                  collect(v_0) .~ D.(frame_a.r_0)
@@ -532,6 +532,8 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
                              resolve2(ori(frame_a), cross(delta_0, f_wheel_0))]
     compose(ODESystem(equations, t; name), frame_a)
 end
+
+_norm(x) = sqrt(sum(abs2.(x)))
 
 """
     RollingWheel(; name, radius, m, I_axis, I_long, width=0.035, x0, y0, kwargs...)
@@ -603,7 +605,7 @@ with the wheel itself.
                          collect(rollingWheel.der_angles) .~ collect(der_angles)
                          connect(body.frame_a, frame_a)
                          connect(rollingWheel.frame_a, frame_a)]
-    compose(ODESystem(equations, t, sts, pars; name), frame_a, rollingWheel, body)
+    compose(ODESystem(equations, t; name), frame_a, rollingWheel, body)
 end
 
 """
