@@ -41,8 +41,9 @@ function render(model, sol,
         timevec = range(sol.t[1], sol.t[end], step=1/framerate)
     end
     # with_theme(theme_dark()) do
-        fig = Figure()
-        scene = LScene(fig[1, 1]).scene
+        # fig = Figure()
+        # scene = LScene(fig[1, 1]).scene # This causes a black background in the docs
+        scene = Scene()
         
         cam3d!(scene)
         scene.camera.view[] = [
