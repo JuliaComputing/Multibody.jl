@@ -66,7 +66,7 @@ end
 end
 @named model = SimpleSwing()
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [], (0, 50))
+prob = ODEProblem(ssys, [], (0, 4))
 sol = solve(prob, Rodas4(), abstol=1e-8, reltol=1e-8)
 plot(sol, layout=21, size=(1900, 1000), legend=false, link=:x)
 ```
@@ -74,7 +74,7 @@ This makes for a rather interesting-looking springy pendulum!
 
 ```@example SWING
 import CairoMakie
-Multibody.render(model, sol; z = -5, filename = "simple_swing.gif") # Use "swing.mp4" for a video file
+Multibody.render(model, sol, 0:0.01:4; z = -5, filename = "simple_swing.gif") # Use "swing.mp4" for a video file
 nothing # hide
 ```
 
@@ -130,7 +130,7 @@ ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [
     collect(model.body.r_0) .=> [0, -2, -0.5];
-], (0.0, 0.1))
+], (0.0, 0.0001))
 # prob.u0[1+3] = -0.5
 # prob.u0[2+3] = -2
 
