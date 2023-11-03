@@ -7,6 +7,7 @@ t = Multibody.t
 D = Differential(t)
 doplot() = false
 world = Multibody.world
+W(args...; kwargs...) = Multibody.world
 
 ## Only body and world
 @named body = Body(; m = 1, isroot = false, r_cm = [1, 0, 1])
@@ -576,8 +577,7 @@ systems = @named begin
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
     torque1 = Torque(resolveInFrame = :frame_b)
-    # sine[1:3] = Blocks.Sine(frequency = 1)
-    fixed = Fixed() # TODO: implement
+    fixed = Fixed() 
     inertia1 = Rotational.Inertia(J = cyl1.I_11)
     idealGear = Rotational.IdealGear(ratio = 10, use_support = true)
     inertia2 = Rotational.Inertia(J = cyl2.I_11)
@@ -602,21 +602,16 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
+cm = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    D(cm.idealGear.phi_b) => 0
+], (0, 10))
+sol = solve(prob, Rodas4())
 
+@test sol[cm.inertia1.phi] ≈ 10*sol[cm.inertia2.phi] rtol = 1e-2
+@test sol[cm.inertia1.flange_a.tau] ≈ 10*sol[cm.inertia2.flange_a.tau] rtol=1e-2
 
-ssys = structural_simplify(IRSystem(model)) 
-
-@test_skip begin
-    # ssys = structural_simplify(model) # Yingbo: Sym doesn't have a operation or arguments! 
-
-prob = ODEProblem(ssys, # Yingbo: Not a well formed derivative expression
-                  [
-                      D(gearConstraint.actuatedRevolute_b.phi) => 0,
-                      D(inertia2.flange_a.phi) => 0,
-                      D(D(idealGear.phi_b)) => 0,
-                      D(gearConstraint.actuatedRevolute_a) => 0,
-                  ], (0, 10))
-end
 
 # ==============================================================================
 ## Rolling wheel ===============================================================
