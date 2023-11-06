@@ -190,7 +190,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               I_21 = 0,
               I_31 = 0,
               I_32 = 0,
-              isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = 0)
+              isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = 0, radius = 0.1f0)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
@@ -216,6 +216,9 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     @parameters r_cm[1:3]=r_cm [
         description = "Vector from frame_a to center of mass, resolved in frame_a",
     ]
+    @parameters radius=radius [
+        description = "Radius of the body in animations",
+    ]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
     @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
@@ -231,11 +234,13 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     # DRa = D(Ra)
 
+    dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot
         @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
         @variables phid(t)[1:3]=phid0 [state_priority = 10]
         @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
         phi, phid, phidd = collect.((phi, phid, phidd))
+        dvs = [dvs; phi; phid; phidd]
         ar = axesRotations([1, 2, 3], phi, phid)
 
         @named frame_a = Frame(varw = true)
@@ -269,6 +274,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
                                  cross(w_a, cross(w_a, r_cm))))
            collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
 
+    # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
+    
     ODESystem(eqs, t; name, metadata = Dict(:isroot => isroot), systems = [frame_a])
 end
 
