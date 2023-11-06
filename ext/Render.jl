@@ -106,7 +106,12 @@ function render!(scene, ::typeof(Body), sys, sol, t)
         Ta = get_frame(sol, sys.frame_a, $t)
         coords = (Ta*[r; 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
         point = Point3f(coords)
-        Sphere(point, 0.1)
+        radius = try
+            sol($t, idxs=sys.radius)
+        catch
+            0.05f0
+        end
+        Sphere(point, Float32(radius))
     end
     mesh!(scene, thing, color=:purple)
 
@@ -168,9 +173,14 @@ function render!(scene, ::typeof(Revolute), sys, sol, t)
         n_a = sol($t, idxs=collect(sys.n))
         R_w_a = get_frame(sol, sys.frame_a, $t)[1:3, 1:3]
         n_w = R_w_a*n_a # Rotate to the world frame
-        p1 = Point3f(O + 0.1*n_w)
-        p2 = Point3f(O - 0.1*n_w)
-        Makie.GeometryBasics.Cylinder(p1, p2, 0.1f0)
+        radius = try
+            sol($t, idxs=sys.radius)
+        catch
+            0.02f0
+        end
+        p1 = Point3f(O + radius*n_w)
+        p2 = Point3f(O - radius*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, radius)
     end
     mesh!(scene, thing, color=:red)
     true
