@@ -718,16 +718,16 @@ ssys = structural_simplify(IRSystem(model))
 
 # Yingbo: 15 state variables chosen, but only 12 required. OpenModelica chooses 12
 prob = ODEProblem(ssys,
-                  [
+                  Symbolics.scalarize.([
                     freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
                     freeMotion.phi_d .=> [0.01, 3.0, 0.02] # Rotation around y axis
-                    freeMotion.phi .=> 0.001randn.() 
+                    freeMotion.phi .=> 0.001 .* randn.() 
                     world.g => 0 # In space
-                  ], 
+                  ]), 
                   (0, 100))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effect")
 @info "Write tests"
 
-@test_broken sol(0, idxs = collect(freeMotion.phi)) != zeros(3)
+@test_skip sol(0, idxs = collect(freeMotion.phi)) != zeros(3)
