@@ -195,7 +195,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phid0 = zeros(3),
               r_0 = 0,
               radius = 0.005,
-              useQuaternions=true,)
+              useQuaternions=false,)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
