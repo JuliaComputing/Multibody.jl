@@ -21,6 +21,10 @@ If `ODESystem` is called on a `RotationMatrix` object `o`, symbolic variables fo
 struct RotationMatrix <: Orientation
     R::R3
     w::Any
+    function RotationMatrix(R, w)
+        size(w) == (3,) || error("w must be a 3-vector")
+        new(R, w)
+    end
 end
 
 RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
@@ -231,13 +235,12 @@ end
 
 Base.getindex(Q::Quaternion, i) = Q.Q[i]
 
-function NumQuaternion(; Q = [1.0, 0, 0, 0], w = zeros(3), name, varw = false)
-    Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
-    # @variables w(t)[1:3]=w [description="angular velocity"]
-    # R = collect(R)
-    # R = ModelingToolkit.renamespace.(name, R) .|> Num
+function NumQuaternion(; Q = [0.0, 0, 0, 1.0], w = zeros(3), name, varw = false)
+    # Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
+    @variables Q(t)[1:4] = [0.0,0,0,1.0]
     if varw
-        w = at_variables_t(:w, 1:3, default = w)
+        @variables w(t)[1:3]=w [description="angular velocity"]
+        # w = at_variables_t(:w, 1:3, default = w)
     else
         w = get_w(Q)
     end
@@ -259,6 +262,10 @@ function from_Q(Q, w)
     (Q[2]*Q[1] - Q[3]*Q[4])  (Q[2]*Q[2] + Q[4]*Q[4])-1  (Q[2]*Q[3] + Q[1]*Q[4]);
     (Q[3]*Q[1] + Q[2]*Q[4])  (Q[3]*Q[2] - Q[1]*Q[4])  (Q[3]*Q[3] + Q[4]*Q[4])-1]
     RotationMatrix(R, w)
+end
+
+function angularVelocity1(Q, der_Q)
+    2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
 end
 
 function angularVelocity2(Q, der_Q)

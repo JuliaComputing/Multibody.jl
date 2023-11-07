@@ -194,6 +194,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
+              radius = 0.005,
               useQuaternions=true,)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
@@ -244,12 +245,18 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         if useQuaternions
             @named frame_a = Frame(varw = true)
             Ra = ori(frame_a, true)
-            @named Q = NumQuaternion(varw=false)
+            # @variables q(t)[1:4] = [0.0,0,0,1.0]
+            # @variables qw(t)[1:3] = [0.0,0,0]
+            # q = collect(q)
+            # qw = collect(qw)
+            # Q = Quaternion(q, qw)
+            @named Q = NumQuaternion(varw=true) 
             ar = from_Q(Q, angularVelocity2(Q, D.(Q.Q)))
             Equation[
                 0 ~ orientation_constraint(Q)
                 Ra ~ ar
                 Ra.w .~ ar.w
+                Q.w .~ ar.w
                 collect(w_a .~ Ra.w)
             ]
         else
