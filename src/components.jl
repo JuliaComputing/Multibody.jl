@@ -54,7 +54,7 @@ The world component is the root of all multibody models. It is a fixed frame wit
 const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
-gravity_acceleration(r) = world.g * world.n # NOTE: This is hard coded for now to use the the standard, parallel gravity model
+gravity_acceleration(r) = GlobalScope(world.g) * GlobalScope.(world.n) # NOTE: This is hard coded for now to use the the standard, parallel gravity model
 
 @component function Fixed(; name, r = [0, 0, 0])
     systems = @named begin frame_b = Frame() end
