@@ -304,7 +304,7 @@ doplot() && plot(sol, idxs = joint.s)
 world = Multibody.world
 @named begin
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
-                 I_33 = 0.1, r_0 = [0.3, -0.2, 0], useQuaternions=true) # This is root since there is no joint parallel to the spring leading to this body
+                 I_33 = 0.1, r_0 = [0.3, -0.2, 0], useQuaternions=false) # This is root since there is no joint parallel to the spring leading to this body
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
