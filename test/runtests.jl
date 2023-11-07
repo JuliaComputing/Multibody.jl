@@ -720,8 +720,8 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 ## Dzhanibekov effect ==========================================================
 # ==============================================================================
 world = Multibody.world
-@named freeMotion = FreeMotion(enforceState = true, isroot = true)
-@named body = Body(m = 1, isroot = false, I_11 = 1, I_22 = 10, I_33 = 100)
+@named freeMotion = FreeMotion(enforceState = false, isroot = false)
+@named body = Body(m = 1, isroot = true, I_11 = 1, I_22 = 10, I_33 = 100, useQuaternions=false)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
@@ -733,18 +733,18 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
 
-# Yingbo: 15 state variables chosen, but only 12 required. OpenModelica chooses 12
 prob = ODEProblem(ssys,
                   Symbolics.scalarize.([
-                    freeMotion.v_rel_a .=> [0,1,0] # Movement in y direction
-                    freeMotion.phi_d .=> [0.01, 3.0, 0.02] # Rotation around y axis
-                    freeMotion.phi .=> 0.001 .* randn.() 
-                    world.g => 0 # In space
+                    body.v_0 .=> [0,1,0] # Movement in y direction
+                    body.w_a .=> [0.01, 3.0, 0.02] # Rotation around y axis
+                    body.phi .=> 0.001 .* randn.() 
+                    # body.Q .=> 0.001 .* randn.() .+ [0,0,0,1]
+                    world.g => 0.0 # In space
                   ]), 
-                  (0, 100))
+                  (0, 3))
 
 sol = solve(prob, Rodas4())
-doplot() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effect")
+doplot() && plot(sol, idxs = collect(body.phi), title = "Dzhanibekov effect")
 @info "Write tests"
 
 @test_skip sol(0, idxs = collect(freeMotion.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored
