@@ -130,7 +130,7 @@ As is hopefully evident from the little code snippet above, this linear pendulum
 ### Why do we need a joint?
 In the example above, we introduced a prismatic joint to model the oscillating motion of the mass-spring system. In reality, we can suspend a mass in a spring without any joint, so why do we need one here? The answer is that we do not, in fact, need the joint, but if we connect the spring directly to the world, we need to make the body (mass) the root object of the kinematic tree instead:
 ```@example pendulum
-@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0])
+@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], useQuaternions=false)
 @named multibody_spring = Multibody.Spring(c=1)
 
 connections = [connect(world.frame_b, multibody_spring.frame_a)
@@ -143,11 +143,12 @@ defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
             collect(root_body.r_0 .=> [0, 0, 0])...,
             collect((D.(root_body.phi)) .=> [0, 0, 0])...,
             collect(D.(D.(root_body.phi)) .=> [0, 0, 0])...,
-            collect(D.(root_body.phid) .=> [0, 0, 0])...,)
+            collect(D.(root_body.phid) .=> [0, 0, 0])...,
+)
 
 prob = ODEProblem(ssys, defs, (0, 30))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring system without joint")
 ```
 Here, we used a [`Multibody.Spring`](@ref) instead of connecting a `Translational.Spring` to a joint. The `Translational.Spring`, alongside other components from `ModelingToolkitStandardLibrary.Mechanical`, is a 1-dimensional object, whereas multibody components are 3-dimensional objects.
@@ -161,7 +162,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, defs, (0, 30))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")
 ```
 

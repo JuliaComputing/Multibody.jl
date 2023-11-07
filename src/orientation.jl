@@ -96,6 +96,12 @@ function get_w(RM)
     [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
 end
 
+function get_w(Q::AbstractVector)
+    Q = collect(Q)
+    DQ = collect(D.(Q))
+    angularVelocity2(Q, DQ)
+end
+
 """
     h2 = resolve2(R21, h1)
 
@@ -218,12 +224,52 @@ function connect_loop(F1, F2)
 end
 
 ## Quaternions
-orientation_constraint(q::AbstractVector) = q'q - 1
-
-function angularVelocity2(q::AbstractVector, q̇)
-    Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
-    2 * Q * q̇
+struct Quaternion <: Orientation
+    Q
+    w::Any
 end
+
+Base.getindex(Q::Quaternion, i) = Q.Q[i]
+
+function NumQuaternion(; Q = [0.0, 0, 0, 1.0], w = zeros(3), name, varw = false)
+    # Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
+    @variables Q(t)[1:4] = [0.0,0,0,1.0]
+    if varw
+        @variables w(t)[1:3]=w [description="angular velocity"]
+        # w = at_variables_t(:w, 1:3, default = w)
+    else
+        w = get_w(Q)
+    end
+    Q, w = collect.((Q, w))
+    Quaternion(Q, w)
+end
+
+
+orientation_constraint(q::AbstractVector) = q'q - 1
+orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
+
+# function angularVelocity2(q::AbstractVector, q̇)
+#     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
+#     2 * Q * q̇
+# end
+
+function from_Q(Q, w)
+    R = 2*[(Q[1]*Q[1] + Q[4]*Q[4])-1  (Q[1]*Q[2] + Q[3]*Q[4]) (Q[1]*Q[3] - Q[2]*Q[4]);
+    (Q[2]*Q[1] - Q[3]*Q[4])  (Q[2]*Q[2] + Q[4]*Q[4])-1  (Q[2]*Q[3] + Q[1]*Q[4]);
+    (Q[3]*Q[1] + Q[2]*Q[4])  (Q[3]*Q[2] - Q[1]*Q[4])  (Q[3]*Q[3] + Q[4]*Q[4])-1]
+    RotationMatrix(R, w)
+end
+
+function angularVelocity1(Q, der_Q)
+    2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
+end
+
+function angularVelocity2(Q, der_Q)
+    2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
+end
+
+
+## Euler
 
 function axesRotations(sequence, angles, der_angles, name = :R_ar)
     R = axisRotation(sequence[3], angles[3]) *

@@ -190,7 +190,12 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               I_21 = 0,
               I_31 = 0,
               I_32 = 0,
-              isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = 0, radius = 0.1f0)
+              isroot = false,
+              phi0 = zeros(3),
+              phid0 = zeros(3),
+              r_0 = 0,
+              radius = 0.005,
+              useQuaternions=false,)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
@@ -236,23 +241,42 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot
-        @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
-        @variables phid(t)[1:3]=phid0 [state_priority = 10]
-        @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
-        phi, phid, phidd = collect.((phi, phid, phidd))
-        dvs = [dvs; phi; phid; phidd]
-        ar = axesRotations([1, 2, 3], phi, phid)
+        
+        if useQuaternions
+            @named frame_a = Frame(varw = true)
+            Ra = ori(frame_a, true)
+            # @variables q(t)[1:4] = [0.0,0,0,1.0]
+            # @variables qw(t)[1:3] = [0.0,0,0]
+            # q = collect(q)
+            # qw = collect(qw)
+            # Q = Quaternion(q, qw)
+            @named Q = NumQuaternion(varw=true) 
+            ar = from_Q(Q, angularVelocity2(Q, D.(Q.Q)))
+            Equation[
+                0 ~ orientation_constraint(Q)
+                Ra ~ ar
+                Ra.w .~ ar.w
+                Q.w .~ ar.w
+                collect(w_a .~ Ra.w)
+            ]
+        else
+            @named frame_a = Frame(varw = true)
+            @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
+            @variables phid(t)[1:3]=phid0 [state_priority = 10]
+            @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
+            phi, phid, phidd = collect.((phi, phid, phidd))
+            ar = axesRotations([1, 2, 3], phi, phid)
 
-        @named frame_a = Frame(varw = true)
-        Ra = ori(frame_a, true)
+            Ra = ori(frame_a, true)
 
-        Equation[
-                 # 0 .~ orientation_constraint(Ra); 
-                 phid .~ D.(phi)
-                 phidd .~ D.(phid)
-                 Ra ~ ar
-                 Ra.w .~ ar.w
-                 collect(w_a .~ Ra.w)]
+            Equation[
+                    # 0 .~ orientation_constraint(Ra); 
+                    phid .~ D.(phi)
+                    phidd .~ D.(phid)
+                    Ra ~ ar
+                    Ra.w .~ ar.w
+                    collect(w_a .~ Ra.w)]
+        end
     else
         @named frame_a = Frame()
         Ra = ori(frame_a)
