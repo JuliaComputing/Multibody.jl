@@ -696,6 +696,24 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 @test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
 
 
+# without joint
+world = Multibody.world
+@named body = Body(m = 1, isroot = true)
+
+@named model = ODESystem([], t,
+                         systems = [world;
+                                    body])
+# ssys = structural_simplify(model, allow_parameters = false)
+ssys = structural_simplify(IRSystem(model))
+@test length(states(ssys)) == 12
+
+prob = ODEProblem(ssys, [], (0, 10))
+
+sol = solve(prob, Rodas4())
+doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
+y = sol(0:0.1:10, idxs = body.r_0[2])
+@test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
+
 
 
 # ==============================================================================
