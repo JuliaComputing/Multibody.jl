@@ -747,4 +747,45 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = collect(body.phi), title = "Dzhanibekov effect")
 @info "Write tests"
 
-@test_skip sol(0, idxs = collect(freeMotion.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored
+# @test_skip sol(0, idxs = collect(freeMotion.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored
+
+
+
+
+# ==============================================================================
+## Harmonic oscillator with Body as root and quaternions as state variables
+# ==============================================================================
+
+
+
+@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], useQuaternions=true) # This time the body isroot since there is no joint containing state
+@named spring = Multibody.Spring(c = 1)
+
+connections = [connect(world.frame_b, spring.frame_a)
+               connect(spring.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t, systems = [world, spring, body])
+model = complete(model)
+# ssys = structural_simplify(model, allow_parameter = false)
+
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+@test length(states(ssys)) == 13 # One extra due to quaternions
+D = Differential(t)
+
+# du = prob.f.f.f_oop(prob.u0, prob.p, 0)
+# @test all(isfinite, du)
+
+# prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
+sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
+
+doplot() &&
+    plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6)
+
+@test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
+@test sol(pi, idxs = body.r_0[2]) < -2
+
+
