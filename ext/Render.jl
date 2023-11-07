@@ -307,7 +307,7 @@ end
 function rot_from_line(d)
     d = d ./ norm(d)
     if d[1] == 0 && d[2] == 0
-        return Matrix{Float32}(I, 3, 3)
+        return RotMatrix{3}(Matrix{Float32}(I, 3, 3))
     end
     d = d ./ norm(d)
     z = [0, 0, 1]
