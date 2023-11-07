@@ -21,10 +21,6 @@ If `ODESystem` is called on a `RotationMatrix` object `o`, symbolic variables fo
 struct RotationMatrix <: Orientation
     R::R3
     w::Any
-    function RotationMatrix(R, w)
-        size(w) == (3,) || error("w must be a 3-vector")
-        new(R, w)
-    end
 end
 
 RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
