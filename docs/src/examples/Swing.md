@@ -101,7 +101,7 @@ Next, we create the full swing assembly
         body_right = BodyShape(m=0.1, r = [0, 0, -w])
 
 
-        body  = Body(m=6, isroot=true, r_cm = [w/2, w/2, w/2])
+        body  = Body(m=6, isroot=true, r_cm = [w/2, -w/2, w/2])
 
         damper = Damper(d=50.0)
     end
@@ -129,10 +129,10 @@ model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [
-    collect(model.body.r_0) .=> [0, -2, -0.5];
-], (0.0, 0.04))
-prob.u0[1] = -0.5
-prob.u0[2] = -2
+    collect(model.body_left.body.r_0) .=> [0, -2, -0.5];
+], (0.0, 0.06))
+# prob.u0[1] = -0.5
+# prob.u0[2] = -2
 
 
 @time sol = solve(prob, Rodas4())
