@@ -797,18 +797,14 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.ModelingToolkit]]
 deps = ["AbstractTrees", "ArrayInterface", "Combinatorics", "Compat", "ConstructionBase", "DataStructures", "DiffEqBase", "DiffEqCallbacks", "DiffRules", "Distributed", "Distributions", "DocStringExtensions", "DomainSets", "ForwardDiff", "FunctionWrappersWrappers", "Graphs", "IfElse", "InteractiveUtils", "JuliaFormatter", "JumpProcesses", "LabelledArrays", "Latexify", "Libdl", "LinearAlgebra", "MLStyle", "MacroTools", "NaNMath", "OrdinaryDiffEq", "PrecompileTools", "RecursiveArrayTools", "Reexport", "RuntimeGeneratedFunctions", "SciMLBase", "Serialization", "Setfield", "SimpleNonlinearSolve", "SparseArrays", "SpecialFunctions", "StaticArrays", "SymbolicIndexingInterface", "SymbolicUtils", "Symbolics", "URIs", "UnPack", "Unitful"]
-git-tree-sha1 = "0bd2a7cf879d3b206ed227e05cd162d32e0a3d8a"
-repo-rev = "master"
-repo-url = "https://github.com/SciML/ModelingToolkit.jl.git"
+git-tree-sha1 = "90b0d8395c9a8d3fcb5838f7f4f54b3f26e6f17a"
 uuid = "961ee093-0014-501f-94e3-6117800e7a78"
 version = "8.72.2"
 
     [deps.ModelingToolkit.extensions]
-    MTKBifurcationKitExt = "BifurcationKit"
     MTKDeepDiffsExt = "DeepDiffs"
 
     [deps.ModelingToolkit.weakdeps]
-    BifurcationKit = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
     DeepDiffs = "ab62b9b5-e342-54a8-a765-a90f495de1a6"
 
 [[deps.ModelingToolkitStandardLibrary]]
