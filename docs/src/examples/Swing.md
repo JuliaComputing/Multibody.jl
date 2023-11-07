@@ -130,12 +130,12 @@ ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [
     collect(model.body.r_0) .=> [0, -2, -0.5];
-], (0.0, 0.0001))
-# prob.u0[1+3] = -0.5
-# prob.u0[2+3] = -2
+], (0.0, 0.04))
+prob.u0[1] = -0.5
+prob.u0[2] = -2
 
 
-@time sol = solve(prob, Rodas4(), dtmin=1e-5, dt=1e-5, force_dtmin=true)
+@time sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = [model.body.r_0...])
