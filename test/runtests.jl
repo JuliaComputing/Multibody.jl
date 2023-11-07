@@ -40,7 +40,7 @@ The multibody paper mentions this as an interesting example, figure 8:
 =#
 
 
-@named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0]) # This time the body isroot since there is no joint containing state
+@named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], useQuaternions=false) # This time the body isroot since there is no joint containing state
 @named spring = Multibody.Spring(c = 1, fixedRotationAtFrame_a = false,
                                  fixedRotationAtFrame_b = false)
 
@@ -58,18 +58,18 @@ D = Differential(t)
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 # @test all(isfinite, du)
 
-@test_skip begin # Yingbo: instability
-  prob = ODEProblem(ssys, [], (0, 10))
-  sol = solve(prob, Rodas5P())
-  @test SciMLBase.successful_retcode(sol)
-  @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
-  @test sol(2pi, idxs = body.r_0[2])≈1 atol=1e-3
-  @test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
-  @test sol(pi, idxs = body.r_0[2]) < -2
+# @test_skip begin # Yingbo: instability
+prob = ODEProblem(ssys, [], (0, 10))
+sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
+@test SciMLBase.successful_retcode(sol)
+@test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
+@test sol(pi, idxs = body.r_0[2]) < -2
 
-  doplot() &&
-      plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout = 9)
-end
+doplot() &&
+    plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout = 9)
+# end
 
 # ==============================================================================
 ## Simple pendulum =============================================================
@@ -304,7 +304,7 @@ doplot() && plot(sol, idxs = joint.s)
 world = Multibody.world
 @named begin
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
-                 I_33 = 0.1, r_0 = [0.3, -0.2, 0]) # This is root since there is no joint parallel to the spring leading to this body
+                 I_33 = 0.1, r_0 = [0.3, -0.2, 0], useQuaternions=false) # This is root since there is no joint parallel to the spring leading to this body
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
@@ -340,11 +340,13 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 ssys = structural_simplify(IRSystem(model))#, alias_eliminate = false)
 
 prob = ODEProblem(ssys,
-                  [collect(D.(body1.phid)) .=> 0;
+                  [#collect(D.(body1.phid)) .=> 0;
                    D(p2.s) => 0;
                    D(D(p2.s)) => 0;
-                   damper1.d => 0], (0, 10))
-
+                   damper1.d => 0], (0, 10)
+)
+du = similar(prob.u0)
+prob.f(du, prob.u0, prob.p, 0)
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 
@@ -730,3 +732,50 @@ doplot() && plot(sol, idxs = collect(freeMotion.phi), title = "Dzhanibekov effec
 @info "Write tests"
 
 @test_skip sol(0, idxs = collect(freeMotion.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored
+
+
+
+
+
+
+
+
+
+
+# ==============================================================================
+## Harmonic oscillator with Body as root and quaternions as state variables
+# ==============================================================================
+
+
+
+@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], useQuaternions=true) # This time the body isroot since there is no joint containing state
+@named spring = Multibody.Spring(c = 1)
+
+connections = [connect(world.frame_b, spring.frame_a)
+               connect(spring.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t, systems = [world, spring, body])
+model = complete(model)
+# ssys = structural_simplify(model, allow_parameter = false)
+
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+@test length(states(ssys)) == 13 # One extra due to quaternions
+D = Differential(t)
+
+# du = prob.f.f.f_oop(prob.u0, prob.p, 0)
+# @test all(isfinite, du)
+
+# prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
+sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
+
+doplot() &&
+    plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6)
+
+@test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
+@test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
+@test sol(pi, idxs = body.r_0[2]) < -2
+
+
