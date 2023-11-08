@@ -25,6 +25,11 @@ ssys = structural_simplify(model)
 
 @test length(states(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
+@testset "robot" begin
+    @info "Testing robot"
+    include("test_robot.jl")
+end
+
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
 # ==============================================================================

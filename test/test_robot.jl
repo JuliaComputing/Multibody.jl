@@ -4,11 +4,14 @@ using Test
 using JuliaSimCompiler
 t = Multibody.t
 using OrdinaryDiffEq
+using OrdinaryDiffEq.SciMLBase: successful_retcode
+
+using Multibody: AccSensor,AxisType2,AxisType1,Controller,GearType2,BearingFriction,GearType1,Motor,MechanicalStructure,RobotAxis,Robot6DOF,PathPlanning1,PathPlanning6
+
+doplot() = false
 
 cd(@__DIR__)
 world = Multibody.world
-include("OneAxis.jl")
-include("FullRobot.jl")
 @named structure = MechanicalStructure()
 
 
@@ -50,7 +53,8 @@ prob = ODEProblem(m, [
     D(D(cm.motor.Jmotor.phi)) => 0
 ], (0.0, 5.0))
 sol = solve(prob, Rodas4())
-plot(sol, idxs=cm.motor.phi.phi.u)
+@test successful_retcode(sol)
+doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
 
 ##
 
@@ -78,7 +82,8 @@ prob = ODEProblem(m, [
     ModelingToolkit.missing_variable_defaults(m);
 ], (0.0, 5.0))
 sol = solve(prob, Rodas4())
-plot(sol, idxs=cm.motor.phi.phi.u)
+@test successful_retcode(sol)
+doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
 
 
 @mtkmodel GearTest begin
@@ -161,8 +166,8 @@ sol = solve(prob, Rodas4())
 @test sol(0.0, idxs=cm.axis2.motor.emf.phi) == 0
 # @test sol(tspan[2], idxs=cm.axis2.motor.emf.phi) == 0
 
-isinteractive() && plot(sol, layout=length(states(m)))
-isinteractive() && plot(sol, idxs=[
+doplot() && plot(sol, layout=length(states(m)))
+doplot() && plot(sol, idxs=[
     cm.axis2.gear.gear.phi_a
     cm.axis2.gear.gear.phi_b
     cm.axis2.gear.gear.flange_b.phi
@@ -186,64 +191,105 @@ u = cm.axis2.controller.PI.ctr_output.u
 @named pp = PathPlanning1(;)
 @named pp6 = PathPlanning6(;)
 
-@named oneaxis = OneAxis(trivial=true)
-oneaxis = complete(oneaxis)
-op = Dict([
-    oneaxis.axis.flange.phi => 0
-    D(oneaxis.axis.flange.phi) => 0
-    D(D(oneaxis.axis.flange.phi)) => 0
-    D(D(oneaxis.load.phi)) => 0
-    oneaxis.axis.controller.PI.T => 0.01
-    oneaxis.axis.controller.PI.gainPI.k => 1
-    oneaxis.axis.controller.P.k => 10
-    oneaxis.load.J => 1.3*15
-])
-# matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
+
+# ==============================================================================
+## Test OneAxis
+# ==============================================================================
+
+@testset "one axis" begin
+    @info "Testing one axis"
+    @named oneaxis = RobotAxis(trivial=false)
+    oneaxis = complete(oneaxis)
+    op = Dict([
+        oneaxis.axis.flange.phi => 0
+        D(oneaxis.axis.flange.phi) => 0
+        D(D(oneaxis.axis.flange.phi)) => 0
+        D(D(oneaxis.load.phi)) => 0
+        D(oneaxis.axis.gear.gear.phi_b) => 0
+        oneaxis.axis.controller.PI.T => 0.01
+        oneaxis.axis.controller.PI.gainPI.k => 1
+        oneaxis.axis.controller.P.k => 10
+        oneaxis.load.J => 1.3*15
+    ])
+    # matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
 
 
-# using ControlSystemsBase 
-# S = ss(matrices_S...) |> minreal
-# @test isstable(S)
-# bodeplot(S)
+    # using ControlSystemsBase 
+    # S = ss(matrices_S...) |> minreal
+    # @test isstable(S)
+    # bodeplot(S)
 
 
-ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: solution unstable with IRSystem simplification, IRSystem also does not handle the DataInterpolations.CubicSpline
-# ssys = structural_simplify(oneaxis)
-# cm = oneaxis
-# prob = ODEProblem(ssys, [
-#     cm.axis.flange.phi => 0
-#     D(cm.axis.flange.phi) => 0
-# ], (0.0, 5.0))
+    # ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: IRSystem does not handle the DataInterpolations.CubicSpline
+    ssys = structural_simplify(oneaxis)
+    # cm = oneaxis
+    # prob = ODEProblem(ssys, [
+    #     cm.axis.flange.phi => 0
+    #     D(cm.axis.flange.phi) => 0
+    # ], (0.0, 5.0))
 
-zdd = ModelingToolkit.missing_variable_defaults(ssys)
+    zdd = ModelingToolkit.missing_variable_defaults(ssys); op = merge(Dict(zdd), op)
 
-prob = ODEProblem(ssys, collect(op), (0.0, 10.5),)
-sol = solve(prob, Rodas4());
-if isinteractive()
-    plot(sol, layout=length(states(ssys)), size=(1900, 1200))
-    plot!(sol, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref)
+    prob = ODEProblem(ssys, collect(op), (0.0, 10),)
+    sol = solve(prob, Rodas4());
+    if doplot()
+        plot(sol, layout=length(states(ssys)), size=(1900, 1200))
+        plot!(sol, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref)
+        display(current())
+    end
+    @test SciMLBase.successful_retcode(sol)
+    # @test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
+
+    tv = 0:0.1:10.0
+    control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref-oneaxis.pathPlanning.controlBus.axisControlBus1.angle)
+
+    @test sol(tv[1], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
+    @test sol(tv[end], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
+    @test maximum(abs, control_error) < 1e-5
 end
-@test SciMLBase.successful_retcode(sol)
-# @test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
-
-tv = 0:0.1:10.0
-control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref-oneaxis.pathPlanning.controlBus.axisControlBus1.angle)
-
-@test sol(tv[1], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
-@test sol(tv[end], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
-@test maximum(abs, control_error) < 1e-5
 
 
+##
+@testset "full robot" begin
+    @info "Testing full robot"
 
-using OrdinaryDiffEq
-@named robot = FullRobot(trivial=true)
-ssys = structural_simplify(IRSystem(robot))
-prob = ODEProblem(ssys, [], (0.0, 1.0))
+    @named robot = Robot6DOF(trivial=true)
+    robot = complete(robot)
 
-out = similar(prob.u0)
-prob.f(out, prob.u0, prob.p, 0.0)
+    @time "full robot" begin 
+        @time "simplification" ssys = structural_simplify(IRSystem(robot))
+        @time "Problem creation" prob = ODEProblem(ssys, [], (0.0, 4.0))
+        @time "simulation" sol = solve(prob, Rodas5P(autodiff=false));
+        @test SciMLBase.successful_retcode(sol)
+    end
 
+    if doplot()
+        # plot(sol, layout=30, size=(1900,1200), legend=false)
+        plot(sol, idxs = [
+            robot.pathPlanning.controlBus.axisControlBus1.angle_ref
+            robot.pathPlanning.controlBus.axisControlBus2.angle_ref
+            robot.pathPlanning.controlBus.axisControlBus3.angle_ref
+            robot.pathPlanning.controlBus.axisControlBus4.angle_ref
+            robot.pathPlanning.controlBus.axisControlBus5.angle_ref
+            robot.pathPlanning.controlBus.axisControlBus6.angle_ref
+        ], layout=6, size=(800,800), l=(:black, :dash), legend=false)
+        plot!(sol, idxs = [
+            robot.pathPlanning.controlBus.axisControlBus1.angle
+            robot.pathPlanning.controlBus.axisControlBus2.angle
+            robot.pathPlanning.controlBus.axisControlBus3.angle
+            robot.pathPlanning.controlBus.axisControlBus4.angle
+            robot.pathPlanning.controlBus.axisControlBus5.angle
+            robot.pathPlanning.controlBus.axisControlBus6.angle
+        ], layout=6)
+        display(current())
 
-@time sol = solve(prob, Rodas4())
+    end
 
+    tv = 0:0.1:4
+    angle_ref = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref)
+    @test !all(iszero, angle_ref)
 
+    control_error = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
+    @test maximum(abs, control_error[20:end]) < 1e-4
+    @test_broken maximum(abs, control_error) < 1e-4 # Initial condition not respected
+end
