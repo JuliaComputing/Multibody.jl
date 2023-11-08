@@ -373,8 +373,8 @@ end
 
 
 function from_nxy(n_x, n_y)
-    e_x = length(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
-    e_y = length(n_y) < 1e-10 ? [0, 1.0, 0] : _normalize(n_y)
+    e_x = norm(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
+    e_y = norm(n_y) < 1e-10 ? [0, 1.0, 0] : _normalize(n_y)
     n_z_aux = cross(e_x, e_y)
     n_y_aux = #if n_z_aux' * n_z_aux > 1.0e-6 # TODO: MTK too buggy with ifelse to handle this logic
         e_y
@@ -387,6 +387,23 @@ function from_nxy(n_x, n_y)
     e_z = _normalize(e_z_aux)
     RotationMatrix([e_x e_y e_z], zeros(3))
 end
+
+# function from_nxy(n_x, n_y)
+#     e_x = norm(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
+#     e_y = norm(n_y) < 1e-10 ? [0, 1.0, 0] : _normalize(n_y)
+#     n_z_aux = cross(e_x, e_y)
+#     n_y_aux = ifelse(
+#         n_z_aux' * n_z_aux > 1.0e-6,
+#         e_y,
+#         ifelse(
+#             abs(e_x[1]) > 1.0e-6,
+#             [0, 1.0, 0],
+#             [1.0, 0, 0])
+#     )
+#     e_z_aux = cross(e_x, n_y_aux)
+#     e_z = _normalize(e_z_aux)
+#     RotationMatrix([e_x e_y e_z], zeros(3))
+# end
 
 function resolveDyade1(R, D2)
     R'D2*R
