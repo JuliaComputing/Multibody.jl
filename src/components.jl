@@ -1,4 +1,5 @@
 using LinearAlgebra
+import ModelingToolkitStandardLibrary
 
 function isroot(sys)
     sys.metadata isa Dict || return false
@@ -379,7 +380,7 @@ end
 
 Model a rope (string / cable) of length `l` and mass `m`.
 
-The rope is modeled as a series of `n` links, each connected by a [`Spherical`](@ref) joint. The links are either fixed in length (default, modeled using [`BodyShape`](@ref)) or flexible, in which case they are modeled as a [`Spring`](@ref) and [`Damper`](@ref) in parallel. The flexibility is controlled by the parameters `c` and `d`, which are the stiffness and damping coefficients of the spring and damper, respectively. The default values are `c = 0` and `d = 0`, which corresponds to a fixed rope.
+The rope is modeled as a series of `n` links, each connected by a [`Spherical`](@ref) joint. The links are either fixed in length (default, modeled using [`BodyShape`](@ref)) or flexible, in which case they are modeled as a [`Translational.Spring`](@ref) and [`Translational.Damper`](@ref) in parallel with a [`Prismatic`](@ref) joint with a [`Body`](@ref) adding mass to the center of the link segment. The flexibility is controlled by the parameters `c` and `d`, which are the stiffness and damping coefficients of the spring and damper, respectively. The default values are `c = 0` and `d = 0`, which corresponds to a stiff rope.
 
 
 - `l`: Unstretched length of rope
@@ -407,19 +408,19 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, kwargs...)
     ]
     
     if c > 0
-        m > 0 || error("A rope with flexibility (c > 0) requires a non-zero mass (m > 0)")
+        ModelingToolkitStandardLibrary.@symcheck m > 0 || error("A rope with flexibility (c > 0) requires a non-zero mass (m > 0)")
         ci = n * c # Segment stiffness
         di = n * d # Segment damping
-        links = [Spring(c = ci, m = mi, s_unstretched=li, name=Symbol("link_$i")) for i = 1:n]
-        dampers = [Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
-        linkjoints = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i")) for i = 1:n]
+        springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
+        dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
+        masses = [Body(m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = [0, -li/2, 0]) for i = 1:n]
+        links = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i"), useAxisFlange=true) for i = 1:n]
         for i = 1:n
-            push!(eqs, connect(links[i].frame_a, linkjoints[i].frame_a, dampers[i].frame_a))
-            push!(eqs, connect(links[i].frame_b, linkjoints[i].frame_b, dampers[i].frame_b))
+            push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
+            push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))
+            push!(eqs, connect(links[i].frame_a, masses[i].frame_a))
         end
-        links = [links; linkjoints; dampers]
-    # elseif m == 0
-    #     links = [FixedTranslation(r = [0, -li, 0], name=Symbol("link_$i")) for i = 1:n]
+        links = [links; springs; dampers; masses]
     else
         links = [BodyShape(m = mi, r = [0, -li, 0], name=Symbol("link_$i"), isroot=false) for i = 1:n]
     end
