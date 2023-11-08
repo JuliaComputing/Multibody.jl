@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Industrial robot · Multibody.jl</title><meta name="title" content="Industrial robot · Multibody.jl"/><meta property="og:title" content="Industrial robot · Multibody.jl"/><meta property="twitter:title" content="Industrial robot · Multibody.jl"/><meta name="description" content="Documentation for Multibody.jl."/><meta property="og:description" content="Documentation for Multibody.jl."/><meta property="twitter:description" content="Documentation for Multibody.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Multibody.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../pendulum/">Getting started: Pendulum</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../spring_damper_system/">Spring-damper system</a></li><li><a class="tocitem" href="../spring_mass_system/">Spring-mass system</a></li><li><a class="tocitem" href="../three_springs/">Three springs (series forces)</a></li><li><a class="tocitem" href="../sensors/">Sensors</a></li><li><a class="tocitem" href="../spherical_pendulum/">Spherical pendulum</a></li><li><a class="tocitem" href="../gearbox/">Gearbox</a></li><li><a class="tocitem" href="../free_motion/">Free motions</a></li><li class="is-active"><a class="tocitem" href>Industrial robot</a><ul class="internal"><li><a class="tocitem" href="#D-animation"><span>3D animation</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../rendering/">3D rendering</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Industrial robot</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Industrial robot</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaComputing/Multibody.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Industrial-robot"><a class="docs-heading-anchor" href="#Industrial-robot">Industrial robot</a><a id="Industrial-robot-1"></a><a class="docs-heading-anchor-permalink" href="#Industrial-robot" title="Permalink"></a></h1><p><img src="robot.gif" alt="animation"/></p><pre><code class="language-julia hljs">using Multibody
+using ModelingToolkit
+using Plots
+using JuliaSimCompiler
+using OrdinaryDiffEq
+using Test
+
+t = Multibody.t
+D = Differential(t)
+@named robot = Multibody.Robot6DOF(trivial=true)
+robot = complete(robot)
+
+length(equations(robot))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2067</code></pre><p>The robot is a medium sized system with some 2000 equations before simplification.</p><p>After simplification, the following states are chosen:</p><pre><code class="language-julia hljs">ssys = structural_simplify(IRSystem(robot))
+states(ssys)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">225-element Vector{JuliaSimCompiler.IRElement}:
+ mechanics₊r6₊phi
+ mechanics₊r5₊phi
+ mechanics₊r4₊phi
+ mechanics₊r3₊phi
+ mechanics₊r2₊phi
+ mechanics₊r1₊phi
+ mechanics₊r1₊frame_b₊R₂ˏ₁
+ mechanics₊r1₊frame_b₊R₁ˏ₁
+ mechanics₊r1₊frame_b₊R₃ˏ₁
+ mechanics₊r1₊frame_b₊R₂ˏ₂
+ ⋮
+ Dt(mechanics₊load₊frameTranslation₊frame_a₊R₃ˏ₂, 2, false)
+ Dt(mechanics₊b6₊frameTranslation₊frame_a₊R₃ˏ₃, 2, false)
+ Dt(mechanics₊load₊frame_a₊R₁ˏ₃, 2, false)
+ Dt(axis1₊gear₊gear₊phi_b, 2, false)
+ Dt(axis2₊gear₊gear₊phi_b, 2, false)
+ Dt(axis3₊gear₊gear₊phi_b, 2, false)
+ Dt(axis4₊gear₊gear₊phi_b, 2, false)
+ Dt(axis5₊gear₊gear₊phi_b, 2, false)
+ Dt(axis6₊gear₊gear₊phi_b, 2, false)</code></pre><pre><code class="language- hljs">prob = ODEProblem(ssys, [
+    robot.mechanics.r1.phi =&gt; deg2rad(-60)
+    robot.mechanics.r2.phi =&gt; deg2rad(20)
+    robot.mechanics.r3.phi =&gt; deg2rad(90)
+    robot.mechanics.r4.phi =&gt; deg2rad(0)
+    robot.mechanics.r5.phi =&gt; deg2rad(-110)
+    robot.mechanics.r6.phi =&gt; deg2rad(0)
+], (0.0, 4.0))
+sol = solve(prob, Rodas5P(autodiff=false));
+@test SciMLBase.successful_retcode(sol)
+
+plot(sol, idxs = [
+    robot.pathPlanning.controlBus.axisControlBus1.angle_ref
+    robot.pathPlanning.controlBus.axisControlBus2.angle_ref
+    robot.pathPlanning.controlBus.axisControlBus3.angle_ref
+    robot.pathPlanning.controlBus.axisControlBus4.angle_ref
+    robot.pathPlanning.controlBus.axisControlBus5.angle_ref
+    robot.pathPlanning.controlBus.axisControlBus6.angle_ref
+], layout=(4,3), size=(800,800), l=(:black, :dash), legend=:outertop, legendfontsize=6)
+plot!(sol, idxs = [
+    robot.pathPlanning.controlBus.axisControlBus1.angle
+    robot.pathPlanning.controlBus.axisControlBus2.angle
+    robot.pathPlanning.controlBus.axisControlBus3.angle
+    robot.pathPlanning.controlBus.axisControlBus4.angle
+    robot.pathPlanning.controlBus.axisControlBus5.angle
+    robot.pathPlanning.controlBus.axisControlBus6.angle
+], sp=1:6)
+
+plot!(sol, idxs = [
+    robot.axis1.controller.feedback1.output.u
+    robot.axis2.controller.feedback1.output.u
+    robot.axis3.controller.feedback1.output.u
+    robot.axis4.controller.feedback1.output.u
+    robot.axis5.controller.feedback1.output.u
+    robot.axis6.controller.feedback1.output.u
+], sp=7:12, lab=&quot;Position error&quot;, link=:x)
+plot!(xlabel=[fill(&quot;&quot;, 1, 9) fill(&quot;Time [s]&quot;, 1, 3)])</code></pre><p>We see that after an initial transient, the robot controller converges to tracking the reference trajectory well.</p><h2 id="D-animation"><a class="docs-heading-anchor" href="#D-animation">3D animation</a><a id="D-animation-1"></a><a class="docs-heading-anchor-permalink" href="#D-animation" title="Permalink"></a></h2><p>Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:</p><pre><code class="language- hljs">import CairoMakie
+Multibody.render(robot, sol; z = -5, filename = &quot;robot.gif&quot;)
+nothing # hide</code></pre><p><img src="robot.gif" alt="animation"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../free_motion/">« Free motions</a><a class="docs-footer-nextpage" href="../../rendering/">3D rendering »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Wednesday 8 November 2023 16:51">Wednesday 8 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
