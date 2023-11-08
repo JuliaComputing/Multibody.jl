@@ -18,7 +18,6 @@ world = Multibody.world
 
 @named motor = Motor()
 using ModelingToolkitStandardLibrary
-using ModelingToolkitStandardLibrary.Mechanical.Rotational: Fixed
 using ModelingToolkitStandardLibrary.Blocks
 
 myfixed(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotational.Fixed(args...; kwargs...)

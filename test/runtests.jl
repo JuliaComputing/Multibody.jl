@@ -584,7 +584,7 @@ systems = @named begin
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
     torque1 = Torque(resolveInFrame = :frame_b)
-    fixed = Fixed() 
+    fixed = Multibody.Fixed() 
     inertia1 = Rotational.Inertia(J = cyl1.I_11)
     idealGear = Rotational.IdealGear(ratio = 10, use_support = true)
     inertia2 = Rotational.Inertia(J = cyl2.I_11)
