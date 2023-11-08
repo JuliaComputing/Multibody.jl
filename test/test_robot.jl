@@ -257,9 +257,9 @@ end
     robot = complete(robot)
 
     @time "full robot" begin 
-        @time "simplification" ssys = structural_simplify(IRSystem(robot))
-        @time "Problem creation" prob = ODEProblem(ssys, [], (0.0, 4.0))
-        @time "simulation" sol = solve(prob, Rodas5P(autodiff=false));
+        @time "structural_simplify" ssys = structural_simplify(IRSystem(robot))
+        @time "ODEProblem creation" prob = ODEProblem(ssys, [], (0.0, 4.0))
+        @time "simulation (solve)" sol = solve(prob, Rodas5P(autodiff=false));
         @test SciMLBase.successful_retcode(sol)
     end
 
