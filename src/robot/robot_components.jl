@@ -437,6 +437,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    length = 0.225,
                        #    width = 0.3,
                        #    height = 0.3,
+                       radius = 0.3/2,
                        m = 1)
         b1 = BodyShape(r = [0, 0.324, 0.3],
                        I_22 = 1.16,
@@ -445,6 +446,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    length = 0.25,
                        #    width = 0.15,
                        #    height = 0.2,
+                       radius = 0.2/2,
                        #    color = [255, 0, 0],
                        m = 1)
         b2 = BodyShape(r = [0, 0.65, 0],
@@ -453,12 +455,13 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        I_11 = 2.58,
                        I_22 = 0.64,
                        I_33 = 2.73,
-                       I_21 = -0.46
+                       I_21 = -0.46,
                        #    lengthDirection = [1, 0, 0],
                        #    widthDirection = [0, 1, 0],
                        #    length = 0.5,
                        #    width = 0.2,
                        #    height = 0.15,
+                       radius = 0.2/2,
                        #    color = [255, 178, 0],
                        )
         b3 = BodyShape(r = [0, 0.414, -0.155],
@@ -467,36 +470,39 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        I_11 = 0.279,
                        I_22 = 0.245,
                        I_33 = 0.413,
-                       I_21 = -0.070
+                       I_21 = -0.070,
                        #    lengthDirection = [1, 0, 0],
                        #    widthDirection = [0, 1, 0],
                        #    length = 0.15,
                        #    width = 0.15,
                        #    height = 0.15,
+                       radius = 0.15/2,
                        #    color = [255, 0, 0],
                        )
         b4 = BodyShape(r = [0, 0.186, 0],
                        m = 28.7,
                        I_11 = 1.67,
                        I_22 = 0.081,
-                       I_33 = 1.67
+                       I_33 = 1.67,
                        #   lengthDirection = [1, 0, 0],
                        #   widthDirection = [0, 1, 0],
                        #   length = 0.73,
                        #   width = 0.1,
                        #   height = 0.1,
+                       radius = 0.1/2,
                        #   color = [255, 178, 0],
                        )
         b5 = BodyShape(r = [0, 0.125, 0],
                        m = 5.2,
                        I_11 = 1.25,
                        I_22 = 0.81,
-                       I_33 = 1.53
+                       I_33 = 1.53,
                        # lengthDirection = [1, 0, 0],
                        # widthDirection = [0, 1, 0],
                        # length = 0.225,
                        # width = 0.075,
                        # height = 0.1,
+                        radius = 0.1/2,
                        # color = [0, 0, 255],
                        )
         b6 = BodyShape(r = [0, 0, 0],

@@ -14,9 +14,10 @@ t = Multibody.t
 D = Differential(t)
 @named robot = Multibody.Robot6DOF(trivial=true)
 robot = complete(robot)
-show(stdout, MIME"text/plain"(), robot)
+
+length(equations(robot))
 ```
-The robot is a medium sized system with some 3000 variables before simplification.
+The robot is a medium sized system with some 2000 equations before simplification.
 
 After simplification, the following states are chosen:
 ```@example robot
