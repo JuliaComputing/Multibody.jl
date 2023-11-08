@@ -10,7 +10,7 @@ A single robot axis.
 - `startAngle`: 
 - `endAngle`: 
 """
-function RobotAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0,
+function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, startAngle = 0,
     endAngle = 120, swingTime = 0.5, refSpeedMax = 3, refAccMax = 10, kwargs...)
 
     # parameter SI.Mass mLoad(min=0)=15 "Mass of load";

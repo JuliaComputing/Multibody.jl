@@ -69,6 +69,27 @@ Ideal sensor to measure the absolute flange angular acceleration
     return ODESystem(eqs, t, [], []; name = name, systems = [flange, a])
 end
 
+RotationalFlange = Rotational.Flange
+RotationalAngleSensor = Rotational.AngleSensor
+RotationalSpeedSensor = Rotational.SpeedSensor
+
+# @mtkmodel AxisType2 begin #(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
+#     #J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
+# @parameters begin
+# kp = 10, [description = "Gain of position controller"]
+# ks = 1, [description = "Gain of speed controller"]
+# Ts = 0.01, [description = "Time constant of integrator of speed controller"]
+# k = 1.1616, [description = "Gain of motor"]
+# w = 4590, [description = "Time constant of motor"]
+# D = 0.6, [description = "Damping constant of motor"]
+# J = 0.0013, [description = "Moment of inertia of motor"]
+# ratio = -105, [description = "Gear ratio"]
+# Rv0 = 0.4, [description = "Viscous friction torque at zero velocity"]
+# Rv1 = 0.13 / 160, [description = "Viscous friction coefficient"]
+# peak = 1,
+# [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+# end
+
 """
     AxisType2(; name)
 
@@ -76,20 +97,20 @@ Axis model of the r3 joints 4,5,6
 """
 function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
                    J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
-    pars = @parameters begin
-        kp = kp, [description = "Gain of position controller"]
-        ks = ks, [description = "Gain of speed controller"]
-        Ts = Ts, [description = "Time constant of integrator of speed controller"]
-        k = k, [description = "Gain of motor"]
-        w = w, [description = "Time constant of motor"]
-        D = D, [description = "Damping constant of motor"]
-        J = J, [description = "Moment of inertia of motor"]
-        # ratio = ratio, [description = "Gear ratio"]
-        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
-        Rv1 = Rv1, [description = "Viscous friction coefficient"]
-        peak = peak,
-               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
-    end
+    # pars = @parameters begin
+    #     kp = kp, [description = "Gain of position controller"]
+    #     ks = ks, [description = "Gain of speed controller"]
+    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
+    #     k = k, [description = "Gain of motor"]
+    #     w = w, [description = "Time constant of motor"]
+    #     D = D, [description = "Damping constant of motor"]
+    #     J = J, [description = "Moment of inertia of motor"]
+    #     # ratio = ratio, [description = "Gear ratio"]
+    #     Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+    #     Rv1 = Rv1, [description = "Viscous friction coefficient"]
+    #     peak = peak,
+    #            [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+    # end
 
     systems = @named begin
         flange = Rotational.Flange()
@@ -118,7 +139,7 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
            #    connect(Const.y, initializeFlange.a_start)
            connect(controller.axisControlBus, axisControlBus)]
 
-    ODESystem(eqs, t, [], pars; name, systems)
+    ODESystem(eqs, t; name, systems)
 end
 
 function AxisType1(; name, c = 43, cd = 0.005, kwargs...)
@@ -132,12 +153,12 @@ function AxisType1(; name, c = 43, cd = 0.005, kwargs...)
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
-    pars = @parameters begin
-        kp = kp, [description = "Gain of position controller"]
-        ks = ks, [description = "Gain of speed controller"]
-        Ts = Ts, [description = "Time constant of integrator of speed controller"]
-        ratio = ratio, [description = "Gear ratio of gearbox"]
-    end
+    # pars = @parameters begin
+    #     kp = kp, [description = "Gain of position controller"]
+    #     ks = ks, [description = "Gain of speed controller"]
+    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
+    #     ratio = ratio, [description = "Gear ratio of gearbox"]
+    # end
     systems = @named begin
         gain1 = Blocks.Gain(ratio)
         PI = Blocks.PI(gainPI.k = ks, T = Ts)
@@ -159,7 +180,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
            (add3.input3.u ~ axisControlBus.motorSpeed)
            (PI.ctr_output.u ~ axisControlBus.current_ref)]
 
-    ODESystem(eqs, t, [], pars; name, systems)
+    ODESystem(eqs, t; name, systems)
 end
 
 function GearType2(; name, i = -99,
