@@ -14,6 +14,7 @@ t = Multibody.t
 D = Differential(t)
 @named robot = Multibody.Robot6DOF(trivial=true)
 robot = complete(robot)
+show(stdout, MIME"text/plain"(), robot)
 ```
 The robot is a medium sized system with some 3000 variables before simplification.
 
