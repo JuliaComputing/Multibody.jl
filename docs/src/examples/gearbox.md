@@ -1,7 +1,7 @@
 # Gearbox
 
 This example models a gearbox in two different ways:
-1. Using the 3D [`GearConstraint`](@ref) component from the multibody library.
+1. Using the 3D [`GearConstraint`](@ref) component from the Multibody library.
 2. Using the 1D [`IdealGear`](@ref) component from the `Rotational` submodule, together with a [`Mounting1D`](@ref) component.
 
 The [`GearConstraint`](@ref) has two rotational axes which do not have to be parallel. If wou want to select rotational axes, use the keyword arguments `n_a` and `n_b` to [`GearConstraint`](@ref).
@@ -53,5 +53,12 @@ prob = ODEProblem(ssys, [
     D(cm.idealGear.phi_b) => 0
 ], (0, 10))
 sol = solve(prob, Rodas4())
-plot(sol)
+plot(sol, idxs=[
+    inertia1.phi
+    inertia2.phi
+    gearConstraint.actuatedRevolute_a.phi
+    gearConstraint.phi_b
+    inertia1.phi / inertia2.phi # One can plot arbitrary expressions of variables! In this case, we plot the ratio between the two angles.
+], layout=3, sp=[1 2 1 2 3], framestyle=:zerolines)
 ```
+The plot indicates that the ratio between the angles of inertia 1 and 2 is 10, as expected, and that the same ratio holds between the two sides of the 3D gear constraint.
