@@ -14,3 +14,4 @@ The animations below illustrate some of the kinds of mechanisms we can model.
 ![springdamper](https://juliacomputing.github.io/Multibody.jl/dev/examples/springdamper.gif)
 ![three springs](https://juliacomputing.github.io/Multibody.jl/dev/examples/three_springs.gif)
 ![spherical](https://juliacomputing.github.io/Multibody.jl/dev/examples/spherical.gif)
+![robot](https://juliacomputing.github.io/Multibody.jl/dev/examples/robot.gif)

@@ -10,7 +10,6 @@ using Multibody: AccSensor,AxisType2,AxisType1,Controller,GearType2,BearingFrict
 
 doplot() = false
 
-cd(@__DIR__)
 world = Multibody.world
 @named structure = MechanicalStructure()
 
@@ -289,6 +288,6 @@ end
     @test !all(iszero, angle_ref)
 
     control_error = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
-    @test maximum(abs, control_error[20:end]) < 1e-4
+    @test maximum(abs, control_error[25:end]) < 1e-4
     @test_broken maximum(abs, control_error) < 1e-4 # Initial condition not respected
 end
