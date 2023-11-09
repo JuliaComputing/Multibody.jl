@@ -70,7 +70,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example pendulum
 import CairoMakie # GLMakie is another alternative, suitable for interactive plots
-Multibody.render(model, sol; z = -5, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
+Multibody.render(model, sol; z = -3, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
 nothing # hide
 ```
 
@@ -100,6 +100,12 @@ plot(sol, idxs = joint.phi, title="Damped pendulum")
 ```
 This time we see that the pendulum loses energy and eventually comes to rest at the stable equilibrium point ``\pi / 2``.
 
+```@example pendulum
+Multibody.render(model, sol; z = -3, filename = "pendulum_damped.gif")
+nothing # hide
+```
+![animation damped](pendulum_damped.gif)
+
 ## A linear pendulum?
 When we think of a pendulum, we typically think of a rotary pendulum that is rotating around a pivot point like in the examples above. 
 A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device. This time around, we make use of a [`Prismatic`](@ref) joint rather than a [`Revolute`](@ref) joint. A [prismatic joint](https://en.wikipedia.org/wiki/Prismatic_joint) has one positional degree of freedom, compared to the single rotational degree of freedom for the revolute joint.
@@ -107,16 +113,17 @@ A mass suspended in a spring can be though of as a linear pendulum (often referr
 ![Spring with mass](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringWithMass.png)
 
 ```@example pendulum
-@named damper = Translational.Damper(d=0.5)
-@named spring = Translational.Spring(c=1)
-@named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
+@named body_0 = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
+@named damper = Translational.Damper(d=1)
+@named spring = Translational.Spring(c=10)
+@named joint = Prismatic(n = [0, 1, 0], useAxisFlange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(damper.flange_b, spring.flange_b, joint.axis)
                connect(joint.support, damper.flange_a, spring.flange_a)
-               connect(body.frame_a, joint.frame_b)]
+               connect(body_0.frame_a, joint.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, body, damper, spring])
+@named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 30))
@@ -127,11 +134,17 @@ Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")
 
 As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `Translational` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `useAxisFlange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
 
+```@example pendulum
+Multibody.render(model, sol; z = -5, filename = "linear_pend.gif", framerate=24)
+nothing # hide
+```
+![linear pendulum](linear_pend.gif)
+
 ### Why do we need a joint?
 In the example above, we introduced a prismatic joint to model the oscillating motion of the mass-spring system. In reality, we can suspend a mass in a spring without any joint, so why do we need one here? The answer is that we do not, in fact, need the joint, but if we connect the spring directly to the world, we need to make the body (mass) the root object of the kinematic tree instead:
 ```@example pendulum
-@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], useQuaternions=false)
-@named multibody_spring = Multibody.Spring(c=1)
+@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0])
+@named multibody_spring = Multibody.Spring(c=10)
 
 connections = [connect(world.frame_b, multibody_spring.frame_a)
                 connect(root_body.frame_a, multibody_spring.frame_b)]
@@ -218,7 +231,7 @@ plot(sol, layout=4)
 
 ```@example pendulum
 import CairoMakie
-Multibody.render(model, sol, z=-5, R = Rotations.RotXYZ(0.2, -0.2, 0), filename = "furuta.gif")
+Multibody.render(model, sol, z=-3, R = Rotations.RotXYZ(0.2, -0.2, 0), filename = "furuta.gif")
 nothing # hide
 ```
 ![furuta](furuta.gif)
