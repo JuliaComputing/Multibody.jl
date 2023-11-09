@@ -68,7 +68,19 @@ plot!(sol, idxs = [
 ], sp=7:12, lab="Position error", link=:x)
 plot!(xlabel=[fill("", 1, 9) fill("Time [s]", 1, 3)])
 ```
-We see that after an initial transient, the robot controller converges to tracking the reference trajectory well.
+We see that after an initial transient, the robot controller converges to tracking the reference trajectory well. However, since the first three axes of the robot are modeled as slightly flexible, and we are ultimately interested in the tracking performance _after_ the gear box, we plot also this tracking error
+```@example robot
+plot(sol, idxs = [
+    robot.axis1.controller.feedback1.output.u
+    robot.axis2.controller.feedback1.output.u
+    robot.axis3.controller.feedback1.output.u
+], layout=(1,3), lab="Position error, motor side", link=:x)
+plot!(sol, idxs = [
+            robot.pathPlanning.controlBus.axisControlBus1.angle_ref - robot.axis1.motor.Jmotor.phi / ( -105)
+            robot.pathPlanning.controlBus.axisControlBus2.angle_ref - robot.axis2.motor.Jmotor.phi / (210)
+            robot.pathPlanning.controlBus.axisControlBus3.angle_ref - robot.axis3.motor.Jmotor.phi / (60)
+], lab="Position error, arm side")
+```
 
 
 
