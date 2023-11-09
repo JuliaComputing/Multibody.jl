@@ -45,3 +45,45 @@ The figure indicates that the body is falling freely, experiencing a constant ac
 show(stdout, MIME"text/plain"(), world) # hide
 nothing # hide
 ```
+
+
+If we instead model a body suspended in springs without the presence of any joint, we need to give the body state variables. We do this by saying `isroot = true` when we create the body.
+
+```@example FREE_MOTION
+@named begin
+    body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
+                     r_0 = [0.2, -0.5, 0.1], isroot = true)
+    bar2 = FixedTranslation(r = [0.8, 0, 0])
+    spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
+    spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
+end
+
+eqs = [connect(bar2.frame_a, world.frame_b)
+       connect(spring1.frame_b, body.frame_a)
+       connect(bar2.frame_b, spring2.frame_a)
+       connect(spring1.frame_a, world.frame_b)
+       connect(body.frame_b, spring2.frame_b)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [
+                             world,
+                             body,
+                             bar2,
+                             spring1,
+                             spring2,
+                         ])
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [], (0, 10))
+
+sol = solve(prob, Rodas5P())
+@assert SciMLBase.successful_retcode(sol)
+
+plot(sol, idxs = [body.r_0...])
+```
+
+```@example FREE_MOTION
+import CairoMakie
+Multibody.render(model, sol, z=-3, R = Rotations.RotXYZ(0.2, -0.2, 0), filename = "free_body.gif")
+nothing # hide
+```
+![free_body](free_body.gif)
