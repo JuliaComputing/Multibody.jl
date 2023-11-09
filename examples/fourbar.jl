@@ -118,6 +118,7 @@ sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 0.01 .* randn.())
 
 # First test the structure without the loop closed, this makes a quadruple pendulum
 
+
 systems = @named begin
     j1 = Revolute(isroot = true)
     j2 = Revolute(isroot = true)
@@ -141,12 +142,14 @@ connections = [
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 
-# m = structural_simplify(fourbar)
-m = structural_simplify(IRSystem(fourbar))
-@test length(states(m)) == 8
-prob = ODEProblem(m, [], (0.0, 10))
+@time "Quadpend" begin
+    # m = structural_simplify(fourbar)
+    m = structural_simplify(IRSystem(fourbar))
+    @test length(states(m)) == 8
+    prob = ODEProblem(m, [], (0.0, 10))
 
-@time sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
+    @time sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 0.01 .* randn.())
+end
 isinteractive() && plot(sol)
 
 # render(fourbar, sol; framerate=60)

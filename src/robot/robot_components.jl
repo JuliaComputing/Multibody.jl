@@ -142,14 +142,38 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
     ODESystem(eqs, t; name, systems)
 end
 
-function AxisType1(; name, c = 43, cd = 0.005, kwargs...)
-    @parameters begin
-        c = c, [description = "Spring constant"]
-        cd = cd, [description = "Damper constant"]
+function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
+    J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
+    # @parameters begin
+    #     c = c, [description = "Spring constant"]
+    #     cd = cd, [description = "Damper constant"]
+    # end
+
+    systems = @named begin
+        flange = Rotational.Flange()
+        spring = Rotational.SpringDamper(c=c, d=cd)
+        gear = GearType2(; Rv0, Rv1, peak, i = ratio)
+        motor = Motor(; J, k, w, D)
+        controller = Controller(; kp, ks, Ts, ratio)
+        angleSensor = Rotational.AngleSensor()
+        speedSensor = Rotational.SpeedSensor()
+        accSensor = AccSensor() # TODO: shift to MTKstdlib version when merged
+        # Const = Blocks.Constant(k = 0)
+        axisControlBus = AxisControlBus()
     end
-    @warn "Axis type 1 is currently identical to type 2" maxlog=2
-    # @named axisType2 = AxisType2(redeclare GearType1 gear(c=c, d=cd), kwargs...) # TODO: Figure out how to handle the redeclare directive https://github.com/SciML/ModelingToolkit.jl/issues/2038
-    axisType2 = AxisType2(; name, kwargs...)
+
+    eqs = [
+        connect(flange, spring.flange_a)
+        connect(spring.flange_b, gear.flange_b, angleSensor.flange, speedSensor.flange, accSensor.flange)
+        connect(motor.flange_motor, gear.flange_a)
+        connect(motor.axisControlBus, axisControlBus)
+        (angleSensor.phi.u ~ axisControlBus.angle)
+        (speedSensor.w.u ~ axisControlBus.speed)
+        (accSensor.a.u ~ axisControlBus.acceleration)
+        connect(controller.axisControlBus, axisControlBus)
+    ]
+
+    ODESystem(eqs, t; name, systems)
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)

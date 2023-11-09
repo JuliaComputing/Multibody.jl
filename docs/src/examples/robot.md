@@ -33,6 +33,10 @@ prob = ODEProblem(ssys, [
     robot.mechanics.r4.phi => deg2rad(0)
     robot.mechanics.r5.phi => deg2rad(-110)
     robot.mechanics.r6.phi => deg2rad(0)
+
+    robot.axis1.motor.Jmotor.phi => deg2rad(-60) *  -105 # Multiply by gear ratio
+    robot.axis2.motor.Jmotor.phi => deg2rad(20) *  210
+    robot.axis3.motor.Jmotor.phi => deg2rad(90) *  60
 ], (0.0, 4.0))
 sol = solve(prob, Rodas5P(autodiff=false));
 @test SciMLBase.successful_retcode(sol)
