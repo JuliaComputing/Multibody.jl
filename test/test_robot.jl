@@ -10,7 +10,6 @@ using Multibody: AccSensor,AxisType2,AxisType1,Controller,GearType2,BearingFrict
 
 doplot() = false
 
-cd(@__DIR__)
 world = Multibody.world
 @named structure = MechanicalStructure()
 
