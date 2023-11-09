@@ -279,6 +279,12 @@ end
             robot.pathPlanning.controlBus.axisControlBus5.angle
             robot.pathPlanning.controlBus.axisControlBus6.angle
         ], layout=6)
+
+        plot!(sol, idxs = [
+            robot.axis1.motor.Jmotor.phi / ( -105)
+            robot.axis2.motor.Jmotor.phi / (210)
+            robot.axis3.motor.Jmotor.phi / (60)
+        ], sp=(1:3)')
         display(current())
 
     end

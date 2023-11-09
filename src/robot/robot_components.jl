@@ -163,9 +163,9 @@ function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1
     end
 
     eqs = [
-        connect(flange, spring.flange_a)
-        connect(spring.flange_b, gear.flange_b, angleSensor.flange, speedSensor.flange, accSensor.flange)
-        connect(motor.flange_motor, gear.flange_a)
+        connect(flange, gear.flange_b, angleSensor.flange, speedSensor.flange, accSensor.flange)
+        connect(gear.flange_a, spring.flange_b)
+        connect(motor.flange_motor, spring.flange_a)
         connect(motor.axisControlBus, axisControlBus)
         (angleSensor.phi.u ~ axisControlBus.angle)
         (speedSensor.w.u ~ axisControlBus.speed)
