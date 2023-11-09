@@ -8,6 +8,8 @@ This tutorial mirrors that of the following Modelica tutorial [Spring damper sys
 
 ![Spring-damper system](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringDamperSystem.png)
 
+This example has two parallel spring-mass parts, the first body (`body1`) is attached directly to the spring, with no joint in parallel with the spring. In this situation, we have to set `isroot=true` for `body1` to indicate that we want to use the body variables as state. The second body (`body2`) is attached to the spring with a joint in parallel with the spring, so we can use the joint variables as state, hence `isroot=false` for `body2`.
+
 ```@example spring_damper_system
 using Multibody
 using ModelingToolkit
@@ -73,8 +75,6 @@ plot(
 )
 ```
 
-This example has two parallel spring-mass parts, the first body (`body1`) is attached directly to the spring, with no joint in parallel with the spring. In this situation, we have to set `isroot=true` for `body1` to indicate that we want to use the body variables as state. The second body (`body2`) is attached to the spring with a joint in parallel with the spring, so we can use the joint variables as state, hence `isroot=false` for `body2`.
-
 
 In this example we used separate springs and dampers, see also the component [`SpringDamperParallel`](@ref) which combines the two in one component.
 
@@ -84,7 +84,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example spring_damper_system
 import CairoMakie
-Multibody.render(model, sol; z = -5, filename = "springdamper.gif")
+Multibody.render(model, sol; z = -4, filename = "springdamper.gif")
 nothing # hide
 ```
 

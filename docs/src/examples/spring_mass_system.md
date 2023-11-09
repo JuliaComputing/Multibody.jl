@@ -71,3 +71,5 @@ nothing # hide
 ```
 
 ![animation](springmass.gif)
+
+You may notice that only one of the springs is rendered, the multibody spring is a 3D mechanical component with a rendering defined, while the spring from the 1D rotational library has no notion of 3D extent.

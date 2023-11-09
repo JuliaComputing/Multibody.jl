@@ -83,6 +83,7 @@ plot(sol, idxs = [body.r_0...])
 
 ```@example FREE_MOTION
 import CairoMakie
+import Multibody.Rotations
 Multibody.render(model, sol, z=-3, R = Rotations.RotXYZ(0.2, -0.2, 0), filename = "free_body.gif")
 nothing # hide
 ```
