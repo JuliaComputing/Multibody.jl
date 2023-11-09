@@ -315,7 +315,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, kwargs...)
     systems = @named begin
         frameTranslation = FixedTranslation(r = r)
-        body = Body(; r_cm, kwargs...)
+        body = Body(; r_cm, r_0, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
     end
