@@ -102,9 +102,9 @@ render!(scene, ::Any, args...) = false # Fallback for systems that have no rende
 
 function render!(scene, ::typeof(Body), sys, sol, t)
     thing = @lift begin # Sphere
-        r = sol($t, idxs=collect(sys.r_cm))
+        r_cm = sol($t, idxs=collect(sys.r_cm))
         Ta = get_frame(sol, sys.frame_a, $t)
-        coords = (Ta*[r; 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
+        coords = (Ta*[r_cm; 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
         point = Point3f(coords)
         radius = try
             sol($t, idxs=sys.radius)
@@ -115,28 +115,30 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     end
     mesh!(scene, thing, color=:purple)
 
-    # thing = @lift begin # Cylinder
-    #     Ta = get_frame(sol, sys.frame_a, $t)
+    r_cm = sol(0.0, idxs=collect(sys.r_cm))
+    iszero(r_cm) && (return true)
+
+    thing = @lift begin # Cylinder
+        Ta = get_frame(sol, sys.frame_a, $t)
                
-    #     r = sol($t, idxs=collect(sys.r_cm))
-    #     coords = (Ta*[r; 1])[1:3]
-    #     point = Point3f(coords)
+        r_cm = sol($t, idxs=collect(sys.r_cm)) # r_cm is the center of the sphere in frame a
+        iszero(r_cm)
+        coords = (Ta*[r_cm; 1])[1:3]
+        point = Point3f(coords) # Sphere center in world coords
 
-    #     rt = sol($t, idxs=collect(sys.r_0))
-    #     coords = (Ta*[rt; 1])[1:3]
-    #     tip = Point3f(coords)
+        tip = Point3f(Ta[1:3, 4]) # Origin of frame a in world coords
 
-    #     d = tip - point
-    #     d = d ./ norm(d)
-    #     # d = Point3f(Ta[1:3, 1])
-    #     tip = point + 0.2f0d
-    #     extremity = tip
-    #     origin = point
+        d = tip - point
+        d = d ./ norm(d)
+        # d = Point3f(Ta[1:3, 1])
+        tip = point + 0.2f0d
+        extremity = tip
+        origin = point
 
-    #     radius = 0.05f0
-    #     Makie.GeometryBasics.Cylinder(origin, extremity, radius)
-    # end
-    # mesh!(scene, thing, color=:purple)
+        radius = 0.05f0
+        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    end
+    mesh!(scene, thing, color=:purple)
     true
 end
 
