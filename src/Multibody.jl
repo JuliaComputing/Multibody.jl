@@ -17,11 +17,19 @@ export render, render!
 Create a 3D animation of a multibody system
 
 # Arguments:
-- `model`: The unsimplified multibody model
+- `model`: The _unsimplified_ multibody model, i.e., this is the model _before_ any call to `structural_simplify`.
 - `sol`: The `ODESolution` produced by simulating the system using `solve`
 - `t`: If a single number `t` is provided, the mechanism at this time is rendered and a scene is returned together with the time as an `Observable`. Modify `time[] = new_time` to change the rendering.
 - `timevec`: If a vector of times is provided, an animation is created and the path to the file on disk is returned.
 - `framerate`: Number of frames per second.
+- `filename` controls the name and the file type of the resulting animation
+
+# Camera control
+The following keyword arguments are available to control the camera pose:
+_ `x = 0`
+_ `y = 0`
+_ `z = -10`
+_ `R = I(3)` The orientation. Use, e.g., `R = Rotations.RotXYZ(roll, pitch, yaw)` to set the orientation using Euler angles.
 """
 function render end
 

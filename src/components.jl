@@ -176,12 +176,18 @@ end
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
+# Parameters
 - `m`: Mass
 - `r_cm`: Vector from `frame_a` to center of mass, resolved in `frame_a`
 - `I`: Inertia matrix of the body
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
 - `phi0`: Initial orientation, only applicable if `isroot = true`
 - `phid0`: Initial angular velocity
+
+# Variables
+- `r_0`: Position vector from origin of world frame to origin of `frame_a`
+- `v_0`: Absolute velocity of `frame_a`, resolved in world frame (= D(r_0))
+- `a_0`: Absolute acceleration of `frame_a` resolved in world frame (= D(v_0))
 """
 @component function Body(; name, m = 1, r_cm = [0, 0, 0],
               I_11 = 0.001,

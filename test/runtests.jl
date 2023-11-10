@@ -634,7 +634,7 @@ sol = solve(prob, Rodas4())
 wheel = complete(wheel)
 
 defs = [
-    # collect(world.n .=> [0, 0, -1]);
+    collect(world.n .=> [0, 0, -1]);
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
@@ -644,7 +644,7 @@ prob = ODEProblem(ssys, defs, (0, 10))
 
 prob.u0 .+= 0.001 .* randn.()
 @test_skip begin # Does not initialize
-  sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-2 .* rand.())
+  sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 1e-6 .* randn.())
   @info "Write tests"
 end
 
