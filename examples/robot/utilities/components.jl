@@ -22,17 +22,17 @@ D = Differential(t)
 """
 @connector function AxisControlBus(; name)
     vars = @variables begin
-        (motion_ref(t) = 0), [description = "= true, if reference motion is not in rest"]
-        (angle_ref(t) = 0), [description = "Reference angle of axis flange"]
-        (angle(t) = 0), [description = "Angle of axis flange"]
-        (speed_ref(t) = 0), [description = "Reference speed of axis flange"]
-        (speed(t) = 0), [description = "Speed of axis flange"]
-        (acceleration_ref(t) = 0), [description = "Reference acceleration of axis flange"]
-        (acceleration(t) = 0), [description = "Acceleration of axis flange"]
-        (current_ref(t) = 0), [description = "Reference current of motor"]
-        (current(t) = 0), [description = "Current of motor"]
-        (motorAngle(t) = 0), [description = "Angle of motor flange"]
-        (motorSpeed(t) = 0), [description = "Speed of motor flange"]
+        (motion_ref(t) = 0), [input = true, description = "= true, if reference motion is not in rest"]
+        (angle_ref(t) = 0), [input = true, description = "Reference angle of axis flange"]
+        (angle(t) = 0), [output = true, description = "Angle of axis flange"]
+        (speed_ref(t) = 0), [input = true, description = "Reference speed of axis flange"]
+        (speed(t) = 0), [output = true, description = "Speed of axis flange"]
+        (acceleration_ref(t) = 0), [input = true, description = "Reference acceleration of axis flange"]
+        (acceleration(t) = 0), [output = true, description = "Acceleration of axis flange"]
+        (current_ref(t) = 0), [input = true, description = "Reference current of motor"]
+        (current(t) = 0), [output = true, description = "Current of motor"]
+        (motorAngle(t) = 0), [output = true, description = "Angle of motor flange"]
+        (motorSpeed(t) = 0), [output = true, description = "Speed of motor flange"]
     end
     ODESystem(Equation[], t, vars, []; name)
 end
