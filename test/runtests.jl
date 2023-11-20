@@ -873,7 +873,7 @@ end
 
 # Stiff rope
 world = Multibody.world
-@named rope = Multibody.Rope(l = 1, m = 1, n=5, c=0, d=0)
+@named rope = Multibody.Rope(l = 1, m = 1, n=12, c=0, d=0)
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 
 connections = [connect(world.frame_b, rope.frame_a)
@@ -892,7 +892,10 @@ prob = ODEProblem(ssys, [
 @time "Rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
 @test SciMLBase.successful_retcode(sol)
 
-
+if false
+    import GLMakie
+    render(model, sol)
+end
 
 
 
