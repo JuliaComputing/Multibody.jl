@@ -30,6 +30,11 @@ ssys = structural_simplify(model)
     include("test_robot.jl")
 end
 
+@testset "cb" begin
+    @info "Testing cb"
+    include("test_cb.jl")
+end
+
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
 # ==============================================================================

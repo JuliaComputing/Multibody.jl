@@ -5,6 +5,7 @@ using ModelingToolkit
 using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
+using StaticArrays
 
 export Rotational, Translational
 
@@ -147,6 +148,8 @@ include("robot/path_planning.jl")
 include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
 
+export CraigBampton
+include("cb.jl")
 
 
 end

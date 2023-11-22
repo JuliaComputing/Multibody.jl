@@ -419,3 +419,36 @@ end
 function resolveDyade2(R, D1)
     R*D1*R'
 end
+
+
+Rt2T(R,t) = SA[   R[1,1] R[1,2] R[1,3] t[1]
+                        R[2,1] R[2,2] R[2,3] t[2]
+                        R[3,1] R[3,2] R[3,3] t[3]
+                        0      0      0      1]
+# T2R(T::AbstractMatrix) = T[1:3,1:3]
+T2R(T::AbstractMatrix) = RotMatrix(SA[   T[1,1] T[1,2] T[1,3]
+                        T[2,1] T[2,2] T[2,3]
+                        T[3,1] T[3,2] T[3,3]])
+
+T2R(T::AbstractArray{<:Any, 3}, i) = RotMatrix(SA[   T[1,1,i] T[1,2,i] T[1,3,i]
+                                    T[2,1,i] T[2,2,i] T[2,3,i]
+                                    T[3,1,i] T[3,2,i] T[3,3,i]])
+# T2t(T::AbstractMatrix) = T[1:3,4]
+T2t(T::AbstractMatrix) = SVector(T[1,4],T[2,4],T[3,4])
+t2T(t::AbstractVector) = SA[1 0 0 t[1]
+                            0 1 0 t[2]
+                            0 0 1 t[3]
+                            0 0 0 1]
+
+
+R2T(R) = SA[R[1,1] R[1,2] R[1,3] 0
+            R[2,1] R[2,2] R[2,3] 0
+            R[3,1] R[3,2] R[3,3] 0
+            0      0      0      1]
+            
+function t2T(t1,t2,t3)
+    SA[ 1 0 0 t1
+        0 1 0 t2
+        0 0 1 t3
+        0 0 0 1]
+end
