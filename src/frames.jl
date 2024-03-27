@@ -1,12 +1,12 @@
-@connector function Frame(; name, varw = false)
-    @variables r_0(t)[1:3]=zeros(3) [
+@connector function Frame(; name, varw = false, r_0 = zeros(3))
+    @variables r_0(t)[1:3]=r_0 [
         description = "Position vector directed from the origin of the world frame to the connector frame origin, resolved in world frame",
     ]
-    @variables f(t)[1:3]=zeros(3) [
+    @variables f(t)[1:3] [
         connect = Flow,
         description = "Cut force resolved in connector frame",
     ]
-    @variables tau(t)[1:3]=zeros(3) [
+    @variables tau(t)[1:3] [
         connect = Flow,
         description = "Cut torque resolved in connector frame",
     ]

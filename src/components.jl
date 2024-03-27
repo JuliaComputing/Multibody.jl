@@ -103,14 +103,15 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
     @parameters r(t)[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
+    r = collect(r)
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
     taua = frame_a.tau |> collect
     taub = frame_b.tau |> collect
-    eqs = Equation[collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r)
-                   ori(frame_b) ~ ori(frame_a)
-                   0 .~ fa + fb
-                   0 .~ taua + taub + cross(r, fb)]
+    eqs = Equation[(collect(frame_b.r_0) ~ collect(frame_a.r_0) + resolve1(ori(frame_a), r))
+                   (ori(frame_b) ~ ori(frame_a))
+                   (0 ~ fa + fb)
+                   (0 ~ taua + taub + cross(r, fb))]
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
@@ -206,20 +207,20 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3]=0 [
+    @variables v_0(t)[1:3] [guess = 0, 
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
-    @variables a_0(t)[1:3]=0 [
+    @variables a_0(t)[1:3] [guess = 0, 
         state_priority = 2,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
-    @variables g_0(t)[1:3]=0 [description = "gravity acceleration"]
-    @variables w_a(t)[1:3]=0 [
+    @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
+    @variables w_a(t)[1:3] [guess = 0, 
         state_priority = 2,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
-    @variables z_a(t)[1:3]=0 [
+    @variables z_a(t)[1:3] [guess = 0, 
         description = "Absolute angular acceleration of frame_a resolved in frame_a",
     ]
     # 6*3 potential variables + Frame: 2*3 flow + 3 potential + 3 residual = 24 equations + 2*3 flow
@@ -330,11 +331,11 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3]=0 [
+    @variables v_0(t)[1:3] [ guess=0,
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
-    @variables a_0(t)[1:3]=0 [
+    @variables a_0(t)[1:3] [ guess=0,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @parameters begin

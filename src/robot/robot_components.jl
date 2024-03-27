@@ -21,17 +21,17 @@ D = Differential(t)
 """
 @connector function AxisControlBus(; name)
     vars = @variables begin
-        (motion_ref(t) = 0), [description = "= true, if reference motion is not in rest"]
-        (angle_ref(t) = 0), [description = "Reference angle of axis flange"]
-        (angle(t) = 0), [description = "Angle of axis flange"]
-        (speed_ref(t) = 0), [description = "Reference speed of axis flange"]
-        (speed(t) = 0), [description = "Speed of axis flange"]
-        (acceleration_ref(t) = 0), [description = "Reference acceleration of axis flange"]
-        (acceleration(t) = 0), [description = "Acceleration of axis flange"]
-        (current_ref(t) = 0), [description = "Reference current of motor"]
-        (current(t) = 0), [description = "Current of motor"]
-        (motorAngle(t) = 0), [description = "Angle of motor flange"]
-        (motorSpeed(t) = 0), [description = "Speed of motor flange"]
+        (motion_ref(t)), [guess=0.0,input = true, description = "= true, if reference motion is not in rest"]
+        (angle_ref(t)), [guess=0.0,input = true, description = "Reference angle of axis flange"]
+        (angle(t)), [guess=0.0,output = true, description = "Angle of axis flange"]
+        (speed_ref(t)), [guess=0.0,input = true, description = "Reference speed of axis flange"]
+        (speed(t)), [guess=0.0,output = true, description = "Speed of axis flange"]
+        (acceleration_ref(t)), [guess=0.0,input = true, description = "Reference acceleration of axis flange"]
+        (acceleration(t)), [guess=0.0,output = true, description = "Acceleration of axis flange"]
+        (current_ref(t)), [guess=0.0,input = true, description = "Reference current of motor"]
+        (current(t)), [guess=0.0,output = true, description = "Current of motor"]
+        (motorAngle(t)), [guess=0.0,output = true, description = "Angle of motor flange"]
+        (motorSpeed(t)), [guess=0.0,output = true, description = "Speed of motor flange"]
     end
     ODESystem(Equation[], t, vars, []; name)
 end
@@ -433,12 +433,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     # end
 
     @variables begin
-        (q(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint angles"]
-        (qd(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint speeds"]
-        (qdd(t)[1:6] = 0),
-        [state_priority = typemax(Int), description = "Joint accelerations"]
-        (tau(t)[1:6] = 0),
-        [state_priority = typemax(Int), description = "Joint driving torques"]
+        (q(t)[1:6]), [guess = 0, state_priority = typemax(Int), description = "Joint angles"]
+        (qd(t)[1:6]), [guess = 0, state_priority = typemax(Int), description = "Joint speeds"]
+        (qdd(t)[1:6]),
+        [guess = 0, state_priority = typemax(Int), description = "Joint accelerations"]
+        (tau(t)[1:6]),
+        [guess = 0, state_priority = typemax(Int), description = "Joint driving torques"]
     end
 
     systems = @named begin
