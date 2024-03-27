@@ -814,3 +814,49 @@ doplot() &&
 
 end
 
+## Actuated joint
+using Multibody
+using ModelingToolkit
+using JuliaSimCompiler
+using OrdinaryDiffEq
+using ModelingToolkitStandardLibrary.Blocks
+import ModelingToolkitStandardLibrary.Mechanical.Rotational
+
+@testset "Actuated joint" begin
+@parameters t
+D = Differential(t)
+
+# Workarounds for @mtkmodel bugs and limitations
+RTorque = Rotational.Torque
+BSine = Blocks.Sine
+W(args...; kwargs...) = Multibody.world
+
+@mtkmodel ActuatedJoint begin
+    @components begin
+        world = W()
+        torque = RTorque()
+        joint = Revolute(useAxisFlange=true) # The axis flange provides an interface to the 1D torque input from ModelingToolkitStandardLibrary.Mechanical.Rotational
+        torque_signal = BSine(frequency=1/5)
+        body = BodyShape(; m = 1, r = [0.4, 0, 0])
+    end
+    @equations begin
+        connect(world.frame_b, joint.frame_a)
+        connect(joint.frame_b, body.frame_a)
+        connect(torque_signal.output, torque.tau)
+        connect(torque.flange, joint.axis)
+    end
+end
+
+@named model = ActuatedJoint()
+cm = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [D(D(cm.joint.phi)) => 0], (0, 10))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+doplot() && plot(sol) |> display
+
+# using GLMakie
+# render(model, sol, z=-3)
+
+
+end
