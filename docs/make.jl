@@ -28,6 +28,7 @@ makedocs(;
                  "Spherical pendulum" => "examples/spherical_pendulum.md",
                  "Gearbox" => "examples/gearbox.md",
                  "Free motions" => "examples/free_motion.md",
+                 "Kinematic loops" => "examples/kinematic_loops.md",
                  "Industrial robot" => "examples/robot.md",
              ],
              "3D rendering" => "rendering.md",

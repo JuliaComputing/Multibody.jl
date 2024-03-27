@@ -224,6 +224,11 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
+    color = try
+        sol(0, idxs=sys.color)
+    catch
+        :purple
+    end
     mesh!(scene, thing, color=:purple)
     # thing = @lift begin
     #     r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
