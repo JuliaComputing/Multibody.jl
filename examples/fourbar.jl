@@ -230,10 +230,6 @@ m = structural_simplify(IRSystem(fourbar)) # It does simplify
 
 prob = ODEProblem(m, [], (0.0, 12.0))
 
-# Try the generated dynamics
-du = zero(prob.u0)
-prob.f.f(du, prob.u0 .+ 0.0001 .* randn.(), prob.p, 0) 
-
 
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
