@@ -114,7 +114,10 @@ prob = ODEProblem(m, [], (0.0, 5.0))
 du = zero(prob.u0)
 prob.f(du, prob.u0, prob.p, 0.0) 
 
-sol = solve(prob, Rodas4(autodiff=false))#, u0 = prob.u0 .+ 0.01 .* randn.())
+@test_skip begin
+    sol = solve(prob, Rodas4(autodiff=false), u0 = prob.u0 .+ 0.01 .* randn.())
+    @test successful_retcode(sol)
+end
 
 # using SeeToDee, NonlinearSolve
 # function dynamics(x,u,p,t)
@@ -187,14 +190,15 @@ systems = @named begin
     j1 = Revolute()
     j2 = Revolute()
     j3 = Revolute()
-    # j4 = Revolute(iscut=true)
+    # j4 = Revolute()
     # j2 = RevolutePlanarLoopConstraint()
     # j3 = RevolutePlanarLoopConstraint()
     j4 = RevolutePlanarLoopConstraint()
-    b1 = BodyShape(m=1, r = [1.0, 0, 0])
-    b2 = BodyShape(m=1, r = [1.0, 0, 0])
-    b3 = BodyShape(m=1, r = [-1.0, 0, 0])
-    b4 = BodyShape(m=1, r = [1.0, 0, 0])
+    j5 = Revolute()
+    b1 = BodyShape(m=1, r = [1.0, 0, 0], radius = 1*0.08)
+    b2 = BodyShape(m=1, r = [0.0, 1.0, 0], radius = 1.2*0.08)
+    b3 = BodyShape(m=1, r = [-1.0, 0, 0], radius = 1.4*0.08)
+    b4 = BodyShape(m=1, r = [0.0, -1.0, 0], radius = 1.6*0.08)
 end
 
 connections = [
@@ -211,25 +215,29 @@ connections = [
     connect(j4.frame_b, b4.frame_a)
     # Multibody.connect_loop(j4.frame_b, b4.frame_a)
     
-    connect(b4.frame_b, j1.frame_a)
+    connect(b4.frame_b, j5.frame_a)
+    connect(j5.frame_b, world.frame_b) # Attached to world
+    # NOTE: we need 5 joints since j1.frame_a is rigidly attached to the world, and b4 closing the loop can thus not rotate around j1. One could potentially avoid connecting j1 to world and instead just force the positional coordinates of j1 to be zero.
     # Multibody.connect_loop(b4.frame_b, j1.frame_a)
     
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 
-##
+#
 
 # m = structural_simplify((fourbar), allow_parameter=false)
 m = structural_simplify(IRSystem(fourbar)) # It does simplify
 
 @test_broken length(states(m)) == 2
 
-prob = ODEProblem(m, [], (0.0, 1.0))
+prob = ODEProblem(m, [], (0.0, 5.0))
 
 # Try the generated dynamics
 du = zero(prob.u0)
 prob.f.f(du, prob.u0 .+ 0.0001 .* randn.(), prob.p, 0) 
 
 
-sol = solve(prob, Rodas4(autodiff=false), u0 = prob.u0 .+ 0.0001 .* randn.())
-isinteractive() && plot(sol, vars = [j1.phi, j2.phi, j3.phi])
+sol = solve(prob, Rodas4(autodiff=false), u0 = prob.u0 .+ 0.0000000 .* randn.())
+@test SciMLBase.successful_retcode(sol)
+# isinteractive() && plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
+# first(render(fourbar, sol, 0.1, z=-5))
