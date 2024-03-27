@@ -3,6 +3,7 @@ using Multibody
 using Test
 using JuliaSimCompiler
 t = Multibody.t
+D = Differential(t)
 using OrdinaryDiffEq
 using OrdinaryDiffEq.SciMLBase: successful_retcode
 

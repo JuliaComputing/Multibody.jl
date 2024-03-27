@@ -44,42 +44,44 @@ The multibody paper mentions this as an interesting example, figure 8:
     a spring to the environment."
 =#
 
+@testset "spring - harmonic oscillator" begin
 
-@named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], useQuaternions=false) # This time the body isroot since there is no joint containing state
-@named spring = Multibody.Spring(c = 1, fixedRotationAtFrame_a = false,
-                                 fixedRotationAtFrame_b = false)
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], useQuaternions=false) # This time the body isroot since there is no joint containing state
+    @named spring = Multibody.Spring(c = 1, fixedRotationAtFrame_a = false,
+                                    fixedRotationAtFrame_b = false)
 
-connections = [connect(world.frame_b, spring.frame_a)
-               connect(spring.frame_b, body.frame_a)]
+    connections = [connect(world.frame_b, spring.frame_a)
+                connect(spring.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, spring, body])
+    @named model = ODESystem(connections, t, systems = [world, spring, body])
 
-# ssys = structural_simplify(model, allow_parameter = false)
+    # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = IRSystem(model)
-ssys = structural_simplify(irsys)
-D = Differential(t)
+    irsys = IRSystem(model)
+    ssys = structural_simplify(irsys)
+    D = Differential(t)
 
-# du = prob.f.f.f_oop(prob.u0, prob.p, 0)
-# @test all(isfinite, du)
+    # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
+    # @test all(isfinite, du)
 
-# @test_skip begin # Yingbo: instability
-prob = ODEProblem(ssys, [], (0, 10))
-sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
-@test SciMLBase.successful_retcode(sol)
-@test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
-@test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
-@test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
-@test sol(pi, idxs = body.r_0[2]) < -2
+    # @test_skip begin # Yingbo: instability
+    prob = ODEProblem(ssys, [], (0, 10))
+    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
+    @test SciMLBase.successful_retcode(sol)
+    @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
+    @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
+    @test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
+    @test sol(pi, idxs = body.r_0[2]) < -2
 
-doplot() &&
-    plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout = 9)
-# end
+    doplot() &&
+        plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout = 9)
+end
 
 # ==============================================================================
 ## Simple pendulum =============================================================
 # ==============================================================================
 using LinearAlgebra, ModelingToolkit
+@testset "Simple pendulum" begin
 @named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named torksensor = CutTorque()
@@ -118,11 +120,13 @@ sol = solve(prob, Rodas4())
       maximum(norm.(eachcol(reduce(hcat, sol[collect(joint.frame_a.f)]))))
 
 doplot() && plot(sol, idxs = collect(joint.phi))
+end
 
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
 # ==============================================================================
 
+@testset "Simple pendula" begin
 world = Multibody.world
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named damper = Rotational.Damper(d = 0.1)
@@ -170,10 +174,10 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
-modele = ModelingToolkit.expand_connections(model)
+# modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-ssys = structural_simplify(IRSystem(modele))#, alias_eliminate = false)
+ssys = structural_simplify(IRSystem(model))#, alias_eliminate = false)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
@@ -218,11 +222,13 @@ sol3 = solve(prob, Rodas4())
 @test sol3[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 doplot() && plot(sol3, idxs = rev.phi)
 @test sol3(1:10, idxs=rev.phi).u ≈ sol(1:10, idxs=rev.phi).u atol=1e-2
-
+end
 # ==============================================================================
 ## Double pendulum =============================================================
 # ==============================================================================
+
 using LinearAlgebra
+@testset "Double pendulum" begin
 @named rod1 = FixedTranslation(r = [1, 0, 0])
 @named rod2 = FixedTranslation(r = [1, 0, 0])
 @named body1 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
@@ -276,11 +282,12 @@ sol = solve(prob, Rodas4())
 @test sol[body2.r_0[2]][end]≈-2 rtol=0.01 # sum of rod lengths = 2
 doplot() &&
     plot(sol, idxs = [rev1.phi; rev2.phi; damper2.phi_rel; collect(body2.r_0[1:2])])
-
+end
 # ==============================================================================
 ## Linear mass-spring-damper ===================================================
 # ==============================================================================
 
+@testset "Linear mass-spring-damper" begin
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Translational.Damper(d=0.5)
 @named spring = Translational.Spring(c=1)
@@ -301,11 +308,12 @@ sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test sol[joint.s][end]≈-9.81 rtol=0.01 # gravitational acceleration since spring stiffness is 1
 doplot() && plot(sol, idxs = joint.s)
-
+end
 # ==============================================================================
 ## Spring damper system from https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Elementary.html#Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem
 # ==============================================================================
 
+@testset "Spring damper system" begin
 world = Multibody.world
 @named begin
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
@@ -371,7 +379,7 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = [spring1.s, spring2.s])
 doplot() && plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
 doplot() && plot(sol, idxs = [spring1.f, spring2.f])
-
+end
 # ==============================================================================
 ## Three springs ===============================================================
 # ==============================================================================
@@ -382,6 +390,7 @@ using JuliaSimCompiler
 using OrdinaryDiffEq
 
 
+@testset "Three springs" begin
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
@@ -421,14 +430,14 @@ prob = ODEProblem(ssys, [], (0, 10))
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
 # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
-sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-1 .* rand.()) # Yingbo: init not working unless random 
+sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 1e-1 .* rand.())  
 @test SciMLBase.successful_retcode(sol)
 
-doplot() && plot(sol, idxs = [body1.r_0...])
+doplot() && plot(sol, idxs = [body1.r_0...]) |> display
 # end
 # TODO: add tutorial explaining what interesting things this demos illustrates
 # fixedRotationAtFrame_a and b = true required
-
+end
 # ==============================================================================
 ## FreeBody ====================================================================
 # ==============================================================================
@@ -439,6 +448,7 @@ using ModelingToolkit
 using JuliaSimCompiler
 using OrdinaryDiffEq
 
+@testset "FreeBody" begin
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
@@ -475,14 +485,14 @@ prob = ODEProblem(ssys,
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
 # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
-sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-6 .* rand.()) # Yingbo: init not working unless random 
-@assert SciMLBase.successful_retcode(sol)
-
-doplot() && plot(sol, idxs = [body.r_0...])
-# end
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
 
 @info "Initialization broken, initial value for body.r_0 not respected, add tests when MTK has a working initialization"
+doplot() && plot(sol, idxs = [body.r_0...]) |> display
+# end
 
+end
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
 # ==============================================================================
@@ -492,6 +502,7 @@ using ModelingToolkit
 using JuliaSimCompiler
 using OrdinaryDiffEq
 
+@testset "Spherical-joint pendulum" begin
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
@@ -530,11 +541,12 @@ doplot() && plot(sol, idxs = [body.r_0...])
 @test norm(sol(10, idxs = [body.r_0...])) ≈ 1
 
 @test norm(sol(0, idxs = [joint.phi...])) ≈ √(3)
-
+end
 # ==============================================================================
 ## universal pendulum
 # ==============================================================================
 
+@testset "Universal pendulum" begin
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
@@ -564,7 +576,7 @@ sol2 = solve(prob, Rodas4())
 @test norm(sol2(10, idxs = [body.r_0...])) ≈ 1
 
 doplot() && plot(sol2, idxs = [body.r_0...])
-
+end
 # ==============================================================================
 ## GearConstraint ===================================================
 # ==============================================================================
@@ -575,6 +587,7 @@ using ModelingToolkit
 using JuliaSimCompiler
 using OrdinaryDiffEq
 
+@testset "GearConstraint" begin
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
@@ -618,12 +631,13 @@ sol = solve(prob, Rodas4())
 
 @test sol[cm.inertia1.phi] ≈ 10*sol[cm.inertia2.phi] rtol = 1e-2
 @test sol[cm.inertia1.flange_a.tau] ≈ 10*sol[cm.inertia2.flange_a.tau] rtol=1e-2
-
+end
 
 # ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
 # The wheel does not need the world
+@testset "Rolling wheel" begin
 @named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
                         I_long = 0.12,
                         x0 = 0.2,
@@ -642,18 +656,19 @@ ssys = structural_simplify(IRSystem(wheel))
 prob = ODEProblem(ssys, defs, (0, 10))
 
 
-prob.u0 .+= 0.001 .* randn.()
+# prob.u0 .+= 0.001 .* randn.()
 @test_skip begin # Does not initialize
   sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 1e-6 .* randn.())
   @info "Write tests"
 end
 
-
+end
 
 # ==============================================================================
 ## FreeMotion ==================================================================
 # ==============================================================================
 
+@testset "FreeMotion" begin
 # Model a free-falling body
 # Test 1, enforce state = false
 world = Multibody.world
@@ -720,15 +735,16 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
 y = sol(0:0.1:10, idxs = body.r_0[2])
 @test y≈-9.81 / 2 .* (0:0.1:10) .^ 2 atol=1e-2 # Analytical solution to acceleration problem
-
+end
 
 
 # ==============================================================================
 ## Dzhanibekov effect ==========================================================
 # ==============================================================================
+@testset "Dzhanibekov effect" begin
 world = Multibody.world
 @named freeMotion = FreeMotion(enforceState = false, isroot = false)
-@named body = Body(m = 1, isroot = true, I_11 = 1, I_22 = 10, I_33 = 100, useQuaternions=false)
+@named body = BodyShape(m = 1, r=0.1*[1,2,3], isroot = true, I_11 = 1, I_22 = 10, I_33 = 100, useQuaternions=false)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
@@ -742,28 +758,29 @@ ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys,
                   Symbolics.scalarize.([
-                    body.v_0 .=> [0,1,0] # Movement in y direction
-                    body.w_a .=> [0.01, 3.0, 0.02] # Rotation around y axis
-                    body.phi .=> 0.001 .* randn.() 
+                    body.body.v_0 .=> [0,1,0] # Movement in y direction
+                    body.body.w_a .=> [0.01, 3.0, 0.02] # Rotation around y axis
+                    body.body.phi .=> 0.0001 .* randn.() 
                     # body.Q .=> 0.001 .* randn.() .+ [0,0,0,1]
                     world.g => 0.0 # In space
                   ]), 
                   (0, 3))
 
 sol = solve(prob, Rodas4())
-doplot() && plot(sol, idxs = collect(body.phi), title = "Dzhanibekov effect")
+@test SciMLBase.successful_retcode(sol)
+doplot() && plot(sol, idxs = collect(body.body.phi), title = "Dzhanibekov effect") |> display
 @info "Write tests"
 
-# @test_skip sol(0, idxs = collect(freeMotion.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored
+@test sol(0, idxs = collect(body.body.phi)) != zeros(3) # The problem here is that the initial condition is completely ignored
 
-
+end
 
 
 # ==============================================================================
 ## Harmonic oscillator with Body as root and quaternions as state variables
 # ==============================================================================
 
-
+@testset "Harmonic oscillator with Body as root and quaternions as state variables" begin
 
 @named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], useQuaternions=true) # This time the body isroot since there is no joint containing state
 @named spring = Multibody.Spring(c = 1)
@@ -788,11 +805,12 @@ prob = ODEProblem(ssys, [], (0, 10))
 sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
 
 doplot() &&
-    plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6)
+    plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6) |> display
 
 @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
 @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
 @test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
 @test sol(pi, idxs = body.r_0[2]) < -2
 
+end
 

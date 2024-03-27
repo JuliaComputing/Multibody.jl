@@ -428,7 +428,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
+function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
     @named frame_a = Frame()
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
@@ -524,7 +524,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
                  0 ~ vContact_0'e_lat_0
 
                  # Contact force
-                 f_wheel_0 ~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
+                 f_wheel_0 .~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
 
                  # Force and torque balance at the wheel center
                  zeros(3) .~ collect(frame_a.f) + resolve2(ori(frame_a), f_wheel_0)
