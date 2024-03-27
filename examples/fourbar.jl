@@ -178,7 +178,7 @@ isinteractive() && plot(sol)
 # We must also replace one joint with a RevolutePlanarLoopConstraint 
 systems = @named begin
     j1 = Revolute(useAxisFlange=true)
-    j2 = Revolute()
+    j2 = Revolute(useAxisFlange=true)
     j3 = Revolute()
     # j4 = Revolute()
     # j2 = RevolutePlanarLoopConstraint()
