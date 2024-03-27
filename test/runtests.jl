@@ -23,7 +23,7 @@ modele = ModelingToolkit.expand_connections(model)
 
 ssys = structural_simplify(model)
 
-@test length(states(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
+@test length(unknowns(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
 @testset "robot" begin
     @info "Testing robot"
@@ -520,7 +520,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
-@test length(states(ssys)) == 6
+@test length(unknowns(ssys)) == 6
 
 
 prob = ODEProblem(ssys,
@@ -684,7 +684,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
-@test length(states(ssys)) == 12
+@test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -708,7 +708,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
-@test_broken length(states(ssys)) == 12 # This test passes when the body states are used, but not with joint states
+@test_broken length(unknowns(ssys)) == 12 # This test passes when the body states are used, but not with joint states
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -727,7 +727,7 @@ world = Multibody.world
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
-@test length(states(ssys)) == 12
+@test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -794,7 +794,7 @@ model = complete(model)
 
 irsys = IRSystem(model)
 ssys = structural_simplify(irsys)
-@test length(states(ssys)) == 13 # One extra due to quaternions
+@test length(unknowns(ssys)) == 13 # One extra due to quaternions
 D = Differential(t)
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
