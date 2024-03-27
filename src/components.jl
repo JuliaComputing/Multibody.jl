@@ -146,6 +146,9 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     @parameters angle(t)=angle [
         description = "angle of rotation in radians",
     ]
+
+    pars = [r; n; angle]
+
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
     taua = frame_a.tau |> collect
@@ -156,20 +159,20 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     if isroot
         R_rel = planar_rotation(n, angle, 0)
         eqs = [ori(frame_b) ~ absoluteRotation(frame_a, R_rel);
-               zeros(3) .~ fa + resolve1(R_rel, fb);
-               zeros(3) .~ taua + resolve1(R_rel, taub) - cross(r,
+               zeros(3) ~ fa + resolve1(R_rel, fb);
+               zeros(3) ~ taua + resolve1(R_rel, taub) - cross(r,
                                                                 fa)]
     else
         R_rel_inv = planar_rotation(n, -angle, 0)
         eqs = [ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv);
-               zeros(3) .~ fb + resolve1(R_rel_inv, fa);
-               zeros(3) .~ taub + resolve1(R_rel_inv, taua) +
+               zeros(3) ~ fb + resolve1(R_rel_inv, fa);
+               zeros(3) ~ taub + resolve1(R_rel_inv, taua) +
                            cross(resolve1(R_rel_inv, r), fb)]
     end
     eqs = collect(eqs)
     append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))
 
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    compose(ODESystem(eqs, t, [], pars; name), frame_a, frame_b)
 end
 
 """

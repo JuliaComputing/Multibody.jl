@@ -111,12 +111,6 @@ git-tree-sha1 = "0c5f81f47bbbcf4aea7b2959135713459170798b"
 uuid = "62783981-4cbd-42fc-bca8-16325de8dc4b"
 version = "0.1.5"
 
-[[deps.Bumper]]
-deps = ["StrideArraysCore"]
-git-tree-sha1 = "aa2fc4ee0754a4ec23208961d4d40f154157f5a3"
-uuid = "8ce10254-0962-460f-a3d8-1f77fea1446e"
-version = "0.6.0"
-
 [[deps.CEnum]]
 git-tree-sha1 = "389ad5c84de1ae7cf0e28e381131c98ea87d54fc"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
@@ -162,22 +156,11 @@ weakdeps = ["SparseArrays"]
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
 
-[[deps.Clang_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "TOML", "Zlib_jll", "libLLVM_jll"]
-git-tree-sha1 = "de2204d98741f57e7ddb9a6a738db74ba8a608cb"
-uuid = "0ee61d77-7f21-5576-8119-9fcc46b10100"
-version = "15.0.7+10"
-
 [[deps.CloseOpenIntervals]]
 deps = ["Static", "StaticArrayInterface"]
 git-tree-sha1 = "70232f82ffaab9dc52585e0dd043b5e0c6b714f1"
 uuid = "fb6a15b2-703c-40df-9091-08a04967cfa9"
 version = "0.1.12"
-
-[[deps.CodeInfoTools]]
-git-tree-sha1 = "91018794af6e76d2d42b96b25f5479bca52598f5"
-uuid = "bc773b8a-8374-437a-b9f2-0e9785855863"
-version = "0.3.5"
 
 [[deps.Combinatorics]]
 git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
@@ -712,10 +695,12 @@ uuid = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 version = "1.0.54"
 
 [[deps.JuliaSimCompiler]]
-deps = ["ChainRules", "ConstructionBase", "DataStructures", "DiffEqCallbacks", "DocStringExtensions", "Expronicon", "ForwardDiff", "Graphs", "IfElse", "LLVM", "Libdl", "LinearAlgebra", "ModelingToolkit", "OffsetArrays", "Preferences", "RecursiveFactorization", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SparseDiffTools", "SpecialFunctions", "StaticArrays", "StaticCompiler", "StrideArraysCore", "SymbolicIndexingInterface", "Symbolics", "UnPack"]
-git-tree-sha1 = "f30bd015524a66109844c55b6ddc14d7a2b12cb5"
+deps = ["AbstractTrees", "ChainRules", "ConstructionBase", "DataStructures", "DiffEqCallbacks", "DocStringExtensions", "Expronicon", "ForwardDiff", "GPUCompiler", "Graphs", "IfElse", "JuliaFormatter", "LLVM", "Libdl", "LinearAlgebra", "ModelingToolkit", "NaNMath", "OffsetArrays", "Preferences", "RecursiveFactorization", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SparseDiffTools", "SpecialFunctions", "StaticArrays", "StrideArraysCore", "SymbolicIndexingInterface", "Symbolics", "UnPack"]
+git-tree-sha1 = "90cbe4a702ff0614799c620129e29d375d8e6e8e"
+repo-rev = "master"
+repo-url = "https://github.com/JuliaComputing/JuliaSimCompiler.jl.git"
 uuid = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
-version = "0.1.6"
+version = "0.1.7"
 
     [deps.JuliaSimCompiler.extensions]
     AcausalVisualizationExt = "CairoMakie"
@@ -756,11 +741,6 @@ git-tree-sha1 = "8a6837ec02fe5fb3def1abc907bb802ef11a0729"
 git-tree-sha1 = "8a6837ec02fe5fb3def1abc907bb802ef11a0729"
 uuid = "ba0b0d4f-ebba-5204-a429-3ac8c609bfb7"
 version = "0.9.5"
-
-[[deps.LLD_jll]]
-deps = ["Artifacts", "Libdl", "Zlib_jll", "libLLVM_jll"]
-uuid = "d55e3150-da41-5e91-b323-ecfd1eec6109"
-version = "15.0.7+10"
 
 [[deps.LLVM]]
 deps = ["CEnum", "LLVMExtra_jll", "Libdl", "Preferences", "Printf", "Requires", "Unicode"]
@@ -1042,7 +1022,9 @@ version = "9.7.1"
 
 [[deps.ModelingToolkitStandardLibrary]]
 deps = ["ChainRulesCore", "DiffEqBase", "IfElse", "LinearAlgebra", "ModelingToolkit", "Symbolics"]
-git-tree-sha1 = "50b27ae73c39ecba91bd3e48325b586bc970cd24"
+git-tree-sha1 = "d4e187c31982c8fb31362093625adc50c1209576"
+repo-rev = "main"
+repo-url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl.git"
 uuid = "16a59e39-deab-5bd0-87e4-056b12336739"
 version = "2.6.0"
 
@@ -1663,18 +1645,6 @@ git-tree-sha1 = "36b3d696ce6366023a0ea192b4cd442268995a0d"
 uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 version = "1.4.2"
 
-[[deps.StaticCompiler]]
-deps = ["Clang_jll", "CodeInfoTools", "GPUCompiler", "InteractiveUtils", "LLD_jll", "LLVM", "Libdl", "MacroTools", "Serialization", "StaticTools"]
-git-tree-sha1 = "545c528c77eb51ebd65502acf20956ea35171a41"
-uuid = "81625895-6c0f-48fc-b932-11a18313743c"
-version = "0.6.3"
-
-[[deps.StaticTools]]
-deps = ["Bumper", "LinearAlgebra", "LoopVectorization", "ManualMemory", "Random"]
-git-tree-sha1 = "80f14502d07ca392387ac8a9963585046b92a8c6"
-uuid = "86c06d3c-3f03-46de-9781-57580aa96d0a"
-version = "0.8.9"
-
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -1935,11 +1905,6 @@ version = "0.2.0"
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 version = "1.2.13+1"
-
-[[deps.libLLVM_jll]]
-deps = ["Artifacts", "Libdl"]
-uuid = "8f36deef-c2a5-5394-99ed-8e07531fb29a"
-version = "15.0.7+10"
 
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
