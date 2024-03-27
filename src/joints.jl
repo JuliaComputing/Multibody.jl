@@ -14,7 +14,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
-                  isroot = true, radius = 0.1)
+                  isroot = true, iscut = false, radius = 0.1)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -34,16 +34,23 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
-    if isroot
-        eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
-                       ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
-                       collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
-                       collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
-    else
+    if iscut
         eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-                       ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
-                       collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
-                       collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+            residue(ori(frame_a), absoluteRotation(ori(frame_b), Rrel)) .~ 0 # If joint is a cut joint, this equation is replaced
+                collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
+                collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+    else
+        if isroot
+            eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
+                        ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
+                        collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
+                        collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
+        else
+            eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
+                        ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
+                        collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
+                        collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+        end
     end
     moreeqs = [collect(frame_a.r_0 .~ frame_b.r_0)
                D(phi) ~ w
@@ -122,7 +129,7 @@ The function returns an ODESystem representing the prismatic joint.
            zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n * s, frame_b.f))
 
            # d'Alemberts principle
-           f .~ -n'collect(frame_b.f)]
+           f ~ -(n'collect(frame_b.f))[]]
 
     if useAxisFlange
         @named fixed = Translational.Fixed(s0=0)
@@ -708,3 +715,71 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     end
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
+
+"""
+    RevolutePlanarLoopConstraint(; name, n)
+
+Revolute joint that is described by 2 positional constraints for usage in a planar loop (the ambiguous cut-force perpendicular to the loop and the ambiguous cut-torques are set arbitrarily to zero)
+
+Joint where `frame_b` rotates around axis `n` which is fixed in `frame_a` and where this joint is used in a planar loop providing 2 constraint equations on position level.
+
+If a planar loop is present, e.g., consisting of 4 revolute joints where the joint axes are all parallel to each other, then there is no unique mathematical solution if all revolute joints are modelled with `Revolute` and the symbolic algorithms will fail. The reason is that, e.g., the cut-forces in the revolute joints perpendicular to the planar loop are not uniquely defined when 3-dim. descriptions of revolute joints are used. Usually, an error message will be printed pointing out this situation. In this case, one revolute joint in the loop has to be replaced by model `RevolutePlanarLoopCutJoint`. The effect is that from the 5 constraints of a 3-dim. revolute joint, 3 constraints are removed and replaced by appropriate known variables (e.g., the force in the direction of the axis of rotation is treated as known with value equal to zero; for standard revolute joints, this force is an unknown quantity).
+"""
+@component function RevolutePlanarLoopConstraint(; name, n = Float64[0, 0, 1])
+    norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
+    @named frame_a = Frame()
+    @named frame_b = Frame()
+
+    # n isa Vector{Float64} || error("Parametric axis of rotation is currently not supported")
+
+    # Activate this when symbolic parameters are a bit more robust
+    # @parameters n[1:3]=n [description = "axis of rotation"]
+
+    # # @parameters e[1:3] [description = "Unit vector in direction of rotation axis, resolved in frame_a (= same as in frame_b)"]
+    # @parameters nnx_a[1:3] = [1,0,0]#ifelse(abs(n[1]) > 0.1, [0,1,0], ifelse(abs(n[2]) > 0.1, [0,0,1], [1,0,0])) [description = "Arbitrary vector that is not aligned with rotation axis n"]
+    # @parameters ey_a[1:3] = [0,1,0]#inormalize(cross(n, nnx_a)) [description = "Unit vector orthogonal to axis n of revolute joint, resolved in frame_a"]
+    # @parameters ex_a[1:3] = [1,0,0]#icross(ey_a, n) [description = "Unit vector orthogonal to axis n of revolute joint and to ey_a, resolved in frame_a"]
+    # # @variables ey_b[1:3](t) [description = "ey_a, resolved in frame_b"]
+    # # @variables ex_b[1:3](t) [description = "ex_a, resolved in frame_b"]
+
+
+
+    nnx_a = ifelse(abs(n[1]) > 0.1, [0,1,0], ifelse(abs(n[2]) > 0.1, [0,0,1], [1,0,0])) 
+    ey_a = normalize(cross(n, nnx_a)) 
+    ex_a = cross(ey_a, n) 
+
+
+    @variables r_rel_a(t)[1:3] [description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a"]
+    @variables f_c(t)[1:2] [description = "Dummy or constraint forces in direction of ex_a, ey_a"]
+
+
+    # @named R_rel = NumRotationMatrix()
+
+    Rrel0 = planar_rotation(n, 0, 0)
+    varw = false
+    @named R_rel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
+
+    n = collect(n)
+    ey_a = collect(ey_a)
+    ex_a = collect(ex_a)
+    r_rel_a = collect(r_rel_a)
+    f_c = collect(f_c)
+
+    Rb = ori(frame_b)
+
+    eqs = [
+        R_rel ~ relativeRotation(ori(frame_a), ori(frame_b))
+        r_rel_a .~ resolve2(ori(frame_a), collect(frame_b.r_0 - frame_a.r_0))
+        0 ~ (ex_a'r_rel_a)[]
+        0 ~ (ey_a'r_rel_a)[]
+        collect(frame_a.tau) .~ zeros(3)
+        collect(frame_b.tau) .~ zeros(3)
+        collect(frame_a.f) .~ vec([ex_a ey_a]*f_c)
+        collect(frame_b.f) .~ -resolve2(R_rel, frame_a.f)
+
+    ]
+    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+end
+
+LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)
+

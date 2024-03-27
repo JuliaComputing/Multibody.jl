@@ -134,7 +134,7 @@ export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, B
 include("components.jl")
 
 export Revolute, Prismatic, Spherical, Universal, GearConstraint, RollingWheelJoint,
-       RollingWheel, FreeMotion
+       RollingWheel, FreeMotion, RevolutePlanarLoopConstraint
 include("joints.jl")
 
 export Spring, Damper, SpringDamperParallel, Torque, Force
