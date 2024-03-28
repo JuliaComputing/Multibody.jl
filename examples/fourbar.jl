@@ -4,62 +4,8 @@ using Multibody: connect_loop
 using Test
 using Plots
 t = Multibody.t
-
 world = Multibody.world
 
-
-W(args...; kwargs...) = Multibody.world
-
-# @mtkmodel FourBar begin
-#     @variables begin
-#         j1_phi(t), [description = "Angle of revolute joint j1", output = true]
-#         j2_s(t), [description = "Distance of prismatic joint j2", output = true]
-#         j1_w(t), [description = "Axis speed of revolute joint j1", output = true]
-#         j2_v(t), [description = "Axis velocity of prismatic joint j2", output = true]
-#     end
-#     @components begin
-#         world = W()
-#         j1 = Revolute(
-#             n=[1,0,0],
-#             # stateSelect=StateSelect.always,
-#             w0=5.235987755982989,
-#             # fixed=true
-#             isroot = false,
-#             )
-#         j2 = Prismatic(n=[1,0,0], s0 = -0.2, isroot=false)
-#         b1 = BodyShape(r=[0,0.5,0.1], isroot=false)
-#         b2 = BodyShape(r=[0,0.2,0], isroot=false)
-#         b3 = BodyShape(r=[-1,0.3,0.1])
-#         rev = Revolute(n=[0,1,0], isroot=false)
-#         rev1 = Revolute(isroot=true)
-#         j3 = Revolute(n=[1,0,0])
-#         j4 = Revolute(n=[0,1,0])
-#         j5 = Revolute(n=[0,0,1])
-#         b0 = FixedTranslation(r=[1.2,0,0])
-#     end
-
-#     @equations begin
-#         connect(j2.frame_b, b2.frame_a)
-#         connect(j1.frame_b, b1.frame_a)
-#         # connect(rev.frame_a, b2.frame_b)
-#         connect_loop(rev.frame_a, b2.frame_b)
-#         connect(rev.frame_b, rev1.frame_a)
-#         connect(rev1.frame_b, b3.frame_a) 
-#         connect(world.frame_b, j1.frame_a)
-#         connect(b1.frame_b, j3.frame_a)
-#         connect(j3.frame_b, j4.frame_a)
-#         connect(j4.frame_b, j5.frame_a)
-#         connect(j5.frame_b, b3.frame_b)
-#         connect(b0.frame_a, world.frame_b)
-#         connect(b0.frame_b, j2.frame_a)
-#         j1_phi ~ j1.phi
-#         j2_s ~ j2.s
-#         j1_w ~ j1.w
-#         j2_v ~ j2.v
-#     end
-# end
-
-# @named fourbar = FourBar()
 systems = @named begin
     j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989)
     j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
