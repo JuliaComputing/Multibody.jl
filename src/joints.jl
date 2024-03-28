@@ -14,7 +14,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
-                  isroot = true, iscut = false, radius = 0.1)
+                  isroot = true, iscut = false, radius = 0.1, state_priority = 1.0)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -26,10 +26,10 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
         description = "Driving torque in direction of axis of rotation",
     ]
     @variables phi(t)=phi0 [
-        state_priority = 20,
+        state_priority = state_priority,
         description = "Relative rotation angle from frame_a to frame_b",
     ]
-    @variables w(t)=w0 [state_priority = 20, description = "angular velocity (rad/s)"]
+    @variables w(t)=w0 [state_priority = state_priority, description = "angular velocity (rad/s)"]
     Rrel0 = planar_rotation(n, phi0, w0)
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)

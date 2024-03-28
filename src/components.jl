@@ -97,11 +97,14 @@ Fixed translation of `frame_b` with respect to `frame_a` with position vector `r
 
 Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
-@component function FixedTranslation(; name, r)
+@component function FixedTranslation(; name, r, radius=0.08f0)
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters r(t)[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
+    ]
+    @parameters radius=radius [
+        description = "Radius of the body in animations",
     ]
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
@@ -111,7 +114,9 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
                    ori(frame_b) ~ ori(frame_a)
                    0 .~ fa + fb
                    0 .~ taua + taub + cross(r, fb)]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    pars = [r; radius]
+    vars = []
+    compose(ODESystem(eqs, t, vars, pars; name), frame_a, frame_b)
 end
 
 """
