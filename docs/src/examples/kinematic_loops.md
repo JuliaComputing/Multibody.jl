@@ -91,7 +91,7 @@ nothing # hide
 
 The mechanism below is another instance of a 4-bar linkage, this time with 6 revolute joints, 1 prismatic joint and 4 bodies. In order to simulate this mechanism, the user must
 1. Use the `iscut=true` keyword argument to one of the `Revolute` joints to indicate that the joint is a cut joint. A cut joint behaves similarly to a regular joint, but it introduces fewer constraints in order to avoid the otherwise over-constrained system resulting from closing the kinematic loop.
-2. Increase the `state_priority` of the joint `j1` above the default joint priority 1. This encourages the model compiler to choose the joint coordinate of `j1` as state variable. The joint coordinate of `j1` is the only coordinate that uniquely determines the configuration of the mechanism. The choice of any other joint coordinate would lead to a singular representation in at least one configuration of the mechanism. The joint `j1` is the revolute joint located in the origin, see the animation below.
+2. Increase the `state_priority` of the joint `j1` above the default joint priority 3. This encourages the model compiler to choose the joint coordinate of `j1` as state variable. The joint coordinate of `j1` is the only coordinate that uniquely determines the configuration of the mechanism. The choice of any other joint coordinate would lead to a singular representation in at least one configuration of the mechanism. The joint `j1` is the revolute joint located in the origin, see the animation below.
 
 
 To drive the mechanism, we set the initial velocity of the joint j1 to some non-zero value.
@@ -140,3 +140,5 @@ import CairoMakie
 Multibody.render(fourbar2, sol; z = -3, R=Multibody.rotx(20, true)*Multibody.roty(20, true), filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
 nothing # hide
 ```
+
+![animation](fourbar2.gif)
