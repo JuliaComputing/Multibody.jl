@@ -100,7 +100,7 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
 @component function FixedTranslation(; name, r)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r(t)[1:3]=r [
+    @parameters r[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
     r = collect(r)
@@ -108,10 +108,10 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
     fb = frame_b.f |> collect
     taua = frame_a.tau |> collect
     taub = frame_b.tau |> collect
-    eqs = Equation[(collect(frame_b.r_0) ~ collect(frame_a.r_0) + resolve1(ori(frame_a), r))
+    eqs = Equation[(collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r))
                    (ori(frame_b) ~ ori(frame_a))
-                   (0 ~ fa + fb)
-                   (0 ~ taua + taub + cross(r, fb))]
+                   (0 .~ fa + fb)
+                   (0 .~ taua + taub + cross(r, fb))]
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
