@@ -90,7 +90,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(body.frame_a, joint.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
-ssys = structural_simplify(model, allow_parameter = false)
+ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(joint.phi) => 0, D(D(joint.phi)) => 0],
                   (0, 30))
@@ -157,6 +157,8 @@ defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
             collect((D.(root_body.phi)) .=> [0, 0, 0])...,
             collect(D.(D.(root_body.phi)) .=> [0, 0, 0])...,
             collect(D.(root_body.phid) .=> [0, 0, 0])...,
+            collect(root_body.w_a .=> [0, 0, 0])...,
+            collect(root_body.v_0 .=> [0, 0, 0])...,
 )
 
 prob = ODEProblem(ssys, defs, (0, 30))

@@ -51,6 +51,7 @@ cm = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     D(cm.idealGear.phi_b) => 0
+    cm.idealGear.phi_b => 0
 ], (0, 10))
 sol = solve(prob, Rodas4())
 plot(sol, idxs=[

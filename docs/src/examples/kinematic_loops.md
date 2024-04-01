@@ -98,11 +98,11 @@ To drive the mechanism, we set the initial velocity of the joint j1 to some non-
 
 ```@example kinloop
 systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10.0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10.0, radius=0.2f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
     j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
-    b1 = BodyShape(r = [0, 0.5, 0.1])
-    b2 = BodyShape(r = [0, 0.2, 0])
-    b3 = BodyShape(r = [-1, 0.3, 0.1])
+    b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
+    b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
+    b3 = BodyShape(r = [-1, 0.3, 0.1], radius=0.03)
     rev = Revolute(n = [0, 1, 0], iscut=true)
     rev1 = Revolute()
     j3 = Revolute(n = [1, 0, 0])
