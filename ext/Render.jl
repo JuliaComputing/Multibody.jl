@@ -208,7 +208,7 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
         r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
         origin = r1#(r1+r2) ./ 2
         extremity = r2#-r1 # Double pendulum is a good test for this
-        radius = 0.08f0
+        radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
     mesh!(scene, thing, color=:purple)
