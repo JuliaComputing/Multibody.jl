@@ -26,7 +26,7 @@ unknowns(ssys)
 ```
     
 ```@example robot
-prob = ODEProblem(ssys, merge(Dict(unknowns(ssys) .=> 0), Dict([
+prob = ODEProblem(ssys, Dict([
     robot.mechanics.r1.phi => deg2rad(-60)
     robot.mechanics.r2.phi => deg2rad(20)
     robot.mechanics.r3.phi => deg2rad(90)
@@ -37,7 +37,7 @@ prob = ODEProblem(ssys, merge(Dict(unknowns(ssys) .=> 0), Dict([
     robot.axis1.motor.Jmotor.phi => deg2rad(-60) *  -105 # Multiply by gear ratio
     robot.axis2.motor.Jmotor.phi => deg2rad(20) *  210
     robot.axis3.motor.Jmotor.phi => deg2rad(90) *  60
-])), (0.0, 4.0))
+]), (0.0, 4.0))
 sol = solve(prob, Rodas5P(autodiff=false));
 @test SciMLBase.successful_retcode(sol)
 
