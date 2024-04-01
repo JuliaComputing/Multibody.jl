@@ -65,7 +65,7 @@ The multibody paper mentions this as an interesting example, figure 8:
     # @test all(isfinite, du)
 
     # @test_skip begin # Yingbo: instability
-    prob = ODEProblem(ssys, [], (0, 10))
+    prob = ODEProblem(ssys, unknowns(ssys) .=> 0, (0, 10))
     sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
@@ -354,8 +354,8 @@ ssys = structural_simplify(IRSystem(model))#, alias_eliminate = false)
 
 prob = ODEProblem(ssys,
                   [#collect(D.(body1.phid)) .=> 0;
-                   D(p2.s) => 0;
-                   D(D(p2.s)) => 0;
+                  collect(body1.v_0 .=> 0)
+                  collect(body1.w_a .=> 0)
                    damper1.d => 0], (0, 10)
 )
 du = similar(prob.u0)
@@ -367,9 +367,8 @@ endpoint = sol(sol.t[end], idxs = [spring1.s, spring2.s])
 @test_broken endpoint[1]≈endpoint[2] rtol=0.01
 
 prob = ODEProblem(ssys,
-                  [collect(D.(body1.phid)) .=> 0;
-                   D(p2.s) => 0;
-                   D(D(p2.s)) => 0;
+                  [collect(body1.v_0 .=> 0)
+                  collect(body1.w_a .=> 0)
                    damper1.d => 2], (0, 10))
 
 sol = solve(prob, Rodas4())
@@ -426,7 +425,9 @@ eqs = [connect(world.frame_b, bar1.frame_a)
                          ])
 ssys = structural_simplify(IRSystem(model))
 # ssys = structural_simplify(model, allow_parameters = false)
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [
+    collect(body1.v_0 .=> 0);
+], (0, 10))
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
 # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
@@ -478,7 +479,8 @@ eqs = [connect(bar2.frame_a, world.frame_b)
 ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
 # ssys = structural_simplify(model, allow_parameters = false)
 prob = ODEProblem(ssys,
-                  [collect(D.(body.body.phid)) .=> 1;
+                  [collect(body.body.w_a .=> 0);
+                  collect(body.body.v_0 .=> 0);
                    collect(D.(body.body.phi)) .=> 1;
                 #    collect((body.body.r_0)) .=> collect((body.r_0));
                    collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
@@ -625,6 +627,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 cm = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
+    cm.idealGear.phi_b => 0
     D(cm.idealGear.phi_b) => 0
 ], (0, 10))
 sol = solve(prob, Rodas4())
@@ -686,7 +689,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12
 
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -710,7 +713,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = structural_simplify(IRSystem(model))
 @test_broken length(unknowns(ssys)) == 12 # This test passes when the body states are used, but not with joint states
 
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -729,7 +732,10 @@ world = Multibody.world
 ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12
 
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [
+    collect(body.w_a .=> [0, 1, 0]); 
+    collect(body.v_0 .=> [0, 0, 0]); 
+], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -801,7 +807,7 @@ D = Differential(t)
 # @test all(isfinite, du)
 
 # prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 0, 0]); ], (0, 10))
 sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
 
 doplot() &&

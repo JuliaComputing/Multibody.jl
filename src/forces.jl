@@ -139,6 +139,7 @@ function Force(; name, resolveInFrame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
 end
 
+_norm(x) = sqrt(sum(x^2 for x in x)) # Workaround for buggy symbolic arrays
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
                        fixedRotationAtFrame_b = false, r_rel_0 = 0, s0 = 0)
     @named frame_a = Frame()
@@ -157,10 +158,10 @@ function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
 
-    eqs = [r_rel_0 .~ frame_b.r_0 .- frame_a.r_0;
-           length ~ norm(r_rel_0)
+    eqs = [collect(r_rel_0 .~ frame_b.r_0 .- frame_a.r_0);
+           length ~ _norm(r_rel_0)
            s ~ max(length, s_small)
-           e_rel_0 .~ r_rel_0 ./ s]
+           collect(e_rel_0 .~ r_rel_0 ./ s)]
 
     # Modelica stdlib has the option to inser special equations when two line forces are connected, this option does not yet exisst here https://github.com/modelica/ModelicaStandardLibrary/blob/10238e9927e2078571e41b53cda128c5207f69f7/Modelica/Mechanics/MultiBody/Interfaces/LineForceBase.mo#L49
 
@@ -214,7 +215,7 @@ function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kw
     # NOTE, both frames are assumed to be connected, while modelica has special handling if they aren't
     if m0 > 0
         eqs = [eqs
-               r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthFraction
+               collect(r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthFraction)
                v_CM_0 .~ D.(r_CM_0)
                ag_CM_0 .~ D.(v_CM_0) - gravity_acceleration(r_CM_0)
                frame_a.f .~ resolve2(ori(frame_a),
