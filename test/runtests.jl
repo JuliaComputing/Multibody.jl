@@ -655,14 +655,13 @@ defs = [
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-ssys = structural_simplify(IRSystem(wheel))
-prob = ODEProblem(ssys, defs, (0, 10))
 
 
-# prob.u0 .+= 0.001 .* randn.()
 @test_skip begin # Does not initialize
-  sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 1e-6 .* randn.())
-  @info "Write tests"
+    ssys = structural_simplify(IRSystem(wheel))
+    prob = ODEProblem(ssys, defs, (0, 10))
+    sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 1e-6 .* randn.())
+    @info "Write tests"
 end
 
 end
@@ -711,7 +710,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(IRSystem(model))
-@test_broken length(unknowns(ssys)) == 12 # This test passes when the body states are used, but not with joint states
+@test length(unknowns(ssys)) == 12 
 
 prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
