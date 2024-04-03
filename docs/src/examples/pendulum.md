@@ -50,7 +50,7 @@ The `ODESystem` is the fundamental model type in ModelingToolkit used for multib
 
 Before we can simulate the system, we must perform model compilation using [`structural_simplify`](@ref)
 ```@example pendulum
-ssys = structural_simplify(model, allow_parameter = false)
+ssys = structural_simplify(IRSystem(model))
 ```
 This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations.
 

@@ -121,8 +121,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     end
     mesh!(scene, thing, color=:purple)
 
-    r_cm = sol(0.0, idxs=r_cm)
-    iszero(r_cm) && (return true)
+    iszero(sol(0.0, idxs=collect(r_cm))) && (return true)
 
     thing = @lift begin # Cylinder
         Ta = get_frame(sol, sys.frame_a, $t)
