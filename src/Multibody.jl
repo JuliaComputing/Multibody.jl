@@ -12,7 +12,7 @@ export render, render!
 
 """
     scene, time = render(model, sol, t::Real; framerate = 30)
-    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30)
+    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1)
 
 Create a 3D animation of a multibody system
 
@@ -22,6 +22,7 @@ Create a 3D animation of a multibody system
 - `t`: If a single number `t` is provided, the mechanism at this time is rendered and a scene is returned together with the time as an `Observable`. Modify `time[] = new_time` to change the rendering.
 - `timevec`: If a vector of times is provided, an animation is created and the path to the file on disk is returned.
 - `framerate`: Number of frames per second.
+- `timescale`: Scaling of the time vector. This argument can be made to speed up animations (`timescale < 1`) or slow them down (`timescale > 1`). A value of `timescale = 2` will be 2x slower than real time.
 - `filename` controls the name and the file type of the resulting animation
 
 # Camera control

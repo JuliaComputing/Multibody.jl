@@ -40,10 +40,11 @@ function render(model, sol,
     y = 0,
     z = -10,
     R = I(3),
+    timescale = 1.0,
     filename = "multibody_$(model.name).mp4",
     )
     if timevec === nothing
-        timevec = range(sol.t[1], sol.t[end], step=1/framerate)
+        timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
     # with_theme(theme_dark()) do
         # fig = Figure()
@@ -57,11 +58,12 @@ function render(model, sol,
         t = 0.0
         t = Observable(timevec[1])
 
-        recursive_render!(scene, complete(model), sol, t)
+    recursive_render!(scene, complete(model), sol, t)
 
-        record(scene, filename, timevec; framerate) do time
-            t[] = time
-        end
+    record(scene, filename, timevec; framerate) do time
+        # @show time
+        t[] = time/timescale
+    end
     # end
 end
 
