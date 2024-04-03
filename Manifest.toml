@@ -638,7 +638,9 @@ version = "1.0.54"
 
 [[deps.JuliaSimCompiler]]
 deps = ["AbstractTrees", "ChainRules", "ConstructionBase", "DataStructures", "DiffEqCallbacks", "DocStringExtensions", "Expronicon", "ForwardDiff", "GPUCompiler", "Graphs", "IfElse", "JuliaFormatter", "LLVM", "Libdl", "LinearAlgebra", "ModelingToolkit", "NaNMath", "OffsetArrays", "Preferences", "RecursiveFactorization", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SparseArrays", "SparseDiffTools", "SpecialFunctions", "StaticArrays", "StrideArraysCore", "SymbolicIndexingInterface", "Symbolics", "UnPack"]
-path = "/home/fredrikb/.julia/dev/JuliaSimCompiler"
+git-tree-sha1 = "d689b6ccb69f74b3d89a031e1cfb752cc4ff3d43"
+repo-rev = "master"
+repo-url = "https://github.com/JuliaComputing/JuliaSimCompiler.jl.git"
 uuid = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
 version = "0.1.7"
 
@@ -912,7 +914,9 @@ version = "9.7.1"
 
 [[deps.ModelingToolkitStandardLibrary]]
 deps = ["ChainRulesCore", "DiffEqBase", "IfElse", "LinearAlgebra", "ModelingToolkit", "Symbolics"]
-path = "/home/fredrikb/.julia/dev/ModelingToolkitStandardLibrary"
+git-tree-sha1 = "d4e187c31982c8fb31362093625adc50c1209576"
+repo-rev = "main"
+repo-url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl.git"
 uuid = "16a59e39-deab-5bd0-87e4-056b12336739"
 version = "2.6.0"
 
