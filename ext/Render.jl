@@ -47,16 +47,19 @@ function render(model, sol,
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
     # with_theme(theme_dark()) do
-        # fig = Figure()
-        # scene = LScene(fig[1, 1]).scene # This causes a black background in the docs
-        scene = Scene()
-        
-        cam3d!(scene)
-        scene.camera.view[] = [
-            R [x,y,z]; 0 0 0 1
-        ]
-        t = 0.0
-        t = Observable(timevec[1])
+    if string(Makie.current_backend()) == "CairoMakie"
+        scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
+    else
+        fig = Figure()
+        scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
+    end
+    
+    cam3d!(scene)
+    scene.camera.view[] = [
+        R [x,y,z]; 0 0 0 1
+    ]
+    t = 0.0
+    t = Observable(timevec[1])
 
     recursive_render!(scene, complete(model), sol, t)
 
@@ -98,9 +101,10 @@ function recursive_render!(scene, model, sol, t)
     for subsys in model.systems
         system_type = get_systemtype(subsys)
         # did_render = render!(scene, system_type, subsys, sol, t)
-        did_render = render!(scene, system_type, getproperty(model, subsys.name), sol, t)
+        subsys_ns = getproperty(model, subsys.name)
+        did_render = render!(scene, system_type, subsys_ns, sol, t)
         if !something(did_render, false)
-            recursive_render!(scene, getproperty(model, subsys.name), sol, t)
+            recursive_render!(scene, subsys_ns, sol, t)
         end
     end
 end
@@ -195,7 +199,7 @@ function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConst
         p2 = Point3f(O - radius*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)
     end
-    mesh!(scene, thing, color=:red)
+    mesh!(scene, thing, color=:red, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 
@@ -244,7 +248,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
     catch
         :purple
     end
-    mesh!(scene, thing, color=:purple)
+    mesh!(scene, thing, color=:purple, specular = Vec3f(1.5))
     # thing = @lift begin
     #     r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
     #     r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
