@@ -32,6 +32,22 @@ function get_systemtype(sys)
 end
 
 
+function default_scene(x,y,z,R; F = false)
+    if string(Makie.current_backend()) == "CairoMakie"
+        scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
+        fig = nothing
+    else
+        fig = Figure()
+        # scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
+        scene = LScene(fig[1, 1]).scene
+    end
+    cam3d!(scene)
+    scene.camera.view[] = [
+        R [x,y,z]; 0 0 0 1
+    ]
+    scene, fig
+end
+
 
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
@@ -42,23 +58,14 @@ function render(model, sol,
     R = I(3),
     timescale = 1.0,
     filename = "multibody_$(model.name).mp4",
+    scene = default_scene(x,y,z,R)[1],
+    kwargs...
     )
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
     # with_theme(theme_dark()) do
-    if string(Makie.current_backend()) == "CairoMakie"
-        scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
-    else
-        fig = Figure()
-        scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
-    end
-    
-    cam3d!(scene)
-    scene.camera.view[] = [
-        R [x,y,z]; 0 0 0 1
-    ]
-    t = 0.0
+
     t = Observable(timevec[1])
 
     recursive_render!(scene, complete(model), sol, t)
@@ -74,22 +81,16 @@ function render(model, sol, time::Real;
     kwargs...,
     )
 
-    fig = Figure()
-    scene = LScene(fig[1, 1]).scene
-    cam3d!(scene)
+    # fig = Figure()
+    # scene = LScene(fig[1, 1]).scene
+    # cam3d!(scene)
+    scene, fig = default_scene(0,0,-10,I(3))
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
 
     t = Slider(fig[2, 1], range = steps, startvalue = time).value
     
-    scene.camera.view[] = [
-        1 0 0 0
-        0 1 0 0
-        0 0 1 -10
-        0 0 0 1
-    ]
-
     recursive_render!(scene, complete(model), sol, t)
     fig, t
 end
@@ -112,9 +113,9 @@ end
 render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
 
 function render!(scene, ::typeof(Body), sys, sol, t)
-    r_cm = collect(sys.r_cm)
+    r_cmv = collect(sys.r_cm)
     thing = @lift begin # Sphere
-        r_cm = sol($t, idxs=r_cm)
+        r_cm = sol($t, idxs=r_cmv)
         Ta = get_frame(sol, sys.frame_a, $t)
         coords = (Ta*[r_cm; 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
         point = Point3f(coords)
@@ -127,12 +128,12 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     end
     mesh!(scene, thing, color=:purple)
 
-    iszero(sol(0.0, idxs=collect(r_cm))) && (return true)
+    iszero(sol(0.0, idxs=r_cmv)) && (return true)
 
     thing = @lift begin # Cylinder
         Ta = get_frame(sol, sys.frame_a, $t)
                
-        r_cm = sol($t, idxs=r_cm) # r_cm is the center of the sphere in frame a
+        r_cm = sol($t, idxs=r_cmv) # r_cm is the center of the sphere in frame a
         iszero(r_cm)
         coords = (Ta*[r_cm; 1])[1:3]
         point = Point3f(coords) # Sphere center in world coords
