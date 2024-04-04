@@ -812,7 +812,7 @@ end
 # ==============================================================================
 ## Harmonic oscillator with Body as root and quaternions as state variables
 # ==============================================================================
-
+using LinearAlgebra
 @testset "Harmonic oscillator with Body as root and quaternions as state variables" begin
 
 @named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], quat=true) # This time the body isroot since there is no joint containing state
@@ -1008,3 +1008,35 @@ sol = solve(prob, Rodas4())
 tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
 
+
+
+
+# ==============================================================================
+## Simple pendulum with quaternions=============================================================
+# ==============================================================================
+using LinearAlgebra, ModelingToolkit
+# @testset "Simple pendulum" begin
+@named joint = Multibody.FreeMotion(isroot = true, enforceState=true, useQuaternions=true)
+@named body = Body(; m = 1, r_cm = [0.5, 0, 0], isroot=false, useQuaternions=false)
+
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, body.frame_a)]
+
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+
+
+
+##
+D = Differential(t)
+prob = ODEProblem(ssys, [collect(joint.w_rel_b .=> randn(3)); ], (0, 10))
+
+using OrdinaryDiffEq
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+doplot() && plot(sol)
+# end

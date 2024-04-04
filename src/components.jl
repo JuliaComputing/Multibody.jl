@@ -222,6 +222,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phid0 = zeros(3),
               r_0 = 0,
               radius = 0.05,
+              v_0 = 0,
+              w_a = 0,
               air_resistance = 0.0,
               color = [1,0,0,1],
               quat=false,)
@@ -229,7 +231,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3] [guess = 0, 
+    @variables v_0(t)[1:3]=v_0 [guess = 0, 
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
@@ -238,7 +240,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
-    @variables w_a(t)[1:3] [guess = 0, 
+    @variables w_a(t)[1:3]=w_a [guess = 0, 
         state_priority = 2,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
@@ -275,11 +277,6 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         if quat
             @named frame_a = Frame(varw = true)
             Ra = ori(frame_a, true)
-            # @variables q(t)[1:4] = [0.0,0,0,1.0]
-            # @variables qw(t)[1:3] = [0.0,0,0]
-            # q = collect(q)
-            # qw = collect(qw)
-            # Q = Quaternion(q, qw)
             @named Q = NumQuaternion(varw=true) 
             ar = from_Q(Q, angular_velocity2(Q, D.(Q.Q)))
             Equation[

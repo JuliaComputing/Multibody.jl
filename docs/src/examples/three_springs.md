@@ -20,14 +20,13 @@ world = Multibody.world
 
 systems = @named begin
     body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
-                 r_cm = [0, -0.2, 0], isroot = false)
+                 r_cm = [0, -0.2, 0], isroot=true, useQuaternions=true)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0, 0, 0.3])
     spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1,
                                r_rel_0 = [-0.2, -0.2, 0.2])
-    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1,
-                               fixed_rotation_at_frame_a = true, fixed_rotation_at_frame_b = true)
-    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1)
+    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1)
+    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, fixedRotationAtFrame_b=true)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
        connect(world.frame_b, bar2.frame_a)
@@ -39,15 +38,13 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [
-    D.(spring3.lineforce.r_rel_0) .=> 0;
-    collect(body1.v_0) .=> 0;
-], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
-sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
+sol = solve(prob, FBDF(), u0=prob.u0 .+ 1e-9*randn(length(prob.u0)))
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = [body1.r_0...])
+Plots.plot(sol, idxs = ori(body1.frame_a).R[1])
 ```
 
 ## 3D animation

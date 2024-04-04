@@ -681,7 +681,8 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `v_rel_a`
 - `a_rel_a`
 """
-@component function FreeMotion(; name, state = true, sequence = [1, 2, 3], isroot = true,
+@component function FreeMotion(; name, enforceState = true, sequence = [1, 2, 3], isroot = true,
+                    useQuaternions = false,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
                     phi_d = 0,
                     phi_dd = 0,
@@ -740,11 +741,20 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                      ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)])
         end
 
-        append!(eqs,
-                [phi_d .~ D.(phi)
-                 phi_dd .~ D.(phi_d)
-                 R_rel ~ axes_rotations(sequence, phi, phi_d)
-                 w_rel_b .~ angular_velocity2(R_rel)])
+        if useQuaternions
+            @named Q = NumQuaternion(varw=false) 
+            append!(eqs, [
+                w_rel_b .~ angular_velocity2(Q, D.(Q.Q))
+                R_rel ~ from_Q(Q, w_rel_b)
+                0 ~ orientation_constraint(Q)
+            ])
+        else
+            append!(eqs,
+                    [phi_d .~ D.(phi)
+                    phi_dd .~ D.(phi_d)
+                    R_rel ~ axes_rotations(sequence, phi, phi_d)
+                    w_rel_b .~ angular_velocity2(R_rel)])
+        end
 
     else
         # Free motion joint does not have state
