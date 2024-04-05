@@ -31,6 +31,14 @@ function get_systemtype(sys)
     eval(meta.type)
 end
 
+function get_color(sys, sol, default)
+    try
+        Makie.RGBA(sol(sol.t[1], idxs=collect(sys.color))...)
+    catch
+        default
+    end
+end
+
 
 function default_scene(x,y,z,R; F = false)
     if string(Makie.current_backend()) == "CairoMakie"
@@ -113,6 +121,8 @@ end
 render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
 
 function render!(scene, ::typeof(Body), sys, sol, t)
+    color = get_color(sys, sol, :purple)
+
     r_cmv = collect(sys.r_cm)
     thing = @lift begin # Sphere
         r_cm = sol($t, idxs=r_cmv)
@@ -126,7 +136,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
         end
         Sphere(point, Float32(radius))
     end
-    mesh!(scene, thing, color=:purple)
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
 
     iszero(sol(0.0, idxs=r_cmv)) && (return true)
 
@@ -150,7 +160,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
         radius = 0.05f0
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing, color=:purple)
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 
@@ -185,6 +195,7 @@ function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConst
     # TODO: change to cylinder
     r_0 = collect(sys.frame_a.r_0)
     n = collect(sys.n)
+    color = get_color(sys, sol, :red)
     thing = @lift begin
         # radius = sol($t, idxs=sys.radius)
         O = sol($t, idxs=r_0)
@@ -200,7 +211,7 @@ function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConst
         p2 = Point3f(O - radius*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)
     end
-    mesh!(scene, thing, color=:red, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 
@@ -219,6 +230,7 @@ render!(scene, ::typeof(FreeMotion), sys, sol, t) = true
 
 
 function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
+    color = get_color(sys, sol, :purple)
     r_0a = collect(sys.frame_a.r_0)
     r_0b = collect(sys.frame_b.r_0)
     thing = @lift begin
@@ -229,7 +241,7 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing, color=:purple)
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 
