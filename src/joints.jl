@@ -696,13 +696,13 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     end
     @variables begin
         (phi(t)[1:3] = phi),
-        [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-        (phi_d(t)[1:3] = phi_d), [state_priority = 10, description = "Derivatives of phi"]
+        [state_priority = 4, description = "3 angles to rotate frame_a into frame_b"]
+        (phi_d(t)[1:3] = phi_d), [state_priority = 4, description = "Derivatives of phi"]
         (phi_dd(t)[1:3] = phi_dd),
-        [state_priority = 10, description = "Second derivatives of phi"]
+        [state_priority = 4, description = "Second derivatives of phi"]
         (w_rel_b(t)[1:3] = w_rel_b),
         [
-            state_priority = 10,
+            state_priority = useQuaternions ? 4.0 : 1.0,
             description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
         ]
         (r_rel_a(t)[1:3] = r_rel_a),
@@ -746,6 +746,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
             append!(eqs, [
                 w_rel_b .~ angular_velocity2(Q, D.(Q.Q))
                 R_rel ~ from_Q(Q, w_rel_b)
+                # R_rel.w .~ w_rel_b # Needed? If not included, w_rel_b has no effect. To include, use R_rel = NumRotationMatrix(varw=true), but this yeilds the same numer of state variables
                 0 ~ orientation_constraint(Q)
             ])
         else

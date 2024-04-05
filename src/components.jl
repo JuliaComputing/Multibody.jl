@@ -283,8 +283,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
                 0 ~ orientation_constraint(Q)
                 Ra ~ ar
                 Ra.w .~ ar.w
-                Q.w .~ ar.w
-                collect(w_a .~ Ra.w)
+                Q.w .~ ar.w # These should not be needed
+                collect(w_a .~ Ra.w) # These should not be needed
             ]
         else
             @named frame_a = Frame(varw = true)
