@@ -81,11 +81,11 @@ end
                      description = "Axis of rotation = axis of support torque (resolved in frame_a)",
                  ]
     end
-    @variables begin (housing_tau(t)[1:3] = 0), [
+    @variables begin (housing_tau(t)[1:3]), [
                          description = "Torque",
                      ] end
-    eqs = [collect(housing_tau) .~ collect(-n * flange_b.tau)
-           flange_b.phi .~ phi0
+    eqs = [(collect(housing_tau) .~ collect(-n * flange_b.tau));
+           (flange_b.phi ~ phi0);
            connect(housing_frame_a, frame_a)]
     compose(ODESystem(eqs, t; name), systems...)
 end
@@ -113,7 +113,7 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
     taub = frame_b.tau |> collect
     eqs = Equation[(collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r))
                    (ori(frame_b) ~ ori(frame_a))
-                   (0 .~ fa + fb)
+                   collect(0 .~ fa + fb)
                    (0 .~ taua + taub + cross(r, fb))]
     pars = [r; radius]
     vars = []
@@ -136,10 +136,10 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r(t)[1:3]=r [
+    @parameters r[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
-    @parameters n(t)[1:3]=n [
+    @parameters n[1:3]=n [
         description = "axis of rotation, resolved in frame_a",
     ]
     # @parameters n_x(t)=n_x [

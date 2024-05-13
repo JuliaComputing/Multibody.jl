@@ -200,7 +200,7 @@ u = cm.axis2.controller.PI.ctr_output.u
 
 @testset "one axis" begin
     @info "Testing one axis"
-    @named oneaxis = RobotAxis(trivial=false)
+    @named oneaxis = RobotAxis(trivial=true)
     oneaxis = complete(oneaxis)
     op = Dict([
         oneaxis.axis.flange.phi => 0
@@ -212,6 +212,7 @@ u = cm.axis2.controller.PI.ctr_output.u
         oneaxis.axis.controller.PI.gainPI.k => 1
         oneaxis.axis.controller.P.k => 10
         oneaxis.load.J => 1.3*15
+        oneaxis.load.phi => 0
     ])
     # matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
 
@@ -222,20 +223,20 @@ u = cm.axis2.controller.PI.ctr_output.u
     # bodeplot(S)
 
 
-    # ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: IRSystem does not handle the DataInterpolations.CubicSpline
-    ssys = structural_simplify(oneaxis)
+    ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: IRSystem does not handle the DataInterpolations.CubicSpline
+    # ssys = structural_simplify(oneaxis)
     # cm = oneaxis
     # prob = ODEProblem(ssys, [
     #     cm.axis.flange.phi => 0
     #     D(cm.axis.flange.phi) => 0
     # ], (0.0, 5.0))
 
-    zdd = ModelingToolkit.missing_variable_defaults(ssys); op = merge(Dict(zdd), op)
+    zdd = ModelingToolkit.missing_variable_defaults(oneaxis); op = merge(Dict(zdd), op)
 
     prob = ODEProblem(ssys, collect(op), (0.0, 10),)
     sol = solve(prob, Rodas4());
     if doplot()
-        plot(sol, layout=length(states(ssys)), size=(1900, 1200))
+        plot(sol, layout=length(unknowns(ssys)), size=(1900, 1200))
         plot!(sol, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref)
         display(current())
     end
