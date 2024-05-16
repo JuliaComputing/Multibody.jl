@@ -250,7 +250,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     I = [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]
 
-    r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
+    # r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
 
     # DRa = D(Ra)
 
@@ -272,25 +272,25 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
                 Ra ~ ar
                 Ra.w .~ ar.w
                 Q.w .~ ar.w
-                collect(w_a .~ Ra.w)
+                w_a ~ Ra.w
             ]
         else
             @named frame_a = Frame(varw = true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
-            phi, phid, phidd = collect.((phi, phid, phidd))
+            # phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axesRotations([1, 2, 3], phi, phid)
 
             Ra = ori(frame_a, true)
 
             Equation[
                     # 0 .~ orientation_constraint(Ra); 
-                    phid .~ D.(phi)
-                    phidd .~ D.(phid)
+                    phid ~ D(phi)
+                    phidd ~ D(phid)
                     Ra ~ ar
                     Ra.w .~ ar.w
-                    collect(w_a .~ Ra.w)]
+                    w_a ~ Ra.w]
         end
     else
         @named frame_a = Frame()
@@ -299,19 +299,19 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         Equation[
                  # collect(w_a .~ DRa.w); # angularVelocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
                  # vec(DRa.R .~ 0)
-                 collect(w_a .~ angularVelocity2(Ra));]
+                 w_a ~ angularVelocity2(Ra);]
     end
 
     eqs = [eqs;
-           # collect(w_a .~ get_w(Ra));
-           collect(r_0 .~ frame_a.r_0)
-           collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
-           collect(v_0 .~ D.(r_0))
-           collect(a_0 .~ D.(v_0))
-           collect(z_a .~ D.(w_a))
-           collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
+           # (w_a .~ get_w(Ra));
+           (r_0 ~ frame_a.r_0)
+           (g_0 ~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
+           (v_0 ~ D(r_0))
+           (a_0 ~ D(v_0))
+           (z_a ~ D(w_a))
+           (frame_a.f ~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
                                  cross(w_a, cross(w_a, r_cm))))
-           collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
+           (frame_a.tau ~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
     
