@@ -81,11 +81,11 @@ end
                      description = "Axis of rotation = axis of support torque (resolved in frame_a)",
                  ]
     end
-    @variables begin (housing_tau(t)[1:3] = 0), [
+    @variables begin (housing_tau(t)[1:3]), [
                          description = "Torque",
                      ] end
-    eqs = [collect(housing_tau) .~ collect(-n * flange_b.tau)
-           flange_b.phi .~ phi0
+    eqs = [(collect(housing_tau) .~ collect(-n * flange_b.tau));
+           (flange_b.phi ~ phi0);
            connect(housing_frame_a, frame_a)]
     compose(ODESystem(eqs, t; name), systems...)
 end
@@ -100,9 +100,10 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
 @component function FixedTranslation(; name, r, radius=0.08f0)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r(t)[1:3]=r [
+    @parameters r[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
+    r = collect(r)
     @parameters radius=radius [
         description = "Radius of the body in animations",
     ]
@@ -110,10 +111,10 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
     fb = frame_b.f |> collect
     taua = frame_a.tau |> collect
     taub = frame_b.tau |> collect
-    eqs = Equation[collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r)
-                   ori(frame_b) ~ ori(frame_a)
-                   0 .~ fa + fb
-                   0 .~ taua + taub + cross(r, fb)]
+    eqs = Equation[(collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r))
+                   (ori(frame_b) ~ ori(frame_a))
+                   collect(0 .~ fa + fb)
+                   (0 .~ taua + taub + cross(r, fb))]
     pars = [r; radius]
     vars = []
     compose(ODESystem(eqs, t, vars, pars; name), frame_a, frame_b)
@@ -135,10 +136,10 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r(t)[1:3]=r [
+    @parameters r[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
-    @parameters n(t)[1:3]=n [
+    @parameters n[1:3]=n [
         description = "axis of rotation, resolved in frame_a",
     ]
     # @parameters n_x(t)=n_x [
@@ -150,6 +151,9 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     @parameters angle(t)=angle [
         description = "angle of rotation in radians",
     ]
+
+    pars = [r; n; angle]
+
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
     taua = frame_a.tau |> collect
@@ -160,20 +164,20 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     if isroot
         R_rel = planar_rotation(n, angle, 0)
         eqs = [ori(frame_b) ~ absoluteRotation(frame_a, R_rel);
-               zeros(3) .~ fa + resolve1(R_rel, fb);
-               zeros(3) .~ taua + resolve1(R_rel, taub) - cross(r,
+               zeros(3) ~ fa + resolve1(R_rel, fb);
+               zeros(3) ~ taua + resolve1(R_rel, taub) - cross(r,
                                                                 fa)]
     else
         R_rel_inv = planar_rotation(n, -angle, 0)
         eqs = [ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv);
-               zeros(3) .~ fb + resolve1(R_rel_inv, fa);
-               zeros(3) .~ taub + resolve1(R_rel_inv, taua) +
+               zeros(3) ~ fb + resolve1(R_rel_inv, fa);
+               zeros(3) ~ taub + resolve1(R_rel_inv, taua) +
                            cross(resolve1(R_rel_inv, r), fb)]
     end
     eqs = collect(eqs)
     append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))
 
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    compose(ODESystem(eqs, t, [], pars; name), frame_a, frame_b)
 end
 
 """
@@ -211,20 +215,20 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3]=0 [
+    @variables v_0(t)[1:3] [guess = 0, 
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
-    @variables a_0(t)[1:3]=0 [
+    @variables a_0(t)[1:3] [guess = 0, 
         state_priority = 2,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
-    @variables g_0(t)[1:3]=0 [description = "gravity acceleration"]
-    @variables w_a(t)[1:3]=0 [
+    @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
+    @variables w_a(t)[1:3] [guess = 0, 
         state_priority = 2,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
-    @variables z_a(t)[1:3]=0 [
+    @variables z_a(t)[1:3] [guess = 0, 
         description = "Absolute angular acceleration of frame_a resolved in frame_a",
     ]
     # 6*3 potential variables + Frame: 2*3 flow + 3 potential + 3 residual = 24 equations + 2*3 flow
@@ -246,7 +250,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     I = [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]
 
-    r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
+    # r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
 
     # DRa = D(Ra)
 
@@ -268,25 +272,25 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
                 Ra ~ ar
                 Ra.w .~ ar.w
                 Q.w .~ ar.w
-                collect(w_a .~ Ra.w)
+                w_a ~ Ra.w
             ]
         else
             @named frame_a = Frame(varw = true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
-            phi, phid, phidd = collect.((phi, phid, phidd))
+            # phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axesRotations([1, 2, 3], phi, phid)
 
             Ra = ori(frame_a, true)
 
             Equation[
                     # 0 .~ orientation_constraint(Ra); 
-                    phid .~ D.(phi)
-                    phidd .~ D.(phid)
+                    phid ~ D(phi)
+                    phidd ~ D(phid)
                     Ra ~ ar
                     Ra.w .~ ar.w
-                    collect(w_a .~ Ra.w)]
+                    w_a ~ Ra.w]
         end
     else
         @named frame_a = Frame()
@@ -295,19 +299,19 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         Equation[
                  # collect(w_a .~ DRa.w); # angularVelocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
                  # vec(DRa.R .~ 0)
-                 collect(w_a .~ angularVelocity2(Ra));]
+                 w_a ~ angularVelocity2(Ra);]
     end
 
     eqs = [eqs;
-           # collect(w_a .~ get_w(Ra));
-           collect(r_0 .~ frame_a.r_0)
-           collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
-           collect(v_0 .~ D.(r_0))
-           collect(a_0 .~ D.(v_0))
-           collect(z_a .~ D.(w_a))
-           collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
+           # (w_a .~ get_w(Ra));
+           (r_0 ~ frame_a.r_0)
+           (g_0 ~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
+           (v_0 ~ D(r_0))
+           (a_0 ~ D(v_0))
+           (z_a ~ D(w_a))
+           (frame_a.f ~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
                                  cross(w_a, cross(w_a, r_cm))))
-           collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
+           (frame_a.tau ~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
     
@@ -335,11 +339,11 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3]=0 [
+    @variables v_0(t)[1:3] [ guess=0,
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
-    @variables a_0(t)[1:3]=0 [
+    @variables a_0(t)[1:3] [ guess=0,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @parameters begin

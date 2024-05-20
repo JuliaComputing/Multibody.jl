@@ -57,13 +57,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys,
-                  [D.(body1.phi) .=> 0;
-                   D.(D.(body1.phi)) .=> 0;
-                   D.(body1.phid) .=> 0;
-                   D(p2.s) => 0;
-                   D(D(p2.s)) => 0;
-                   damper1.d => 2], (0, 10))
+prob = ODEProblem(ssys, [damper1.d => 2], (0, 10))
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)

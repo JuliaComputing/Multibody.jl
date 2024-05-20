@@ -30,6 +30,8 @@ prob = ODEProblem(ssys, [
     D.(freeMotion.phi) .=> randn();
     D.(D.(freeMotion.phi)) .=> randn();
     D.(body.w_a) .=> randn();
+    collect(body.w_a .=> 0);
+    collect(body.v_0 .=> 0);
 ], (0, 10))
 
 sol = solve(prob, Rodas4())
@@ -73,7 +75,10 @@ eqs = [connect(bar2.frame_a, world.frame_b)
                              spring2,
                          ])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [], (0, 10))
+prob = ODEProblem(ssys, [
+    collect(body.body.v_0 .=> 0);
+    collect(body.body.w_a .=> 0);
+], (0, 10))
 
 sol = solve(prob, Rodas5P())
 @assert SciMLBase.successful_retcode(sol)

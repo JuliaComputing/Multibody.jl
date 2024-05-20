@@ -1,6 +1,6 @@
 using Rotations
 
-_norm(x) = sqrt(sum(abs2.(x)))
+_norm(x) = sqrt(sum(abs2(x) for x in x)) # Workaround for buggy symbolic arrays
 _normalize(x) = x ./ _norm(x)
 
 const R3{T} = RotMatrix{3, T}

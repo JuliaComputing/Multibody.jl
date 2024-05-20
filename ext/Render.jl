@@ -7,15 +7,20 @@ using LinearAlgebra
 using ModelingToolkit
 export render
 
+
+function get_rot(sol, frame, t)
+    reshape(sol(t, idxs = vec(ori(frame).R.mat)), 3, 3)
+end
+
 """
     get_frame(sol, frame, t)
 
 Extract a 4×4 transformation matrix ∈ SE(3) from a solution at time `t`.
 """
 function get_frame(sol, frame, t)
-    R = reshape(sol(t, idxs = vec(ori(frame).R.mat)), 3, 3)
-    t = sol(t, idxs = collect(frame.r_0))
-    [R' t; 0 0 0 1]
+    R = get_rot(sol, frame, t)
+    tr = sol(t, idxs = collect(frame.r_0))
+    [R' tr; 0 0 0 1]
 end
 
 
@@ -101,8 +106,9 @@ end
 render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
 
 function render!(scene, ::typeof(Body), sys, sol, t)
+    r_cm = collect(sys.r_cm)
     thing = @lift begin # Sphere
-        r_cm = sol($t, idxs=collect(sys.r_cm))
+        r_cm = sol($t, idxs=r_cm)
         Ta = get_frame(sol, sys.frame_a, $t)
         coords = (Ta*[r_cm; 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
         point = Point3f(coords)
@@ -115,13 +121,12 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     end
     mesh!(scene, thing, color=:purple)
 
-    r_cm = sol(0.0, idxs=collect(sys.r_cm))
-    iszero(r_cm) && (return true)
+    iszero(sol(0.0, idxs=collect(r_cm))) && (return true)
 
     thing = @lift begin # Cylinder
         Ta = get_frame(sol, sys.frame_a, $t)
                
-        r_cm = sol($t, idxs=collect(sys.r_cm)) # r_cm is the center of the sphere in frame a
+        r_cm = sol($t, idxs=r_cm) # r_cm is the center of the sphere in frame a
         iszero(r_cm)
         coords = (Ta*[r_cm; 1])[1:3]
         point = Point3f(coords) # Sphere center in world coords
@@ -144,22 +149,24 @@ end
 
 function render!(scene, ::typeof(World), sys, sol, t)
     radius = 0.01f0
+    r_0 = collect(sys.frame_b.r_0)
+
     thing = @lift begin
-        O = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        O = Point3f(sol($t, idxs=r_0))
         x = O .+ Point3f(1,0,0)
         Makie.GeometryBasics.Cylinder(O, x, radius)
     end
     mesh!(scene, thing, color=:red)
 
     thing = @lift begin
-        O = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        O = Point3f(sol($t, idxs=r_0))
         y = O .+ Point3f(0,1,0)
         Makie.GeometryBasics.Cylinder(O, y, radius)
     end
     mesh!(scene, thing, color=:green)
 
     thing = @lift begin
-        O = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        O = Point3f(sol($t, idxs=r_0))
         z = O .+ Point3f(0,0,1)
         Makie.GeometryBasics.Cylinder(O, z, radius)
     end
@@ -167,19 +174,21 @@ function render!(scene, ::typeof(World), sys, sol, t)
     true
 end
 
-function render!(scene, ::typeof(Revolute), sys, sol, t)
+function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)
     # TODO: change to cylinder
+    r_0 = collect(sys.frame_a.r_0)
+    n = collect(sys.n)
     thing = @lift begin
         # radius = sol($t, idxs=sys.radius)
-        O = sol($t, idxs=collect(sys.frame_a.r_0))
-        n_a = sol($t, idxs=collect(sys.n))
-        R_w_a = get_frame(sol, sys.frame_a, $t)[1:3, 1:3]
-        n_w = R_w_a*n_a # Rotate to the world frame
+        O = sol($t, idxs=r_0)
+        n_a = sol($t, idxs=n)
+        R_w_a = get_rot(sol, sys.frame_a, $t)
+        n_w = R_w_a'*n_a # Rotate to the world frame
         radius = try
             sol($t, idxs=sys.radius)
         catch
-            0.02f0
-        end
+            0.05f0
+        end |> Float32
         p1 = Point3f(O + radius*n_w)
         p2 = Point3f(O - radius*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)
@@ -189,8 +198,8 @@ function render!(scene, ::typeof(Revolute), sys, sol, t)
 end
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
+    vars = collect(sys.frame_a.r_0)
     thing = @lift begin
-        vars = collect(sys.frame_a.r_0)
         coords = sol($t, idxs=vars)
         point = Point3f(coords)
         Sphere(point, 0.1)
@@ -203,9 +212,11 @@ render!(scene, ::typeof(FreeMotion), sys, sol, t) = true
 
 
 function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
+    r_0a = collect(sys.frame_a.r_0)
+    r_0b = collect(sys.frame_b.r_0)
     thing = @lift begin
-        r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
-        r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        r1 = Point3f(sol($t, idxs=r_0a))
+        r2 = Point3f(sol($t, idxs=r_0b))
         origin = r1#(r1+r2) ./ 2
         extremity = r2#-r1 # Double pendulum is a good test for this
         radius = Float32(sol($t, idxs=sys.radius))
@@ -216,9 +227,11 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
 end
 
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
+    r_0a = collect(sys.frame_a.r_0)
+    r_0b = collect(sys.frame_b.r_0)
     thing = @lift begin
-        r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
-        r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        r1 = Point3f(sol($t, idxs=r_0a))
+        r2 = Point3f(sol($t, idxs=r_0b))
         origin = r1
         extremity = r2
         radius = Float32(sol($t, idxs=sys.radius))
@@ -244,9 +257,11 @@ end
 
 
 function render!(scene, ::typeof(Damper), sys, sol, t)
+    r_0a = collect(sys.frame_a.r_0)
+    r_0b = collect(sys.frame_b.r_0)
     thing = @lift begin
-        r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
-        r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        r1 = Point3f(sol($t, idxs=r_0a))
+        r2 = Point3f(sol($t, idxs=r_0b))
         origin = r1
         d = r2 - r1
         extremity = d / norm(d) * 0.2f0 + r1 
@@ -259,9 +274,11 @@ end
 
 
 function render!(scene, ::typeof(Spring), sys, sol, t)
+    r_0a = collect(sys.frame_a.r_0)
+    r_0b = collect(sys.frame_b.r_0)
     thing = @lift begin
-        r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
-        r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+        r1 = Point3f(sol($t, idxs=r_0a))
+        r2 = Point3f(sol($t, idxs=r_0b))
         spring_mesh(r1,r2)
     end
     plot!(scene, thing, color=:blue)
@@ -271,10 +288,12 @@ end
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
     count(ModelingToolkit.isframe, sys.systems) == 2 || return false
+    r_0a = collect(sys.frame_a.r_0)
+    r_0b = collect(sys.frame_b.r_0)
     try
         thing = @lift begin
-            r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
-            r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
+            r1 = Point3f(sol($t, idxs=r_0a))
+            r2 = Point3f(sol($t, idxs=r_0b))
             origin = r1
             extremity = r2
             radius = 0.05f0

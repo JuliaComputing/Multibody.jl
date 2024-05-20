@@ -14,7 +14,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
-                  isroot = true, iscut = false, radius = 0.1, state_priority = 3.0)
+                  isroot = true, iscut = false, radius = 0.05, state_priority = 3.0)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -35,6 +35,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
     n = collect(n)
 
     if iscut
+        # NOTE: only equations for isroot=false available here
         eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
             residue(ori(frame_a), absoluteRotation(ori(frame_b), Rrel)) .~ 0 # If joint is a cut joint, this equation is replaced
                 collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
@@ -56,7 +57,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
                D(phi) ~ w
                tau ~ -collect(frame_b.tau)'n]
     append!(eqs, moreeqs)
-    if useAxisFlange
+    sys = if useAxisFlange
         # @named internalAxis = Rotational.InternalSupport(tau=tau)
         @named fixed = Rotational.Fixed()
 
@@ -67,14 +68,15 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
         push!(eqs, axis.phi ~ phi)
         push!(eqs, axis.tau ~ tau)
         # push!(eqs, connect(internalAxis.flange, axis))
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
+        ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b, axis, support, fixed])
     else
         # Modelica Revolute uses a ConstantTorque as well as internalAxis = Rotational.InternalSupport(tau=tau), but it seemed more complicated than required and I couldn't get it to work, likely due to the `input` semantics of modelica not having an equivalent in MTK, so the (tau=tau) input argument caused problems.
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         push!(eqs, tau ~ 0)
-        compose(ODESystem(eqs, t; name), frame_a, frame_b)
+        ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b])
     end
+    extend(ODESystem(Equation[], t, [], [radius]; name), sys)
 end
 
 """
@@ -747,11 +749,13 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     nnx_a = ifelse(abs(n[1]) > 0.1, [0,1,0], ifelse(abs(n[2]) > 0.1, [0,0,1], [1,0,0])) 
     ey_a = normalize(cross(n, nnx_a)) 
     ex_a = cross(ey_a, n) 
-
-
+    
+    
     @variables r_rel_a(t)[1:3] [description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a"]
     @variables f_c(t)[1:2] [description = "Dummy or constraint forces in direction of ex_a, ey_a"]
-
+    n0 = n
+    @variables n(t)[1:3]
+    
 
     # @named R_rel = NumRotationMatrix()
 
@@ -776,9 +780,9 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         collect(frame_b.tau) .~ zeros(3)
         collect(frame_a.f) .~ vec([ex_a ey_a]*f_c)
         collect(frame_b.f) .~ -resolve2(R_rel, frame_a.f)
-
+        collect(n) .~ n0
     ]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    ODESystem(eqs, t; name, systems=[frame_a, frame_b])
 end
 
 LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)
