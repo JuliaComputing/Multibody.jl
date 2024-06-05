@@ -700,9 +700,7 @@ version = "0.1.0"
 
 [[deps.JuliaSimCompiler]]
 deps = ["AbstractTrees", "ChainRules", "ConstructionBase", "DataStructures", "DiffEqCallbacks", "DocStringExtensions", "Expronicon", "ForwardDiff", "GPUCompiler", "Graphs", "IfElse", "JuliaFormatter", "JuliaSimBase", "JuliaSimCompilerRuntime", "LLVM", "Libdl", "LinearAlgebra", "ModelingToolkit", "NaNMath", "OffsetArrays", "RuntimeGeneratedFunctions", "SciMLBase", "Setfield", "SnoopPrecompile", "SparseArrays", "SparseDiffTools", "SpecialFunctions", "StaticArrays", "StrideArraysCore", "SymbolicIndexingInterface", "SymbolicUtils", "Symbolics", "UnPack"]
-git-tree-sha1 = "e948d4218b8860e7c980d4738806ae2a8df3cbbc"
-repo-rev = "master"
-repo-url = "https://github.com/JuliaComputing/JuliaSimCompiler.jl.git"
+path = "/home/fredrikb/.julia/dev/JuliaSimCompiler"
 uuid = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
 version = "0.1.11"
 

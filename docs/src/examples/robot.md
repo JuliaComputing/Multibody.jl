@@ -12,7 +12,7 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-@named robot = Multibody.Robot6DOF(trivial=true)
+@named robot = Multibody.Robot6DOF(trivial=false)
 robot = complete(robot)
 
 length(equations(robot))
@@ -68,17 +68,17 @@ plot!(sol, idxs = [
 ], sp=7:12, lab="Position error", link=:x)
 plot!(xlabel=[fill("", 1, 9) fill("Time [s]", 1, 3)])
 ```
-We see that after an initial transient, the robot controller converges to tracking the reference trajectory well. However, since the first three axes of the robot are modeled as slightly flexible, and we are ultimately interested in the tracking performance _after_ the gear box, we plot also this tracking error
+We see that after an initial transient, the robot controller converges to tracking the reference trajectory well. However, since the first three axes of the robot are modeled as slightly flexible, and we are ultimately interested in the tracking performance _after_ the gear box and any flexibilities it may suffer from, we plot also this tracking error
 ```@example robot
 plot(sol, idxs = [
-    robot.axis1.controller.feedback1.output.u
-    robot.axis2.controller.feedback1.output.u
-    robot.axis3.controller.feedback1.output.u
+    robot.axis1.controller.feedback1.output.u #/ ( -105)
+    robot.axis2.controller.feedback1.output.u #/ (210)
+    robot.axis3.controller.feedback1.output.u #/ (60)
 ], layout=(1,3), lab="Position error, motor side", link=:x)
 plot!(sol, idxs = [
-            robot.pathPlanning.controlBus.axisControlBus1.angle_ref - robot.axis1.motor.Jmotor.phi / ( -105)
-            robot.pathPlanning.controlBus.axisControlBus2.angle_ref - robot.axis2.motor.Jmotor.phi / (210)
-            robot.pathPlanning.controlBus.axisControlBus3.angle_ref - robot.axis3.motor.Jmotor.phi / (60)
+            robot.pathPlanning.controlBus.axisControlBus1.angle_ref - robot.mechanics.r1.phi #
+            robot.pathPlanning.controlBus.axisControlBus2.angle_ref - robot.mechanics.r2.phi #
+            robot.pathPlanning.controlBus.axisControlBus3.angle_ref - robot.mechanics.r3.phi #
 ], lab="Position error, arm side")
 ```
 
