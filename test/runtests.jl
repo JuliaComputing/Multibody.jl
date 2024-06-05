@@ -873,53 +873,56 @@ end
 
 # Stiff rope
 world = Multibody.world
-@named rope = Multibody.Rope(l = 1, m = 1, n=12, c=0, d=0)
+number_of_links = 6
+@named rope = Multibody.Rope(l = 1, m = 1, n=number_of_links, c=0, d=0)
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, body, rope])
+@named stiff_rope = ODESystem(connections, t, systems = [world, body, rope])
 # ssys = structural_simplify(model, allow_parameter = false)
 
-ssys = structural_simplify(IRSystem(model))
+@time "Simplify stiff rope pendulum" ssys = structural_simplify(IRSystem(stiff_rope))
 
 D = Differential(t)
 prob = ODEProblem(ssys, [
-    # D.(D.(collect(rope.r))) .=> 0;
-    body.r_0 .=> [1,1,1]
+    collect(body.r_0) .=> [1,1,1];
+    collect(body.w_a) .=> [1,1,1]
 ], (0, 3))
-@time "Rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
+@time "Stiff rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
 @test SciMLBase.successful_retcode(sol)
 
 if false
     import GLMakie
-    render(model, sol)
+    render(stiff_rope, sol) # Takes very long time for n>=5
 end
 
 
 
 ## Flexible rope
 world = Multibody.world
-@named rope = Multibody.Rope(l = 1, m = 1, n=5, c=1000.0, d=10)
+number_of_links = 6
+@named rope = Multibody.Rope(l = 1, m = 1, n=number_of_links, c=1000.0, d=10)
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, body, rope])
+@named flexible_rope = ODESystem(connections, t, systems = [world, body, rope])
 # ssys = structural_simplify(model, allow_parameter = false)
 
-ssys = structural_simplify(IRSystem(model))
-
-##
-
+@time "Simplify flexible rope pendulum" ssys = structural_simplify(IRSystem(flexible_rope))
 D = Differential(t)
 prob = ODEProblem(ssys, [
     # D.(D.(collect(rope.r))) .=> 0;
-    body.r_0 .=> [1,1,1]
+    collect(body.r_0) .=> [1,1,1];
+    collect(body.w_a) .=> [1,1,1]
 ], (0, 10))
-@time "Rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
+@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
 @test SciMLBase.successful_retcode(sol)
-
+if false
+    import GLMakie
+    render(flexible_rope, sol) # Takes very long time for n>=5
+end
 
