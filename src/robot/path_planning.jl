@@ -1,5 +1,8 @@
 using DataInterpolations
 using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
+
+include("ptp.jl")
+
 "Generate reference angles for specified kinematic movement"
 function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:10,
                        swingTime = 0.5, kwargs...)
