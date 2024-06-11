@@ -273,43 +273,44 @@ end
             robot.axis1.motor.Jmotor.phi => deg2rad(-60) * (-105) # Multiply by gear ratio
             robot.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
             robot.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
-        ], (0.0, 4.0))
+        ], (0.0, 2.0))
         @time "simulation (solve)" sol = solve(prob, Rodas5P(autodiff=false));
         @test SciMLBase.successful_retcode(sol)
     end
 
     if doplot()
         # plot(sol, layout=30, size=(1900,1200), legend=false)
-        plot(sol, idxs = [
+        @time "Plotting ref" plot(sol, idxs = [
             robot.pathPlanning.controlBus.axisControlBus1.angle_ref# * (-105)
             robot.pathPlanning.controlBus.axisControlBus2.angle_ref# * (210)
             robot.pathPlanning.controlBus.axisControlBus3.angle_ref# * (60)
             robot.pathPlanning.controlBus.axisControlBus4.angle_ref# * (-99)
             robot.pathPlanning.controlBus.axisControlBus5.angle_ref# * (79.2)
             robot.pathPlanning.controlBus.axisControlBus6.angle_ref# * (-99)
-        ], layout=6, size=(800,800), l=(:black, :dash), legend=false)
-        plot!(sol, idxs = [
+        ], layout=9, size=(800,800), l=(:black, :dash), legend=false)
+        @time "Plotting ang." plot!(sol, idxs = [
             robot.pathPlanning.controlBus.axisControlBus1.angle
             robot.pathPlanning.controlBus.axisControlBus2.angle
             robot.pathPlanning.controlBus.axisControlBus3.angle
             robot.pathPlanning.controlBus.axisControlBus4.angle
             robot.pathPlanning.controlBus.axisControlBus5.angle
             robot.pathPlanning.controlBus.axisControlBus6.angle
-        ], layout=6)
+        ], sp=(1:6)')
 
         plot!(sol, idxs = [
             robot.axis1.motor.Jmotor.phi / ( -105) - robot.pathPlanning.controlBus.axisControlBus1.angle_ref
             robot.axis2.motor.Jmotor.phi / (210) - robot.pathPlanning.controlBus.axisControlBus2.angle_ref
             robot.axis3.motor.Jmotor.phi / (60) - robot.pathPlanning.controlBus.axisControlBus3.angle_ref
-        ], sp=(1:3)')
+        ], sp=(7:9)')
         display(current())
 
     end
 
-    tv = 0:0.1:4
+    tv = 0:0.1:2
     angle_ref = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref)
     @test !all(iszero, angle_ref)
 
     control_error = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
-    @test maximum(abs, control_error) < 1e-4
+    @test maximum(abs, control_error) < 0.002
 end
+

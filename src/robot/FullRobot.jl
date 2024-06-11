@@ -56,8 +56,8 @@ function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, startAngle
     pathPlanning = PathPlanning1(;swingTime = swingTime,
                             angleBegDeg = startAngle,
                             angleEndDeg = endAngle,
-                            #  speedMax = refSpeedMax,
-                            #  accMax = refAccMax
+                             speedMax = refSpeedMax,
+                             accMax = refAccMax,
                             kwargs...
                             )
     controlBus = ControlBus()

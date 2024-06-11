@@ -37,7 +37,7 @@ prob = ODEProblem(ssys, Dict([
     robot.axis1.motor.Jmotor.phi => deg2rad(-60) *  -105 # Multiply by gear ratio
     robot.axis2.motor.Jmotor.phi => deg2rad(20) *  210
     robot.axis3.motor.Jmotor.phi => deg2rad(90) *  60
-]), (0.0, 4.0))
+]), (0.0, 2.0))
 sol = solve(prob, Rodas5P(autodiff=false));
 @test SciMLBase.successful_retcode(sol)
 
@@ -71,9 +71,9 @@ plot!(xlabel=[fill("", 1, 9) fill("Time [s]", 1, 3)])
 We see that after an initial transient, the robot controller converges to tracking the reference trajectory well. However, since the first three axes of the robot are modeled as slightly flexible, and we are ultimately interested in the tracking performance _after_ the gear box and any flexibilities it may suffer from, we plot also this tracking error
 ```@example robot
 plot(sol, idxs = [
-    robot.axis1.controller.feedback1.output.u #/ ( -105)
-    robot.axis2.controller.feedback1.output.u #/ (210)
-    robot.axis3.controller.feedback1.output.u #/ (60)
+    robot.axis1.controller.feedback1.output.u / ( -105)
+    robot.axis2.controller.feedback1.output.u / (210)
+    robot.axis3.controller.feedback1.output.u / (60)
 ], layout=(1,3), lab="Position error, motor side", link=:x)
 plot!(sol, idxs = [
             robot.pathPlanning.controlBus.axisControlBus1.angle_ref - robot.mechanics.r1.phi #
