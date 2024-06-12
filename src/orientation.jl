@@ -273,10 +273,12 @@ orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
 #     2 * Q * q̇
 # end
 
+Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
 function from_Q(Q, w)
-    R = 2*[(Q[1]*Q[1] + Q[4]*Q[4])-1  (Q[1]*Q[2] + Q[3]*Q[4]) (Q[1]*Q[3] - Q[2]*Q[4]);
-    (Q[2]*Q[1] - Q[3]*Q[4])  (Q[2]*Q[2] + Q[4]*Q[4])-1  (Q[2]*Q[3] + Q[1]*Q[4]);
-    (Q[3]*Q[1] + Q[2]*Q[4])  (Q[3]*Q[2] - Q[1]*Q[4])  (Q[3]*Q[3] + Q[4]*Q[4])-1]
+    # TODO: shift Q elements 1,4
+    Q2 = [Q[4], Q[1], Q[2], Q[3]]
+    q = Rotations.QuatRotation(Q2)
+    R = RotMatrix(q)
     RotationMatrix(R, w)
 end
 
@@ -475,4 +477,28 @@ function get_frame(sol, frame, t)
     R = get_rot(sol, frame, t)
     tr = get_trans(sol, frame, t)
     [R tr; 0 0 0 1]
+
+function nonunit_quaternion_equations(R, w)
+    @variables Q(t)[1:4]=[0,0,0,1] # normalized
+    @variables Q̂(t)[1:4]=[0,0,0,1] # Non-normalized
+    @variables n(t)=1 c(t)=0
+    @parameters k = 0.1
+    Q̂ = collect(Q̂)
+    Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
+    P = [
+        0 0 0 1
+        1 0 0 0
+        0 1 0 0
+        0 0 1 0
+    ]
+    Ω = P'Ω*P
+    [
+        n ~ Q̂'Q̂
+        # n ~ _norm(Q̂)^2
+        c ~ k * (1 - n)
+        D.(Q̂) .~ (Ω * Q̂) ./ 2 + c * Q̂
+        Q .~ Q̂ ./ sqrt(n)
+        R ~ from_Q(Q, w)
+        # R.w ~ w
+    ]
 end

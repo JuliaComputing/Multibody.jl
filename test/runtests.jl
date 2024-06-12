@@ -1014,10 +1014,16 @@ tt = 0:0.1:10
 # ==============================================================================
 ## Simple pendulum with quaternions=============================================================
 # ==============================================================================
-using LinearAlgebra, ModelingToolkit
+using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+t = Multibody.t
 # @testset "Simple pendulum" begin
-@named joint = Multibody.FreeMotion(isroot = true, enforceState=true, useQuaternions=true)
-@named body = Body(; m = 1, r_cm = [0.5, 0, 0], isroot=false, useQuaternions=false)
+@named joint = Multibody.FreeMotion(isroot = true, enforceState=false, useQuaternions=true)
+@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, useQuaternions=true, w_a=[1,0.5,0.2])
+
+# @named joint = Multibody.FreeMotion(isroot = true, enforceState=true, useQuaternions=true)
+# @named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=false, w_a=[1,1,1])
+
+world = Multibody.world
 
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -1033,10 +1039,56 @@ ssys = structural_simplify(irsys)
 
 ##
 D = Differential(t)
-prob = ODEProblem(ssys, [collect(joint.w_rel_b .=> randn(3)); ], (0, 10))
+prob = ODEProblem(ssys, [collect(body.w_a) .=> [1,0,0];], (0, 2pi))
 
-using OrdinaryDiffEq
-sol = solve(prob, Rodas4())
+using OrdinaryDiffEq, Test
+sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 0 .* randn.())#, initializealg=ShampineCollocationInit(0.01))
+# sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 1e-12 .* randn.(), dtmin=1e-8, force_dtmin=true)
 @test SciMLBase.successful_retcode(sol)
-doplot() && plot(sol)
+doplot() && plot(sol, layout=13)
 # end
+
+ts = 0:0.1:2pi
+Q = Matrix(sol(ts, idxs = [body.Q...]))
+Qh = Matrix(sol(ts, idxs = [body.Q̂...]))
+n = Matrix(sol(ts, idxs = [body.n...]))
+@test mapslices(norm, Qh, dims=1).^2 ≈ n
+@test Q ≈ Qh ./ sqrt.(n) atol=1e-2
+@test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
+
+
+
+function get_R(frame, t)
+    reshape(sol(t, idxs=vec(ori(frame).R.mat)), 3, 3)
+end
+function get_r(frame, t)
+    sol(t, idxs=collect(frame.r_0))
+end
+
+import Multibody.Rotations.QuatRotation as Quat
+import Multibody.Rotations
+ti = 5
+for (i, ti) in enumerate(ts)
+    R = get_R(body.frame_a, ti)
+    @test norm(R'R - I) < 1e-10
+    @test Multibody.from_Q(Q[:, i], 0).R ≈ R atol=1e-3
+end
+
+
+# Test that rotational velocity of 1 results in one full rotation in 2π seconds. Test rotation around all three major axes
+@test get_R(body.frame_a, 0pi) ≈ I
+@test get_R(body.frame_a, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
+@test get_R(body.frame_a, 2pi) ≈ I atol=1e-3
+
+prob = ODEProblem(ssys, [collect(body.w_a) .=> [0,1,0];], (0, 2pi))
+sol = solve(prob, Rodas4())#, 
+@test get_R(body.frame_a, 0pi) ≈ I
+@test get_R(body.frame_a, 1pi) ≈ diagm([-1, 1, -1]) atol=1e-3
+@test get_R(body.frame_a, 2pi) ≈ I atol=1e-3
+
+
+prob = ODEProblem(ssys, [collect(body.w_a) .=> [0,0,1];], (0, 2pi))
+sol = solve(prob, Rodas4())#, 
+@test get_R(body.frame_a, 0pi) ≈ I
+@test get_R(body.frame_a, 1pi) ≈ diagm([-1, -1, 1]) atol=1e-3
+@test get_R(body.frame_a, 2pi) ≈ I atol=1e-3

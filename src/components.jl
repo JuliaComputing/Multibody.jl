@@ -275,17 +275,9 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     eqs = if isroot # isRoot
         
         if quat
-            @named frame_a = Frame(varw = true)
-            Ra = ori(frame_a, true)
-            @named Q = NumQuaternion(varw=true) 
-            ar = from_Q(Q, angular_velocity2(Q, D.(Q.Q)))
-            Equation[
-                0 ~ orientation_constraint(Q)
-                Ra ~ ar
-                Ra.w .~ ar.w
-                Q.w .~ ar.w # These should not be needed
-                collect(w_a .~ Ra.w) # These should not be needed
-            ]
+            @named frame_a = Frame(varw = false)
+            Ra = ori(frame_a, false)
+            nonunit_quaternion_equations(Ra, w_a);
         else
             @named frame_a = Frame(varw = true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
