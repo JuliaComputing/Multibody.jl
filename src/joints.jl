@@ -155,16 +155,18 @@ The function returns an ODESystem representing the prismatic joint.
 end
 
 """
-    Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates, phi = 0, phi_d = 0, phi_dd = 0)
+    Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates, phi = 0, phi_d = 0, phi_dd = 0, d = 0)
 
 Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential state variables. If parameter `enforceState` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence_angleStates` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as state. If angles are used as state there is the slight disadvantage that a singular configuration is present leading to a division by zero.
 
 - `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `enforceState = true`.
 - `sequence_angleStates`: Rotation sequence
+- `d`: Viscous damping constant. If `d > 0`. the joint dissipates energy due to viscous damping according to ``τ ~ -d*ω``.
 """
 @component function Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3], phi = 0,
                    phi_d = 0,
+                   d = 0,
                    phi_dd = 0)
     @named begin
         ptf = PartialTwoFrames()
@@ -181,9 +183,16 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                      ] end
 
     # torque balance
-    eqs = [zeros(3) .~ collect(frame_a.tau)
-           zeros(3) .~ collect(frame_b.tau)
-           collect(frame_b.r_0) .~ collect(frame_a.r_0)]
+    if d <= 0
+        eqs = [zeros(3) .~ collect(frame_a.tau)
+            zeros(3) .~ collect(frame_b.tau)
+            collect(frame_b.r_0) .~ collect(frame_a.r_0)]
+    else
+        fric = d*w_rel
+        eqs = [-fric .~ collect(frame_a.tau)
+        fric .~ resolve1(R_rel, collect(frame_b.tau))
+        collect(frame_b.r_0) .~ collect(frame_a.r_0)]
+    end
 
     if enforceState
         @variables begin

@@ -212,6 +212,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phid0 = zeros(3),
               r_0 = 0,
               radius = 0.005,
+              air_resistance = 0.0,
               color = [1,0,0,1],
               useQuaternions=false,)
     @variables r_0(t)[1:3]=r_0 [
@@ -313,8 +314,13 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
            collect(v_0 .~ D.(r_0))
            collect(a_0 .~ D.(v_0))
            collect(z_a .~ D.(w_a))
-           collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
-                                 cross(w_a, cross(w_a, r_cm))))
+           if air_resistance > 0
+                collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0 + air_resistance*_norm(v_0)*v_0) + cross(z_a, r_cm) +
+                                        cross(w_a, cross(w_a, r_cm))))
+           else
+                collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
+                                        cross(w_a, cross(w_a, r_cm))))
+           end
            collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
@@ -387,9 +393,16 @@ The rope is modeled as a series of `n` links, each connected by a [`Spherical`](
 - `n`: Number of links used to model the rope. For accurate approximations to continuously flexible ropes, a large number may be required.
 - `m`: The total mass of the rope. Each rope segment will have mass `m / n`.
 - `c`: The equivalent stiffness of the rope, i.e., the rope will act like a spring with stiffness `c`. 
-- `d`: The equivalent damping of the rope, i.e., the rope will act like a damper with damping `d`.
+- `d`: The equivalent damping in the stretching direction of the rope, i.e., the taught rope will act like a damper with damping `d`.
+- `d_joint`: Viscous damping in the joints between the links. A positive value makes the rope dissipate energy while flexing (as opposed to the damping `d` which dissipats energy due to stretching).
+
+## Damping
+There are three different methods of adding damping to the rope:
+- Damping in the stretching direction of the rope, controlled by the parameter `d`.
+- Damping in flexing of the rope, modeled as viscous friction in the joints between the links, controlled by the parameter `d_joint`.
+- Air resistance to the rope moving through the air, controlled by the parameter `air_resistance`. This damping is quadratic in the velocity (``f_d ~ -||v||v``) of each link relative to the world frame.
 """
-function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, kwargs...)
+function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, kwargs...)
 
     @assert n >= 1
     systems = @named begin
@@ -400,7 +413,7 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, kwargs...)
     li = l / n # Segment length
     mi = m / n # Segment mass
 
-    joints = [Spherical(name=Symbol("joint_$i"), isroot=true, enforceState=true) for i = 1:n+1]
+    joints = [Spherical(name=Symbol("joint_$i"), isroot=true, enforceState=true, d = d_joint) for i = 1:n+1]
 
     eqs = [
         connect(frame_a, joints[1].frame_a)
@@ -413,7 +426,7 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, kwargs...)
         di = n * d # Segment damping
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
-        masses = [Body(m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = [0, -li/2, 0]) for i = 1:n]
+        masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = [0, -li/2, 0], air_resistance) for i = 1:n]
         links = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i"), useAxisFlange=true) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
@@ -422,7 +435,7 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, kwargs...)
         end
         links = [links; springs; dampers; masses]
     else
-        links = [BodyShape(m = mi, r = [0, -li, 0], name=Symbol("link_$i"), isroot=false) for i = 1:n]
+        links = [BodyShape(; m = mi, r = [0, -li, 0], name=Symbol("link_$i"), isroot=false, air_resistance) for i = 1:n]
     end
 
 

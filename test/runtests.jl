@@ -874,7 +874,7 @@ end
 # Stiff rope
 world = Multibody.world
 number_of_links = 6
-@named rope = Multibody.Rope(l = 1, m = 1, n=number_of_links, c=0, d=0)
+@named rope = Multibody.Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1)
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 
 connections = [connect(world.frame_b, rope.frame_a)
@@ -889,22 +889,23 @@ D = Differential(t)
 prob = ODEProblem(ssys, [
     collect(body.r_0) .=> [1,1,1];
     collect(body.w_a) .=> [1,1,1]
-], (0, 3))
-@time "Stiff rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
+], (0, 5))
+@time "Stiff rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1);
 @test SciMLBase.successful_retcode(sol)
 
-if false
+
+if true
     import GLMakie
-    render(stiff_rope, sol) # Takes very long time for n>=5
+    @time "render stiff_rope" render(stiff_rope, sol) # Takes very long time for n>=8
 end
 
 
 
 ## Flexible rope
 world = Multibody.world
-number_of_links = 6
-@named rope = Multibody.Rope(l = 1, m = 1, n=number_of_links, c=1000.0, d=10)
-@named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
+number_of_links = 3
+@named rope = Multibody.Rope(l = 1, m = 5, n=number_of_links, c=800.0, d=0.001, d_joint=0.1, air_resistance=0.2)
+@named body = Body(; m = 300, isroot = false, r_cm = [0, 0, 0], air_resistance=0)
 
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
@@ -917,12 +918,64 @@ D = Differential(t)
 prob = ODEProblem(ssys, [
     # D.(D.(collect(rope.r))) .=> 0;
     collect(body.r_0) .=> [1,1,1];
-    collect(body.w_a) .=> [1,1,1]
+    collect(body.w_a) .=> [1,1,1];
+    collect(body.v_0) .=> [10,10,10]
 ], (0, 10))
-@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1 .* randn.());
+@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
 @test SciMLBase.successful_retcode(sol)
-if false
+if true
     import GLMakie
-    render(flexible_rope, sol) # Takes very long time for n>=5
+    @time "render flexible_rope" render(flexible_rope, sol) # Takes very long time for n>=8
 end
 
+
+
+
+## Resistance in spherical joint
+# This test creates a spherical pendulum and one simple one with Revolute joint. The damping should work the same
+
+
+systems = @named begin
+    joint = Spherical(enforceState=true, isroot=true, phi = [π/2, 0, 0], d = 0.3)
+    bar = FixedTranslation(r = [0, -1, 0])
+    body = Body(; m = 1, isroot = false)
+
+
+    bartop = FixedTranslation(r = [1, 0, 0])
+    joint2 = Multibody.Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = true)
+    bar2 = FixedTranslation(r = [0, 1, 0])
+    body2 = Body(; m = 1, isroot = false)
+    damper = Rotational.Damper(d = 0.3)
+end
+
+connections = [connect(world.frame_b, joint.frame_a)
+            connect(joint.frame_b, bar.frame_a)
+            connect(bar.frame_b, body.frame_a)
+            
+            connect(world.frame_b, bartop.frame_a)
+            connect(bartop.frame_b, joint2.frame_a)
+            connect(joint2.frame_b, bar2.frame_a)
+            connect(bar2.frame_b, body2.frame_a)
+
+            connect(joint2.support, damper.flange_a)
+            connect(damper.flange_b, joint2.axis)
+            ]
+
+@named model = ODESystem(connections, t, systems = [world; systems])
+ssys = structural_simplify(IRSystem(model))
+
+prob = ODEProblem(ssys, [
+                    D.(joint.phi) .=> 0;
+                    D.(D.(joint.phi)) .=> 0;
+                    joint2.phi => π/2
+], (0, 10))
+
+sol = solve(prob, Rodas4())
+@assert SciMLBase.successful_retcode(sol)
+
+# plot(sol, idxs = [body.r_0;], layout=3)
+# plot!(sol, idxs = [body2.r_0; ], sp=[1 2 3])
+# render(model, sol)
+
+tt = 0:0.1:10
+@test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
