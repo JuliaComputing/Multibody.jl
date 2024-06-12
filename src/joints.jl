@@ -177,7 +177,9 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    d = 0,
                    phi_dd = 0,
                    color = [1, 1, 0, 1],
-                   radius = 0.1)
+                   radius = 0.1,
+                   quat = false,
+                   )
     @named begin
         ptf = PartialTwoFrames()
         R_rel = NumRotationMatrix()
@@ -209,19 +211,24 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     end
 
     if state
-        @variables begin
-            (phi(t)[1:3] = phi),
-            [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-            (phi_d(t)[1:3] = phi_d),
-            [state_priority = 10, description = "3 angle derivatives"]
-            (phi_dd(t)[1:3] = phi_dd),
-            [state_priority = 10, description = "3 angle second derivatives"]
+        if quat
+            append!(eqs, nonunit_quaternion_equations(R_rel, w_rel))
+            # append!(eqs, collect(w_rel) .~ angularVelocity2(R_rel))
+        else
+            @variables begin
+                (phi(t)[1:3] = phi),
+                [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
+                (phi_d(t)[1:3] = phi_d),
+                [state_priority = 10, description = "3 angle derivatives"]
+                (phi_dd(t)[1:3] = phi_dd),
+                [state_priority = 10, description = "3 angle second derivatives"]
+            end
+            append!(eqs,
+                    [R_rel ~ axes_rotations(sequence_angleStates, phi, phi_d)
+                    collect(w_rel) .~ angular_velocity2(R_rel)
+                    collect(phi_d .~ D.(phi))
+                    collect(phi_dd .~ D.(phi_d))])
         end
-        append!(eqs,
-                [R_rel ~ axes_rotations(sequence, phi, phi_d)
-                 collect(w_rel) .~ angular_velocity2(R_rel)
-                 collect(phi_d .~ D.(phi))
-                 collect(phi_dd .~ D.(phi_d))])
         if isroot
             append!(eqs,
                     [connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut)
@@ -742,13 +749,15 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
 
         if useQuaternions
-            @named Q = NumQuaternion(varw=false) 
-            append!(eqs, [
-                w_rel_b .~ angular_velocity2(Q, D.(Q.Q))
-                R_rel ~ from_Q(Q, w_rel_b)
-                # R_rel.w .~ w_rel_b # Needed? If not included, w_rel_b has no effect. To include, use R_rel = NumRotationMatrix(varw=true), but this yeilds the same numer of state variables
-                0 ~ orientation_constraint(Q)
-            ])
+            # @named Q = NumQuaternion() 
+            append!(eqs, nonunit_quaternion_equations(R_rel, w_rel_b))
+
+            # append!(eqs, [
+                # w_rel_b .~ angularVelocity2(Q, D.(Q.Q))
+            #     R_rel ~ from_Q(Q, w_rel_b)
+                # R_rel.w .~ w_rel_b; # Needed? If not included, w_rel_b has no effect. To include, use R_rel = NumRotationMatrix(varw=true), but this yeilds the same numer of state variables
+            #     0 ~ orientation_constraint(Q)
+            # ])
         else
             append!(eqs,
                     [phi_d .~ D.(phi)

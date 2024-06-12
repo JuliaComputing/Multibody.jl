@@ -1012,7 +1012,7 @@ tt = 0:0.1:10
 
 
 # ==============================================================================
-## Simple pendulum with quaternions=============================================================
+## Simple motion with quaternions=============================================================
 # ==============================================================================
 using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
 t = Multibody.t
@@ -1077,6 +1077,7 @@ end
 
 # Test that rotational velocity of 1 results in one full rotation in 2π seconds. Test rotation around all three major axes
 @test get_R(body.frame_a, 0pi) ≈ I
+@test get_R(body.frame_a, pi/2) ≈ [1 0 0; 0 0 -1; 0 1 0] atol=1e-3
 @test get_R(body.frame_a, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
 @test get_R(body.frame_a, 2pi) ≈ I atol=1e-3
 
@@ -1092,3 +1093,125 @@ sol = solve(prob, Rodas4())#,
 @test get_R(body.frame_a, 0pi) ≈ I
 @test get_R(body.frame_a, 1pi) ≈ diagm([-1, -1, 1]) atol=1e-3
 @test get_R(body.frame_a, 2pi) ≈ I atol=1e-3
+
+
+
+## states in joint instead of body
+
+using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+t = Multibody.t
+
+@named joint = Multibody.FreeMotion(isroot = true, enforceState=true, useQuaternions=true)
+@named body = Body(; m = 1, r_cm = [0.0, 0, 0])
+
+world = Multibody.world
+
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, body.frame_a)]
+
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+
+
+
+##
+D = Differential(t)
+# q0 = randn(4); q0 ./= norm(q0)
+q0 = [0,0,0,1]
+prob = ODEProblem(ssys, [
+    collect(body.w_a) .=> [1,0,0];
+    collect(joint.Q) .=> q0;
+    collect(joint.Q̂) .=> q0;
+    ], (0, 2pi))
+
+using OrdinaryDiffEq, Test
+sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 1e-6 .* randn.())
+@test SciMLBase.successful_retcode(sol)
+# doplot() && plot(sol, layout=21)
+
+
+ts = 0:0.1:2pi
+Q = Matrix(sol(ts, idxs = [joint.Q...]))
+Qh = Matrix(sol(ts, idxs = [joint.Q̂...]))
+n = Matrix(sol(ts, idxs = [joint.n...]))
+@test mapslices(norm, Qh, dims=1).^2 ≈ n
+@test Q ≈ Qh ./ sqrt.(n) atol=1e-2
+@test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
+
+
+
+@test get_R(joint.frame_b, 0pi) ≈ I
+@test get_R(joint.frame_b, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
+@test get_R(joint.frame_b, 2pi) ≈ I atol=1e-3
+
+
+Matrix(sol(ts, idxs = [joint.w_rel_b...]))
+
+
+
+
+
+## Spherical joint pendulum with quaternions
+
+using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+t = Multibody.t
+world = Multibody.world
+
+
+@named joint = Multibody.Spherical(isroot=false, enforceState=false, useQuaternions=false)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=true, useQuaternions=true, air_resistance=0.0)
+
+# @named joint = Multibody.Spherical(isroot=true, enforceState=true, useQuaternions=true)
+# @named body = Body(; m = 1, r_cm = [1.0, 0, 0], isroot=false)
+
+
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+
+
+D = Differential(t)
+q0 = randn(4); q0 ./= norm(q0)
+# q0 = [0,0,0,1]
+prob = ODEProblem(ssys, [
+    # collect(body.w_a) .=> [1,0,0];
+    # collect(body.Q) .=> q0;
+    # collect(body.Q̂) .=> q0;
+    ], (0, 30))
+
+using OrdinaryDiffEq, Test
+sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 0 .* randn.())
+@test SciMLBase.successful_retcode(sol)
+# doplot() && plot(sol, layout=21)
+
+
+ts = 0:0.1:2pi
+Q = Matrix(sol(ts, idxs = [body.Q...]))
+Qh = Matrix(sol(ts, idxs = [body.Q̂...]))
+n = Matrix(sol(ts, idxs = [body.n...]))
+@test mapslices(norm, Qh, dims=1).^2 ≈ n
+@test Q ≈ Qh ./ sqrt.(n) atol=1e-2
+@test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
+
+Matrix(sol(ts, idxs = [body.w_a...]))
+
+@test get_R(joint.frame_b, 0pi) ≈ I
+@test get_R(joint.frame_b, sqrt(9.81/1)) ≈ diagm([1, -1, -1]) atol=1e-3
+@test get_R(joint.frame_b, 2pi) ≈ I atol=1e-3
+
+
+Matrix(sol(ts, idxs = [joint.w_rel_b...]))
+
+# render(model, sol)
