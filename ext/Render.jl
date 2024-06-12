@@ -167,7 +167,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
 
-    iszero(sol(0.0, idxs=r_cmv)) && (return true)
+    iszero(r_cm(sol.t[1])) && (return true)
 
     thing = @lift begin # Cylinder
         Ta = framefun($t)
