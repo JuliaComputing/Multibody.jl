@@ -56,7 +56,7 @@ prob = ODEProblem(ssys, [], (0.0, 3.51))
 sol = solve(prob, Rodas5P())
 Plots.plot(sol)
 
-using GLMakie
+import GLMakie
 framerate = 30
-timevec = range(sol.t[1], sol.t[end], step=1/framerate) |> reverse
-render(logo, sol, timevec; z=-2, x=-0.3, y=0.3, filename="JuliaSim_logo.mp4", framerate)
+timevec = [zeros(30); range(sol.t[1], sol.t[end], step=1/framerate)] |> reverse
+render(logo, sol, timevec; z=-2, x=-0.3, y=0.3, filename="JuliaSim_logo.gif", framerate)
