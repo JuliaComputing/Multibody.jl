@@ -1,15 +1,12 @@
 name: CI
-
 on:
   push:
     branches:
       - main
     tags: '*'
   pull_request:
-
 env:
   JULIA_PKG_SERVER: https://internal.juliahub.com/
-
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
@@ -21,19 +18,28 @@ jobs:
           - '1'
         os:
           - self-hosted
+          # - macOS-latest
         arch:
           - x64
     steps:
       - name: Set debug env
         run: export JULIA_DEBUG="loading"
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        name: Checkout
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: webfactory/ssh-agent@v0.8.0 
-        with: 
-          ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
+      - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3.3.2
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
       - uses: PumasAI/add-private-registry@main
         with:
           juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
@@ -41,3 +47,4 @@ jobs:
           private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+        continue-on-error: ${{ matrix.version == '1.6' }} # Allow to fail and workflow still count as completed
