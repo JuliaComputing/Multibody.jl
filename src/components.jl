@@ -43,7 +43,7 @@ end
     @parameters g=9.81 [description = "gravitational acceleration of world"]
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
-                   O ~ nullRotation()
+                   O ~ nullrotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
                    ]
     ODESystem(eqs, t, [], [n; g]; name, systems = [frame_b])
@@ -64,7 +64,7 @@ gravity_acceleration(r) = GlobalScope(world.g) * GlobalScope.(world.n) # NOTE: T
                                    description = "Position vector from world frame to frame_b, resolved in world frame",
                                ] end
     eqs = [collect(frame_b.r_0 .~ r)
-           ori(frame_b) ~ nullRotation()]
+           ori(frame_b) ~ nullrotation()]
     compose(ODESystem(eqs, t; name), systems...)
 end
 
@@ -165,13 +165,13 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 
     if isroot
         R_rel = planar_rotation(n, angle, 0)
-        eqs = [ori(frame_b) ~ absoluteRotation(frame_a, R_rel);
+        eqs = [ori(frame_b) ~ absolute_rotation(frame_a, R_rel);
                zeros(3) ~ fa + resolve1(R_rel, fb);
                zeros(3) ~ taua + resolve1(R_rel, taub) - cross(r,
                                                                 fa)]
     else
         R_rel_inv = planar_rotation(n, -angle, 0)
-        eqs = [ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv);
+        eqs = [ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv);
                zeros(3) ~ fb + resolve1(R_rel_inv, fa);
                zeros(3) ~ taub + resolve1(R_rel_inv, taua) +
                            cross(resolve1(R_rel_inv, r), fb)]
@@ -214,7 +214,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               radius = 0.005,
               air_resistance = 0.0,
               color = [1,0,0,1],
-              useQuaternions=false,)
+              quat=false,)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
@@ -262,7 +262,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot
         
-        if useQuaternions
+        if quat
             @named frame_a = Frame(varw = true)
             Ra = ori(frame_a, true)
             # @variables q(t)[1:4] = [0.0,0,0,1.0]
@@ -271,7 +271,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
             # qw = collect(qw)
             # Q = Quaternion(q, qw)
             @named Q = NumQuaternion(varw=true) 
-            ar = from_Q(Q, angularVelocity2(Q, D.(Q.Q)))
+            ar = from_Q(Q, angular_velocity2(Q, D.(Q.Q)))
             Equation[
                 0 ~ orientation_constraint(Q)
                 Ra ~ ar
@@ -285,7 +285,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
             phi, phid, phidd = collect.((phi, phid, phidd))
-            ar = axesRotations([1, 2, 3], phi, phid)
+            ar = axes_rotations([1, 2, 3], phi, phid)
 
             Ra = ori(frame_a, true)
 
@@ -302,9 +302,9 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         Ra = ori(frame_a)
         # This equation is defined here and not in the Rotation component since the branch above might use another equation
         Equation[
-                 # collect(w_a .~ DRa.w); # angularVelocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
+                 # collect(w_a .~ DRa.w); # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
                  # vec(DRa.R .~ 0)
-                 collect(w_a .~ angularVelocity2(Ra));]
+                 collect(w_a .~ angular_velocity2(Ra));]
     end
 
     eqs = [eqs;
@@ -340,7 +340,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 """
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=:purple, kwargs...)
     systems = @named begin
-        frameTranslation = FixedTranslation(r = r)
+        translation = FixedTranslation(r = r)
         body = Body(; r_cm, r_0, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
@@ -374,8 +374,8 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     eqs = [r_0 .~ collect(frame_a.r_0)
            v_0 .~ D.(r_0)
            a_0 .~ D.(v_0)
-           connect(frame_a, frameTranslation.frame_a)
-           connect(frame_b, frameTranslation.frame_b)
+           connect(frame_a, translation.frame_a)
+           connect(frame_b, translation.frame_b)
            connect(frame_a, body.frame_a)]
     ODESystem(eqs, t, [r_0; v_0; a_0], pars; name, systems)
 end
@@ -413,7 +413,7 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, air_resistance=0, d_join
     li = l / n # Segment length
     mi = m / n # Segment mass
 
-    joints = [Spherical(name=Symbol("joint_$i"), isroot=true, enforceState=true, d = d_joint) for i = 1:n+1]
+    joints = [Spherical(name=Symbol("joint_$i"), isroot=true, state=true, d = d_joint) for i = 1:n+1]
 
     eqs = [
         connect(frame_a, joints[1].frame_a)
@@ -427,7 +427,7 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, air_resistance=0, d_join
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
         masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = [0, -li/2, 0], air_resistance) for i = 1:n]
-        links = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i"), useAxisFlange=true) for i = 1:n]
+        links = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i"), axisflange=true) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))

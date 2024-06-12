@@ -23,11 +23,11 @@ function PartialAbsoluteSensor(; name, n_out)
 end
 
 """
-    PartialCutForceBaseSensor(; name, resolveInFrame = :frame_a)
+    PartialCutForceBaseSensor(; name, resolve_frame = :frame_a)
 
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
+- `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
 """
-function PartialCutForceBaseSensor(; name, resolveInFrame = :frame_a)
+function PartialCutForceBaseSensor(; name, resolve_frame = :frame_a)
     @named begin
         frame_a = Frame()
         frame_b = Frame()
@@ -41,48 +41,48 @@ function PartialCutForceBaseSensor(; name, resolveInFrame = :frame_a)
 end
 
 """
-    CutTorque(; name, resolveInFrame)
+    CutTorque(; name, resolve_frame)
 
 Basic sensor to measure cut torque vector. Contains a connector of type `Blocks.RealOutput` with name `torque`.
 
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
+- `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
 """
-function CutTorque(; name, resolveInFrame = :frame_a)
-    @named pcfbs = PartialCutForceBaseSensor(; resolveInFrame)
-    @named torque = Blocks.RealOutput(nout = 3) # "Cut torque resolved in frame defined by resolveInFrame"
+function CutTorque(; name, resolve_frame = :frame_a)
+    @named pcfbs = PartialCutForceBaseSensor(; resolve_frame)
+    @named torque = Blocks.RealOutput(nout = 3) # "Cut torque resolved in frame defined by resolve_frame"
     @unpack frame_a, frame_b = pcfbs
-    eqs = if resolveInFrame === :world
+    eqs = if resolve_frame === :world
         collect(torque.u) .~ resolve1(ori(frame_a), frame_a.tau)
-    elseif resolveInFrame === :frame_a
+    elseif resolve_frame === :frame_a
         collect(torque.u) .~ collect(frame_a.tau)
     else
-        error("resolveInFrame must be :world or :frame_a")
+        error("resolve_frame must be :world or :frame_a")
     end
     extend(compose(ODESystem(eqs, t; name), torque), pcfbs)
 end
 
 """
-    BasicCutForce(; name, resolveInFrame)
+    BasicCutForce(; name, resolve_frame)
 
 Basic sensor to measure cut force vector. Contains a connector of type `Blocks.RealOutput` with name `force`.
 
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
+- `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_a`, options include `:frame_a` and `:world`.
 """
-function CutForce(; name, resolveInFrame = :frame_a)
-    @named pcfbs = PartialCutForceBaseSensor(; resolveInFrame)
-    @named force = Blocks.RealOutput(nout = 3) # "Cut force resolved in frame defined by resolveInFrame"
+function CutForce(; name, resolve_frame = :frame_a)
+    @named pcfbs = PartialCutForceBaseSensor(; resolve_frame)
+    @named force = Blocks.RealOutput(nout = 3) # "Cut force resolved in frame defined by resolve_frame"
     @unpack frame_a, frame_b = pcfbs
-    eqs = if resolveInFrame === :world
+    eqs = if resolve_frame === :world
         collect(force.u) .~ resolve1(ori(frame_a), frame_a.f)
-    elseif resolveInFrame === :frame_a
+    elseif resolve_frame === :frame_a
         collect(force.u) .~ collect(frame_a.f)
     else
-        error("resolveInFrame must be :world or :frame_a")
+        error("resolve_frame must be :world or :frame_a")
     end
     extend(compose(ODESystem(eqs, t; name), force), pcfbs)
 end
 
-function RelativePosition(; name, resolveInFrame = :frame_a)
+function RelativePosition(; name, resolve_frame = :frame_a)
     @named begin prs = PartialRelativeBaseSensor(; name) end
 
     @unpack frame_a, frame_b = prs
@@ -104,8 +104,8 @@ function RelativeAngles(; name, sequence = [1, 2, 3])
            frame_a.tau .~ zeros(3) |> collect
            frame_b.f .~ zeros(3) |> collect
            frame_b.tau .~ zeros(3) |> collect
-           R_rel ~ relativeRotation(frame_a, frame_b)
-           angles .~ axesRotationsAngles(R_rel, sequence, guessAngle1)]
+           R_rel ~ relative_rotation(frame_a, frame_b)
+           angles .~ axes_rotationangles(R_rel, sequence, guessAngle1)]
     compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
 end
 
@@ -118,6 +118,6 @@ function AbsoluteAngles(; name, sequence = [1, 2, 3])
     @named R_abs = NumRotationMatrix()
     eqs = [collect(frame_a.f .~ 0)
            collect(frame_a.tau .~ 0)
-           angles.u .~ axesRotationsAngles(ori(frame_a), [1, 2, 3])]
+           angles.u .~ axes_rotationangles(ori(frame_a), [1, 2, 3])]
     extend(compose(ODESystem(eqs, t; name)), pas)
 end

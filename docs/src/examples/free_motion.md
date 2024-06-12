@@ -1,5 +1,5 @@
 # Free motions
-This example demonstrates how a free-floating [`Body`](@ref) can be simulated. The body is attached to the world through a [`FreeMotion`](@ref) joint, i.e., a joint that imposes no constraints. The joint is required to add the appropriate relative state variables between the world and the body. We choose `enforceState = true` and `isroot = true` in the [`FreeMotion`](@ref) constructor.
+This example demonstrates how a free-floating [`Body`](@ref) can be simulated. The body is attached to the world through a [`FreeMotion`](@ref) joint, i.e., a joint that imposes no constraints. The joint is required to add the appropriate relative state variables between the world and the body. We choose `state = true` and `isroot = true` in the [`FreeMotion`](@ref) constructor.
 
 ```@example FREE_MOTION
 using Multibody
@@ -12,7 +12,7 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@named freeMotion = FreeMotion(enforceState = true, isroot = true)
+@named freeMotion = FreeMotion(state = true, isroot = true)
 @named body = Body(m = 1)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)

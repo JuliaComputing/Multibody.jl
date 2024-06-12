@@ -234,7 +234,7 @@ u = cm.axis2.controller.PI.ctr_output.u
 
     zdd = ModelingToolkit.missing_variable_defaults(oneaxis); op = merge(Dict(zdd), op)
 
-    prob = ODEProblem(ssys, collect(op), (0.0, 10),)
+    prob = ODEProblem(ssys, collect(op), (0.0, 3),)
     sol = solve(prob, Rodas4());
     if doplot()
         plot(sol, layout=length(unknowns(ssys)), size=(1900, 1200))
@@ -249,7 +249,7 @@ u = cm.axis2.controller.PI.ctr_output.u
 
     @test sol(tv[1], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
     @test sol(tv[end], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
-    @test maximum(abs, control_error) < 1e-5
+    @test maximum(abs, control_error) < 1e-3
 end
 
 

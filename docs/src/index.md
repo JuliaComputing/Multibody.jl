@@ -41,7 +41,7 @@ A joint restricts the number of degrees of freedom (DOF) of a body. For example,
 
 A [`Spherical`](@ref) joints restricts all translational degrees of freedom, but allows all rotational degrees of freedom. It thus transmits no torque.
 
-Some joints offer the option to add 1-dimensional components to them by providing the keyword `useAxisFlange = true`. This allows us to add, e.g., springs, dampers, sensors, and actuators to the joint.
+Some joints offer the option to add 1-dimensional components to them by providing the keyword `axisflange = true`. This allows us to add, e.g., springs, dampers, sensors, and actuators to the joint.
 
 ```@autodocs
 Modules = [Multibody]

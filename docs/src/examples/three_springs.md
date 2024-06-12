@@ -7,7 +7,7 @@ This example mirrors that of the [modelica three-springs](https://doc.modelica.o
 
 
 
-The example connects three springs together in a single point. The springs are all massless and do normally not have any state variables, but we can insist on one of the springs being stateful, in this case, we must tell the lower spring component to act as root by setting `fixedRotationAtFrame_a = fixedRotationAtFrame_b = true`.
+The example connects three springs together in a single point. The springs are all massless and do normally not have any state variables, but we can insist on one of the springs being stateful, in this case, we must tell the lower spring component to act as root by setting `fixed_rotation_at_frame_a = fixed_rotation_at_frame_b = true`.
 
 ```@example spring_mass_system
 using Multibody
@@ -28,7 +28,7 @@ systems = @named begin
     spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1,
                                r_rel_0 = [-0.2, -0.2, 0.2])
     spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1,
-                               fixedRotationAtFrame_a = true, fixedRotationAtFrame_b = true)
+                               fixed_rotation_at_frame_a = true, fixed_rotation_at_frame_b = true)
     spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
@@ -42,7 +42,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 @named model = ODESystem(eqs, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
-    D.(spring3.lineForce.r_rel_0) .=> 0;
+    D.(spring3.lineforce.r_rel_0) .=> 0;
 ], (0, 10))
 
 sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))

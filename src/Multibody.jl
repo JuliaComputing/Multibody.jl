@@ -144,6 +144,7 @@ include("forces.jl")
 export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce
 include("sensors.jl")
 
+export point_to_point
 include("robot/path_planning.jl")
 include("robot/robot_components.jl")
 include("robot/FullRobot.jl")

@@ -21,7 +21,7 @@ systems = @named begin
     gearConstraint = GearConstraint(; ratio = 10)
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
-    torque1 = Torque(resolveInFrame = :frame_b)
+    torque1 = Torque(resolve_frame = :frame_b)
     fixed = Fixed() 
     inertia1 = Rotational.Inertia(J = cyl1.I_11)
     idealGear = Rotational.IdealGear(ratio = 10, use_support = true)

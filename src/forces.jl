@@ -3,11 +3,11 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as TP
 import ModelingToolkitStandardLibrary.Blocks
 
 """
-    BasicTorque(; name, resolveInFrame = :world)
+    BasicTorque(; name, resolve_frame = :world)
 
 Low-level torque component used to build [`Torque`](@ref)
 """
-function BasicTorque(; name, resolveInFrame = :world)
+function BasicTorque(; name, resolve_frame = :world)
     @named ptf = PartialTwoFrames()
     @named torque = Blocks.RealInput(; nin = 3)
     @unpack frame_a, frame_b = ptf
@@ -27,20 +27,20 @@ function BasicTorque(; name, resolveInFrame = :world)
            # torque balance
            zeros(3) .~ collect(frame_a.tau) + resolve2(frame_a, t_b_0)]
 
-    if resolveInFrame == :frame_a
+    if resolve_frame == :frame_a
         append!(eqs,
                 [t_b_0 .~ -resolve1(frame_a, torque.u)
                  collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
-    elseif resolveInFrame == :frame_b
+    elseif resolve_frame == :frame_b
         append!(eqs,
                 [t_b_0 .~ -resolve1(frame_b, torque.u)
                  collect(frame_b.tau) .~ collect(-torque.u)])
-    elseif resolveInFrame == :world
+    elseif resolve_frame == :world
         append!(eqs,
                 [t_b_0 .~ collect(-torque.u)
                  collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
     else
-        error("Unknown value of argument resolveInFrame")
+        error("Unknown value of argument resolve_frame")
         append!(eqs, [t_b_0 .~ zeros(3)
                       collect(frame_b.tau) .~ zeros(3)])
     end
@@ -49,24 +49,24 @@ function BasicTorque(; name, resolveInFrame = :world)
 end
 
 """
-    Torque(; name, resolveInFrame = :frame_b)
+    Torque(; name, resolve_frame = :frame_b)
 
 Torque acting between two frames, defined by 3 input signals and resolved in frame `world`, `frame_a`, `frame_b` (default)
 
 # Connectors:
 - `frame_a`
 - `frame_b`
-- `torque`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of torque resolved in frame defined by `resolveInFrame`.
+- `torque`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of torque resolved in frame defined by `resolve_frame`.
 
 # Keyword arguments:
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
+- `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
 """
-function Torque(; name, resolveInFrame = :frame_b)
+function Torque(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named begin
         torque = Blocks.RealInput(; nin = 3)
-        basicTorque = BasicTorque(; resolveInFrame = resolveInFrame)
+        basicTorque = BasicTorque(; resolve_frame = resolve_frame)
     end
 
     eqs = [connect(basicTorque.frame_a, frame_a)
@@ -75,7 +75,7 @@ function Torque(; name, resolveInFrame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
 end
 
-function BasicForce(; name, resolveInFrame = :frame_b)
+function BasicForce(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @named force = Blocks.RealInput(; nin = 3)
     @unpack frame_a, frame_b = ptf
@@ -93,44 +93,44 @@ function BasicForce(; name, resolveInFrame = :frame_b)
            0 .~ collect(frame_a.f) + resolve2(frame_a, f_b_0)
            0 .~ collect(frame_a.tau) + resolve2(frame_a, cross(r_0, f_b_0))]
 
-    if resolveInFrame == :frame_a
+    if resolve_frame == :frame_a
         append!(eqs,
                 [f_b_0 .~ -resolve1(frame_a, force.u)
                  collect(frame_b.tau) .~ resolve2(frame_b, f_b_0)])
-    elseif resolveInFrame == :frame_b
+    elseif resolve_frame == :frame_b
         append!(eqs,
                 [f_b_0 .~ -resolve1(frame_b, force.u)
                  collect(frame_b.tau) .~ collect(-force.u)])
-    elseif resolveInFrame == :world
+    elseif resolve_frame == :world
         append!(eqs,
                 [f_b_0 .~ collect(-force.u)
                  collect(frame_b.tau) .~ resolve2(frame_b, f_b_0)])
     else
-        error("Unknown value of argument resolveInFrame")
+        error("Unknown value of argument resolve_frame")
     end
 
     extend(ODESystem(eqs, t, name = name, systems = [force]), ptf)
 end
 
 """
-    Force(; name, resolveInFrame = :frame_b)
+    Force(; name, resolve_frame = :frame_b)
 
 Force acting between two frames, defined by 3 input signals and resolved in frame `world`, `frame_a`, `frame_b` (default)
 
 # Connectors:
 - `frame_a`
 - `frame_b`
-- `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolveInFrame`.
+- `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolve_frame`.
 
 # Keyword arguments:
-- `resolveInFrame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
+- `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
 """
-function Force(; name, resolveInFrame = :frame_b)
+function Force(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named begin
-        force = Blocks.RealInput(; nin = 3) # x-, y-, z-coordinates of force resolved in frame defined by resolveInFrame
-        basicForce = BasicForce(; resolveInFrame = resolveInFrame)
+        force = Blocks.RealInput(; nin = 3) # x-, y-, z-coordinates of force resolved in frame defined by resolve_frame
+        basicForce = BasicForce(; resolve_frame = resolve_frame)
     end
 
     eqs = [connect(basicForce.frame_a, frame_a)
@@ -139,8 +139,8 @@ function Force(; name, resolveInFrame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
 end
 
-function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame_a = false,
-                       fixedRotationAtFrame_b = false, r_rel_0 = 0, s0 = 0)
+function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
+                       fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
     @named frame_a = Frame()
     @named frame_b = Frame()
 
@@ -164,16 +164,16 @@ function LineForceBase(; name, length = 0, s_small = 1e-10, fixedRotationAtFrame
 
     # Modelica stdlib has the option to inser special equations when two line forces are connected, this option does not yet exisst here https://github.com/modelica/ModelicaStandardLibrary/blob/10238e9927e2078571e41b53cda128c5207f69f7/Modelica/Mechanics/MultiBody/Interfaces/LineForceBase.mo#L49
 
-    if fixedRotationAtFrame_a
+    if fixed_rotation_at_frame_a
         # TODO: frame_a.R should be rooted here
-        eqs = [eqs; vec(ori(frame_a).R .~ nullRotation().R)]
+        eqs = [eqs; vec(ori(frame_a).R .~ nullrotation().R)]
     else
         eqs = [eqs; frame_a.tau .~ 0]
     end
 
-    if fixedRotationAtFrame_b
+    if fixed_rotation_at_frame_b
         # TODO: frame_b.R should be rooted here
-        eqs = [eqs; vec(ori(frame_b).R .~ nullRotation().R)]
+        eqs = [eqs; vec(ori(frame_b).R .~ nullrotation().R)]
     else
         eqs = [eqs; frame_b.tau .~ 0]
     end
@@ -258,7 +258,7 @@ function PartialLineForce(; name, kwargs...)
 
                  # Determine forces and torques at frame_a and frame_b
                  collect(frame_a.f) .~ collect(-e_a * f)
-                 collect(frame_b.f) .~ -resolve2(relativeRotation(frame_a, frame_b),
+                 collect(frame_b.f) .~ -resolve2(relative_rotation(frame_a, frame_b),
                                                  frame_a.f)]
     extend(ODESystem(equations, t; name), lfb)
 end
@@ -293,7 +293,7 @@ See also [`SpringDamperParallel`](@ref)
 @component function Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
-    @named lineForce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
+    @named lineforce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
                                          kwargs...)
     
     # @parameters c=c [description = "spring constant", bounds = (0, Inf)]
@@ -332,16 +332,16 @@ See also [`SpringDamperParallel`](@ref)
            r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
            e_a .~ r_rel_a / s
            f ~ spring2d.f
-           length ~ lineForce.length
-           s ~ lineForce.s
-           r_rel_0 .~ lineForce.r_rel_0
-           e_rel_0 .~ lineForce.e_rel_0
-           connect(lineForce.frame_a, frame_a)
-           connect(lineForce.frame_b, frame_b)
-           connect(spring2d.flange_b, lineForce.flange_b)
-           connect(spring2d.flange_a, lineForce.flange_a)]
+           length ~ lineforce.length
+           s ~ lineforce.s
+           r_rel_0 .~ lineforce.r_rel_0
+           e_rel_0 .~ lineforce.e_rel_0
+           connect(lineforce.frame_a, frame_a)
+           connect(lineforce.frame_b, frame_b)
+           connect(spring2d.flange_b, lineforce.flange_b)
+           connect(spring2d.flange_a, lineforce.flange_a)]
 
-    extend(ODESystem(eqs, t; name, systems = [lineForce, spring2d]), ptf)
+    extend(ODESystem(eqs, t; name, systems = [lineforce, spring2d]), ptf)
 end
 
 """

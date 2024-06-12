@@ -444,12 +444,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         axis4 = Rotational.Flange()
         axis5 = Rotational.Flange()
         axis6 = Rotational.Flange()
-        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false, radius=0.15)
-        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false, radius=0.1)
-        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false, radius=0.075)
-        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false, radius=0.06)
-        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false, radius=0.05)
-        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false, radius=0.02)
+        r1 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.15)
+        r2 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.1)
+        r3 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.075)
+        r4 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.06)
+        r5 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.05)
+        r6 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.02)
         b0 = BodyShape(r = [0, 0.351, 0],
                        #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],

@@ -79,10 +79,10 @@ nothing # hide
 By default, the world frame is indicated using the convention x: red, y: green, z: blue. The animation shows how the simple [`Body`](@ref) represents a point mass at a particular distance `r_cm` away from its mounting flange `frame_a`. To model a more physically motivated pendulum rod, we could have used a [`BodyShape`](@ref) component, which has two mounting flanges instead of one. The [`BodyShape`](@ref) component is shown in several of the examples available in the example sections of the documentation.
 
 ## Adding damping
-To add damping to the pendulum such that the pendulum will eventually come to rest, we add a [`Damper`](@ref) to the revolute joint. The damping coefficient is given by `d`, and the damping force is proportional to the angular velocity of the joint. To add the damper to the revolute joint, we must create the joint with the keyword argument `useAxisFlange = true`, this adds two internal flanges to the joint to which you can attach components from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module (1-dimensional components). We then connect one of the flanges of the damper to the axis flange of the joint, and the other damper flange to the support flange which is rigidly attached to the world.
+To add damping to the pendulum such that the pendulum will eventually come to rest, we add a [`Damper`](@ref) to the revolute joint. The damping coefficient is given by `d`, and the damping force is proportional to the angular velocity of the joint. To add the damper to the revolute joint, we must create the joint with the keyword argument `axisflange = true`, this adds two internal flanges to the joint to which you can attach components from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module (1-dimensional components). We then connect one of the flanges of the damper to the axis flange of the joint, and the other damper flange to the support flange which is rigidly attached to the world.
 ```@example pendulum
 @named damper = Rotational.Damper(d = 0.1)
-@named joint = Revolute(n = [0, 0, 1], isroot = true, useAxisFlange = true)
+@named joint = Revolute(n = [0, 0, 1], isroot = true, axisflange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(damper.flange_b, joint.axis)
@@ -116,7 +116,7 @@ A mass suspended in a spring can be though of as a linear pendulum (often referr
 @named body_0 = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Translational.Damper(d=1)
 @named spring = Translational.Spring(c=10)
-@named joint = Prismatic(n = [0, 1, 0], useAxisFlange = true)
+@named joint = Prismatic(n = [0, 1, 0], axisflange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(damper.flange_b, spring.flange_b, joint.axis)
@@ -132,7 +132,7 @@ sol = solve(prob, Rodas4())
 Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")
 ```
 
-As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `Translational` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `useAxisFlange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
+As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `Translational` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `axisflange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
 
 ```@example pendulum
 Multibody.render(model, sol; z = -5, filename = "linear_pend.gif", framerate=24)
@@ -197,8 +197,8 @@ W(args...; kwargs...) = Multibody.world
 @mtkmodel FurutaPendulum begin
     @components begin
         world = W()
-        shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, useAxisFlange = true)
-        elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, useAxisFlange = true, phi0=0.1)
+        shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, axisflange = true)
+        elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, axisflange = true, phi0=0.1)
         upper_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0, 0.6], radius=0.05)
         lower_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0.6, 0], radius=0.05)
         tip = Body(; m = 0.3, isroot = false)

@@ -26,7 +26,7 @@ world = Multibody.world
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true, isroot = true)
+    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true, isroot = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
