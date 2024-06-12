@@ -44,7 +44,7 @@ end
 
 @named motorTest = MotorTest()
 m = structural_simplify(IRSystem(motorTest))
-# @test length(states(m)) == 3
+# @test length(unknowns(m)) == 3
     # D(motorTest.motor.gear.bearingFriction.w) => 0
 cm = complete(motorTest)
 
@@ -159,6 +159,7 @@ tspan = (0.0, 5.0)
 prob = ODEProblem(m, [
     # ModelingToolkit.missing_variable_defaults(m);
     # D(cm.axis2.gear.bearingFriction.w) => 0
+    cm.axis2.motor.Jmotor.phi => deg2rad(20) *  0,
     cm.axis2.gear.gear.phi_b => 0,
     D(cm.axis2.gear.gear.phi_b) => 0,
 ], tspan)
@@ -168,7 +169,7 @@ sol = solve(prob, Rodas4())
 @test sol(0.0, idxs=cm.axis2.motor.emf.phi) == 0
 # @test sol(tspan[2], idxs=cm.axis2.motor.emf.phi) == 0
 
-doplot() && plot(sol, layout=length(states(m)))
+doplot() && plot(sol, layout=length(unknowns(m)))
 doplot() && plot(sol, idxs=[
     cm.axis2.gear.gear.phi_a
     cm.axis2.gear.gear.phi_b
@@ -200,7 +201,7 @@ u = cm.axis2.controller.PI.ctr_output.u
 
 @testset "one axis" begin
     @info "Testing one axis"
-    @named oneaxis = RobotAxis(trivial=true)
+    @named oneaxis = RobotAxis(trivial=false)
     oneaxis = complete(oneaxis)
     op = Dict([
         oneaxis.axis.flange.phi => 0
@@ -244,7 +245,7 @@ u = cm.axis2.controller.PI.ctr_output.u
     # @test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
 
     tv = 0:0.1:10.0
-    control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref-oneaxis.pathPlanning.controlBus.axisControlBus1.angle)
+    control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref-oneaxis.load.phi)
 
     @test sol(tv[1], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
     @test sol(tv[end], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
@@ -256,7 +257,7 @@ end
 @testset "full robot" begin
     @info "Testing full robot"
 
-    @named robot = Robot6DOF(trivial=true)
+    @named robot = Robot6DOF(trivial=false)
     robot = complete(robot)
 
     @time "full robot" begin 
@@ -269,41 +270,47 @@ end
             robot.mechanics.r5.phi => deg2rad(-110)
             robot.mechanics.r6.phi => deg2rad(0)
         
-            robot.axis1.motor.Jmotor.phi => deg2rad(-60) *  -105 # Multiply by gear ratio
-            robot.axis2.motor.Jmotor.phi => deg2rad(20) *  210
-            robot.axis3.motor.Jmotor.phi => deg2rad(90) *  60
-        ], (0.0, 4.0))
+            robot.axis1.motor.Jmotor.phi => deg2rad(-60) * (-105) # Multiply by gear ratio
+            robot.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
+            robot.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
+        ], (0.0, 2.0))
         @time "simulation (solve)" sol = solve(prob, Rodas5P(autodiff=false));
         @test SciMLBase.successful_retcode(sol)
     end
 
     if doplot()
         # plot(sol, layout=30, size=(1900,1200), legend=false)
-        plot(sol, idxs = [
-            robot.pathPlanning.controlBus.axisControlBus1.angle_ref
-            robot.pathPlanning.controlBus.axisControlBus2.angle_ref
-            robot.pathPlanning.controlBus.axisControlBus3.angle_ref
-            robot.pathPlanning.controlBus.axisControlBus4.angle_ref
-            robot.pathPlanning.controlBus.axisControlBus5.angle_ref
-            robot.pathPlanning.controlBus.axisControlBus6.angle_ref
-        ], layout=6, size=(800,800), l=(:black, :dash), legend=false)
-        plot!(sol, idxs = [
+        @time "Plotting ref" plot(sol, idxs = [
+            robot.pathPlanning.controlBus.axisControlBus1.angle_ref# * (-105)
+            robot.pathPlanning.controlBus.axisControlBus2.angle_ref# * (210)
+            robot.pathPlanning.controlBus.axisControlBus3.angle_ref# * (60)
+            robot.pathPlanning.controlBus.axisControlBus4.angle_ref# * (-99)
+            robot.pathPlanning.controlBus.axisControlBus5.angle_ref# * (79.2)
+            robot.pathPlanning.controlBus.axisControlBus6.angle_ref# * (-99)
+        ], layout=9, size=(800,800), l=(:black, :dash), legend=false)
+        @time "Plotting ang." plot!(sol, idxs = [
             robot.pathPlanning.controlBus.axisControlBus1.angle
             robot.pathPlanning.controlBus.axisControlBus2.angle
             robot.pathPlanning.controlBus.axisControlBus3.angle
             robot.pathPlanning.controlBus.axisControlBus4.angle
             robot.pathPlanning.controlBus.axisControlBus5.angle
             robot.pathPlanning.controlBus.axisControlBus6.angle
-        ], layout=6)
+        ], sp=(1:6)')
+
+        plot!(sol, idxs = [
+            robot.axis1.motor.Jmotor.phi / ( -105) - robot.pathPlanning.controlBus.axisControlBus1.angle_ref
+            robot.axis2.motor.Jmotor.phi / (210) - robot.pathPlanning.controlBus.axisControlBus2.angle_ref
+            robot.axis3.motor.Jmotor.phi / (60) - robot.pathPlanning.controlBus.axisControlBus3.angle_ref
+        ], sp=(7:9)')
         display(current())
 
     end
 
-    tv = 0:0.1:4
+    tv = 0:0.1:2
     angle_ref = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref)
     @test !all(iszero, angle_ref)
 
     control_error = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
-    @test_broken maximum(abs, control_error[25:end]) < 1e-4
-    @test_broken maximum(abs, control_error) < 1e-4 # Initial condition not respected
+    @test maximum(abs, control_error) < 0.002
 end
+

@@ -1,5 +1,8 @@
 using DataInterpolations
 using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
+
+include("ptp.jl")
+
 "Generate reference angles for specified kinematic movement"
 function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:10,
                        swingTime = 0.5, kwargs...)
@@ -61,8 +64,8 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
         controlBus = ControlBus()
         path = KinematicPTP(; q_end = deg2rad.(angleEndDeg),
                             time,
-                            #  qd_max = speedMax,
-                            #  qdd_max = accMax,
+                             qd_max = speedMax,
+                             qdd_max = accMax,
                             #  startTime = startTime,
                             q_begin = deg2rad.(angleBegDeg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = naxis, axisUsed = 1)
@@ -188,17 +191,8 @@ end
 A simple trajectory planner that plans a 5:th order polynomial trajectory between two points, subject to specified boundary conditions on the position, velocity and acceleration.
 """
 function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0,
-                      qdd_begin = 0, qdd_end = 0, trivial = false)
+                      qdd_begin = 0, qdd_end = 0, trivial = false, qd_max=1, qdd_max=1)
     nout = max(length(q_begin), length(q_end), length(qd_end), length(qdd_end))
-    #       parameter Real p_q_begin[nout]=(if size(q_begin, 1) == 1 then ones(nout)*
-    #       q_begin[1] else q_begin);
-    #   parameter Real p_q_end[nout]=(if size(q_end, 1) == 1 then ones(nout)*q_end[
-    #       1] else q_end);
-    #   parameter Real p_qd_max[nout]=(if size(qd_max, 1) == 1 then ones(nout)*
-    #       qd_max[1] else qd_max);
-    #   parameter Real p_qdd_max[nout]=(if size(qdd_max, 1) == 1 then ones(nout)*
-    #       qdd_max[1] else qdd_max);
-    #   parameter Real p_deltaq[nout]=p_q_end - p_q_begin;
 
     # @parameters begin
     #     q_begin = q_begin, [description = "Start position"]
@@ -213,19 +207,7 @@ function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end
     #     p_deltaq[1:nout] = p_q_end - p_q_begin
     # end
 
-    # output endTime "Time instant at which movement stops";
 
-    #     Modelica.Blocks.Interfaces.RealOutput q[nout]
-    #       "Reference position of path planning" annotation (Placement(
-    #           transformation(extent={{100,70},{120,90}})));
-    #     Modelica.Blocks.Interfaces.RealOutput qd[nout]
-    #       "Reference speed of path planning" annotation (Placement(transformation(
-    #             extent={{100,20},{120,40}})));
-    #     Modelica.Blocks.Interfaces.RealOutput qdd[nout]
-    #       "Reference acceleration of path planning" annotation (Placement(
-    #           transformation(extent={{100,-40},{120,-20}})));
-    #     Modelica.Blocks.Interfaces.BooleanOutput moving[nout]
-    #       "= true, if end position not yet reached; = false, if end position reached or axis is completely at rest"
 
     systems = @named begin
         q = RealOutput(; nout)
@@ -234,124 +216,28 @@ function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end
         # moving = BooleanOutput(; nout)
     end
 
-    # for i in 1:nout
-    #     aux1[i] = p_deltaq[i] / p_qd_max[i]
-    #     aux2[i] = p_deltaq[i] / p_qdd_max[i]
-    # end
-
-    # sd_max_inv = max(abs(aux1))
-    # sdd_max_inv = max(abs(aux2))
-
-    # if sd_max_inv <= eps || sdd_max_inv <= eps
-    #     sd_max = 0
-    #     sdd_max = 0
-    #     Ta1 = 0
-    #     Ta2 = 0
-    #     noWphase = false
-    #     Tv = 0
-    #     Te = 0
-    #     Ta1s = 0
-    #     Ta2s = 0
-    #     Tvs = 0
-    #     Tes = 0
-    #     sd_max2 = 0
-    #     s1 = 0
-    #     s2 = 0
-    #     s3 = 0
-    #     s = 0
-    # else
-    #     sd_max = 1 / max(abs(aux1))
-    #     sdd_max = 1 / max(abs(aux2))
-    #     Ta1 = sqrt(1 / sdd_max)
-    #     Ta2 = sd_max / sdd_max
-    #     noWphase = Ta2 >= Ta1
-    #     Tv = if noWphase
-    #         Ta1
-    #     else
-    #         1 / sd_max
-    #     end
-    #     Te = if noWphase
-    #         Ta1 + Ta1
-    #     else
-    #         Tv + Ta2
-    #     end
-    #     Ta1s = Ta1 + startTime
-    #     Ta2s = Ta2 + startTime
-    #     Tvs = Tv + startTime
-    #     Tes = Te + startTime
-    #     sd_max2 = sdd_max * Ta1
-    #     s1 = sdd_max * (noWphase ?
-    #                     Ta1 * Ta1 : Ta2 * Ta2) / 2
-    #     s2 = s1 + (noWphase ? sd_max2 * (Te - Ta1) - (sdd_max / 2) * (Te - Ta1)^2 :
-    #           sd_max * (Tv - Ta2))
-
-    #     s3 = s2 + sd_max * (Te - Tv) - (sdd_max / 2) * (Te - Tv) * (Te - Tv)
-
-    #     if time < startTime
-    #         s = 0
-    #     elseif noWphase
-    #         if time < Ta1s
-    #             s = (sdd_max / 2) * (time - startTime) * (time - startTime)
-    #         elseif time < Tes
-    #             s = s1 + sd_max2 * (time - Ta1s) -
-    #                 (sdd_max / 2) * (time - Ta1s) * (time -
-    #                                                  Ta1s)
-    #         else
-    #             s = s2
-    #         end
-    #     elseif time < Ta2s
-    #         s = (sdd_max / 2) * (time - startTime) * (time - startTime)
-    #     elseif time < Tvs
-    #         s = s1 + sd_max * (time - Ta2s)
-    #     elseif time < Tes
-    #         s = s2 + sd_max * (time - Tvs) - (sdd_max / 2) * (time - Tvs) * (time - Tvs)
-    #     else
-    #         s = s3
-    #     end
-    # end
-
-    # sd = D(s)
-    # sdd = D(sd)
-
-    # qdd = p_deltaq * sdd
-    # qd = p_deltaq * sd
-    # q = p_q_begin + p_deltaq * s
-    # endTime = Tes
-
-    # # report when axis is moving
-    # motion_ref = time < endTime
-    # for i in 1:nout
-    #     loop
-    #     moving[i] = abs(q_begin[i] - q_end[i]) > eps ? motion_ref : false
-    # end
 
     startTime = time[1]
     time0 = time .- startTime # traj5 wants time vector to start at 0
+    if !trivial
+        q_vec, qd_vec, qdd_vec = PTP(time; q0 = q_begin, q1 = q_end, qd_max, qdd_max)
+    end
 
     interp_eqs = map(1:nout) do i
         if trivial
-                # [q.u[i] ~ 1 # TODO: SymbolicIR does not handle the interpolation https://github.com/JuliaComputing/SymbolicIR.jl/issues/2
-                # qd.u[i] ~ 0
-                # qdd.u[i] ~ 0]
-
             _q, _qd, _qdd = traj5(t, time[end]; q0 = q_begin[i], q1 = q_end[i],
                                        q̇0 = zero(q_begin[i]),
                                        q̇1 = zero(q_begin[i]),
                                        q̈0 = zero(q_begin[i]),
                                        q̈1 = zero(q_begin[i]))
-            [q.u[i] ~ _q # TODO: SymbolicIR does not handle the interpolation https://github.com/JuliaComputing/SymbolicIR.jl/issues/2
+            [q.u[i] ~ _q 
             qd.u[i] ~ _qd
             qdd.u[i] ~ _qdd]
         else
-            q_vec, qd_vec, qdd_vec = traj5(time0; q0 = q_begin[i], q1 = q_end[i],
-            q̇0 = zero(q_begin[i]),
-            q̇1 = zero(q_begin[i]),
-            q̈0 = zero(q_begin[i]),
-            q̈1 = zero(q_begin[i]))
-
-            qfun = CubicSpline(q_vec, time; extrapolate=true)
-            qdfun = CubicSpline(qd_vec, time; extrapolate=true)
-            qddfun = CubicSpline(qdd_vec, time; extrapolate=true)
+            # q_vec, qd_vec, qdd_vec = PTP(time; q0 = q_begin[i], q1 = q_end[i], qd_max, qdd_max)
+            qfun = CubicSpline(q_vec[:, i], time; extrapolate=true)
+            qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolate=true)
+            qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolate=true)
             [q.u[i] ~ qfun(t) 
             qd.u[i] ~ qdfun(t)
             qdd.u[i] ~ qddfun(t)]

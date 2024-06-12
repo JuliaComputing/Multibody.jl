@@ -125,18 +125,14 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
     end
 
     eqs = [
-           connect(flange, gear.flange_b, angleSensor.flange, speedSensor.flange, accSensor.flange)
-           connect(motor.flange_motor, gear.flange_a)
+           connect(flange, gear.flange_b)
+           connect(motor.flange_motor, gear.flange_a, angleSensor.flange, speedSensor.flange, accSensor.flange)
 
 
            connect(motor.axisControlBus, axisControlBus)
-           (angleSensor.phi.u ~ axisControlBus.angle)
-           (speedSensor.w.u ~ axisControlBus.speed)
-           (accSensor.a.u ~ axisControlBus.acceleration)
-           #    connect(axisControlBus.angle_ref, initializeFlange.phi_start)
-           #    connect(axisControlBus.speed_ref, initializeFlange.w_start)
-           #    connect(initializeFlange.flange, flange)
-           #    connect(Const.y, initializeFlange.a_start)
+           (angleSensor.phi.u/ratio ~ axisControlBus.angle)
+           (speedSensor.w.u/ratio ~ axisControlBus.speed)
+           (accSensor.a.u/ratio ~ axisControlBus.acceleration)
            connect(controller.axisControlBus, axisControlBus)]
 
     ODESystem(eqs, t; name, systems)
@@ -163,13 +159,13 @@ function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1
     end
 
     eqs = [
-        connect(flange, spring.flange_a)
-        connect(spring.flange_b, gear.flange_b, angleSensor.flange, speedSensor.flange, accSensor.flange)
-        connect(motor.flange_motor, gear.flange_a)
+        connect(flange, gear.flange_b)
+        connect(gear.flange_a, spring.flange_b)
+        connect(motor.flange_motor, spring.flange_a, angleSensor.flange, speedSensor.flange, accSensor.flange)
         connect(motor.axisControlBus, axisControlBus)
-        (angleSensor.phi.u ~ axisControlBus.angle)
-        (speedSensor.w.u ~ axisControlBus.speed)
-        (accSensor.a.u ~ axisControlBus.acceleration)
+        (angleSensor.phi.u/ratio ~ axisControlBus.angle)
+        (speedSensor.w.u/ratio ~ axisControlBus.speed)
+        (accSensor.a.u/ratio ~ axisControlBus.acceleration)
         connect(controller.axisControlBus, axisControlBus)
     ]
 
