@@ -21,17 +21,17 @@ D = Differential(t)
 """
 @connector function AxisControlBus(; name)
     vars = @variables begin
-        (motion_ref(t) = 0), [description = "= true, if reference motion is not in rest"]
-        (angle_ref(t) = 0), [description = "Reference angle of axis flange"]
-        (angle(t) = 0), [description = "Angle of axis flange"]
-        (speed_ref(t) = 0), [description = "Reference speed of axis flange"]
-        (speed(t) = 0), [description = "Speed of axis flange"]
-        (acceleration_ref(t) = 0), [description = "Reference acceleration of axis flange"]
-        (acceleration(t) = 0), [description = "Acceleration of axis flange"]
-        (current_ref(t) = 0), [description = "Reference current of motor"]
-        (current(t) = 0), [description = "Current of motor"]
-        (motorAngle(t) = 0), [description = "Angle of motor flange"]
-        (motorSpeed(t) = 0), [description = "Speed of motor flange"]
+        (motion_ref(t)), [guess=0.0,input = true, description = "= true, if reference motion is not in rest"]
+        (angle_ref(t)), [guess=0.0,input = true, description = "Reference angle of axis flange"]
+        (angle(t)), [guess=0.0,output = true, description = "Angle of axis flange"]
+        (speed_ref(t)), [guess=0.0,input = true, description = "Reference speed of axis flange"]
+        (speed(t)), [guess=0.0,output = true, description = "Speed of axis flange"]
+        (acceleration_ref(t)), [guess=0.0,input = true, description = "Reference acceleration of axis flange"]
+        (acceleration(t)), [guess=0.0,output = true, description = "Acceleration of axis flange"]
+        (current_ref(t)), [guess=0.0,input = true, description = "Reference current of motor"]
+        (current(t)), [guess=0.0,output = true, description = "Current of motor"]
+        (motorAngle(t)), [guess=0.0,output = true, description = "Angle of motor flange"]
+        (motorSpeed(t)), [guess=0.0,output = true, description = "Speed of motor flange"]
     end
     ODESystem(Equation[], t, vars, []; name)
 end
@@ -355,10 +355,10 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         diff = IdealOpAmp()
         fixed = Rotational.Fixed() # NOTE: this was added to account for the fixed frame that is added to RotationalEMF when useSupport=false
         emf = Electrical.EMF(; k = k) # Was RotationalEMF(k, useSupport=false), which differs from EMF in that it can be instantiated without support
-        La = Inductor(; L = (250 / (2 * D * w)))
+        La = Inductor(; L = (250 / (2 * D * w)), i=0)
         Ra = Resistor(; R = 250)
         Rd2 = Resistor(; R = 100)
-        C = Capacitor(C = 0.004 * D / w)
+        C = Capacitor(C = 0.004 * D / w, v=0)
         OpI = IdealOpAmp()
         Ri = Resistor(; R = 10)
         Rd1 = Resistor(; R = 100)
@@ -375,7 +375,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         g5 = Ground()
         phi = Rotational.AngleSensor()
         speed = Rotational.SpeedSensor()
-        Jmotor = Rotational.Inertia(; J = J)
+        Jmotor = Rotational.Inertia(; J = J, w=0)
         axisControlBus = AxisControlBus()
         convert1 = Blocks.Gain(1)
         convert2 = Blocks.Gain(1)
@@ -433,12 +433,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     # end
 
     @variables begin
-        (q(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint angles"]
-        (qd(t)[1:6] = 0), [state_priority = typemax(Int), description = "Joint speeds"]
-        (qdd(t)[1:6] = 0),
-        [state_priority = typemax(Int), description = "Joint accelerations"]
-        (tau(t)[1:6] = 0),
-        [state_priority = typemax(Int), description = "Joint driving torques"]
+        (q(t)[1:6]), [guess = 0, state_priority = typemax(Int), description = "Joint angles"]
+        (qd(t)[1:6]), [guess = 0, state_priority = typemax(Int), description = "Joint speeds"]
+        (qdd(t)[1:6]),
+        [guess = 0, state_priority = typemax(Int), description = "Joint accelerations"]
+        (tau(t)[1:6]),
+        [guess = 0, state_priority = typemax(Int), description = "Joint driving torques"]
     end
 
     systems = @named begin
@@ -448,12 +448,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         axis4 = Rotational.Flange()
         axis5 = Rotational.Flange()
         axis6 = Rotational.Flange()
-        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false)
-        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false)
-        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false)
-        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false)
-        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false)
-        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false)
+        r1 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false, radius=0.15)
+        r2 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false, radius=0.1)
+        r3 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false, radius=0.075)
+        r4 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false, radius=0.06)
+        r5 = Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = false, radius=0.05)
+        r6 = Revolute(n = [0, 1, 0], useAxisFlange = true, isroot = false, radius=0.02)
         b0 = BodyShape(r = [0, 0.351, 0],
                        #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],

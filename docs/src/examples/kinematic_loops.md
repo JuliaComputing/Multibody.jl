@@ -27,10 +27,10 @@ systems = @named begin
     j3 = Revolute()
     j4 = RevolutePlanarLoopConstraint()
     j5 = Revolute()
-    b1 = BodyShape(m=1, r = [2.0, 0, 0])
-    b2 = BodyShape(m=1, r = [0.0, 2.0, 0])
-    b3 = BodyShape(m=1, r = [-2.0, 0, 0])
-    b4 = BodyShape(m=1, r = [0.0, -2.0, 0])
+    b1 = BodyShape(m=1, r = [2.0, 0, 0], radius=0.03)
+    b2 = BodyShape(m=1, r = [0.0, 2.0, 0], radius=0.03)
+    b3 = BodyShape(m=1, r = [-2.0, 0, 0], radius=0.03)
+    b4 = BodyShape(m=1, r = [0.0, -2.0, 0], radius=0.03)
     damper1 = Rotational.Damper(d=0.5)
     damper2 = Rotational.Damper(d=0.1)
 end
@@ -58,8 +58,8 @@ connections = [
     connect(j2.support, damper2.flange_b)
     
 ]
-@named fourbar2 = ODESystem(connections, t, systems = [world; systems])
-m = structural_simplify(IRSystem(fourbar2))
+@named fourbar = ODESystem(connections, t, systems = [world; systems])
+m = structural_simplify(IRSystem(fourbar))
 prob = ODEProblem(m, [], (0.0, 30.0))
 sol = solve(prob, Rodas4(autodiff=false))
 
@@ -80,7 +80,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example kinloop
 import CairoMakie
-Multibody.render(fourbar2, sol, 0:0.033:10; z = -7, R=Multibody.rotx(20, true)*Multibody.roty(20, true), filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
+Multibody.render(fourbar, sol, 0:0.033:10; z = -7, R=Multibody.rotx(20, true)*Multibody.roty(20, true), filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
 nothing # hide
 ```
 
@@ -91,18 +91,18 @@ nothing # hide
 
 The mechanism below is another instance of a 4-bar linkage, this time with 6 revolute joints, 1 prismatic joint and 4 bodies. In order to simulate this mechanism, the user must
 1. Use the `iscut=true` keyword argument to one of the `Revolute` joints to indicate that the joint is a cut joint. A cut joint behaves similarly to a regular joint, but it introduces fewer constraints in order to avoid the otherwise over-constrained system resulting from closing the kinematic loop.
-2. Increase the `state_priority` of the joint `j1` above the default joint priority 3. This encourages the model compiler to choose the joint coordinate of `j1` as state variable. The joint coordinate of `j1` is the only coordinate that uniquely determines the configuration of the mechanism. The choice of any other joint coordinate would lead to a singular representation in at least one configuration of the mechanism. The joint `j1` is the revolute joint located in the origin, see the animation below.
+2. Increase the `state_priority` of the joint `j1` above the default joint priority 3. This encourages the model compiler to choose the joint coordinate of `j1` as state variable. The joint coordinate of `j1` is the only coordinate that uniquely determines the configuration of the mechanism. The choice of any other joint coordinate would lead to a singular representation in at least one configuration of the mechanism. The joint `j1` is the revolute joint located in the origin, see the animation below where this joint is made larger than the others.
 
 
 To drive the mechanism, we set the initial velocity of the joint j1 to some non-zero value.
 
 ```@example kinloop
 systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10.0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10.0, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
     j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
-    b1 = BodyShape(r = [0, 0.5, 0.1])
-    b2 = BodyShape(r = [0, 0.2, 0])
-    b3 = BodyShape(r = [-1, 0.3, 0.1])
+    b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
+    b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
+    b3 = BodyShape(r = [-1, 0.3, 0.1], radius=0.03)
     rev = Revolute(n = [0, 1, 0], iscut=true)
     rev1 = Revolute()
     j3 = Revolute(n = [1, 0, 0])
