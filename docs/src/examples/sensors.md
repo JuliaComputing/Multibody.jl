@@ -6,6 +6,7 @@ The example below adds a force and a torque sensor to the pivot point of a pendu
 ```@example sensor
 using Multibody
 using ModelingToolkit
+using JuliaSimCompiler
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
@@ -30,7 +31,6 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = ODESystem(connections, t,
                          systems = [world, joint, body, torquesensor, forcesensor])
-modele = ModelingToolkit.expand_connections(model)
 ssys = structural_simplify(IRSystem(model))
 
 

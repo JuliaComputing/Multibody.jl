@@ -97,16 +97,17 @@ Fixed translation of `frame_b` with respect to `frame_a` with position vector `r
 
 Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
-@component function FixedTranslation(; name, r, radius=0.08f0)
+@component function FixedTranslation(; name, r, radius=0.08f0, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0])
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters r[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
     r = collect(r)
-    @parameters radius=radius [
-        description = "Radius of the body in animations",
-    ]
+    @parameters begin
+        radius = radius, [description = "Radius of the body in animations"]
+        color[1:4] = color, [description = "Color of the body in animations (RGBA)"]
+    end
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
     taua = frame_a.tau |> collect
@@ -115,7 +116,7 @@ Can be though of as a massless rod. For a massive rod, see [`BodyShape`](@ref) o
                    (ori(frame_b) ~ ori(frame_a))
                    collect(0 .~ fa + fb)
                    (0 .~ taua + taub + cross(r, fb))]
-    pars = [r; radius]
+    pars = [r; radius; color]
     vars = []
     compose(ODESystem(eqs, t, vars, pars; name), frame_a, frame_b)
 end
@@ -210,6 +211,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phid0 = zeros(3),
               r_0 = 0,
               radius = 0.005,
+              color = [1,0,0,1],
               useQuaternions=false,)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
@@ -239,6 +241,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     @parameters radius=radius [
         description = "Radius of the body in animations",
     ]
+    @parameters color[1:4] = color [description = "Color of the body in animations (RGBA)"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
     @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
@@ -315,7 +318,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
     
-    ODESystem(eqs, t; name, metadata = Dict(:isroot => isroot), systems = [frame_a])
+    sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
+    add_params(sys, [radius; color]; name)
 end
 
 
