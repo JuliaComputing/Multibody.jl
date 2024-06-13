@@ -201,7 +201,7 @@ u = cm.axis2.controller.PI.ctr_output.u
 
 @testset "one axis" begin
     @info "Testing one axis"
-    @named oneaxis = RobotAxis(trivial=false)
+    @named oneaxis = RobotAxis()
     oneaxis = complete(oneaxis)
     op = Dict([
         oneaxis.axis.flange.phi => 0
@@ -257,7 +257,7 @@ end
 @testset "full robot" begin
     @info "Testing full robot"
 
-    @named robot = Robot6DOF(trivial=false)
+    @named robot = Robot6DOF()
     robot = complete(robot)
 
     @time "full robot" begin 
