@@ -18,6 +18,7 @@ using Plots
 using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
+t = Multibody.t
 
 world = Multibody.world
 number_of_links = 6
