@@ -103,3 +103,40 @@ nothing # hide
 ```
 
 ![animation](robot.gif)
+
+## Kinematics
+The coordinates of any point on the mechanism may be obtained in the world coordinate frame by either
+
+```@example robot
+output = collect(robot.mechanics.b6.frame_b.r_0)
+fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+fkine(prob.u0, prob.p, 0)
+```
+
+Query the solution object with the desired output, e.g.,
+```@example robot
+sol(0, idxs=output)
+```
+query the problem with the output, in which case the initial condition is used to compute the output
+```@example robot
+prob[output]
+```
+
+or by building an explicit function `(state, parameters, time) -> output`
+```@example robot
+fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+fkine(prob.u0, prob.p, 0)
+```
+!!! note
+    The function `fkine` above takes the full state of the robot model, as opposed to only the joint angles.
+
+### Jacobian
+We can compute the Jacobian ``J`` of the forward-kinematics function using the package ForwardDiff. The Jacobian of the end-effector coordinates will be a 3×36 matrix, since we have 36-dimensional state of the robot after simplification. Since the end-effector coordinates do not depend on all the state variables, we may ask which variables it depends on by finding non-zero columns of ``J``
+```@example robot
+using ModelingToolkit.ForwardDiff
+J = ForwardDiff.jacobian(x->fkine(x, prob.p, 0), prob.u0)
+nonzero_inds = findall(any(!iszero, J, dims=1)[:])
+unknowns(ssys)[nonzero_inds]
+```
+We see that the end-effector position depends on all mechanical angles except for the last one, which is expected since the end-effector origin is on the axis of rotation of joint 6. 
+
