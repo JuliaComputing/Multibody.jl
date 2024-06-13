@@ -22,7 +22,7 @@ t = Multibody.t
 
 world = Multibody.world
 number_of_links = 6
-@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1)
+@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1, radius=0.03, color=[0.5, 0.4, 0.4, 1])
 @named body = Body(; m = 1, radius=0.2)
 
 connections = [connect(world.frame_b, rope.frame_a)
@@ -82,7 +82,7 @@ chain_length = 2
 x_dist = 1.5 # Distance between the two mounting points
 
 systems = @named begin
-    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1])
+    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1], radius=0.05)
     spring = Spring(c = 2000)
     fixed = FixedTranslation(; r=[x_dist, 0, 0], radius=0.02, color=[0.1,0.1,0.1,1]) # Second mounting point
 end

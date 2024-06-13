@@ -253,7 +253,7 @@ function render!(scene, ::typeof(Spherical), sys, sol, t)
     thing = @lift begin
         coords = vars($t)
         point = Point3f(coords)
-        Sphere(point, radius)
+        Sphere(point, Float32(radius))
     end
     mesh!(scene, thing; color)
     true
@@ -307,6 +307,7 @@ end
 function render!(scene, ::typeof(Damper), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    color = get_color(sys, sol, :gray)
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
@@ -314,9 +315,9 @@ function render!(scene, ::typeof(Damper), sys, sol, t)
         d = r2 - r1
         extremity = d / norm(d) * 0.2f0 + r1 
         radius = 0.1f0
-        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+        Makie.GeometryBasics.Cylinder(origin, extremity, Float32(radius))
     end
-    mesh!(scene, thing, color=:gray)
+    mesh!(scene, thing; color)
     true
 end
 
@@ -344,7 +345,7 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
         sol(sol.t[1], idxs=sys.radius) |> Float32
     catch
         0.05f0
-    end
+    end |> Float32
     try
         thing = @lift begin
             r1 = Point3f(r_0a($t))
