@@ -21,7 +21,7 @@ using Test
 
 world = Multibody.world
 number_of_links = 6
-@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1, iscut=true)
+@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1)
 @named body = Body(; m = 1, radius=0.2)
 
 connections = [connect(world.frame_b, rope.frame_a)

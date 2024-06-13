@@ -408,7 +408,7 @@ There are three different methods of adding damping to the rope:
 - Damping in flexing of the rope, modeled as viscous friction in the joints between the links, controlled by the parameter `d_joint`.
 - Air resistance to the rope moving through the air, controlled by the parameter `air_resistance`. This damping is quadratic in the velocity (``f_d ~ -||v||v``) of each link relative to the world frame.
 """
-function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, iscut = false, color = [255, 219, 120, 255]./255, kwargs...)
+function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, color = [255, 219, 120, 255]./255, kwargs...)
 
     @assert n >= 1
     systems = @named begin
@@ -435,7 +435,7 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
         masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance) for i = 1:n]
-        links = [Prismatic(n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, iscut = iscut && i == 1, color) for i = 1:n]
+        links = [Prismatic(n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))
