@@ -148,7 +148,7 @@ export point_to_point, traj5, KinematicPTP, Kinematic5
 include("robot/path_planning.jl")
 include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
-
+include("robot/codegen.jl")
 
 
 end
