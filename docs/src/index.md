@@ -105,5 +105,5 @@ See [Industrial robot](@ref) for an example making use of the [`point_to_point`]
 
 ```@autodocs
 Modules = [Multibody]
-Pages   = ["path_planning.jl"]
+Pages   = ["path_planning.jl", "ptp.jl"]
 ```
