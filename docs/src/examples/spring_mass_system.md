@@ -25,10 +25,10 @@ systems = @named begin
     p1      = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
     spring1 = TranslationalModelica.Spring(c=30, s_rel0 = 0.1)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
-    body1   = Body(m = 1, r_cm = [0, 0, 0])
+    body1   = Body(m = 1, r_cm = [0, 0, 0], radius=0.1, color=[1,0.5,0,1])
     bar1    = FixedTranslation(r = [0.3, 0, 0])
     bar2    = FixedTranslation(r = [0.3, 0, 0])
-    body2   = Body(m = 1, r_cm = [0, 0, 0])
+    body2   = Body(m = 1, r_cm = [0, 0, 0], radius=0.1)
     p2      = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
 end
 

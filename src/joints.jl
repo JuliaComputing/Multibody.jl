@@ -16,6 +16,10 @@ Revolute joint with 1 rotational degree-of-freedom
 If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotational are also available:
 - `axis`: 1-dim. rotational flange that drives the joint
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
+
+# Rendering options
+- `radius = 0.05`: Radius of the joint in animations
+- `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
                   isroot = true, iscut = false, radius = 0.05, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
@@ -102,7 +106,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   isroot = true, s0 = 0, v0 = 0)
+                   isroot = true, s0 = 0, v0 = 0, )
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -162,16 +166,26 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `state = true`.
 - `sequence`: Rotation sequence
 - `d`: Viscous damping constant. If `d > 0`. the joint dissipates energy due to viscous damping according to ``τ ~ -d*ω``.
+
+# Rendering options
+- `radius = 0.1`: Radius of the joint in animations
+- `color = [1,1,0,1]`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
 @component function Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
                    phi_d = 0,
                    d = 0,
-                   phi_dd = 0)
+                   phi_dd = 0,
+                   color = [1, 1, 0, 1],
+                   radius = 0.1)
     @named begin
         ptf = PartialTwoFrames()
         R_rel = NumRotationMatrix()
         R_rel_inv = NumRotationMatrix()
+    end
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
     end
     @unpack frame_a, frame_b = ptf
     # @parameters begin # Currently not using parameters due to these appearing in if statements
@@ -233,7 +247,8 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         end
     end
 
-    extend(ODESystem(eqs, t; name), ptf)
+    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    add_params(sys, pars; name)
 end
 
 @component function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
