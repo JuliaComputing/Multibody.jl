@@ -30,6 +30,7 @@ makedocs(;
                  "Free motions" => "examples/free_motion.md",
                  "Kinematic loops" => "examples/kinematic_loops.md",
                  "Industrial robot" => "examples/robot.md",
+                 "Ropes, cables and chains" => "examples/ropes_and_cables.md",
              ],
              "3D rendering" => "rendering.md",
          ])

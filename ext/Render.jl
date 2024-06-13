@@ -248,12 +248,14 @@ end
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
     vars = get_fun(sol, collect(sys.frame_a.r_0))
+    color = get_color(sys, sol, :yellow)
+    radius = sol(sol.t[1], idxs=sys.radius)
     thing = @lift begin
         coords = vars($t)
         point = Point3f(coords)
-        Sphere(point, 0.1)
+        Sphere(point, radius)
     end
-    mesh!(scene, thing, color=:yellow)
+    mesh!(scene, thing; color)
     true
 end
 
@@ -280,6 +282,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     radius = Float32(sol(sol.t[1], idxs=sys.radius))
+    color = get_color(sys, sol, :purple)
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
@@ -287,12 +290,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
         extremity = r2
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    color = try
-        sol(0, idxs=sys.color)
-    catch
-        :purple
-    end
-    mesh!(scene, thing, color=:purple, specular = Vec3f(1.5))
+    mesh!(scene, thing; color, specular = Vec3f(1.5))
     # thing = @lift begin
     #     r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
     #     r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))
