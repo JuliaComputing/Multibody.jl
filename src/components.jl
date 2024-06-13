@@ -6,6 +6,8 @@ function isroot(sys)
     get(sys.metadata, :isroot, false)
 end
 
+purple = [0.5019608f0,0.0f0,0.5019608f0,1.0f0]
+
 """
     ori(frame, varw = false)
 
@@ -98,7 +100,7 @@ Fixed translation of `frame_b` with respect to `frame_a` with position vector `r
 
 Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
-@component function FixedTranslation(; name, r, radius=0.08f0, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0])
+@component function FixedTranslation(; name, r, radius=0.08f0, color = purple)
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters r[1:3]=r [
@@ -342,7 +344,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=:purple, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, kwargs...)
     systems = @named begin
         translation = FixedTranslation(r = r)
         body = Body(; r_cm, r_0, kwargs...)
@@ -366,12 +368,11 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
             description = "Vector from frame_a to frame_b resolved in frame_a",
         ]
         radius = radius, [description = "Radius of the body in animations"]
-        # color = color, [description = "Color of the body in animations"]
+        color[1:4] = color, [description = "Color of the body in animations"]
     end
 
-    # @parameters color::Symbol = color # requires MTK v9
 
-    pars = [r; radius]
+    pars = [r; radius; color]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
@@ -399,6 +400,7 @@ The rope is modeled as a series of `n` links, each connected by a [`Spherical`](
 - `c`: The equivalent stiffness of the rope, i.e., the rope will act like a spring with stiffness `c`. 
 - `d`: The equivalent damping in the stretching direction of the rope, i.e., the taught rope will act like a damper with damping `d`.
 - `d_joint`: Viscous damping in the joints between the links. A positive value makes the rope dissipate energy while flexing (as opposed to the damping `d` which dissipats energy due to stretching).
+- `dir`: A vector of norm 1 indicating the initial direction of the rope.
 
 ## Damping
 There are three different methods of adding damping to the rope:
@@ -406,18 +408,20 @@ There are three different methods of adding damping to the rope:
 - Damping in flexing of the rope, modeled as viscous friction in the joints between the links, controlled by the parameter `d_joint`.
 - Air resistance to the rope moving through the air, controlled by the parameter `air_resistance`. This damping is quadratic in the velocity (``f_d ~ -||v||v``) of each link relative to the world frame.
 """
-function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, kwargs...)
+function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, color = [255, 219, 120, 255]./255, kwargs...)
 
     @assert n >= 1
     systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
+    dir = dir / norm(dir)
 
     li = l / n # Segment length
     mi = m / n # Segment mass
 
-    joints = [Spherical(name=Symbol("joint_$i"), isroot=true, state=true, d = d_joint) for i = 1:n+1]
+    # joints = [Spherical(name=Symbol("joint_$i"), isroot=!(iscut && i == 1), iscut = iscut && i == 1, state=true, d = d_joint) for i = 1:n+1]
+    joints = [Spherical(; name=Symbol("joint_$i"), isroot=true, state=true, d = d_joint, radius=0, color) for i = 1:n+1]
 
     eqs = [
         connect(frame_a, joints[1].frame_a)
@@ -430,8 +434,8 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, air_resistance=0, d_join
         di = n * d # Segment damping
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
-        masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = [0, -li/2, 0], air_resistance) for i = 1:n]
-        links = [Prismatic(n = [0, -1, 0], s0 = li, name=Symbol("flexibility_$i"), axisflange=true) for i = 1:n]
+        masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance) for i = 1:n]
+        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))
@@ -439,7 +443,7 @@ function Rope(; name, l = 1, n = 10, m = 1, c = 0, d=0, air_resistance=0, d_join
         end
         links = [links; springs; dampers; masses]
     else
-        links = [BodyShape(; m = mi, r = [0, -li, 0], name=Symbol("link_$i"), isroot=false, air_resistance) for i = 1:n]
+        links = [BodyShape(; m = mi, r = li*dir, name=Symbol("link_$i"), isroot=false, air_resistance, color) for i = 1:n]
     end
 
 
