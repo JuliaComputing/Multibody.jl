@@ -9,7 +9,7 @@ t = Multibody.t
 
 world = Multibody.world
 number_of_links = 6
-@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1)
+@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1, radius=0.03, color=[0.5, 0.4, 0.4, 1])
 @named body = Body(; m = 1, radius=0.2)
 
 connections = [connect(world.frame_b, rope.frame_a)
@@ -51,7 +51,7 @@ chain_length = 2
 x_dist = 1.5 # Distance between the two mounting points
 
 systems = @named begin
-    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1])
+    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1], radius=0.05)
     spring = Spring(c = 2000)
     fixed = FixedTranslation(; r=[x_dist, 0, 0], radius=0.02, color=[0.1,0.1,0.1,1]) # Second mounting point
 end
@@ -70,4 +70,4 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 
-Multibody.render(mounted_chain, sol, z = -3, filename = &quot;mounted_chain.gif&quot;) # May take long time for n&gt;=10</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;mounted_chain.gif&quot;</code></pre><p><img src="../mounted_chain.gif" alt="mounted_chain animation"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../robot/">« Industrial robot</a><a class="docs-footer-nextpage" href="../../rendering/">3D rendering »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Thursday 13 June 2024 15:09">Thursday 13 June 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(mounted_chain, sol, z = -3, filename = &quot;mounted_chain.gif&quot;) # May take long time for n&gt;=10</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;mounted_chain.gif&quot;</code></pre><p><img src="../mounted_chain.gif" alt="mounted_chain animation"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../robot/">« Industrial robot</a><a class="docs-footer-nextpage" href="../../rendering/">3D rendering »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Thursday 13 June 2024 15:21">Thursday 13 June 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
