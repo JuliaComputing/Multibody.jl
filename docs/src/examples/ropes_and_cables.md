@@ -82,9 +82,9 @@ chain_length = 2
 x_dist = 1.5 # Distance between the two mounting points
 
 systems = @named begin
-    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0])
+    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1])
     spring = Spring(c = 2000)
-    fixed = FixedTranslation(; r=[x_dist, 0, 0]) # Second mounting point
+    fixed = FixedTranslation(; r=[x_dist, 0, 0], radius=0.02, color=[0.1,0.1,0.1,1]) # Second mounting point
 end
 
 connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
