@@ -199,6 +199,10 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 - `r_0`: Position vector from origin of world frame to origin of `frame_a`
 - `v_0`: Absolute velocity of `frame_a`, resolved in world frame (= D(r_0))
 - `a_0`: Absolute acceleration of `frame_a` resolved in world frame (= D(v_0))
+
+# Rendering options
+- `radius`: Radius of the joint in animations
+- `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
 @component function Body(; name, m = 1, r_cm = [0, 0, 0],
               I_11 = 0.001,
@@ -211,7 +215,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
-              radius = 0.005,
+              radius = 0.05,
               air_resistance = 0.0,
               color = [1,0,0,1],
               quat=false,)
