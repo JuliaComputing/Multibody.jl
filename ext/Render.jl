@@ -248,12 +248,14 @@ end
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
     vars = get_fun(sol, collect(sys.frame_a.r_0))
+    color = get_color(sys, sol, :yellow)
+    radius = sol(sol.t[1], idxs=sys.radius)
     thing = @lift begin
         coords = vars($t)
         point = Point3f(coords)
-        Sphere(point, 0.1)
+        Sphere(point, radius)
     end
-    mesh!(scene, thing, color=:yellow)
+    mesh!(scene, thing; color)
     true
 end
 

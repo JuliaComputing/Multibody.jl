@@ -12,7 +12,7 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-@named robot = Multibody.Robot6DOF(trivial=false)
+@named robot = Multibody.Robot6DOF()
 robot = complete(robot)
 
 length(equations(robot))
@@ -83,6 +83,15 @@ plot!(sol, idxs = [
 ```
 
 
+## Trajectory planning
+In the example, the robot is tracking a reference trajectory generated using the function [`point_to_point`](@ref) and interfaced from the component [`KinematicPTP`](@ref). We can inspect the generated trajectory by plotting the positions, velocities and accelerations (we show one joint only to keep the plot size limited):
+```@example robot
+plot(sol, idxs = [
+            robot.pathPlanning.controlBus.axisControlBus1.angle_ref
+            robot.pathPlanning.controlBus.axisControlBus1.speed_ref
+            robot.pathPlanning.controlBus.axisControlBus1.acceleration_ref
+], layout=(3,1), lab=["\$q\$" "\$\\dot q\$" "\$\\ddot q\$"], xlabel=["" "" "Time [s]"])
+```
 
 ## 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:

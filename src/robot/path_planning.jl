@@ -128,7 +128,7 @@ function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
         q_axisUsed = RealPassThrough()
         qd_axisUsed = RealPassThrough()
         qdd_axisUsed = RealPassThrough()
-        moving = Blocks.Constant(k = 1) # Blocks.BooleanInput(nAxis) # NOTE
+        moving = Blocks.Constant(k = 1) # Blocks.BooleanInput(nAxis) 
         motion_ref_axisUsed = RealPassThrough() # Blocks.BooleanPassThrough()
     end
 
@@ -147,6 +147,8 @@ end
     q, qd, qdd = traj5(t; q0, q1, q̇0 = zero(q0), q̇1 = zero(q0), q̈0 = zero(q0), q̈1 = zero(q0))
 
 Generate a 5:th order polynomial trajectory with specified end points, vels and accs.
+
+See also [`point_to_point`](@ref) and [`Kinematic5`](@ref).
 """
 function traj5(t; q0 = 0.0, q1 = one(q0), q̇0 = zero(q0), q̇1 = zero(q0), q̈0 = zero(q0),
                q̈1 = zero(q0))
@@ -186,67 +188,85 @@ end
 # plot!(t, centraldiff(centraldiff(q)), sp = 3)
 
 """
-    KinematicPTP(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0, qdd0 = 0, qdd1 = 0)
+    KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
 
-A simple trajectory planner that plans a 5:th order polynomial trajectory between two points, subject to specified boundary conditions on the position, velocity and acceleration.
+A component emitting a trajectory created by the [`point_to_point`](@ref) trajectory generator.
+
+# Arguments
+- `time`: Time vector, e.g., `0:0.01:10`
+- `name`: Name of the component
+- `q0`: Initial position
+- `q1`: Final position
+- `qd_max`: Maximum velocity
+- `qdd_max`: Maximum acceleration
+
+# Outputs
+- `q`: Position
+- `qd`: Velocity
+- `qdd`: Acceleration
+
+See also [`Kinematic5`](@ref).
 """
-function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0,
-                      qdd0 = 0, qdd1 = 0, trivial = false, qd_max=1, qdd_max=1)
-    nout = max(length(q0), length(q1), length(qd1), length(qdd1))
-
-    # @parameters begin
-    #     q0 = q0, [description = "Start position"]
-    #     q1 = q1, [description = "End position"]
-    #     qd_max = qd_max, [description = "Maximum velocities der(q)"]
-    #     qdd_max = qdd_max, [description = "Maximum accelerations der(qd)"]
-    #     startTime = startTime, [description = "Time instant at which movement starts"]
-    #     p_q0[1:nout] = ones(nout) .* q0
-    #     p_q1[1:nout] = ones(nout) .* q1
-    #     p_qd_max[1:nout] = ones(nout) .* qd_max
-    #     p_qdd_max[1:nout] = ones(nout) .* qdd_max
-    #     p_deltaq[1:nout] = p_q1 - p_q0
-    # end
-
-
+function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
+    nout = max(length(q0), length(q1))
 
     systems = @named begin
         q = RealOutput(; nout)
         qd = RealOutput(; nout)
         qdd = RealOutput(; nout)
-        # moving = BooleanOutput(; nout)
     end
 
+    q_vec, qd_vec, qdd_vec = point_to_point(time; q0 = q0, q1 = q1, qd_max, qdd_max)
 
-    startTime = time[1]
-    time0 = time .- startTime # traj5 wants time vector to start at 0
-    if !trivial
-        q_vec, qd_vec, qdd_vec = point_to_point(time; q0 = q0, q1 = q1, qd_max, qdd_max)
+    interp_eqs = map(1:nout) do i
+        qfun = CubicSpline(q_vec[:, i], time; extrapolate=true)
+        qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolate=true)
+        qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolate=true)
+        [q.u[i] ~ qfun(t) 
+        qd.u[i] ~ qdfun(t)
+        qdd.u[i] ~ qddfun(t)]
+    end
+    eqs = reduce(vcat, interp_eqs)
+    ODESystem(eqs, t; name, systems)
+end
+
+
+"""
+    Kinematic5(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0, qdd0 = 0, qdd1 = 0)
+
+A component emitting a 5:th order polynomial trajectory created using [`traj5`](@ref). `traj5` is a simple trajectory planner that plans a 5:th order polynomial trajectory between two points, subject to specified boundary conditions on the position, velocity and acceleration.
+
+# Arguments
+- `time`: Time vector, e.g., `0:0.01:10`
+- `name`: Name of the component
+
+# Outputs
+- `q`: Position
+- `qd`: Velocity
+- `qdd`: Acceleration
+"""
+function Kinematic5(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0,
+                      qdd0 = 0, qdd1 = 0)
+    nout = max(length(q0), length(q1), length(qd1), length(qdd1))
+
+    systems = @named begin
+        q = RealOutput(; nout)
+        qd = RealOutput(; nout)
+        qdd = RealOutput(; nout)
     end
 
     interp_eqs = map(1:nout) do i
-        if trivial
-            _q, _qd, _qdd = traj5(t, time[end]; q0 = q0[i], q1 = q1[i],
-                                       q̇0 = zero(q0[i]),
-                                       q̇1 = zero(q0[i]),
-                                       q̈0 = zero(q0[i]),
-                                       q̈1 = zero(q0[i]))
-            [q.u[i] ~ _q 
-            qd.u[i] ~ _qd
-            qdd.u[i] ~ _qdd]
-        else
-            # q_vec, qd_vec, qdd_vec = PTP(time; q0 = q0[i], q1 = q1[i], qd_max, qdd_max)
-            qfun = CubicSpline(q_vec[:, i], time; extrapolate=true)
-            qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolate=true)
-            qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolate=true)
-            [q.u[i] ~ qfun(t) 
-            qd.u[i] ~ qdfun(t)
-            qdd.u[i] ~ qddfun(t)]
-        end
+        _q, _qd, _qdd = traj5(t, time[end]; q0 = q0[i], q1 = q1[i],
+                                    q̇0 = zero(q0[i]),
+                                    q̇1 = zero(q0[i]),
+                                    q̈0 = zero(q0[i]),
+                                    q̈1 = zero(q0[i]))
+        [q.u[i] ~ _q 
+        qd.u[i] ~ _qd
+        qdd.u[i] ~ _qdd]
+
     end
     eqs = reduce(vcat, interp_eqs)
-
-    # push!(eqs, moving.u ~ (time[1] < t < time[end]))
-
     ODESystem(eqs, t; name, systems)
 end
 
