@@ -421,6 +421,8 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
     compose(ODESystem(eqs, t; name), systems)
 end
 
+robot_orange = [1, 0.51, 0, 1]
+
 function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     # @parameters begin
     #     mLoad = mLoad, [description = "Mass of load"]
@@ -444,12 +446,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         axis4 = Rotational.Flange()
         axis5 = Rotational.Flange()
         axis6 = Rotational.Flange()
-        r1 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.15)
-        r2 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.1)
-        r3 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.075)
-        r4 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.06)
-        r5 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.05)
-        r6 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.02)
+        r1 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.12, color=robot_orange)
+        r2 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.1, color=robot_orange)
+        r3 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.075, color=robot_orange)
+        r4 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.06, color=robot_orange)
+        r5 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.05, color=robot_orange)
+        r6 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.02, color=[0.5, 0.5, 0.5, 1])
         b0 = BodyShape(r = [0, 0.351, 0],
                        #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],
@@ -458,6 +460,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    width = 0.3,
                        #    height = 0.3,
                        radius = 0.3/2,
+                       color = robot_orange,
                        m = 1)
         b1 = BodyShape(r = [0, 0.324, 0.3],
                        I_22 = 1.16,
@@ -467,7 +470,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    width = 0.15,
                        #    height = 0.2,
                        radius = 0.2/2,
-                       #    color = [255, 0, 0],
+                       color = robot_orange,
                        m = 1)
         b2 = BodyShape(r = [0, 0.65, 0],
                        r_cm = [0.172, 0.205, 0],
@@ -482,7 +485,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    width = 0.2,
                        #    height = 0.15,
                        radius = 0.2/2,
-                       #    color = [255, 178, 0],
+                       color = robot_orange,
                        )
         b3 = BodyShape(r = [0, 0.414, -0.155],
                        r_cm = [0.064, -0.034, 0],
@@ -497,7 +500,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    width = 0.15,
                        #    height = 0.15,
                        radius = 0.15/2,
-                       #    color = [255, 0, 0],
+                       color = robot_orange,
                        )
         b4 = BodyShape(r = [0, 0.186, 0],
                        m = 28.7,
@@ -510,7 +513,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #   width = 0.1,
                        #   height = 0.1,
                        radius = 0.1/2,
-                       #   color = [255, 178, 0],
+                       color = robot_orange,
                        )
         b5 = BodyShape(r = [0, 0.125, 0],
                        m = 5.2,
@@ -523,22 +526,22 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        # width = 0.075,
                        # height = 0.1,
                         radius = 0.1/2,
-                       # color = [0, 0, 255],
+                        color = [0.5, 0.5, 0.5, 1],
                        )
         b6 = BodyShape(r = [0, 0, 0],
                        r_cm = [0.05, 0.05, 0.05],
-                       m = 0.5
+                       m = 0.5,
                        # lengthDirection = [1, 0, 0],
                        # widthDirection = [0, 1, 0],
-                       # color = [0, 0, 255],
+                       color = [0.5, 0.5, 0.5, 1],
                        )
         load = BodyShape(r = [0, 0, 0],
                          r_cm = rLoad,
-                         m = mLoad
+                         m = mLoad,
                          # widthDirection = [1, 0, 0],
                          # width = 0.05,
                          # height = 0.05,
-                         # color = [255, 0, 0],
+                         color = [1, 0, 0, 1],
                          # lengthDirection = to_unit1(rLoad),
                          # length = length(rLoad),
                          )
