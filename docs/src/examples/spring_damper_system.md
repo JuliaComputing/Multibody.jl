@@ -57,15 +57,19 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper1.d => 2], (0, 10))
+prob = ODEProblem(ssys, [
+    damper1.d => 2;
+    collect(body1.v_0) .=> 0;
+    collect(body1.w_a) .=> 0;
+], (0, 10))
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
-plot(
-    plot(sol, idxs = [spring1.s, spring2.s]),
-    plot(sol, idxs = [body1.r_0[2], body2.r_0[2]]),
-    plot(sol, idxs = [spring1.f, spring2.f]),
+Plots.plot(
+    Plots.plot(sol, idxs = [spring1.s, spring2.s]),
+    Plots.plot(sol, idxs = [body1.r_0[2], body2.r_0[2]]),
+    Plots.plot(sol, idxs = [spring1.f, spring2.f]),
 )
 ```
 

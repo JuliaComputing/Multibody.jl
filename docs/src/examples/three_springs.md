@@ -43,6 +43,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     D.(spring3.lineforce.r_rel_0) .=> 0;
+    collect(body1.v_0) .=> 0;
 ], (0, 10))
 
 sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
