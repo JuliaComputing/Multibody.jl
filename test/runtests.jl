@@ -25,15 +25,16 @@ ssys = structural_simplify(model)
 
 @test length(unknowns(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
+@testset "traj" begin
+    @info "Testing traj"
+    include("test_traj.jl")
+end
+
 @testset "robot" begin
     @info "Testing robot"
     include("test_robot.jl")
 end
 
-@testset "traj" begin
-    @info "Testing traj"
-    include("test_traj.jl")
-end
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -48,7 +49,8 @@ The multibody paper mentions this as an interesting example, figure 8:
     system as in Figure 8, where a body is connected via
     a spring to the environment."
 =#
-
+t = Multibody.t
+D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
     @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
