@@ -38,7 +38,7 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1);
 @test SciMLBase.successful_retcode(sol)
 
-import GLMakie
+import CairoMakie
 Multibody.render(stiff_rope, sol, z = -5, filename = "stiff_rope.gif") # May take long time for n>=10
 ```
 ![stiff_rope animation](stiff_rope.gif)
