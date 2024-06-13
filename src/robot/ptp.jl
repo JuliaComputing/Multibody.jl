@@ -77,6 +77,7 @@ function point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 
     Ta2s = Ta2 + t0
     Tvs = Tv + t0
     Tes = Te + t0
+    t1 = Tes
     sd_max2 = sdd_max * Ta1
     s1 = sdd_max * (noWphase ?
                     Ta1 * Ta1 : Ta2 * Ta2) / 2
@@ -128,7 +129,6 @@ function point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 
         if time isa Number
             qdd = p_deltaq * sdd
             qd = p_deltaq * sd
-            t1 = Tes
             q = @. p_q0 + p_deltaq * s
             return q, qd, qdd, t1
         else
