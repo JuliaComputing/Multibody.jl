@@ -106,7 +106,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   isroot = true, s0 = 0, v0 = 0, )
+                   isroot = true, s0 = 0, v0 = 0, iscut = false)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -135,7 +135,11 @@ The function returns an ODESystem representing the prismatic joint.
 
            # relationships between kinematic quantities of frame_a and of frame_b
            collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n * s)
-           ori(frame_b) ~ ori(frame_a)
+           if iscut
+              residue(ori(frame_b), ori(frame_a)) .~ 0 # If joint is a cut joint, this equation is replaced
+           else
+              ori(frame_b) ~ ori(frame_a)
+           end
 
            # Force and torque balance
            zeros(3) .~ collect(frame_a.f + frame_b.f)
@@ -171,7 +175,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `radius = 0.1`: Radius of the joint in animations
 - `color = [1,1,0,1]`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
-@component function Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false,
+@component function Spherical(; name, state = false, isroot = true, iscut = false, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
                    phi_d = 0,
                    d = 0,
@@ -223,13 +227,20 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                  collect(phi_d .~ D.(phi))
                  collect(phi_dd .~ D.(phi_d))])
         if isroot
-            append!(eqs,
-                    [ori(frame_b) ~ absolute_rotation(frame_a, R_rel)
-                     zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
+            if iscut
+                append!(eqs, residue(ori(frame_b), absolute_rotation(ori(frame_a), R_rel)) .~ 0) # If joint is a cut joint, this equation is replaced)
+            else
+                append!(eqs, ori(frame_b) ~ absolute_rotation(frame_a, R_rel))
+            end
+            append!(eqs, zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f))
         else
+            if iscut
+                append!(eqs, residue(ori(frame_a), absolute_rotation(frame_b, R_rel_inv)) .~ 0)
+            else
+                append!(eqs, ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv))
+            end
             append!(eqs,
                     [R_rel_inv ~ inverse_rotation(R_rel)
-                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)
                      zeros(3) .~ collect(frame_b.f) + resolve2(R_rel, frame_a.f)])
         end
 

@@ -81,11 +81,14 @@ end
 
 Emulates the `@variables` macro but does never creates array variables. Also never introuces the variable names into the calling scope.
 """
-function at_variables_t(args...; default = nothing)
+function at_variables_t(args...; default = nothing, state_priority = nothing)
     xs = Symbolics.variables(args...; T = Symbolics.FnType)
     xs = map(x -> x(t), xs)
     if default !== nothing
         xs = Symbolics.setdefaultval.(xs, default)
+    end
+    if state_priority !== nothing
+        xs = Symbolics.setmetadata.(xs, ModelingToolkit.VariableStatePriority, state_priority)
     end
     xs
 end
