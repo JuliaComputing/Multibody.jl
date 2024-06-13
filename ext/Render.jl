@@ -324,12 +324,13 @@ end
 function render!(scene, ::typeof(Spring), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    color = get_color(sys, sol, :blue)
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
         spring_mesh(r1,r2)
     end
-    plot!(scene, thing, color=:blue)
+    plot!(scene, thing; color)
     true
 end
 
@@ -338,16 +339,21 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
     count(ModelingToolkit.isframe, sys.systems) == 2 || return false
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    color = get_color(sys, sol, :green)
+    radius = try
+        sol(sol.t[1], idxs=sys.radius) |> Float32
+    catch
+        0.05f0
+    end
     try
         thing = @lift begin
             r1 = Point3f(r_0a($t))
             r2 = Point3f(r_0b($t))
             origin = r1
             extremity = r2
-            radius = 0.05f0
             Makie.GeometryBasics.Cylinder(origin, extremity, radius)
         end
-        mesh!(scene, thing, color=:green, alpha=0.5)
+        mesh!(scene, thing; color)
         return true
     catch
         return false

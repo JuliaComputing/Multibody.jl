@@ -434,8 +434,8 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         di = n * d # Segment damping
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
-        masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance) for i = 1:n]
-        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true) for i = 1:n]
+        masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance, color=0.9*color) for i = 1:n]
+        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))

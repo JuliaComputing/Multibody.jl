@@ -106,12 +106,17 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   isroot = true, s0 = 0, v0 = 0, )
+                   isroot = true, s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1])
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description = "axis of motion"]
     n = collect(n)
+
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+    end
 
     @variables s(t)=s0 [
         state_priority = 10,
@@ -144,18 +149,19 @@ The function returns an ODESystem representing the prismatic joint.
            # d'Alemberts principle
            f ~ -(n'collect(frame_b.f))[]]
 
-    if axisflange
+    sys = if axisflange
         @named fixed = Translational.Fixed(s0=0)
         @named axis = Translational.Flange()
         @named support = Translational.Flange()
         push!(eqs, connect(fixed.flange, support))
         push!(eqs, axis.s ~ s)
         push!(eqs, axis.f ~ f)
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, axis, support, fixed)
+        compose(ODESystem(eqs, t; name=:nothing), frame_a, frame_b, axis, support, fixed)
     else
         push!(eqs, f ~ 0)
-        compose(ODESystem(eqs, t; name), frame_a, frame_b)
+        compose(ODESystem(eqs, t; name=:nothing), frame_a, frame_b)
     end
+    add_params(sys, pars; name)
 end
 
 """
