@@ -4,33 +4,33 @@ using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
 include("ptp.jl")
 
 "Generate reference angles for specified kinematic movement"
-function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:10,
-                       swingTime = 0.5, kwargs...)
+function PathPlanning1(; name, q0deg = 0, q1deg = 1, time = 0:0.01:10,
+                       swingtime = 0.5, speed_max=1, acc_max=1, kwargs...)
     # @parameters begin
-    # angleBegDeg = angleBegDeg, [description = "Start angle"]
-    # angleEndDeg = angleEndDeg, [description = "End angle"]
-    # speedMax = speedMax, [description = "Maximum axis speed"]
-    # accMax = accMax, [description = "Maximum axis acceleration"]
+    # q0deg = q0deg, [description = "Start angle"]
+    # q1deg = q1deg, [description = "End angle"]
+    # speed_max = speed_max, [description = "Maximum axis speed"]
+    # acc_max = acc_max, [description = "Maximum axis acceleration"]
     # startTime = startTime, [description = "Start time of movement"]
-    # swingTime = swingTime,
+    # swingtime = swingtime,
     # [
     #     description = "Additional time after reference motion is in rest before simulation is stopped",
     # ]
-    # angleBeg = deg2rad(angleBegDeg), [description = "Start angles"]
-    # angleEnd = deg2rad(angleEndDeg), [description = "End angles"]
+    # angleBeg = deg2rad(q0deg), [description = "Start angles"]
+    # angleEnd = deg2rad(q1deg), [description = "End angles"]
     # end
 
     systems = @named begin
         controlBus = ControlBus()
-        path = KinematicPTP(; q_end = deg2rad.(angleEndDeg),
+        path = KinematicPTP(; q1 = deg2rad.(q1deg),
                             time,
-                            #  qd_max = speedMax,
-                            #  qdd_max = accMax,
+                             qd_max = (speed_max),
+                             qdd_max = (acc_max),
                             #  startTime = startTime,
-                            q_begin = deg2rad.(angleBegDeg), kwargs...)
+                            q0 = deg2rad.(q0deg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = 1, axisUsed = 1)
         # terminateSimulation = TerminateSimulation(condition = time >=
-        #                                                       path.endTime + swingTime)
+        #                                                       path.endTime + swingtime)
     end
 
     eqs = [connect(path.q, pathToAxis1.q)
@@ -41,33 +41,33 @@ function PathPlanning1(; name, angleBegDeg = 0, angleEndDeg = 1, time = 0:0.01:1
     ODESystem(eqs, t; name, systems)
 end
 
-function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
-                       angleEndDeg = ones(naxis), time = 0:0.01:4,
-                       speedMax = fill(3, naxis),
-                       accMax = fill(2.5, naxis), startTime = 0, swingTime = 0.5, kwargs...)
+function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
+                       q1deg = ones(naxis), time = 0:0.01:4,
+                       speed_max = fill(3, naxis),
+                       acc_max = fill(2.5, naxis), startTime = 0, swingtime = 0.5, kwargs...)
     # @parameters begin
     #     naxis = naxis, [description = "Number of driven axis"]
-    #     angleBegDeg[1:naxis] = angleBegDeg, [description = "Start angles"]
-    #     angleEndDeg[1:naxis] = angleEndDeg, [description = "End angles"]
-    #     # speedMax[1:naxis] = speedMax, [description = "Maximum axis speed"]
-    #     # accMax[1:naxis] = accMax, [description = "Maximum axis acceleration"]
+    #     q0deg[1:naxis] = q0deg, [description = "Start angles"]
+    #     q1deg[1:naxis] = q1deg, [description = "End angles"]
+    #     # speed_max[1:naxis] = speed_max, [description = "Maximum axis speed"]
+    #     # acc_max[1:naxis] = acc_max, [description = "Maximum axis acceleration"]
     #     # startTime = startTime, [description = "Start time of movement"]
-    #     swingTime = swingTime,
+    #     swingtime = swingtime,
     #                 [
     #                     description = "Additional time after reference motion is in rest before simulation is stopped",
     #                 ]
-    #     angleBeg[1:6] = deg2rad.(angleBegDeg), [description = "Start angles"]
-    #     angleEnd[1:6] = deg2rad.(angleEndDeg), [description = "End angles"]
+    #     angleBeg[1:6] = deg2rad.(q0deg), [description = "Start angles"]
+    #     angleEnd[1:6] = deg2rad.(q1deg), [description = "End angles"]
     # end
 
     systems = @named begin
         controlBus = ControlBus()
-        path = KinematicPTP(; q_end = deg2rad.(angleEndDeg),
+        path = KinematicPTP(; q1 = deg2rad.(q1deg),
                             time,
-                             qd_max = speedMax,
-                             qdd_max = accMax,
+                             qd_max = speed_max,
+                             qdd_max = acc_max,
                             #  startTime = startTime,
-                            q_begin = deg2rad.(angleBegDeg), kwargs...)
+                            q0 = deg2rad.(q0deg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = naxis, axisUsed = 1)
         pathToAxis2 = PathToAxisControlBus(nAxis = naxis, axisUsed = 2)
         pathToAxis3 = PathToAxisControlBus(nAxis = naxis, axisUsed = 3)
@@ -75,7 +75,7 @@ function PathPlanning6(; name, naxis = 6, angleBegDeg = zeros(naxis),
         pathToAxis5 = PathToAxisControlBus(nAxis = naxis, axisUsed = 5)
         pathToAxis6 = PathToAxisControlBus(nAxis = naxis, axisUsed = 6)
         # terminateSimulation = TerminateSimulation(condition = time >=
-        #                                                       path.endTime + swingTime)
+        #                                                       path.endTime + swingtime)
     end
 
     eqs = [connect(path.q, pathToAxis1.q)
@@ -186,25 +186,25 @@ end
 # plot!(t, centraldiff(centraldiff(q)), sp = 3)
 
 """
-    KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0, qdd_begin = 0, qdd_end = 0)
+    KinematicPTP(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0, qdd0 = 0, qdd1 = 0)
 
 A simple trajectory planner that plans a 5:th order polynomial trajectory between two points, subject to specified boundary conditions on the position, velocity and acceleration.
 """
-function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end = 0,
-                      qdd_begin = 0, qdd_end = 0, trivial = false, qd_max=1, qdd_max=1)
-    nout = max(length(q_begin), length(q_end), length(qd_end), length(qdd_end))
+function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0,
+                      qdd0 = 0, qdd1 = 0, trivial = false, qd_max=1, qdd_max=1)
+    nout = max(length(q0), length(q1), length(qd1), length(qdd1))
 
     # @parameters begin
-    #     q_begin = q_begin, [description = "Start position"]
-    #     q_end = q_end, [description = "End position"]
+    #     q0 = q0, [description = "Start position"]
+    #     q1 = q1, [description = "End position"]
     #     qd_max = qd_max, [description = "Maximum velocities der(q)"]
     #     qdd_max = qdd_max, [description = "Maximum accelerations der(qd)"]
     #     startTime = startTime, [description = "Time instant at which movement starts"]
-    #     p_q_begin[1:nout] = ones(nout) .* q_begin
-    #     p_q_end[1:nout] = ones(nout) .* q_end
+    #     p_q0[1:nout] = ones(nout) .* q0
+    #     p_q1[1:nout] = ones(nout) .* q1
     #     p_qd_max[1:nout] = ones(nout) .* qd_max
     #     p_qdd_max[1:nout] = ones(nout) .* qdd_max
-    #     p_deltaq[1:nout] = p_q_end - p_q_begin
+    #     p_deltaq[1:nout] = p_q1 - p_q0
     # end
 
 
@@ -220,21 +220,21 @@ function KinematicPTP(; time, name, q_begin = 0, q_end = 1, qd_begin = 0, qd_end
     startTime = time[1]
     time0 = time .- startTime # traj5 wants time vector to start at 0
     if !trivial
-        q_vec, qd_vec, qdd_vec = PTP(time; q0 = q_begin, q1 = q_end, qd_max, qdd_max)
+        q_vec, qd_vec, qdd_vec = point_to_point(time; q0 = q0, q1 = q1, qd_max, qdd_max)
     end
 
     interp_eqs = map(1:nout) do i
         if trivial
-            _q, _qd, _qdd = traj5(t, time[end]; q0 = q_begin[i], q1 = q_end[i],
-                                       q̇0 = zero(q_begin[i]),
-                                       q̇1 = zero(q_begin[i]),
-                                       q̈0 = zero(q_begin[i]),
-                                       q̈1 = zero(q_begin[i]))
+            _q, _qd, _qdd = traj5(t, time[end]; q0 = q0[i], q1 = q1[i],
+                                       q̇0 = zero(q0[i]),
+                                       q̇1 = zero(q0[i]),
+                                       q̈0 = zero(q0[i]),
+                                       q̈1 = zero(q0[i]))
             [q.u[i] ~ _q 
             qd.u[i] ~ _qd
             qdd.u[i] ~ _qdd]
         else
-            # q_vec, qd_vec, qdd_vec = PTP(time; q0 = q_begin[i], q1 = q_end[i], qd_max, qdd_max)
+            # q_vec, qd_vec, qdd_vec = PTP(time; q0 = q0[i], q1 = q1[i], qd_max, qdd_max)
             qfun = CubicSpline(q_vec[:, i], time; extrapolate=true)
             qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolate=true)
             qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolate=true)

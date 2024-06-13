@@ -4,20 +4,20 @@ function add_params(sys, params; name)
 end
 
 """
-    Revolute(; name, phi0 = 0, w0 = 0, n, useAxisFlange = false)
+    Revolute(; name, phi0 = 0, w0 = 0, n, axisflange = false)
 
 Revolute joint with 1 rotational degree-of-freedom
 
 - `phi0`: Initial angle
 - `w0`: Iniitial angular velocity
 - `n`: The axis of rotation
-- `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Rotational, `axis` and `support`, between which rotational components such as springs and dampers can be connected.
+- `axisflange`: If true, the joint will have two additional frames from Mechanical.Rotational, `axis` and `support`, between which rotational components such as springs and dampers can be connected.
 
-If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotational are also available:
+If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotational are also available:
 - `axis`: 1-dim. rotational flange that drives the joint
 - `support`: 1-dim. rotational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 """
-@component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], useAxisFlange = false,
+@component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
                   isroot = true, iscut = false, radius = 0.05, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
@@ -44,18 +44,18 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
     if iscut
         # NOTE: only equations for isroot=false available here
         eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-            residue(ori(frame_a), absoluteRotation(ori(frame_b), Rrel)) .~ 0 # If joint is a cut joint, this equation is replaced
+            residue(ori(frame_a), absolute_rotation(ori(frame_b), Rrel)) .~ 0 # If joint is a cut joint, this equation is replaced
                 collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
                 collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
     else
         if isroot
             eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
-                        ori(frame_b) ~ absoluteRotation(ori(frame_a), Rrel)
+                        ori(frame_b) ~ absolute_rotation(ori(frame_a), Rrel)
                         collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
                         collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
         else
             eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-                        ori(frame_a) ~ absoluteRotation(ori(frame_b), Rrel)
+                        ori(frame_a) ~ absolute_rotation(ori(frame_b), Rrel)
                         collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
                         collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
         end
@@ -64,7 +64,7 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
                D(phi) ~ w
                tau ~ -collect(frame_b.tau)'n]
     append!(eqs, moreeqs)
-    sys = if useAxisFlange
+    sys = if axisflange
         # @named internalAxis = Rotational.InternalSupport(tau=tau)
         @named fixed = Rotational.Fixed()
 
@@ -87,21 +87,21 @@ If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rota
 end
 
 """
-    Prismatic(; name, n = [0, 0, 1], useAxisFlange = false, isroot = true)
+    Prismatic(; name, n = [0, 0, 1], axisflange = false, isroot = true)
 
 Prismatic joint with 1 translational degree-of-freedom
 
 - `n`: The axis of motion (unit vector)
-- `useAxisFlange`: If true, the joint will have two additional frames from Mechanical.Translational, `axis` and `support`, between which translational components such as springs and dampers can be connected.
+- `axisflange`: If true, the joint will have two additional frames from Mechanical.Translational, `axis` and `support`, between which translational components such as springs and dampers can be connected.
 - `isroot`: If true, the joint will be considered the root of the system.
 
-If `useAxisFlange`, flange connectors for ModelicaStandardLibrary.Mechanics.TranslationalModelica are also available:
+If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.TranslationalModelica are also available:
 - `axis`: 1-dim. translational flange that drives the joint
 - `support`: 1-dim. translational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 
 The function returns an ODESystem representing the prismatic joint.
 """
-@component function Prismatic(; name, n = Float64[0, 0, 1], useAxisFlange = false,
+@component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
                    isroot = true, s0 = 0, v0 = 0)
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
@@ -140,7 +140,7 @@ The function returns an ODESystem representing the prismatic joint.
            # d'Alemberts principle
            f ~ -(n'collect(frame_b.f))[]]
 
-    if useAxisFlange
+    if axisflange
         @named fixed = Translational.Fixed(s0=0)
         @named axis = Translational.Flange()
         @named support = Translational.Flange()
@@ -155,16 +155,16 @@ The function returns an ODESystem representing the prismatic joint.
 end
 
 """
-    Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence_angleStates, phi = 0, phi_d = 0, phi_dd = 0, d = 0)
+    Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence, phi = 0, phi_d = 0, phi_dd = 0, d = 0)
 
-Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential state variables. If parameter `enforceState` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence_angleStates` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as state. If angles are used as state there is the slight disadvantage that a singular configuration is present leading to a division by zero.
+Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential state variables. If parameter `state` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as state. If angles are used as state there is the slight disadvantage that a singular configuration is present leading to a division by zero.
 
-- `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `enforceState = true`.
-- `sequence_angleStates`: Rotation sequence
+- `isroot`: Indicate that `frame_a` is the root, otherwise `frame_b` is the root. Only relevant if `state = true`.
+- `sequence`: Rotation sequence
 - `d`: Viscous damping constant. If `d > 0`. the joint dissipates energy due to viscous damping according to ``τ ~ -d*ω``.
 """
-@component function Spherical(; name, enforceState = false, isroot = true, w_rel_a_fixed = false,
-                   z_rel_a_fixed = false, sequence_angleStates = [1, 2, 3], phi = 0,
+@component function Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false,
+                   z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
                    phi_d = 0,
                    d = 0,
                    phi_dd = 0)
@@ -175,7 +175,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     end
     @unpack frame_a, frame_b = ptf
     # @parameters begin # Currently not using parameters due to these appearing in if statements
-    #     sequence_angleStates[1:3] = sequence_angleStates
+    #     sequence[1:3] = sequence
     # end
     @variables begin (w_rel(t)[1:3] = zeros(3)),
                      [
@@ -194,7 +194,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         collect(frame_b.r_0) .~ collect(frame_a.r_0)]
     end
 
-    if enforceState
+    if state
         @variables begin
             (phi(t)[1:3] = phi),
             [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
@@ -204,18 +204,18 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
             [state_priority = 10, description = "3 angle second derivatives"]
         end
         append!(eqs,
-                [R_rel ~ axesRotations(sequence_angleStates, phi, phi_d)
-                 collect(w_rel) .~ angularVelocity2(R_rel)
+                [R_rel ~ axes_rotations(sequence, phi, phi_d)
+                 collect(w_rel) .~ angular_velocity2(R_rel)
                  collect(phi_d .~ D.(phi))
                  collect(phi_dd .~ D.(phi_d))])
         if isroot
             append!(eqs,
-                    [ori(frame_b) ~ absoluteRotation(frame_a, R_rel)
+                    [ori(frame_b) ~ absolute_rotation(frame_a, R_rel)
                      zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
         else
             append!(eqs,
-                    [R_rel_inv ~ inverseRotation(R_rel)
-                     ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv)
+                    [R_rel_inv ~ inverse_rotation(R_rel)
+                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)
                      zeros(3) .~ collect(frame_b.f) + resolve2(R_rel, frame_a.f)])
         end
 
@@ -224,10 +224,10 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         append!(eqs,
                 #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
                 zeros(3) .~ collect(frame_a.f) +
-                            resolveRelative(frame_b.f, frame_b, frame_a))
+                            resolve_relative(frame_b.f, frame_b, frame_a))
         if w_rel_a_fixed || z_rel_a_fixed
-            append!(w_rel .~ angularVelocity2(frame_b) - resolve2(frame_b,
-                                      angularVelocity1(frame_a)))
+            append!(w_rel .~ angular_velocity2(frame_b) - resolve2(frame_b,
+                                      angular_velocity1(frame_a)))
         else
             append!(w_rel .~ zeros(3))
         end
@@ -319,14 +319,14 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
     systems = @named begin
         bearing = Frame() #"Coordinate system fixed in the bearing"
 
-        actuatedRevolute_a = Revolute(useAxisFlange = true,
+        actuatedRevolute_a = Revolute(axisflange = true,
                                       n = n_a)
-        actuatedRevolute_b = Revolute(useAxisFlange = true,
+        actuatedRevolute_b = Revolute(axisflange = true,
                                       n = n_b)
 
         idealGear = Rotational.IdealGear(ratio = ratio)
-        fixedTranslation1 = FixedTranslation(r = r_b)
-        fixedTranslation2 = FixedTranslation(r = r_a)
+        translation1 = FixedTranslation(r = r_b)
+        translation2 = FixedTranslation(r = r_a)
     end
     @unpack frame_a, frame_b = ptf
 
@@ -378,10 +378,10 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
            a_b ~ D(w_b)
            connect(actuatedRevolute_a.axis, idealGear.flange_a)
            connect(idealGear.flange_b, actuatedRevolute_b.axis)
-           connect(actuatedRevolute_a.frame_a, fixedTranslation2.frame_b)
-           connect(fixedTranslation2.frame_a, bearing)
-           connect(fixedTranslation1.frame_a, bearing)
-           connect(fixedTranslation1.frame_b, actuatedRevolute_b.frame_a)
+           connect(actuatedRevolute_a.frame_a, translation2.frame_b)
+           connect(translation2.frame_a, bearing)
+           connect(translation1.frame_a, bearing)
+           connect(translation1.frame_b, actuatedRevolute_b.frame_a)
            connect(frame_a, actuatedRevolute_a.frame_b)
            connect(actuatedRevolute_b.frame_b, frame_b)]
 
@@ -391,9 +391,9 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
               totalPower ~ frame_a.f'resolve2(frame_a, D.(frame_a.r_0)) +
                            frame_b.f'resolve2(frame_b, D.(frame_b.r_0)) +
                            bearing.f'resolve2(bearing, D.(bearing.r_0)) +
-                           frame_a.tau'angularVelocity2(frame_a) +
-                           frame_b.tau'angularVelocity2(frame_b) +
-                           bearing.tau'angularVelocity2(bearing))
+                           frame_a.tau'angular_velocity2(frame_a) +
+                           frame_b.tau'angular_velocity2(frame_b) +
+                           bearing.tau'angular_velocity2(bearing))
     end
 
     extend(ODESystem(eqs, t; name, systems), ptf)
@@ -515,7 +515,7 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
                  # frame_a.R is computed from generalized coordinates
                  collect(frame_a.r_0) .~ [x, y, z]
                  collect(der_angles) .~ D.(angles)
-                 ori(frame_a) ~ axesRotations([3, 2, 1], angles, der_angles)
+                 ori(frame_a) ~ axes_rotations([3, 2, 1], angles, der_angles)
 
                  # Road description
                  collect(r_road_0) .~ [s, w, 0]
@@ -632,7 +632,7 @@ with the wheel itself.
 end
 
 """
-    FreeMotion(; name, enforceState = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
+    FreeMotion(; name, state = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
 
 Joint which _does not_ constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as state.
 
@@ -644,7 +644,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 
 # Arguments
 
-- `enforceState`: Enforce this joint having state, this is often desired and is the default choice.
+- `state`: Enforce this joint having state, this is often desired and is the default choice.
 - `sequence`: Rotation sequence
 - `w_rel_a_fixed`: = true, if `w_rel_a_start` are used as initial values, else as guess values
 - `z_rel_a_fixed`: = true, if `z_rel_a_start` are used as initial values, else as guess values
@@ -658,7 +658,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `v_rel_a`
 - `a_rel_a`
 """
-@component function FreeMotion(; name, enforceState = true, sequence = [1, 2, 3], isroot = true,
+@component function FreeMotion(; name, state = true, sequence = [1, 2, 3], isroot = true,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
                     phi_d = 0,
                     phi_dd = 0,
@@ -707,28 +707,28 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
            # Kinematic relationships
            frame_b.r_0 .~ frame_a.r_0 .+ resolve1(frame_a, r_rel_a)]
 
-    if enforceState
+    if state
         if isroot
             append!(eqs,
-                    ori(frame_b) ~ absoluteRotation(frame_a, R_rel))
+                    ori(frame_b) ~ absolute_rotation(frame_a, R_rel))
         else
             append!(eqs,
-                    [R_rel_inv ~ inverseRotation(R_rel)
-                     ori(frame_a) ~ absoluteRotation(frame_b, R_rel_inv)])
+                    [R_rel_inv ~ inverse_rotation(R_rel)
+                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)])
         end
 
         append!(eqs,
                 [phi_d .~ D.(phi)
                  phi_dd .~ D.(phi_d)
-                 R_rel ~ axesRotations(sequence, phi, phi_d)
-                 w_rel_b .~ angularVelocity2(R_rel)])
+                 R_rel ~ axes_rotations(sequence, phi, phi_d)
+                 w_rel_b .~ angular_velocity2(R_rel)])
 
     else
         # Free motion joint does not have state
         if w_rel_a_fixed || z_rel_a_fixed
             append!(eqs,
-                    w_rel_b .~ angularVelocity2(frame_b) - resolve2(frame_b.
-                                        R, angularVelocity1(frame_a)))
+                    w_rel_b .~ angular_velocity2(frame_b) - resolve2(frame_b.
+                                        R, angular_velocity1(frame_a)))
         end
     end
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
@@ -788,7 +788,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     Rb = ori(frame_b)
 
     eqs = [
-        R_rel ~ relativeRotation(ori(frame_a), ori(frame_b))
+        R_rel ~ relative_rotation(ori(frame_a), ori(frame_b))
         r_rel_a .~ resolve2(ori(frame_a), collect(frame_b.r_0 - frame_a.r_0))
         0 ~ (ex_a'r_rel_a)[]
         0 ~ (ey_a'r_rel_a)[]

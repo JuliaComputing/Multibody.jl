@@ -12,7 +12,24 @@ function centraldiff(v::AbstractVector)
     a = a1+a2
 end
 
-function PTP(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 1)
+
+
+"""
+    q,qd,qdd = point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 1)
+
+Generate a minimum-time point-to-point trajectory with specified start and endpoints, not exceeding specified speed and acceleration limits.
+
+The trajectory produced by this function will typically exhibit piecewise constant accleration, piecewise linear velocity and piecewise quadratic position curves. 
+
+# Arguments:
+- `time`: A scalar or a vector of time points.
+- `q0`: Initial coordinate, may be a scalar or a vector.
+- `q1`: End coordinate
+- `t0`: Tiem at which the motion starts. If `time` contains time points before `t0`, the trajectory will stand still at `q0` until `time` reaches `t0`.
+- `qd_max`: Maximum allowed speed.
+- `qdd_max`: Maximum allowed acceleration.
+"""
+function point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 1)
     nout = max(length(q0), length(q1), length(qd_max), length(qdd_max))
     p_q0 = q0
     p_q1 = q1

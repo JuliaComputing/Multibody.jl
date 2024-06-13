@@ -1,5 +1,5 @@
 """
-    RobotAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, startAngle = 0, endAngle = 120, swingTime = 0.5, refSpeedMax = 3, refAccMax = 10, kwargs)
+    RobotAxis(; name, mLoad = 15, kp = 5, ks = 0.5, Ts = 0.05, q0 = 0, q1 = 120, swingtime = 0.5, refSpeedMax = 3, refAccMax = 10, kwargs)
 
 A single robot axis.
 
@@ -7,21 +7,21 @@ A single robot axis.
 - `kp`: Proportional gain of position controller
 - `ks`: Proportional gain of velocity controller
 - `Ts`: Time constant of integrator of velocity controller
-- `startAngle`: 
-- `endAngle`: 
+- `q0`: Start angle in degrees
+- `q1`: End angle in degrees
 """
-function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, startAngle = 0,
-    endAngle = 120, swingTime = 0.5, refSpeedMax = 3, refAccMax = 10, kwargs...)
+function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, q0 = 0,
+    q1 = 120, swingtime = 0.5, refSpeedMax = 3, refAccMax = 10, kwargs...)
 
     # parameter SI.Mass mLoad(min=0)=15 "Mass of load";
     # parameter Real kp=5 "Gain of position controller of axis";
     # parameter Real ks=0.5 "Gain of speed controller of axis";
     # parameter SI.Time Ts=0.05
     #   "Time constant of integrator of speed controller of axis";
-    # parameter Modelica.Units.NonSI.Angle_deg startAngle = 0 "Start angle of axis";
-    # parameter Modelica.Units.NonSI.Angle_deg endAngle = 120 "End angle of axis";
+    # parameter Modelica.Units.NonSI.Angle_deg q0 = 0 "Start angle of axis";
+    # parameter Modelica.Units.NonSI.Angle_deg q1 = 120 "End angle of axis";
 
-    # parameter SI.Time swingTime=0.5
+    # parameter SI.Time swingtime=0.5
     #   "Additional time after reference motion is in rest before simulation is stopped";
     # parameter SI.AngularVelocity refSpeedMax=3 "Maximum reference speed";
     # parameter SI.AngularAcceleration refAccMax=10
@@ -32,9 +32,9 @@ function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, startAngle
     kp = kp, [description = "Gain of position controller of axis"]
     ks = ks, [description = "Gain of speed controller of axis"]
     Ts = Ts, [description = "Time constant of integrator of speed controller of axis"]
-    # startAngle = startAngle, [description = "Start angle of axis"]
-    # endAngle = endAngle, [description = "End angle of axis"]
-    swingTime = swingTime,
+    # q0 = q0, [description = "Start angle of axis"]
+    # q1 = q1, [description = "End angle of axis"]
+    swingtime = swingtime,
         [
             description = "Additional time after reference motion is in rest before simulation is stopped",
         ]
@@ -53,11 +53,11 @@ function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, startAngle
                 ks = ks,
                 Ts = Ts)
     load = Rotational.Inertia(J = 1.3 * mLoad)
-    pathPlanning = PathPlanning1(;swingTime = swingTime,
-                            angleBegDeg = startAngle,
-                            angleEndDeg = endAngle,
-                             speedMax = refSpeedMax,
-                             accMax = refAccMax,
+    pathPlanning = PathPlanning1(;swingtime = swingtime,
+                            q0deg = q0,
+                            q1deg = q1,
+                            speed_max = refSpeedMax,
+                            acc_max = refAccMax,
                             kwargs...
                             )
     controlBus = ControlBus()
@@ -87,18 +87,18 @@ function Robot6DOF(; name, kwargs...)
         #                [
         #                    description = "Additional time after reference motion is in rest before simulation is stopped",
         #                ]
-        # startAngle1 = -60, [description = "Start angle of axis 1"]
-        # startAngle2 = 20, [description = "Start angle of axis 2"]
-        # startAngle3 = 90, [description = "Start angle of axis 3"]
-        # startAngle4 = 0, [description = "Start angle of axis 4"]
-        # startAngle5 = -110, [description = "Start angle of axis 5"]
-        # startAngle6 = 0, [description = "Start angle of axis 6"]
-        # endAngle1 = 60, [description = "End angle of axis 1"]
-        # endAngle2 = -70, [description = "End angle of axis 2"]
-        # endAngle3 = -35, [description = "End angle of axis 3"]
-        # endAngle4 = 45, [description = "End angle of axis 4"]
-        # endAngle5 = 110, [description = "End angle of axis 5"]
-        # endAngle6 = 45, [description = "End angle of axis 6"]
+        # q01 = -60, [description = "Start angle of axis 1"]
+        # q02 = 20, [description = "Start angle of axis 2"]
+        # q03 = 90, [description = "Start angle of axis 3"]
+        # q04 = 0, [description = "Start angle of axis 4"]
+        # q05 = -110, [description = "Start angle of axis 5"]
+        # q06 = 0, [description = "Start angle of axis 6"]
+        # q11 = 60, [description = "End angle of axis 1"]
+        # q12 = -70, [description = "End angle of axis 2"]
+        # q13 = -35, [description = "End angle of axis 3"]
+        # q14 = 45, [description = "End angle of axis 4"]
+        # q15 = 110, [description = "End angle of axis 5"]
+        # q16 = 45, [description = "End angle of axis 6"]
         # refSpeedMax[1:6] = [3, 1.5, 5, 3.1, 3.1, 4.1],
         #                    [description = "Maximum reference speeds of all joints"]
         # refAccMax[1:6] = [15, 15, 15, 60, 60, 60],
@@ -149,44 +149,44 @@ function Robot6DOF(; name, kwargs...)
     ks6 = 0.5 #, [description = "Gain of speed controller"]
     Ts6 = 0.05 #, [description = "Time constant of integrator of speed controller"]
 
-    startAngle1 = -60 # Can't yet have these as parameters
-    startAngle2 = 20 # Can't yet have these as parameters
-    startAngle3 = 90 # Can't yet have these as parameters
-    startAngle4 = 0 # Can't yet have these as parameters
-    startAngle5 = -110 # Can't yet have these as parameters
-    startAngle6 = 0 # Can't yet have these as parameters
-    endAngle1 = 60 # Can't yet have these as parameters
-    endAngle2 = -70 # Can't yet have these as parameters
-    endAngle3 = -35 # Can't yet have these as parameters
-    endAngle4 = 45 # Can't yet have these as parameters
-    endAngle5 = 110 # Can't yet have these as parameters
-    endAngle6 = 45 # Can't yet have these as parameters
+    q01 = -60 # Can't yet have these as parameters
+    q02 = 20 # Can't yet have these as parameters
+    q03 = 90 # Can't yet have these as parameters
+    q04 = 0 # Can't yet have these as parameters
+    q05 = -110 # Can't yet have these as parameters
+    q06 = 0 # Can't yet have these as parameters
+    q11 = 60 # Can't yet have these as parameters
+    q12 = -70 # Can't yet have these as parameters
+    q13 = -35 # Can't yet have these as parameters
+    q14 = 45 # Can't yet have these as parameters
+    q15 = 110 # Can't yet have these as parameters
+    q16 = 45 # Can't yet have these as parameters
 
     systems = @named begin
         mechanics = MechanicalStructure(mLoad = (mLoad),
                                         rLoad = (rLoad),
                                         g = (g))
         pathPlanning = PathPlanning6(;naxis = 6,
-                                     angleBegDeg = [
-                                         startAngle1,
-                                         startAngle2,
-                                         startAngle3,
-                                         startAngle4,
-                                         startAngle5,
-                                         startAngle6,
+                                     q0deg = [
+                                         q01,
+                                         q02,
+                                         q03,
+                                         q04,
+                                         q05,
+                                         q06,
                                      ],
-                                     angleEndDeg = [
-                                         endAngle1,
-                                         endAngle2,
-                                         endAngle3,
-                                         endAngle4,
-                                         endAngle5,
-                                         endAngle6,
+                                     q1deg = [
+                                         q11,
+                                         q12,
+                                         q13,
+                                         q14,
+                                         q15,
+                                         q16,
                                      ],
-                                     speedMax = refSpeedMax,
-                                     accMax = refAccMax,
+                                     speed_max = refSpeedMax,
+                                     acc_max = refAccMax,
                                      startTime = refStartTime,
-                                     swingTime = refSwingTime,
+                                     swingtime = refSwingTime,
                                      kwargs...)
 
         axis1 = AxisType1(w = 4590,

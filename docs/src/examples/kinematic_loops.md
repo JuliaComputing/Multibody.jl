@@ -22,8 +22,8 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    j1 = Revolute(useAxisFlange=true) # We use an axis flange to attach a damper
-    j2 = Revolute(useAxisFlange=true)
+    j1 = Revolute(axisflange=true) # We use an axis flange to attach a damper
+    j2 = Revolute(axisflange=true)
     j3 = Revolute()
     j4 = RevolutePlanarLoopConstraint()
     j5 = Revolute()

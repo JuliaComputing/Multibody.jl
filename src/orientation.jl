@@ -51,7 +51,7 @@ function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = fa
     RotationMatrix(R, w)
 end
 
-nullRotation() = RotationMatrix()
+nullrotation() = RotationMatrix()
 
 function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     # @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
@@ -99,7 +99,7 @@ end
 function get_w(Q::AbstractVector)
     Q = collect(Q)
     DQ = collect(D.(Q))
-    angularVelocity2(Q, DQ)
+    angular_velocity2(Q, DQ)
 end
 
 """
@@ -131,7 +131,7 @@ resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 resolve1(sys::ODESystem, v) = resolve1(ori(sys), v)
 resolve2(sys::ODESystem, v) = resolve2(ori(sys), v)
 
-function resolveRelative(v1, R1, R2)
+function resolve_relative(v1, R1, R2)
     R1 isa ODESystem && (R1 = ori(R1))
     R2 isa ODESystem && (R2 = ori(R2))
     v2 = resolve2(R2, resolve1(R1, v1))
@@ -150,13 +150,13 @@ function planar_rotation(axis, phi, der_angle)
 end
 
 """
-    R2 = absoluteRotation(R1, R_rel)
+    R2 = absolute_rotation(R1, R_rel)
 
 - `R1`: `Orientation` object to rotate frame 0 into frame 1
 - `R_rel`: `Orientation` object to rotate frame 1 into frame 2
 - `R2`: `Orientation` object to rotate frame 0 into frame 2
 """
-function absoluteRotation(R1, R_rel)
+function absolute_rotation(R1, R_rel)
     # R2 = R_rel.R*R1.R
     # w = resolve2(R_rel, R1.w) + R_rel.w
     # RotationMatrix(R2, w)
@@ -165,7 +165,7 @@ function absoluteRotation(R1, R_rel)
     R_rel * R1
 end
 
-function relativeRotation(R1, R2)
+function relative_rotation(R1, R2)
     R1 isa ODESystem && (R1 = ori(R1))
     R2 isa ODESystem && (R2 = ori(R2))
     R = R2'R1
@@ -173,7 +173,7 @@ function relativeRotation(R1, R2)
     RotationMatrix(R.R, w)
 end
 
-function inverseRotation(R)
+function inverse_rotation(R)
     R isa ODESystem && (R = ori(R))
     Ri = R.R'
     wi = -resolve1(R, R.w)
@@ -186,7 +186,7 @@ function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
     vec(R1.R.mat .~ R2.R.mat)
 end
 
-function angularVelocity2(R::RotationMatrix)
+function angular_velocity2(R::RotationMatrix)
     R.w
 end
 
@@ -255,7 +255,7 @@ end
 orientation_constraint(q::AbstractVector) = q'q - 1
 orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
 
-# function angularVelocity2(q::AbstractVector, q̇)
+# function angular_velocity2(q::AbstractVector, q̇)
 #     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
 #     2 * Q * q̇
 # end
@@ -267,26 +267,26 @@ function from_Q(Q, w)
     RotationMatrix(R, w)
 end
 
-function angularVelocity1(Q, der_Q)
+function angular_velocity1(Q, der_Q)
     2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
 end
 
-function angularVelocity2(Q, der_Q)
+function angular_velocity2(Q, der_Q)
     2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
 end
 
 
 ## Euler
 
-function axesRotations(sequence, angles, der_angles, name = :R_ar)
-    R = axisRotation(sequence[3], angles[3]) *
-        axisRotation(sequence[2], angles[2]) *
-        axisRotation(sequence[1], angles[1])
+function axes_rotations(sequence, angles, der_angles, name = :R_ar)
+    R = axis_rotation(sequence[3], angles[3]) *
+        axis_rotation(sequence[2], angles[2]) *
+        axis_rotation(sequence[1], angles[1])
 
     w = axis(sequence[3]) * der_angles[3] +
-        resolve2(axisRotation(sequence[3], angles[3]), axis(sequence[2]) * der_angles[2]) +
-        resolve2(axisRotation(sequence[3], angles[3]) *
-                 axisRotation(sequence[2], angles[2]),
+        resolve2(axis_rotation(sequence[3], angles[3]), axis(sequence[2]) * der_angles[2]) +
+        resolve2(axis_rotation(sequence[3], angles[3]) *
+                 axis_rotation(sequence[2], angles[2]),
                  axis(sequence[1]) * der_angles[1])
     RotationMatrix(R.R, w)
 end
@@ -294,7 +294,7 @@ end
 axis(s) = float.(s .== (1:3))
 
 """
-    axisRotation(sequence, angle; name = :R)
+    axis_rotation(sequence, angle; name = :R)
 
 Generate a rotation matrix for a rotation around the specified axis.
 
@@ -303,7 +303,7 @@ Generate a rotation matrix for a rotation around the specified axis.
 
 Returns a `RotationMatrix` object.
 """
-function axisRotation(sequence, angle; name = :R)
+function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
         return RotationMatrix(rotx(angle), zeros(3))
     elseif sequence == 2
@@ -412,10 +412,10 @@ end
 #     RotationMatrix([e_x e_y e_z], zeros(3))
 # end
 
-function resolveDyade1(R, D2)
+function resolve_dyade1(R, D2)
     R'D2*R
 end
 
-function resolveDyade2(R, D1)
+function resolve_dyade2(R, D1)
     R*D1*R'
 end

@@ -25,15 +25,16 @@ ssys = structural_simplify(model)
 
 @test length(unknowns(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
+@testset "traj" begin
+    @info "Testing traj"
+    include("test_traj.jl")
+end
+
 @testset "robot" begin
     @info "Testing robot"
     include("test_robot.jl")
 end
 
-@testset "traj" begin
-    @info "Testing traj"
-    include("test_traj.jl")
-end
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -48,12 +49,13 @@ The multibody paper mentions this as an interesting example, figure 8:
     system as in Figure 8, where a body is connected via
     a spring to the environment."
 =#
-
+t = Multibody.t
+D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], useQuaternions=false) # This time the body isroot since there is no joint containing state
-    @named spring = Multibody.Spring(c = 1, fixedRotationAtFrame_a = false,
-                                    fixedRotationAtFrame_b = false)
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
+    @named spring = Multibody.Spring(c = 1, fixed_rotation_at_frame_a = false,
+                                    fixed_rotation_at_frame_b = false)
 
     connections = [connect(world.frame_b, spring.frame_a)
                 connect(spring.frame_b, body.frame_a)]
@@ -135,7 +137,7 @@ end
 world = Multibody.world
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named damper = Rotational.Damper(d = 0.1)
-@named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+@named rev = Multibody.Revolute(n = [0, 0, 1], axisflange = true, isroot = true)
 
 connections = [connect(world.frame_b, rev.frame_a)
                connect(damper.flange_b, rev.axis)
@@ -170,7 +172,7 @@ world = Multibody.world
 @named rod = FixedTranslation(r = [0.5, 0, 0])
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Rotational.Damper(d = 0.1)
-@named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+@named rev = Multibody.Revolute(n = [0, 0, 1], axisflange = true, isroot = true)
 
 connections = [connect(world.frame_b, rev.frame_a)
                connect(damper.flange_b, rev.axis)
@@ -204,7 +206,7 @@ world = Multibody.world
 @named rod = FixedRotation(r = [0.5, 0, 0], n = [0, 0, 1], angle = 0)
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Rotational.Damper(d = 0.1)
-@named rev = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+@named rev = Multibody.Revolute(n = [0, 0, 1], axisflange = true, isroot = true)
 
 connections = [connect(world.frame_b, rev.frame_a)
                connect(damper.flange_b, rev.axis)
@@ -240,8 +242,8 @@ using LinearAlgebra
 @named body2 = Body(; m = 1, isroot = false, r_cm = [0.0, 0, 0])
 @named damper1 = Rotational.Damper(d = 5)
 @named damper2 = Rotational.Damper(d = 1)
-@named rev1 = Multibody.Revolute(n = normalize([0.1, 0, 1]), useAxisFlange = true, isroot = true)
-@named rev2 = Multibody.Revolute(n = [0, 0, 1], useAxisFlange = true, isroot = true)
+@named rev1 = Multibody.Revolute(n = normalize([0.1, 0, 1]), axisflange = true, isroot = true)
+@named rev2 = Multibody.Revolute(n = [0, 0, 1], axisflange = true, isroot = true)
 
 connections = [connect(damper1.flange_b, rev1.axis)
                connect(rev1.support, damper1.flange_a)
@@ -296,7 +298,7 @@ end
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Translational.Damper(d=0.5)
 @named spring = Translational.Spring(c=1)
-@named joint = Prismatic(n = [0, 1, 0], isroot = true, useAxisFlange = true)
+@named joint = Prismatic(n = [0, 1, 0], isroot = true, axisflange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(damper.flange_b, spring.flange_b, joint.axis)
@@ -322,11 +324,11 @@ end
 world = Multibody.world
 @named begin
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
-                 I_33 = 0.1, r_0 = [0.3, -0.2, 0], useQuaternions=false) # This is root since there is no joint parallel to the spring leading to this body
+                 I_33 = 0.1, r_0 = [0.3, -0.2, 0], quat=false) # This is root since there is no joint parallel to the spring leading to this body
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, useAxisFlange = true, isroot = true)
+    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true, isroot = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
@@ -407,7 +409,7 @@ world = Multibody.world
     spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1,
                                r_rel_0 = [-0.2, -0.2, 0.2])
     spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1,
-                               fixedRotationAtFrame_a = true, fixedRotationAtFrame_b = true)
+                               fixed_rotation_at_frame_a = true, fixed_rotation_at_frame_b = true)
     spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
@@ -442,7 +444,7 @@ sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 1e-1 .* rand.())
 doplot() && plot(sol, idxs = [body1.r_0...]) |> display
 # end
 # TODO: add tutorial explaining what interesting things this demos illustrates
-# fixedRotationAtFrame_a and b = true required
+# fixed_rotation_at_frame_a and b = true required
 end
 # ==============================================================================
 ## FreeBody ====================================================================
@@ -515,7 +517,7 @@ D = Differential(t)
 world = Multibody.world
 
 @named begin
-    joint = Spherical(enforceState = true, isroot = true, phi = 1)
+    joint = Spherical(state = true, isroot = true, phi = 1)
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 end
@@ -603,7 +605,7 @@ systems = @named begin
     gearConstraint = GearConstraint(; ratio = 10)
     cyl1 = Body(; m = 1, r_cm = [0.4, 0, 0])
     cyl2 = Body(; m = 1, r_cm = [0.4, 0, 0])
-    torque1 = Torque(resolveInFrame = :frame_b)
+    torque1 = Torque(resolve_frame = :frame_b)
     fixed = Multibody.Fixed() 
     inertia1 = Rotational.Inertia(J = cyl1.I_11)
     idealGear = Rotational.IdealGear(ratio = 10, use_support = true)
@@ -679,7 +681,7 @@ end
 # Model a free-falling body
 # Test 1, enforce state = false
 world = Multibody.world
-@named freeMotion = FreeMotion(enforceState = false, isroot = false)
+@named freeMotion = FreeMotion(state = false, isroot = false)
 @named body = Body(m = 1, isroot = true)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
@@ -703,7 +705,7 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 
 
 ## test 2 enforce state = true
-@named freeMotion = FreeMotion(enforceState = true, isroot = true)
+@named freeMotion = FreeMotion(state = true, isroot = true)
 @named body = Body(m = 1, isroot = false)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
@@ -753,8 +755,8 @@ end
 # ==============================================================================
 @testset "Dzhanibekov effect" begin
 world = Multibody.world
-@named freeMotion = FreeMotion(enforceState = false, isroot = false)
-@named body = BodyShape(m = 1, r=0.1*[1,2,3], isroot = true, I_11 = 1, I_22 = 10, I_33 = 100, useQuaternions=false)
+@named freeMotion = FreeMotion(state = false, isroot = false)
+@named body = BodyShape(m = 1, r=0.1*[1,2,3], isroot = true, I_11 = 1, I_22 = 10, I_33 = 100, quat=false)
 
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
@@ -792,7 +794,7 @@ end
 
 @testset "Harmonic oscillator with Body as root and quaternions as state variables" begin
 
-@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], useQuaternions=true) # This time the body isroot since there is no joint containing state
+@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], quat=true) # This time the body isroot since there is no joint containing state
 @named spring = Multibody.Spring(c = 1)
 
 connections = [connect(world.frame_b, spring.frame_a)
@@ -845,7 +847,7 @@ W(args...; kwargs...) = Multibody.world
     @components begin
         world = W()
         torque = RTorque()
-        joint = Revolute(useAxisFlange=true) # The axis flange provides an interface to the 1D torque input from ModelingToolkitStandardLibrary.Mechanical.Rotational
+        joint = Revolute(axisflange=true) # The axis flange provides an interface to the 1D torque input from ModelingToolkitStandardLibrary.Mechanical.Rotational
         torque_signal = BSine(frequency=1/5)
         body = BodyShape(; m = 1, r = [0.4, 0, 0])
     end
@@ -899,7 +901,7 @@ prob = ODEProblem(ssys, [
 @test SciMLBase.successful_retcode(sol)
 
 
-if true
+if false
     import GLMakie
     @time "render stiff_rope" render(stiff_rope, sol) # Takes very long time for n>=8
 end
@@ -928,7 +930,7 @@ prob = ODEProblem(ssys, [
 ], (0, 10))
 @time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
 @test SciMLBase.successful_retcode(sol)
-if true
+if false
     import GLMakie
     @time "render flexible_rope" render(flexible_rope, sol) # Takes very long time for n>=8
 end
@@ -941,13 +943,13 @@ end
 
 
 systems = @named begin
-    joint = Spherical(enforceState=true, isroot=true, phi = [π/2, 0, 0], d = 0.3)
+    joint = Spherical(state=true, isroot=true, phi = [π/2, 0, 0], d = 0.3)
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 
 
     bartop = FixedTranslation(r = [1, 0, 0])
-    joint2 = Multibody.Revolute(n = [1, 0, 0], useAxisFlange = true, isroot = true)
+    joint2 = Multibody.Revolute(n = [1, 0, 0], axisflange = true, isroot = true)
     bar2 = FixedTranslation(r = [0, 1, 0])
     body2 = Body(; m = 1, isroot = false)
     damper = Rotational.Damper(d = 0.3)
