@@ -128,7 +128,7 @@ function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
         q_axisUsed = RealPassThrough()
         qd_axisUsed = RealPassThrough()
         qdd_axisUsed = RealPassThrough()
-        moving = Blocks.Constant(k = 1) # Blocks.BooleanInput(nAxis) # NOTE
+        moving = Blocks.Constant(k = 1) # Blocks.BooleanInput(nAxis) 
         motion_ref_axisUsed = RealPassThrough() # Blocks.BooleanPassThrough()
     end
 
@@ -147,6 +147,8 @@ end
     q, qd, qdd = traj5(t; q0, q1, q̇0 = zero(q0), q̇1 = zero(q0), q̈0 = zero(q0), q̈1 = zero(q0))
 
 Generate a 5:th order polynomial trajectory with specified end points, vels and accs.
+
+See also [`point_to_point`](@ref) and [`Kinematic5`](@ref).
 """
 function traj5(t; q0 = 0.0, q1 = one(q0), q̇0 = zero(q0), q̇1 = zero(q0), q̈0 = zero(q0),
                q̈1 = zero(q0))
@@ -202,6 +204,8 @@ A component emitting a trajectory created by the [`point_to_point`](@ref) trajec
 - `q`: Position
 - `qd`: Velocity
 - `qdd`: Acceleration
+
+See also [`Kinematic5`](@ref).
 """
 function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
     nout = max(length(q0), length(q1))

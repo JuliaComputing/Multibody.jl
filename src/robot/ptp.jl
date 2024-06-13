@@ -15,11 +15,14 @@ end
 
 
 """
-    q,qd,qdd = point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 1)
+    q,qd,qdd,t_end = point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 1)
 
 Generate a minimum-time point-to-point trajectory with specified start and endpoints, not exceeding specified speed and acceleration limits.
 
-The trajectory produced by this function will typically exhibit piecewise constant accleration, piecewise linear velocity and piecewise quadratic position curves. 
+The trajectory produced by this function will typically exhibit piecewise constant accleration, piecewise linear velocity and piecewise quadratic position curves.
+
+If a vector of `time` points is provided, the function returns matrices `q,qd,qdd` of size `(length(time), n_dims)`. If a scalar `time` point is provided, the function returns `q,qd,qdd` as vectors with the specified dimension (same dimension as `q0`).
+`t_end` is the time at which the trajectory will reach the specified end position.
 
 # Arguments:
 - `time`: A scalar or a vector of time points.
@@ -28,6 +31,8 @@ The trajectory produced by this function will typically exhibit piecewise consta
 - `t0`: Tiem at which the motion starts. If `time` contains time points before `t0`, the trajectory will stand still at `q0` until `time` reaches `t0`.
 - `qd_max`: Maximum allowed speed.
 - `qdd_max`: Maximum allowed acceleration.
+
+See also [`KinematicPTP`](@ref) and [`traj5`](@ref).
 """
 function point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 1)
     nout = max(length(q0), length(q1), length(qd_max), length(qdd_max))
@@ -49,7 +54,7 @@ function point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 
         if time isa Number
             return q0, zero(q0), zero(q0), float(time)
         else
-            return zeros(T, nout) .+ q0', zeros(T, length(time), nout), zeros(T, length(time), nout)
+            return zeros(T, nout) .+ q0', zeros(T, length(time), nout), zeros(T, length(time), nout), float(first(time))
         end
     end
 
@@ -133,7 +138,7 @@ function point_to_point(time; q0 = 0.0, q1 = 1.0, t0 = 0, qd_max = 1, qdd_max = 
         end
     end
     @assert !(time isa Number)
-    return Q, Qd, Qdd
+    return Q, Qd, Qdd, t1
 
 end
 
