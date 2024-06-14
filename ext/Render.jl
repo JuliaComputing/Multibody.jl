@@ -1,7 +1,7 @@
 module Render
 using Makie
 using Multibody
-import Multibody: render, render!, encode, decode
+import Multibody: render, render!, encode, decode, get_rot, get_trans, get_frame
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
@@ -11,7 +11,7 @@ using MeshIO, FileIO
 
 
 function get_rot_fun(sol, frame)
-    syms = vec(ori(frame).R.mat)
+    syms = vec(ori(frame).R.mat')
     getter = ModelingToolkit.getu(sol, syms)
     p = ModelingToolkit.parameter_values(sol)
     function (t)
