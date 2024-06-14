@@ -1,4 +1,5 @@
 using Test
+import ModelingToolkitStandardLibrary.Mechanical.Rotational
 @mtkmodel FurutaPendulum begin
     @components begin
         world = W()
@@ -8,8 +9,8 @@ using Test
         lower_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0.6, 0], radius=0.04)
         tip = Body(; m = 0.3, isroot = false)
 
-        damper1 = RDamper(d = 0.07)
-        damper2 = RDamper(d = 0.07)
+        damper1 = Rotational.Damper(d = 0.07)
+        damper2 = Rotational.Damper(d = 0.07)
     end
     @equations begin
         connect(world.frame_b, shoulder_joint.frame_a)
