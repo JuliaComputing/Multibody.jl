@@ -89,7 +89,7 @@ function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=fals
         # scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
         scene = LScene(fig[1, 1])#.scene
     # end
-    cam3d!(scene)
+    cam3d!(scene, center=false)
     # scene.scene.camera.view[] = [
     #     R [x,y,z]; 0 0 0 1
     # ]
@@ -103,9 +103,9 @@ end
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
     framerate = 30,
-    x = 3,
-    y = 0,
-    z = 3,
+    x = 2,
+    y = 0.5,
+    z = 2,
     lookat = Vec3f(0,0,0),
     up = Vec3f(0,1,0),
     show_axis = false,

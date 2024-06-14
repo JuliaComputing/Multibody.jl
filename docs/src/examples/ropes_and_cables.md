@@ -65,7 +65,7 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
 @test SciMLBase.successful_retcode(sol)
 
-Multibody.render(flexible_rope, sol,  filename = "flexible_rope.gif") # May take long time for n>=10
+Multibody.render(flexible_rope, sol, y = -3, x = -6, z = -6, lookat=[0, -3, 0], filename = "flexible_rope.gif") # May take long time for n>=10
 ```
 
 
@@ -101,7 +101,7 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 
-Multibody.render(mounted_chain, sol, filename = "mounted_chain.gif") # May take long time for n>=10
+Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May take long time for n>=10
 ```
 
 ![mounted_chain animation](mounted_chain.gif)
