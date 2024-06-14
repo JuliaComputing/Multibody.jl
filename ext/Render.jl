@@ -1,11 +1,12 @@
 module Render
 using Makie
 using Multibody
-import Multibody: render, render!
+import Multibody: render, render!, encode, decode
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
 export render
+using MeshIO, FileIO
 
 
 function get_rot(sol, frame, t)
@@ -69,8 +70,17 @@ function get_color(sys, sol, default)
     end
 end
 
+function get_shape(sys, sol)::String
+    try
+        sf = sol(sol.t[1], idxs=collect(sys.shapefile))
+        decode(sf)
+    catch
+        ""
+    end
+end
 
-function default_scene(x,y,z,lookat,up,show_axis)
+
+function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=false)
     # if string(Makie.current_backend()) == "CairoMakie"
     #     scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
     #     fig = nothing
@@ -79,7 +89,7 @@ function default_scene(x,y,z,lookat,up,show_axis)
         # scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
         scene = LScene(fig[1, 1])#.scene
     # end
-    cam3d!(scene)
+    cam3d!(scene, center=false)
     # scene.scene.camera.view[] = [
     #     R [x,y,z]; 0 0 0 1
     # ]
@@ -93,9 +103,9 @@ end
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
     framerate = 30,
-    x = 3,
-    y = 0,
-    z = 3,
+    x = 2,
+    y = 0.5,
+    z = 2,
     lookat = Vec3f(0,0,0),
     up = Vec3f(0,1,0),
     show_axis = false,
@@ -103,7 +113,7 @@ function render(model, sol,
     filename = "multibody_$(model.name).mp4",
     kwargs...
     )
-    scene, fig = default_scene(x,y,z,lookat,up,show_axis)
+    scene, fig = default_scene(x,y,z; lookat,up,show_axis)
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
@@ -124,7 +134,7 @@ function render(model, sol, time::Real;
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
-    scene, fig = default_scene(0,0,10)
+    scene, fig = default_scene(0,0,10; kwargs...)
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
@@ -281,18 +291,36 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
 end
 
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
-    r_0a = get_fun(sol, collect(sys.frame_a.r_0))
-    r_0b = get_fun(sol, collect(sys.frame_b.r_0))
-    radius = Float32(sol(sol.t[1], idxs=sys.radius))
     color = get_color(sys, sol, :purple)
-    thing = @lift begin
-        r1 = Point3f(r_0a($t))
-        r2 = Point3f(r_0b($t))
-        origin = r1
-        extremity = r2
-        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    shapepath = get_shape(sys, sol)
+    if isempty(shapepath)
+        radius = Float32(sol(sol.t[1], idxs=sys.radius))
+        r_0a = get_fun(sol, collect(sys.frame_a.r_0))
+        r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+        thing = @lift begin
+            r1 = Point3f(r_0a($t))
+            r2 = Point3f(r_0b($t))
+            origin = r1
+            extremity = r2
+            Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+        end
+        mesh!(scene, thing; color, specular = Vec3f(1.5))
+    else
+        T = get_frame_fun(sol, sys.frame_a)
+
+        @info "Loading shape mesh $shapepath"
+        shapemesh = FileIO.load(shapepath)
+        m = mesh!(scene, shapemesh; color, specular = Vec3f(1.5))
+
+        on(t) do t
+            Ta = T(t)
+            r1 = Point3f(Ta[1:3, 4])
+            q = Rotations.QuatRotation(Ta[1:3, 1:3]).q
+            Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
+            Makie.transform!(m, translation=r1, rotation=Q)
+        end
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5))
+
     # thing = @lift begin
     #     r1 = Point3f(sol($t, idxs=collect(sys.frame_a.r_0)))
     #     r2 = Point3f(sol($t, idxs=collect(sys.frame_b.r_0)))

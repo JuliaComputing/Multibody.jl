@@ -19,10 +19,10 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Render = ["Makie"]
 
 [compat]
+CoordinateTransformations = "0.6"
 ModelingToolkit = "9"
 ModelingToolkitStandardLibrary = "2"
 Rotations = "1.4"
-CoordinateTransformations = "0.6"
 julia = "1"
 
 [extras]

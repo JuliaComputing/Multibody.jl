@@ -343,8 +343,9 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
+- `shapefile`: A path::String to a CAD model that can be imported by MeshIO for 3D rendering. If none is provided, a cylinder shape is rendered.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", kwargs...)
     systems = @named begin
         translation = FixedTranslation(r = r)
         body = Body(; r_cm, r_0, kwargs...)
@@ -363,16 +364,19 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @variables a_0(t)[1:3] [ guess=0,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
+
+    shapecode = encode(shapefile)
     @parameters begin
         r[1:3]=r, [
             description = "Vector from frame_a to frame_b resolved in frame_a",
         ]
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations"]
+        shapefile[1:length(shapecode)] = shapecode
     end
 
 
-    pars = [r; radius; color]
+    pars = [r; radius; color; shapefile]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 

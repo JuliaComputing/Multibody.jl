@@ -98,7 +98,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example robot
 import CairoMakie
-Multibody.render(robot, sol; filename = "robot.gif")
+Multibody.render(robot, sol; y=2, lookat=[0,1,0], filename = "robot.gif")
 nothing # hide
 ```
 

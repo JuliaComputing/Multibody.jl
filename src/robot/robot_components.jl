@@ -438,6 +438,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         (tau(t)[1:6]),
         [guess = 0, state_priority = typemax(Int), description = "Joint driving torques"]
     end
+    path = @__DIR__()
 
     systems = @named begin
         axis1 = Rotational.Flange()
@@ -453,6 +454,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
         r5 = Revolute(n = [1, 0, 0], axisflange = true, isroot = false, radius=0.05, color=robot_orange)
         r6 = Revolute(n = [0, 1, 0], axisflange = true, isroot = false, radius=0.02, color=[0.5, 0.5, 0.5, 1])
         b0 = BodyShape(r = [0, 0.351, 0],
+                        shapefile = joinpath(path, "../../examples/resources/b0.stl"),
                        #    r_shape = [0, 0, 0],
                        #    lengthDirection = [1, 0, 0],
                        #    widthDirection = [0, 1, 0],
@@ -460,9 +462,10 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        #    width = 0.3,
                        #    height = 0.3,
                        radius = 0.3/2,
-                       color = robot_orange,
+                       color = [0.5, 0.5, 0.5, 1],
                        m = 1)
         b1 = BodyShape(r = [0, 0.324, 0.3],
+                        shapefile = joinpath(path, "../../examples/resources/b1.stl"),
                        I_22 = 1.16,
                        #    lengthDirection = [1, 0, 0],
                        #    widthDirection = [0, 1, 0],
@@ -473,6 +476,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        color = robot_orange,
                        m = 1)
         b2 = BodyShape(r = [0, 0.65, 0],
+                        shapefile = joinpath(path, "../../examples/resources/b2.stl"),
                        r_cm = [0.172, 0.205, 0],
                        m = 56.5,
                        I_11 = 2.58,
@@ -488,6 +492,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        color = robot_orange,
                        )
         b3 = BodyShape(r = [0, 0.414, -0.155],
+                        shapefile = joinpath(path, "../../examples/resources/b3.stl"),
                        r_cm = [0.064, -0.034, 0],
                        m = 26.4,
                        I_11 = 0.279,
@@ -503,6 +508,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        color = robot_orange,
                        )
         b4 = BodyShape(r = [0, 0.186, 0],
+                        shapefile = joinpath(path, "../../examples/resources/b4.stl"),
                        m = 28.7,
                        I_11 = 1.67,
                        I_22 = 0.081,
@@ -516,6 +522,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                        color = robot_orange,
                        )
         b5 = BodyShape(r = [0, 0.125, 0],
+                        shapefile = joinpath(path, "../../examples/resources/b5.stl"),
                        m = 5.2,
                        I_11 = 1.25,
                        I_22 = 0.81,
@@ -529,6 +536,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
                         color = [0.5, 0.5, 0.5, 1],
                        )
         b6 = BodyShape(r = [0, 0, 0],
+                        shapefile = joinpath(path, "../../examples/resources/b6.stl"),
                        r_cm = [0.05, 0.05, 0.05],
                        m = 0.5,
                        # lengthDirection = [1, 0, 0],
