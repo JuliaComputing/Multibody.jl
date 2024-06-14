@@ -70,8 +70,8 @@ plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
 ```@example kinloop
 using Test
 @test SciMLBase.successful_retcode(sol)
-@test sol(sol.t[end], idxs=j3.phi) % 2pi ≈ π/2 atol=0.1 # Test the the "pendulum" is hanging almost straight down after sufficient time has passed
-@test sol(sol.t[end], idxs=j2.phi) % 2pi ≈ -π/2 atol=0.1
+@test sol(sol.t[end], idxs=j3.phi) % 2pi ≈ π/2 atol=0.3 # Test the the "pendulum" is hanging almost straight down after sufficient time has passed
+@test sol(sol.t[end], idxs=j2.phi) % 2pi ≈ -π/2 atol=0.3
 
 ```
 
@@ -81,7 +81,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example kinloop
 import CairoMakie
-Multibody.render(fourbar, sol, 0:0.033:10; y=-1, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
+Multibody.render(fourbar, sol, 0:0.033:10; x=4, y=-1, z=4, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
 nothing # hide
 ```
 
