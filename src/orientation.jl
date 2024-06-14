@@ -421,10 +421,16 @@ function resolve_dyade2(R, D1)
 end
 
 """
-    get_rot(sol, frame, t)
+    R_W_F = get_rot(sol, frame, t)
 
 Extract a 3×3 rotation matrix ∈ SO(3) from a solution at time `t`.
-See also [`get_trans`](@ref), [`get_frame`](@ref)
+
+The rotation matrix returned, ``R_W^F``, is such that when a vector ``p_F`` expressed in the local `frame` of reference ``F`` is multiplied by ``R_W^F`` as ``Rp``, the resulting vector is ``p_W`` expressed in the world frame:
+```math
+p_W = R_W^F * p_F
+```
+
+See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_rot(sol, frame, t)
     Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
@@ -434,17 +440,23 @@ end
     get_trans(sol, frame, t)
 
 Extract the translational part of a frame from a solution at time `t`.
-See also [`get_rot`](@ref), [`get_frame`](@ref)
+See also [`get_rot`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_trans(sol, frame, t)
     SVector{3}(sol(t, idxs = collect(frame.r_0)))
 end
 
 """
-    get_frame(sol, frame, t)
+    T_W_F = get_frame(sol, frame, t)
 
 Extract a 4×4 transformation matrix ∈ SE(3) from a solution at time `t`.
-See also [`get_trans`](@ref), [`get_rot`](@ref)
+
+The transformation matrix returned, ``T_W^F``, is such that when a homogenous-coordinate vector ``p_F``, expressed in the local `frame` of reference ``F`` is multiplied by ``T_W^F`` as ``Tp``, the resulting vector is ``p_W`` expressed in the world frame:
+```math
+p_W = T_W^F * p_F
+```
+
+See also [`get_trans`](@ref) and [`get_rot`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_frame(sol, frame, t)
     R = get_rot(sol, frame, t)

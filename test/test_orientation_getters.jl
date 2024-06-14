@@ -89,3 +89,6 @@ r_A = [r_A; 1] # Homogeneous coordinates
 @test (get_frame(sol, model.lower_arm.frame_a, 12)*r_A)[1:3] ≈ t1
 
 # the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.
+
+@test get_trans(sol, model.tip.frame_a, 12) ≈ t1
+@test get_frame(sol, model.tip.frame_a, 12)[1:3, 4] ≈ t1
