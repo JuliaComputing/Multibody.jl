@@ -35,6 +35,11 @@ end
     include("test_robot.jl")
 end
 
+@testset "orientation_getters" begin
+    @info "Testing orientation_getters"
+    include("test_orientation_getters.jl")
+end
+
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -986,3 +991,4 @@ sol = solve(prob, Rodas4())
 
 tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
+

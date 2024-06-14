@@ -243,27 +243,25 @@ nothing # hide
 Let's break down how to think about directions and orientations when building 3D mechanisms. In the example above, we started with the shoulder joint, this joint rotated around the gravitational axis, `n = [0, 1, 0]`. When this joint is positioned in joint coordinate `shoulder_joint.phi = 0`, its `frame_a` and `frame_b` will coincide. When the joint rotates, `frame_b` will rotate around the axis `n` of `frame_a`. The `frame_a` of the joint is attached to the world, so the joint will rotate around the world's `y`-axis:
 
 ```@example pendulum
-function get_R(frame, t)
-    reshape(sol(t, idxs=vec(ori(frame).R.mat')), 3, 3)
-end
-function get_r(frame, t)
-    sol(t, idxs=collect(frame.r_0))
-end
-get_R(model.shoulder_joint.frame_b, 0)
+get_rot(sol, model.shoulder_joint.frame_b, 0)
 ```
 we see that at time $t = 0$, we have no rotation of `frame_b` around the $y$ axis of the world (frames are always resolved in the world frame), but a second into the simulation, we have:
 ```@example pendulum
-get_R(model.shoulder_joint.frame_b, 1)
+R1 = get_rot(sol, model.shoulder_joint.frame_b, 1)
 ```
-Here, the `frame_b` has rotated around the $y$ axis of the world.
+Here, the `frame_b` has rotated around the $y$ axis of the world (if you are not familiar with rotation matrices, we can ask for the rotation axis and angle)
+```@example pendulum
+using Multibody.Rotations
+(rotation_axis(R1), rotation_angle(R1))
+```
 
 The next body is the upper arm. This body has an extent of `0.6` in the $z$ direction, as measured in its local `frame_a`
 ```@example pendulum
-get_r(model.upper_arm.frame_b, 0)
+get_trans(sol, model.upper_arm.frame_b, 0)
 ```
 One second into the simulation, the upper arm has rotated around the $y$ axis of the world
 ```@example pendulum
-get_r(model.upper_arm.frame_b, 1)
+rb1 = get_trans(sol, model.upper_arm.frame_b, 1)
 ```
 
 If we look at the variable `model.upper_arm.r`, we do not see this rotation!
@@ -272,9 +270,14 @@ arm_r = sol(1, idxs=collect(model.upper_arm.r))
 ```
 The reason is that this variable is resolved in the local `frame_a` and not in the world frame. To transform this variable to the world frame, we may multiply with the rotation matrix of `frame_a` which is always resolved in the world frame:
 ```@example pendulum
-get_R(model.upper_arm.frame_a, 1)*arm_r
+get_rot(sol, model.upper_arm.frame_a, 1)*arm_r
 ```
 We now get the same result has when we asked for the translation vector of `frame_b` above.
+```@example pendulum
+using Test # hide
+get_rot(sol, model.upper_arm.frame_a, 1)*arm_r ≈ rb1 # hide
+nothing # hide
+```
 
 
 Slightly more formally, let $R_A^B$ denote the rotation matrix that rotates a vector expressed in a frame $A$ into one that is expressed in frame $B$, i.e., $r_B = R_B^A r_A$. We have then just performed the transformation $r_W = R_W^A r_A$, where $W$ denotes the world frame, and $A$ denotes `body.frame_a`.
@@ -283,26 +286,20 @@ The next joint, the elbow joint, has the rotational axis `n = [0, 0, 1]`. This i
 
 The lower arm is finally having an extent along the $y$-axis. At the final time when the pendulum motion has been fully damped, we see that the second frame of this body ends up with an $y$-coordinate of `-0.6`:
 ```@example pendulum
-get_r(model.lower_arm.frame_b, 12)
+get_trans(sol, model.lower_arm.frame_b, 12)
 ```
 
 If we rotate the vector of extent of the lower arm to the world frame, we indeed see that the only coordinate that is nonzero is the $y$ coordinate:
 ```@example pendulum
-get_R(model.lower_arm.frame_a, 12)*sol(12, idxs=collect(model.lower_arm.r))
+get_rot(sol, model.lower_arm.frame_a, 12)*sol(12, idxs=collect(model.lower_arm.r))
 ```
 
-The reason that the latter vector differs from `get_r(model.lower_arm.frame_b, 12)` above is that `get_r(model.lower_arm.frame_b, 12)` has been _translated_ as well. To both translate and rotate `model.lower_arm.r` into the world frame, we must use the full transformation matrix $T_W^A \in SE(3)$:
+The reason that the latter vector differs from `get_trans(sol, model.lower_arm.frame_b, 12)` above is that `get_trans(sol, model.lower_arm.frame_b, 12)` has been _translated_ as well. To both translate and rotate `model.lower_arm.r` into the world frame, we must use the full transformation matrix $T_W^A \in SE(3)$:
 
 ```@example pendulum
-function get_T(frame, t)
-    R = get_R(frame, t)
-    r = get_r(frame, t)
-    [R r; 0 0 0 1]
-end
-
 r_A = sol(12, idxs=collect(model.lower_arm.r))
 r_A = [r_A; 1] # Homogeneous coordinates
 
-get_T(model.lower_arm.frame_a, 12)*r_A
+get_frame(sol, model.lower_arm.frame_a, 12)*r_A
 ```
-the vector is now coinciding with `get_r(model.lower_arm.frame_b, 12)`.
+the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.

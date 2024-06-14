@@ -6,13 +6,14 @@ version = "0.1.0"
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 JuliaSimCompiler = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MeshIO = "7269a6da-0436-5bbc-96c2-40638cbb6118"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ModelingToolkitStandardLibrary = "16a59e39-deab-5bd0-87e4-056b12336739"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
-FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-MeshIO = "7269a6da-0436-5bbc-96c2-40638cbb6118"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
@@ -27,6 +28,7 @@ MeshIO = "0.4"
 ModelingToolkit = "9"
 ModelingToolkitStandardLibrary = "2"
 Rotations = "1.4"
+StaticArrays = "1"
 julia = "1"
 
 [extras]

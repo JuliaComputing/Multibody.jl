@@ -5,7 +5,7 @@ using ModelingToolkit
 using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
-
+using StaticArrays
 export Rotational, Translational
 
 export render, render!
@@ -126,7 +126,7 @@ decode(s) = String(UInt8.(s))
 #     ODEProblem{true}(fun, u0, tspan, ps; kwargs...)
 # end
 
-export Orientation, RotationMatrix, ori
+export Orientation, RotationMatrix, ori, get_rot, get_trans, get_frame
 include("orientation.jl")
 
 export Frame
