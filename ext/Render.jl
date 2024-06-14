@@ -9,9 +9,6 @@ export render
 using MeshIO, FileIO
 
 
-function get_rot(sol, frame, t)
-    reshape(sol(t, idxs = vec(ori(frame).R.mat)), 3, 3)
-end
 
 function get_rot_fun(sol, frame)
     syms = vec(ori(frame).R.mat)
@@ -35,22 +32,12 @@ function get_fun(sol, syms)
 end
 
 
-"""
-    get_frame(sol, frame, t)
-
-Extract a 4×4 transformation matrix ∈ SE(3) from a solution at time `t`.
-"""
-function get_frame(sol, frame, t)
-    R = get_rot(sol, frame, t)
-    tr = sol(t, idxs = collect(frame.r_0))
-    [R' tr; 0 0 0 1]
-end
 
 function get_frame_fun(sol, frame)
     R = get_rot_fun(sol, frame)
     tr = get_fun(sol, collect(frame.r_0))
     function (t)
-        [R(t)' tr(t); 0 0 0 1]
+        [R(t) tr(t); 0 0 0 1]
     end
 end
 
@@ -249,7 +236,7 @@ function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConst
         O = r_0($t)
         n_a = n($t)
         R_w_a = rotfun($t)
-        n_w = R_w_a'*n_a # Rotate to the world frame
+        n_w = R_w_a*n_a # Rotate to the world frame
         p1 = Point3f(O + radius*n_w)
         p2 = Point3f(O - radius*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)

@@ -419,3 +419,35 @@ end
 function resolve_dyade2(R, D1)
     R*D1*R'
 end
+
+"""
+    get_rot(sol, frame, t)
+
+Extract a 3×3 rotation matrix ∈ SO(3) from a solution at time `t`.
+See also [`get_trans`](@ref), [`get_frame`](@ref)
+"""
+function get_rot(sol, frame, t)
+    Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
+end
+
+"""
+    get_trans(sol, frame, t)
+
+Extract the translational part of a frame from a solution at time `t`.
+See also [`get_rot`](@ref), [`get_frame`](@ref)
+"""
+function get_trans(sol, frame, t)
+    SVector{3}(sol(t, idxs = collect(frame.r_0)))
+end
+
+"""
+    get_frame(sol, frame, t)
+
+Extract a 4×4 transformation matrix ∈ SE(3) from a solution at time `t`.
+See also [`get_trans`](@ref), [`get_rot`](@ref)
+"""
+function get_frame(sol, frame, t)
+    R = get_rot(sol, frame, t)
+    tr = get_trans(sol, frame, t)
+    [R tr; 0 0 0 1]
+end
