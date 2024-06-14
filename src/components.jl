@@ -100,7 +100,7 @@ Fixed translation of `frame_b` with respect to `frame_a` with position vector `r
 
 Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
-@component function FixedTranslation(; name, r, radius=0.08f0, color = purple)
+@component function FixedTranslation(; name, r, radius=0.02f0, color = purple)
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters r[1:3]=r [

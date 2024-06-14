@@ -100,13 +100,10 @@ function render(model, sol,
     up = Vec3f(0,1,0),
     show_axis = false,
     timescale = 1.0,
-    scene = nothing,
     filename = "multibody_$(model.name).mp4",
     kwargs...
     )
-    if scene === nothing
-        scene, fig = default_scene(x,y,z,lookat,up,show_axis)
-    end
+    scene, fig = default_scene(x,y,z,lookat,up,show_axis)
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
