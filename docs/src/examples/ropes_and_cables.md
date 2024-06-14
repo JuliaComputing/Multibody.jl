@@ -39,7 +39,7 @@ sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1);
 @test SciMLBase.successful_retcode(sol)
 
 import CairoMakie
-Multibody.render(stiff_rope, sol, z = -5, filename = "stiff_rope.gif") # May take long time for n>=10
+Multibody.render(stiff_rope, sol, filename = "stiff_rope.gif") # May take long time for n>=10
 ```
 ![stiff_rope animation](stiff_rope.gif)
 
@@ -65,7 +65,7 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
 @test SciMLBase.successful_retcode(sol)
 
-Multibody.render(flexible_rope, sol, z = -8, filename = "flexible_rope.gif") # May take long time for n>=10
+Multibody.render(flexible_rope, sol,  filename = "flexible_rope.gif") # May take long time for n>=10
 ```
 
 
@@ -101,7 +101,7 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 
-Multibody.render(mounted_chain, sol, z = -3, filename = "mounted_chain.gif") # May take long time for n>=10
+Multibody.render(mounted_chain, sol, filename = "mounted_chain.gif") # May take long time for n>=10
 ```
 
 ![mounted_chain animation](mounted_chain.gif)

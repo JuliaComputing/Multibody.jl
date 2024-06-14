@@ -70,19 +70,22 @@ function get_color(sys, sol, default)
 end
 
 
-function default_scene(x,y,z,R; F = false)
-    if string(Makie.current_backend()) == "CairoMakie"
-        scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
-        fig = nothing
-    else
+function default_scene(x,y,z,lookat,up,show_axis)
+    # if string(Makie.current_backend()) == "CairoMakie"
+    #     scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
+    #     fig = nothing
+    # else
         fig = Figure()
         # scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
-        scene = LScene(fig[1, 1]).scene
-    end
+        scene = LScene(fig[1, 1])#.scene
+    # end
     cam3d!(scene)
-    scene.camera.view[] = [
-        R [x,y,z]; 0 0 0 1
-    ]
+    # scene.scene.camera.view[] = [
+    #     R [x,y,z]; 0 0 0 1
+    # ]
+    camc = cameracontrols(scene.scene)
+    update_cam!(scene.scene, camc, Vec3f(x, y, z), Vec3f(lookat), Vec3f(up))
+    fig.current_axis.x.show_axis[] = show_axis
     scene, fig
 end
 
@@ -90,29 +93,31 @@ end
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
     framerate = 30,
-    x = 0,
+    x = 3,
     y = 0,
-    z = -10,
-    R = I(3),
+    z = 3,
+    lookat = Vec3f(0,0,0),
+    up = Vec3f(0,1,0),
+    show_axis = false,
     timescale = 1.0,
+    scene = nothing,
     filename = "multibody_$(model.name).mp4",
-    scene = default_scene(x,y,z,R)[1],
     kwargs...
     )
+    if scene === nothing
+        scene, fig = default_scene(x,y,z,lookat,up,show_axis)
+    end
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
-    # with_theme(theme_dark()) do
 
     t = Observable(timevec[1])
 
     recursive_render!(scene, complete(model), sol, t)
-
-    record(scene, filename, timevec; framerate) do time
-        # @show time
+    fn = record(fig, filename, timevec; framerate) do time
         t[] = time/timescale
     end
-    # end
+    fn, scene, fig
 end
 
 function render(model, sol, time::Real;
@@ -122,7 +127,7 @@ function render(model, sol, time::Real;
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
-    scene, fig = default_scene(0,0,-10,I(3))
+    scene, fig = default_scene(0,0,10)
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)

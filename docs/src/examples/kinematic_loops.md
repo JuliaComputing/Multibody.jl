@@ -21,17 +21,18 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
+l = 1.5
 systems = @named begin
     j1 = Revolute(axisflange=true) # We use an axis flange to attach a damper
     j2 = Revolute(axisflange=true)
     j3 = Revolute()
     j4 = RevolutePlanarLoopConstraint()
     j5 = Revolute()
-    b1 = BodyShape(m=1, r = [2.0, 0, 0], radius=0.03)
-    b2 = BodyShape(m=1, r = [0.0, 2.0, 0], radius=0.03)
-    b3 = BodyShape(m=1, r = [-2.0, 0, 0], radius=0.03)
-    b4 = BodyShape(m=1, r = [0.0, -2.0, 0], radius=0.03)
-    damper1 = Rotational.Damper(d=0.5)
+    b1 = BodyShape(m=1, r = [l, 0, 0], radius=0.03)
+    b2 = BodyShape(m=1, r = [0.0, l, 0], radius=0.03)
+    b3 = BodyShape(m=1, r = [-l, 0, 0], radius=0.03)
+    b4 = BodyShape(m=1, r = [0.0, -l, 0], radius=0.03)
+    damper1 = Rotational.Damper(d=0.1)
     damper2 = Rotational.Damper(d=0.1)
 end
 
@@ -80,7 +81,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example kinloop
 import CairoMakie
-Multibody.render(fourbar, sol, 0:0.033:10; z = -3, R=Multibody.Rotations.RotXYZ(0.4, 0.4, 0), filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
+Multibody.render(fourbar, sol, 0:0.033:10; y=-1, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
 nothing # hide
 ```
 
@@ -137,7 +138,7 @@ plot(sol, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green
 
 ```@example kinloop
 import CairoMakie
-Multibody.render(fourbar2, sol; z = -3, R=Multibody.rotx(20, true)*Multibody.roty(20, true), filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
+Multibody.render(fourbar2, sol; x=-2, y = 3, z = 5, filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
 nothing # hide
 ```
 
