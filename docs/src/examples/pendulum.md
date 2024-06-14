@@ -70,7 +70,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example pendulum
 import CairoMakie # GLMakie is another alternative, suitable for interactive plots
-Multibody.render(model, sol; z = -3, filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
+Multibody.render(model, sol; filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
 nothing # hide
 ```
 
@@ -101,7 +101,7 @@ plot(sol, idxs = joint.phi, title="Damped pendulum")
 This time we see that the pendulum loses energy and eventually comes to rest at the stable equilibrium point ``\pi / 2``.
 
 ```@example pendulum
-Multibody.render(model, sol; z = -3, filename = "pendulum_damped.gif")
+Multibody.render(model, sol; filename = "pendulum_damped.gif")
 nothing # hide
 ```
 ![animation damped](pendulum_damped.gif)
@@ -135,7 +135,7 @@ Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")
 As is hopefully evident from the little code snippet above, this linear pendulum model has a lot in common with the rotary pendulum. In this example, we connected both the spring and a damper to the same axis flange in the joint. This time, the components came from the `Translational` submodule of ModelingToolkitStandardLibrary rather than the `Rotational` submodule. Also here do we pass `axisflange` when we create the joint to make sure that it is equipped with the flanges `support` and `axis` needed to connect the translational components.
 
 ```@example pendulum
-Multibody.render(model, sol; z = -5, filename = "linear_pend.gif", framerate=24)
+Multibody.render(model, sol; filename = "linear_pend.gif", framerate=24)
 nothing # hide
 ```
 ![linear pendulum](linear_pend.gif)
@@ -233,7 +233,7 @@ plot(sol, layout=4)
 
 ```@example pendulum
 import CairoMakie
-Multibody.render(model, sol, z=-3, R = Rotations.RotXYZ(0.2, -0.2, 0), filename = "furuta.gif")
+Multibody.render(model, sol, filename = "furuta.gif")
 nothing # hide
 ```
 ![furuta](furuta.gif)

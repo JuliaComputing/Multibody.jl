@@ -82,7 +82,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example spring_damper_system
 import CairoMakie
-Multibody.render(model, sol; z = -4, filename = "springdamper.gif")
+Multibody.render(model, sol; filename = "springdamper.gif")
 nothing # hide
 ```
 
