@@ -249,8 +249,18 @@ R1 = get_rot(sol, model.shoulder_joint.frame_b, 1)
 Here, the `frame_b` has rotated around the $y$ axis of the world (if you are not familiar with rotation matrices, we can ask for the rotation axis and angle)
 ```@example pendulum
 using Multibody.Rotations
-(rotation_axis(R1), rotation_angle(R1))
+rotation_axis(R1), rotation_angle(R1)
 ```
+
+This rotation axis and angle should correspond to the joint coordinate (the orientation described by an axis and an angle is invariant to a multiplication of both by -1)
+```@example pendulum
+sol(1, idxs=model.shoulder_joint.phi)
+```
+
+!!! note "Convention"
+    The convention used in [`get_rot`](@ref) is to return the rotation matrix ``R_{World}^{Local}`` that rotates a coordinate from the local frame to the world frame, ``r_{World} = R_{World}^{Local} r_{Local}``.
+
+
 
 Here, we made use of the function [`get_rot`](@ref), we will now make use of also [`get_trans`](@ref) and [`get_frame`](@ref).
 
