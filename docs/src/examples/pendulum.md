@@ -1,8 +1,6 @@
 # Pendulum--The "Hello World of multi-body dynamics"
 This beginners tutorial will model a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
 
-![Pendulum](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/Pendulum.png)
-
 To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
@@ -110,7 +108,6 @@ nothing # hide
 When we think of a pendulum, we typically think of a rotary pendulum that is rotating around a pivot point like in the examples above. 
 A mass suspended in a spring can be though of as a linear pendulum (often referred to as a harmonic oscillator rather than a pendulum), and we show here how we can construct a model of such a device. This time around, we make use of a [`Prismatic`](@ref) joint rather than a [`Revolute`](@ref) joint. A [prismatic joint](https://en.wikipedia.org/wiki/Prismatic_joint) has one positional degree of freedom, compared to the single rotational degree of freedom for the revolute joint.
 
-![Spring with mass](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringWithMass.png)
 
 ```@example pendulum
 @named body_0 = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
@@ -254,6 +251,8 @@ Here, the `frame_b` has rotated around the $y$ axis of the world (if you are not
 using Multibody.Rotations
 (rotation_axis(R1), rotation_angle(R1))
 ```
+
+Here, we made use of the function [`get_rot`](@ref), we will now make use of also [`get_trans`](@ref) and [`get_frame`](@ref).
 
 The next body is the upper arm. This body has an extent of `0.6` in the $z$ direction, as measured in its local `frame_a`
 ```@example pendulum

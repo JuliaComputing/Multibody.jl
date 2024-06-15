@@ -7,7 +7,6 @@ This example mirrors that of the [modelica spring-mass system](https://doc.model
 1. Using a prismatic joint and a 1-dimensional spring from the `Translational` submodule attached to the joint. The advantage of this approach is that the many elements from the Translational library can be easily used here and that this implementation is usually more efficient compared to when using 3-dimensional springs.
 2. Using a 3-dimensional spring from the `Multibody` library.
 
-![Spring-mass system](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringMassSystem.png)
 
 ```@example spring_mass_system
 using Multibody

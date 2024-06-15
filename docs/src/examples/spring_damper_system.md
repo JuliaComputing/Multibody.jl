@@ -6,8 +6,6 @@ Welcome to the spring-damper system example, where we will show you the process 
 
 This tutorial mirrors that of the following Modelica tutorial [Spring damper system](https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem.html) and demonstrates that a body can be freely moving without any connection to a joint. In this case body coordinates are used as state by setting the option `isroot=true` to the body.
 
-![Spring-damper system](https://doc.modelica.org/Modelica%203.2.3/Resources/Images/Mechanics/MultiBody/Examples/Elementary/SpringDamperSystem.png)
-
 This example has two parallel spring-mass parts, the first body (`body1`) is attached directly to the spring, with no joint in parallel with the spring. In this situation, we have to set `isroot=true` for `body1` to indicate that we want to use the body variables as state. The second body (`body2`) is attached to the spring with a joint in parallel with the spring, so we can use the joint variables as state, hence `isroot=false` for `body2`.
 
 ```@example spring_damper_system

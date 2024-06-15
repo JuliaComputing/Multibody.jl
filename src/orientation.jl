@@ -427,7 +427,7 @@ Extract a 3×3 rotation matrix ∈ SO(3) from a solution at time `t`.
 
 The rotation matrix returned, ``R_W^F``, is such that when a vector ``p_F`` expressed in the local `frame` of reference ``F`` is multiplied by ``R_W^F`` as ``Rp``, the resulting vector is ``p_W`` expressed in the world frame:
 ```math
-p_W = R_W^F * p_F
+p_W = R_W^F  p_F
 ```
 
 See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
@@ -453,7 +453,7 @@ Extract a 4×4 transformation matrix ∈ SE(3) from a solution at time `t`.
 
 The transformation matrix returned, ``T_W^F``, is such that when a homogenous-coordinate vector ``p_F``, expressed in the local `frame` of reference ``F`` is multiplied by ``T_W^F`` as ``Tp``, the resulting vector is ``p_W`` expressed in the world frame:
 ```math
-p_W = T_W^F * p_F
+p_W = T_W^F  p_F
 ```
 
 See also [`get_trans`](@ref) and [`get_rot`](@ref), [Orientations and directions](@ref) (docs section).

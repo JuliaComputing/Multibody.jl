@@ -16,7 +16,7 @@ In this documentation, you will find everything you need to get started with Mul
 
 
 
-## Notable difference from Modelica
+## Notable differences from Modelica
 
 - The torque variable in Multibody.jl is typically called `tau` rather than `t` to not conflict with the often used independent variable `t` used to denote time.
 - Multibody.jl occasionally requires the user to specify which component should act as the root of the kinematic tree. This only occurs when bodies are connected directly to force components without a joint parallel to the force component.
