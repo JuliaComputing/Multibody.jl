@@ -51,7 +51,7 @@ prob = ODEProblem(ssys,[
                     D(D(p1.s)) => 0,
                     D(p2.s) => 0,
                     D(D(p2.s)) => 0,
-                  ], (0, 10))
+                  ], (0, 5))
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)

@@ -35,7 +35,10 @@ function ori(sys, varw = false)
     end
 end
 
-@component function World(; name)
+"""
+    World(; name, render=true)
+"""
+@component function World(; name, render=true)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
@@ -43,12 +46,13 @@ end
     @named frame_b = Frame()
     @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
     @parameters g=9.81 [description = "gravitational acceleration of world"]
+    @parameters render=render
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
                    O ~ nullrotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
                    ]
-    ODESystem(eqs, t, [], [n; g]; name, systems = [frame_b])
+    ODESystem(eqs, t, [], [n; g; render]; name, systems = [frame_b])
 end
 
 """

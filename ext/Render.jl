@@ -210,6 +210,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
 end
 
 function render!(scene, ::typeof(World), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     radius = 0.01f0
     r_0 = get_fun(sol, collect(sys.frame_b.r_0))
 

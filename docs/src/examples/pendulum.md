@@ -123,7 +123,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 15))
+prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 10))
 
 sol = solve(prob, Rodas4())
 Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")

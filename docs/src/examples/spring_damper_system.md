@@ -59,7 +59,7 @@ prob = ODEProblem(ssys, [
     damper1.d => 2;
     collect(body1.v_0) .=> 0;
     collect(body1.w_a) .=> 0;
-], (0, 10))
+], (0, 5))
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
