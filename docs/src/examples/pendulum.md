@@ -56,7 +56,7 @@ We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` 
 ```@example pendulum
 D = Differential(t)
 defs = Dict(D(joint.phi) => 0, D(D(joint.phi)) => 0)
-prob = ODEProblem(ssys, defs, (0, 10))
+prob = ODEProblem(ssys, defs, (0, 3.35))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = joint.phi, title="Pendulum")
@@ -79,7 +79,7 @@ By default, the world frame is indicated using the convention x: red, y: green, 
 ## Adding damping
 To add damping to the pendulum such that the pendulum will eventually come to rest, we add a [`Damper`](@ref) to the revolute joint. The damping coefficient is given by `d`, and the damping force is proportional to the angular velocity of the joint. To add the damper to the revolute joint, we must create the joint with the keyword argument `axisflange = true`, this adds two internal flanges to the joint to which you can attach components from the `ModelingToolkitStandardLibrary.Mechanical.Rotational` module (1-dimensional components). We then connect one of the flanges of the damper to the axis flange of the joint, and the other damper flange to the support flange which is rigidly attached to the world.
 ```@example pendulum
-@named damper = Rotational.Damper(d = 0.1)
+@named damper = Rotational.Damper(d = 0.3)
 @named joint = Revolute(n = [0, 0, 1], isroot = true, axisflange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
@@ -91,7 +91,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(joint.phi) => 0, D(D(joint.phi)) => 0],
-                  (0, 30))
+                  (0, 10))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = joint.phi, title="Damped pendulum")
@@ -123,7 +123,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 30))
+prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 15))
 
 sol = solve(prob, Rodas4())
 Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")
@@ -151,14 +151,11 @@ ssys = structural_simplify(IRSystem(model))
 
 defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
             collect(root_body.r_0 .=> [0, 0, 0])...,
-            collect((D.(root_body.phi)) .=> [0, 0, 0])...,
-            collect(D.(D.(root_body.phi)) .=> [0, 0, 0])...,
-            collect(D.(root_body.phid) .=> [0, 0, 0])...,
             collect(root_body.w_a .=> [0, 0, 0])...,
             collect(root_body.v_0 .=> [0, 0, 0])...,
 )
 
-prob = ODEProblem(ssys, defs, (0, 30))
+prob = ODEProblem(ssys, defs, (0, 15))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring system without joint")
@@ -172,7 +169,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, defs, (0, 30))
+prob = ODEProblem(ssys, defs, (0, 15))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")

@@ -35,9 +35,7 @@ ssys = structural_simplify(IRSystem(model))
 
 
 D = Differential(t)
-defs = Dict(collect((D.(joint.phi)) .=> [0, 0, 0])...,
-            collect(D.(D.(joint.phi)) .=> [0, 0, 0])...)
-prob = ODEProblem(ssys, defs, (0, 10))
+prob = ODEProblem(ssys, [], (0, 3))
 
 using OrdinaryDiffEq
 sol = solve(prob, Rodas4())

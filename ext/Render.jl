@@ -9,7 +9,13 @@ export render
 using MeshIO, FileIO
 
 
+"""
+    get_rot_fun(sol, frame)
 
+Return a function of `t` that returns the transpose of the rotation-matrix part of `frame`. The transpose is there to make the rotation matrix `R_W_F`.
+
+See also [`get_rot`](@ref)
+"""
 function get_rot_fun(sol, frame)
     syms = vec(ori(frame).R.mat')
     getter = ModelingToolkit.getu(sol, syms)
@@ -21,6 +27,11 @@ function get_rot_fun(sol, frame)
     end
 end
 
+"""
+    get_fun(sol, syms)
+
+Return a function of `t` that returns `syms` from the solution.
+"""
 function get_fun(sol, syms)
     getter = ModelingToolkit.getu(sol, syms)
     p = ModelingToolkit.parameter_values(sol)
@@ -32,7 +43,13 @@ function get_fun(sol, syms)
 end
 
 
+"""
+    get_frame_fun(sol, frame)
 
+Return a function of `t` that returns the transformation matrix from frame, where the rotation matrix is transposed. The transpose is there to make the rotation matrix `R_W_F`.
+
+See also [`get_frame`](@ref)
+"""
 function get_frame_fun(sol, frame)
     R = get_rot_fun(sol, frame)
     tr = get_fun(sol, collect(frame.r_0))
@@ -299,7 +316,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
         shapemesh = FileIO.load(shapepath)
         m = mesh!(scene, shapemesh; color, specular = Vec3f(1.5))
 
-        on(t) do t
+        @views on(t) do t
             Ta = T(t)
             r1 = Point3f(Ta[1:3, 4])
             q = Rotations.QuatRotation(Ta[1:3, 1:3]).q

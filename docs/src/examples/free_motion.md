@@ -78,7 +78,7 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
-], (0, 10))
+], (0, 3))
 
 sol = solve(prob, Rodas5P())
 @assert SciMLBase.successful_retcode(sol)
