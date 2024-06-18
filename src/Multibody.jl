@@ -145,7 +145,7 @@ include("joints.jl")
 export Spring, Damper, SpringDamperParallel, Torque, Force
 include("forces.jl")
 
-export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce
+export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce, Power
 include("sensors.jl")
 
 export point_to_point, traj5, KinematicPTP, Kinematic5
