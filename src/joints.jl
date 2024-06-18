@@ -23,7 +23,9 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
                   isroot = true, iscut = false, radius = 0.05, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
-    norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
+    if !(eltype(n) <: Num)
+        norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
+    end
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=n [description = "axis of rotation"]
@@ -45,24 +47,17 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     n = collect(n)
 
-    if iscut
-        # NOTE: only equations for isroot=false available here
-        eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-            residue(ori(frame_a), absolute_rotation(ori(frame_b), Rrel)) .~ 0 # If joint is a cut joint, this equation is replaced
-                collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
-                collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+
+    if isroot
+        eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
+                    connect_orientation(ori(frame_b), absolute_rotation(ori(frame_a), Rrel); iscut)
+                    collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
+                    collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
     else
-        if isroot
-            eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
-                        ori(frame_b) ~ absolute_rotation(ori(frame_a), Rrel)
-                        collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
-                        collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
-        else
-            eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
-                        ori(frame_a) ~ absolute_rotation(ori(frame_b), Rrel)
-                        collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
-                        collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
-        end
+        eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
+                    connect_orientation(ori(frame_a), absolute_rotation(ori(frame_b), Rrel); iscut)
+                    collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
+                    collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
     end
     moreeqs = [collect(frame_a.r_0 .~ frame_b.r_0)
                D(phi) ~ w
