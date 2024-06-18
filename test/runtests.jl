@@ -94,22 +94,27 @@ end
 # ==============================================================================
 using LinearAlgebra, ModelingToolkit
 @testset "Simple pendulum" begin
-@named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true)
+@named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true, axisflange=true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named torksensor = CutTorque()
 @named forcesensor = CutForce()
+@named powersensor = Multibody.Power()
+@named damper = Rotational.Damper(d = 1e-300)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, body.frame_a, torksensor.frame_a,
-                       forcesensor.frame_a)]
+                       forcesensor.frame_a, powersensor.frame_a)]
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, torksensor.frame_a)
                connect(torksensor.frame_b, forcesensor.frame_a)
-               connect(forcesensor.frame_b, body.frame_a)]
+               connect(damper.flange_a, joint.axis)
+               connect(damper.flange_b, joint.support)
+               connect(forcesensor.frame_b, powersensor.frame_a)
+               connect(powersensor.frame_b, body.frame_a)]
 
 @named model = ODESystem(connections, t,
-                         systems = [world, joint, body, torksensor, forcesensor])
+                         systems = [world, joint, body, torksensor, forcesensor, powersensor, damper])
 modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
@@ -117,8 +122,7 @@ irsys = IRSystem(modele)
 ssys = structural_simplify(irsys)
 
 D = Differential(t)
-defs = Dict(collect((D.(joint.phi)) .=> [0, 0, 0])...,
-            collect(D.(D.(joint.phi)) .=> [0, 0, 0])...)
+defs = Dict()
 prob = ODEProblem(ssys, defs, (0, 10))
 
 using OrdinaryDiffEq
@@ -130,8 +134,15 @@ sol = solve(prob, Rodas4())
 
 @test maximum(norm.(eachcol(reduce(hcat, sol[collect(forcesensor.force.u)])))) ≈
       maximum(norm.(eachcol(reduce(hcat, sol[collect(joint.frame_a.f)]))))
-
+@test norm(sol[powersensor.power.u]) < 1e-16
 doplot() && plot(sol, idxs = collect(joint.phi))
+
+# Test power sensos
+defs = Dict(damper.d => 10)
+prob = ODEProblem(ssys, defs, (0, 1))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+@test sol(1, idxs=powersensor.power.u) ≈ -1.94758 atol=1e-2
 end
 
 # ==============================================================================
