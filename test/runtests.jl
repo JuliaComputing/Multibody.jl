@@ -507,6 +507,36 @@ doplot() && plot(sol, idxs = [body.r_0...]) |> display
 # end
 
 end
+
+# ==============================================================================
+## Planar joint ================================================================
+# ==============================================================================
+using LinearAlgebra
+@mtkmodel PlanarTest begin
+    @components begin
+        world = W()
+        planar = Planar(n=[0,0,1], n_x=[1,0,0])
+        force = Force()
+        body = Body(m=1)
+    end
+    @equations begin
+        connect(world.frame_b, planar.frame_a, force.frame_a)
+        connect(planar.frame_b, body.frame_a, force.frame_b)
+        force.force.u[1] ~ sin(t)
+        force.force.u[2] ~ t
+        force.force.u[3] ~ t^2
+        # force.force.u ~ [sin(t), t, t^2]
+    end
+end
+@named sys = PlanarTest()
+sys = complete(sys)
+ssys = structural_simplify(IRSystem(sys))
+prob = ODEProblem(ssys, [
+    # collect(sys.body.w_a) .=> 0;
+    # collect(sys.body.v_0) .=> 0;
+], (0, 10))
+
+sol = solve(prob, Rodas4())
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
 # ==============================================================================

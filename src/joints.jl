@@ -818,3 +818,78 @@ end
 
 LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)
 
+
+"""
+    Planar(; n = [0,0,1], n_x = [1,0,0], cylinderlength = 0.1, cylinderdiameter = 0.05, cylindercolor = [1, 0, 1, 1], boxwidth = 0.3*cylinderdiameter, boxheight = boxwidth, boxcolor = [0, 0, 1, 1])
+
+Joint where frame_b can move in a plane and can rotate around an
+axis orthogonal to the plane. The plane is defined by
+vector `n` which is perpendicular to the plane and by vector `n_x`,
+which points in the direction of the x-axis of the plane.
+frame_a and frame_b coincide when s_x=prismatic_x.s=0,
+s_y=prismatic_y.s=0 and phi=revolute.phi=0.
+"""
+@mtkmodel Planar begin
+    @structural_parameters begin
+        state_priority = 1#, [description = "Priority used to choose whether the joint state variables are selected"]
+        n
+        n_x
+    end
+    @parameters begin
+        # (n[1:3]), [description = "Axis orthogonal to unconstrained plane, resolved in frame_a (= same as in frame_b)"]
+        # (n_x[1:3]), [description = "Vector in direction of x-axis of plane, resolved in frame_a (n_x shall be orthogonal to n)"]
+        cylinderlength = 0.1, [description = "Length of revolute cylinder"]
+        cylinderdiameter = 0.05, [description = "Diameter of revolute cylinder"]
+        cylindercolor[1:4], [description = "Color of revolute cylinder"]
+        boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
+        boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
+        boxcolor[1:4], [description = "Color of prismatic joint boxes"]
+    end
+    begin
+        n = collect(n)
+        n_x = collect(n_x)
+        # cylindercolor = collect(cylindercolor)
+        # boxcolor = collect(boxcolor)
+    end
+    # @defaults begin
+    #     n .=> [0, 0, 1]
+    #     n_x .=> [1, 0, 0]
+    #     cylindercolor .=> [1, 0, 1, 1]
+    #     boxcolor .=> [0, 0, 1, 1]
+    # end
+
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n))
+        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x))
+        revolute = Revolute(; state_priority=2.1, n, isroot=false)
+    end
+    @variables begin
+        (s_x(t) = 0), [state_priority = 3.0, description = "Relative distance along first prismatic joint starting at frame_a"]
+        (s_y(t) = 0), [state_priority = 3.0, description = "Relative distance along second prismatic joint starting at first prismatic joint"]
+        (phi(t) = 0), [state_priority = 3.0, description = "Relative rotation angle from frame_a to frame_b"]
+        (v_x(t) = 0), [state_priority = 3.0, description = "Relative velocity along first prismatic joint"]
+        (v_y(t) = 0), [state_priority = 3.0, description = "Relative velocity along second prismatic joint"]
+        (w(t) = 0), [state_priority = 3.0, description = "Relative angular velocity around revolute joint"]
+        (a_x(t) = 0), [description = "Relative acceleration along first prismatic joint"]
+        (a_y(t) = 0), [description = "Relative acceleration along second prismatic joint"]
+        (wd(t) = 0), [description = "Relative angular acceleration around revolute joint"]
+    end
+    @equations begin
+        s_x ~ prismatic_x.s
+        s_y ~ prismatic_y.s
+        phi ~ revolute.phi
+        v_x ~ D(s_x)
+        v_y ~ D(s_y)
+        w   ~ D(phi)
+        a_x ~ D(v_x)
+        a_y ~ D(v_y)
+        wd  ~ D(w)
+        connect(frame_a, prismatic_x.frame_a)
+        connect(prismatic_x.frame_b, prismatic_y.frame_a)
+        connect(prismatic_y.frame_b, revolute.frame_a)
+        connect(revolute.frame_b, frame_b)
+    end
+end
+

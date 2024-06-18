@@ -138,7 +138,7 @@ include("interfaces.jl")
 export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, Rope
 include("components.jl")
 
-export Revolute, Prismatic, Spherical, Universal, GearConstraint, RollingWheelJoint,
+export Revolute, Prismatic, Planar, Spherical, Universal, GearConstraint, RollingWheelJoint,
        RollingWheel, FreeMotion, RevolutePlanarLoopConstraint
 include("joints.jl")
 
