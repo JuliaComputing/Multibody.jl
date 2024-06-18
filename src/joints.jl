@@ -100,11 +100,13 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   isroot = true, iscut = false, s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1])
-    norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
+                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false)
+    if !(eltype(n) <: Num)
+        norm(n) ≈ 1 || error("Prismatic axis of motion must be a unit vector, got norm(n) = $(norm(n))")
+    end
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters n[1:3]=n [description = "axis of motion"]
+    @parameters n[1:3]=_normalize(n) [description = "axis of motion"]
     n = collect(n)
 
     pars = @parameters begin
@@ -113,15 +115,15 @@ The function returns an ODESystem representing the prismatic joint.
     end
 
     @variables s(t)=s0 [
-        state_priority = 10,
+        state_priority = state_priority,
         description = "Relative distance between frame_a and frame_b",
     ]
     @variables v(t)=v0 [
-        state_priority = 10,
+        state_priority = state_priority,
         description = "Relative velocity between frame_a and frame_b",
     ]
     @variables a(t)=0 [
-        state_priority = 10,
+        state_priority = state_priority,
         description = "Relative acceleration between frame_a and frame_b",
     ]
     @variables f(t)=0 [

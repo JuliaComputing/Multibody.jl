@@ -524,19 +524,26 @@ using LinearAlgebra
         connect(planar.frame_b, body.frame_a, force.frame_b)
         force.force.u[1] ~ sin(t)
         force.force.u[2] ~ t
-        force.force.u[3] ~ t^2
-        # force.force.u ~ [sin(t), t, t^2]
+        force.force.u[3] ~ t^2/2
+        # force.force.u .~ [sin(t), t, t^2]
     end
 end
 @named sys = PlanarTest()
 sys = complete(sys)
 ssys = structural_simplify(IRSystem(sys))
 prob = ODEProblem(ssys, [
+    sys.world.g => 9.80665; # Modelica default
     # collect(sys.body.w_a) .=> 0;
     # collect(sys.body.v_0) .=> 0;
-], (0, 10))
+], (0, 2))
 
 sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+
+# plot(sol, idxs=sys.force.frame_a.f)
+@test sol(2, idxs=sys.body.r_0) ≈ [1.0907, -18.28, 0] atol=1e-3
+
+# plot(sol)
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
 # ==============================================================================
@@ -1022,3 +1029,44 @@ sol = solve(prob, Rodas4())
 tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
 
+
+module Mod
+    using ModelingToolkit
+    using ModelingToolkit: t_nounits as t, D_nounits as D
+    @mtkmodel Foo begin
+        @structural_parameters begin
+            state_priority = 1
+            n
+        end
+        @variables begin
+            (x(t)=0), [state_priority=state_priority, description = "Rel"]
+        end
+        @equations begin
+            D(x) ~ -1
+        end
+    end
+end
+
+@named foo = Mod.Foo(state_priority=1, n=1)
+IRSystem(foo)
+
+
+##
+
+
+using ModelingToolkit
+using ModelingToolkit: t_nounits as t, D_nounits as D
+@mtkmodel Foo begin
+    @structural_parameters begin
+        state_priority = 1
+    end
+    @variables begin
+        (x(t)=0), [state_priority=state_priority]
+    end
+    @equations begin
+        D(x) ~ -1
+    end
+end
+
+@mtkbuild foo = Foo(state_priority=1)
+IRSystem(foo)

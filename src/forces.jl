@@ -90,21 +90,22 @@ function BasicForce(; name, resolve_frame = :frame_b)
     r_0, f_b_0 = collect.((r_0, f_b_0))
 
     eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
+           collect(frame_b.tau) .~ 0
            0 .~ collect(frame_a.f) + resolve2(frame_a, f_b_0)
            0 .~ collect(frame_a.tau) + resolve2(frame_a, cross(r_0, f_b_0))]
 
     if resolve_frame == :frame_a
         append!(eqs,
                 [f_b_0 .~ -resolve1(frame_a, force.u)
-                 collect(frame_b.tau) .~ resolve2(frame_b, f_b_0)])
+                 collect(frame_b.f) .~ resolve2(frame_b, f_b_0)])
     elseif resolve_frame == :frame_b
         append!(eqs,
                 [f_b_0 .~ -resolve1(frame_b, force.u)
-                 collect(frame_b.tau) .~ collect(-force.u)])
+                 collect(frame_b.f) .~ collect(-force.u)])
     elseif resolve_frame == :world
         append!(eqs,
                 [f_b_0 .~ collect(-force.u)
-                 collect(frame_b.tau) .~ resolve2(frame_b, f_b_0)])
+                 collect(frame_b.f) .~ resolve2(frame_b, f_b_0)])
     else
         error("Unknown value of argument resolve_frame")
     end
