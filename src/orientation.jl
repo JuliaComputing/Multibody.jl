@@ -275,11 +275,14 @@ orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
 
 Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
 function from_Q(Q, w)
-    Q2 = [Q[4], Q[1], Q[2], Q[3]] # Due to different conventions
+    Q2 = to_q(Q) # Due to different conventions
     q = Rotations.QuatRotation(Q2)
     R = RotMatrix(q)
     RotationMatrix(R, w)
 end
+
+to_q(Q) = SA[Q[4], Q[1], Q[2], Q[3]]
+to_mb(Q) = SA[Q[2], Q[3], Q[4], Q[1]]
 
 function angular_velocity1(Q, der_Q)
     2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
@@ -476,6 +479,7 @@ function get_frame(sol, frame, t)
     R = get_rot(sol, frame, t)
     tr = get_trans(sol, frame, t)
     [R tr; 0 0 0 1]
+end
 
 function nonunit_quaternion_equations(R, w)
     @variables Q(t)[1:4]=[0,0,0,1], [description="Unit quaternion with [i,j,k,w]"] # normalized

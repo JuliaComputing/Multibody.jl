@@ -49,7 +49,7 @@ nothing # hide
 ```
 
 
-If we instead model a body suspended in springs without the presence of any joint, we need to give the body state variables. We do this by saying `isroot = true` when we create the body.
+If we instead model a body suspended in springs without the presence of any joint, we need to give the body state variables. We do this by saying `isroot = true` when we create the body, we also use quaternions to represent angles using `quat = true`.
 
 ```@example FREE_MOTION
 @named begin
@@ -78,10 +78,11 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
-    collect(body.body.Q .=> [0.0940609, 0.0789265, 0.0940609, 0.987965]);
-], (0, 3))
+    collect(body.body.Q .=> Multibody.to_q([0.0940609, 0.0789265, 0.0940609, 0.987965]));
+    collect(body.body.Q̂ .=> Multibody.to_q([0.0940609, 0.0789265, 0.0940609, 0.987965]));
+], (0, 4))
 
-sol = solve(prob, Rodas5P(); u0 = prob.u0 .+ 1e-6 .* randn())
+sol = solve(prob, Rodas5P())
 @assert SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [body.r_0...])
