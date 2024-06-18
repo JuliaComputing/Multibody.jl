@@ -86,13 +86,12 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 end
 
 """
-    Prismatic(; name, n = [0, 0, 1], axisflange = false, isroot = true)
+    Prismatic(; name, n = [0, 0, 1], axisflange = false)
 
 Prismatic joint with 1 translational degree-of-freedom
 
 - `n`: The axis of motion (unit vector)
 - `axisflange`: If true, the joint will have two additional frames from Mechanical.Translational, `axis` and `support`, between which translational components such as springs and dampers can be connected.
-- `isroot`: If true, the joint will be considered the root of the system.
 
 If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.TranslationalModelica are also available:
 - `axis`: 1-dim. translational flange that drives the joint
@@ -135,7 +134,7 @@ The function returns an ODESystem representing the prismatic joint.
 
            # relationships between kinematic quantities of frame_a and of frame_b
            collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n * s)
-           ori(frame_b) ~ ori(frame_a)
+           connect_orientation(ori(frame_b), ori(frame_a); iscut)
 
            # Force and torque balance
            zeros(3) .~ collect(frame_a.f + frame_b.f)
@@ -172,7 +171,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `radius = 0.1`: Radius of the joint in animations
 - `color = [1,1,0,1]`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
-@component function Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false,
+@component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
                    phi_d = 0,
                    d = 0,
@@ -225,11 +224,11 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                  collect(phi_dd .~ D.(phi_d))])
         if isroot
             append!(eqs,
-                    [ori(frame_b) ~ absolute_rotation(frame_a, R_rel)
+                    [connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut)
                      zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
         else
             append!(eqs,
-                    [R_rel_inv ~ inverse_rotation(R_rel)
+                    [connect_orientation(R_rel_inv, inverse_rotation(R_rel); iscut)
                      ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)
                      zeros(3) .~ collect(frame_b.f) + resolve2(R_rel, frame_a.f)])
         end
