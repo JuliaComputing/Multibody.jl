@@ -186,6 +186,19 @@ function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
     vec(R1.R.mat .~ R2.R.mat)
 end
 
+"""
+    connect_orientation(R1,R2; iscut=false)
+
+Connect two rotation matrices together, optionally introducing a cut joint. A normal connection of two rotation matrices introduces 9 constraints, while a cut connection introduces 3 constraints only. This is useful to open kinematic loops, see [Using cut joints](@ref) (docs page) for an example where this is used.
+"""
+function connect_orientation(R1,R2; iscut=false)
+    if iscut
+        residue(R1, R2) .~ 0
+    else
+        R1 ~ R2
+    end
+end
+
 function angular_velocity2(R::RotationMatrix)
     R.w
 end
