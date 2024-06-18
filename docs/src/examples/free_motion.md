@@ -54,7 +54,7 @@ If we instead model a body suspended in springs without the presence of any join
 ```@example FREE_MOTION
 @named begin
     body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                     r_0 = [0.2, -0.5, 0.1], isroot = true)
+                     r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true)
     bar2 = FixedTranslation(r = [0.8, 0, 0])
     spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
     spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
@@ -78,9 +78,10 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
+    collect(body.body.Q .=> [0.0940609, 0.0789265, 0.0940609, 0.987965]);
 ], (0, 3))
 
-sol = solve(prob, Rodas5P())
+sol = solve(prob, Rodas5P(); u0 = prob.u0 .+ 1e-6 .* randn())
 @assert SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [body.r_0...])

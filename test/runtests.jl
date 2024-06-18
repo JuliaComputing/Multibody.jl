@@ -58,7 +58,7 @@ t = Multibody.t
 D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 0.01, 0], quat=false) # This time the body isroot since there is no joint containing state
     @named spring = Multibody.Spring(c = 1, fixed_rotation_at_frame_a = false,
                                     fixed_rotation_at_frame_b = false)
 
@@ -77,7 +77,10 @@ D = Differential(t)
     # @test all(isfinite, du)
 
     # @test_skip begin # Yingbo: instability
-    prob = ODEProblem(ssys, unknowns(ssys) .=> 0, (0, 10))
+    prob = ODEProblem(ssys, [
+        collect(body.w_a) .=> 0;
+        collect(body.v_0) .=> 0;
+    ], (0, 10))
     sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
@@ -314,7 +317,7 @@ end
 @named body = Body(; m = 1, isroot = false, r_cm = [0, 0, 0])
 @named damper = Translational.Damper(d=0.5)
 @named spring = Translational.Spring(c=1)
-@named joint = Prismatic(n = [0, 1, 0], isroot = true, axisflange = true)
+@named joint = Prismatic(n = [0, 1, 0], axisflange = true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(damper.flange_b, spring.flange_b, joint.axis)
@@ -347,7 +350,7 @@ systems = @named begin
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
     bar3 = FixedTranslation(r = [0.9, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true, isroot = true)
+    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
@@ -463,7 +466,6 @@ sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 1e-1 .* rand.())
 
 doplot() && plot(sol, idxs = [body1.r_0...]) |> display
 # end
-# TODO: add tutorial explaining what interesting things this demos illustrates
 # fixed_rotation_at_frame_a and b = true required
 end
 # ==============================================================================
@@ -483,7 +485,7 @@ world = Multibody.world
 
 @named begin
     body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                     r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true)
+                     r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true)
     bar2 = FixedTranslation(r = [0.8, 0, 0])
     spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
     spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
@@ -506,20 +508,26 @@ eqs = [connect(bar2.frame_a, world.frame_b)
 ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
 # ssys = structural_simplify(model, allow_parameters = false)
 prob = ODEProblem(ssys,
-                  [collect(body.body.w_a .=> 0);
+                  [world.g => 9.80665;
+                    collect(body.body.w_a .=> 0);
                   collect(body.body.v_0 .=> 0);
-                   collect(D.(body.body.phi)) .=> 1;
-                #    collect((body.body.r_0)) .=> collect((body.r_0));
-                   collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
+                #   collect(body.body.phi .=> deg2rad(10));
+                  ], (0, 10))
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
 # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas5P(), abstol=1e-6, reltol=1e-6)
 @test SciMLBase.successful_retcode(sol)
 
-@info "Initialization broken, initial value for body.r_0 not respected, add tests when MTK has a working initialization"
-doplot() && plot(sol, idxs = [body.r_0...]) |> display
-# end
+@test sol(10, idxs=[
+    body.r_0;
+]) ≈ [
+    0.196097
+    -0.46243
+    0.080562
+] atol=1e-1
+
+doplot() && plot(sol, idxs = [body.r_0...; body.body.w_a; body.body.v_0; body.body.phi], layout=(4,3), size=(1000, 1000)) |> display
 
 end
 # ==============================================================================

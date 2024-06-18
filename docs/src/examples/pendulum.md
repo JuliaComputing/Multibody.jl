@@ -155,7 +155,7 @@ defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
             collect(root_body.v_0 .=> [0, 0, 0])...,
 )
 
-prob = ODEProblem(ssys, defs, (0, 15))
+prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring system without joint")
@@ -169,7 +169,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, defs, (0, 15))
+prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")

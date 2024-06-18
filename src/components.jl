@@ -280,21 +280,20 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
             nonunit_quaternion_equations(Ra, w_a);
         else
             @named frame_a = Frame(varw = true)
+            Ra = ori(frame_a, true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
             phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axes_rotations([1, 2, 3], phi, phid)
-
-            Ra = ori(frame_a, true)
-
             Equation[
-                    # 0 .~ orientation_constraint(Ra); 
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
                     Ra ~ ar
-                    Ra.w .~ ar.w
-                    collect(w_a .~ Ra.w)]
+                    Ra.w .~ w_a
+                    # w_a .~ angular_velocity2(ori(frame_a, false)) # This is required for FreeBody tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
+                    w_a .~ ar.w # This one for most systems
+                    ]
         end
     else
         @named frame_a = Frame()
@@ -307,7 +306,6 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     end
 
     eqs = [eqs;
-           # collect(w_a .~ get_w(Ra));
            collect(r_0 .~ frame_a.r_0)
            collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
            collect(v_0 .~ D.(r_0))
