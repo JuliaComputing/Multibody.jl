@@ -100,7 +100,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   isroot = true, s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1])
+                   isroot = true, iscut = false, s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1])
     norm(n) ≈ 1 || error("Axis of motion must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
