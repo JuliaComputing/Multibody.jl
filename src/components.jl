@@ -234,9 +234,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phid0 = zeros(3),
               r_0 = 0,
               v_0 = 0,
-              radius = 0.05,
-              v_0 = 0,
               w_a = 0,
+              radius = 0.05,
               air_resistance = 0.0,
               color = [1,0,0,1],
               quat=false,)
@@ -416,7 +415,7 @@ There are three different methods of adding damping to the rope:
 - Damping in flexing of the rope, modeled as viscous friction in the joints between the links, controlled by the parameter `d_joint`.
 - Air resistance to the rope moving through the air, controlled by the parameter `air_resistance`. This damping is quadratic in the velocity (``f_d ~ -||v||v``) of each link relative to the world frame.
 """
-function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, color = [255, 219, 120, 255]./255, radius = 0.05f0, kwargs...)
+function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, cutspherical = false, cutprismatic=false, color = [255, 219, 120, 255]./255, radius = 0.05f0, kwargs...)
 
     @assert n >= 1
     systems = @named begin
@@ -428,8 +427,13 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     li = l / n # Segment length
     mi = m / n # Segment mass
 
-    # joints = [Spherical(name=Symbol("joint_$i"), isroot=!(iscut && i == 1), iscut = iscut && i == 1, state=true, d = d_joint) for i = 1:n+1]
-    joints = [Spherical(; name=Symbol("joint_$i"), isroot=true, state=true, d = d_joint, radius=0, color) for i = 1:n+1]
+    joints = [Spherical(name=Symbol("joint_$i"),
+        # isroot=!(cutspherical && i == 1),
+        isroot=true,
+        iscut = cutspherical && i == 1,
+        # state=!(cutspherical && i == 1),
+        state=true,
+        d = d_joint) for i = 1:n+1]
 
     eqs = [
         connect(frame_a, joints[1].frame_a)
@@ -443,7 +447,7 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
         masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance, color=0.9*color) for i = 1:n]
-        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color, radius) for i = 1:n]
+        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color, radius, iscut = cutprismatic && i == 1) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))

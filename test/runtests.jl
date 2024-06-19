@@ -1060,6 +1060,31 @@ tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
 
 
+@test_skip begin # Produces state with rotation matrix
+    number_of_links = 3
+    chain_length = 2
+    x_dist = 1.5 # Distance between the two mounting points
+    systems = @named begin
+        chain = Rope(l = chain_length, m = 5, n=number_of_links, c=1, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1], radius=0.05, cutprismatic=false, cutspherical=true)
+        fixed = FixedTranslation(; r=[x_dist, 0, 0], radius=0.02, color=[0.1,0.1,0.1,1]) # Second mounting point
+    end
+
+    connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
+                connect(chain.frame_b, fixed.frame_b)]
+
+    @named mounted_chain = ODESystem(connections, t, systems = [systems; world])
+
+    ssys = structural_simplify(IRSystem(mounted_chain))
+    prob = ODEProblem(ssys, [
+        collect(chain.link_3.body.w_a) .=> [0,0,0]; 
+        collect(chain.link_3.frame_b.r_0) .=> [x_dist,0,0]; 
+    ], (0, 4))
+    sol = solve(prob, Rodas4(autodiff=false))
+    @test SciMLBase.successful_retcode(sol)
+
+    # Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May take long time for n>=10
+end
+
 # ==============================================================================
 ## Simple motion with quaternions=============================================================
 # ==============================================================================
