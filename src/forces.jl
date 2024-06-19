@@ -140,9 +140,9 @@ function Force(; name, resolve_frame = :frame_b)
 end
 
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
-                       fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
-    @named frame_a = Frame()
-    @named frame_b = Frame()
+    fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
+    @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
+    @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
 
     @variables length(t) [
         description = "Distance between the origin of frame_a and the origin of frame_b",

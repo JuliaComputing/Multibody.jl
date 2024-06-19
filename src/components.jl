@@ -222,6 +222,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phid0 = zeros(3),
               r_0 = 0,
               radius = 0.05,
+              v_0 = 0,
+              w_a = 0,
               air_resistance = 0.0,
               color = [1,0,0,1],
               quat=false,)
@@ -229,7 +231,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3] [guess = 0, 
+    @variables v_0(t)[1:3]=v_0 [guess = 0, 
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
@@ -238,7 +240,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
-    @variables w_a(t)[1:3] [guess = 0, 
+    @variables w_a(t)[1:3]=w_a [guess = 0, 
         state_priority = 2,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
@@ -273,39 +275,25 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     eqs = if isroot # isRoot
         
         if quat
-            @named frame_a = Frame(varw = true)
-            Ra = ori(frame_a, true)
-            # @variables q(t)[1:4] = [0.0,0,0,1.0]
-            # @variables qw(t)[1:3] = [0.0,0,0]
-            # q = collect(q)
-            # qw = collect(qw)
-            # Q = Quaternion(q, qw)
-            @named Q = NumQuaternion(varw=true) 
-            ar = from_Q(Q, angular_velocity2(Q, D.(Q.Q)))
-            Equation[
-                0 ~ orientation_constraint(Q)
-                Ra ~ ar
-                Ra.w .~ ar.w
-                Q.w .~ ar.w
-                collect(w_a .~ Ra.w)
-            ]
+            @named frame_a = Frame(varw = false)
+            Ra = ori(frame_a, false)
+            nonunit_quaternion_equations(Ra, w_a);
         else
             @named frame_a = Frame(varw = true)
+            Ra = ori(frame_a, true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
             phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axes_rotations([1, 2, 3], phi, phid)
-
-            Ra = ori(frame_a, true)
-
             Equation[
-                    # 0 .~ orientation_constraint(Ra); 
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
                     Ra ~ ar
-                    Ra.w .~ ar.w
-                    collect(w_a .~ Ra.w)]
+                    Ra.w .~ w_a
+                    # w_a .~ angular_velocity2(ori(frame_a, false)) # This is required for FreeBody tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
+                    w_a .~ ar.w # This one for most systems
+                    ]
         end
     else
         @named frame_a = Frame()
@@ -318,7 +306,6 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     end
 
     eqs = [eqs;
-           # collect(w_a .~ get_w(Ra));
            collect(r_0 .~ frame_a.r_0)
            collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
            collect(v_0 .~ D.(r_0))

@@ -177,7 +177,9 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    d = 0,
                    phi_dd = 0,
                    color = [1, 1, 0, 1],
-                   radius = 0.1)
+                   radius = 0.1,
+                   quat = false,
+                   )
     @named begin
         ptf = PartialTwoFrames()
         R_rel = NumRotationMatrix()
@@ -209,19 +211,24 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     end
 
     if state
-        @variables begin
-            (phi(t)[1:3] = phi),
-            [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-            (phi_d(t)[1:3] = phi_d),
-            [state_priority = 10, description = "3 angle derivatives"]
-            (phi_dd(t)[1:3] = phi_dd),
-            [state_priority = 10, description = "3 angle second derivatives"]
+        if quat
+            append!(eqs, nonunit_quaternion_equations(R_rel, w_rel))
+            # append!(eqs, collect(w_rel) .~ angularVelocity2(R_rel))
+        else
+            @variables begin
+                (phi(t)[1:3] = phi),
+                [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
+                (phi_d(t)[1:3] = phi_d),
+                [state_priority = 10, description = "3 angle derivatives"]
+                (phi_dd(t)[1:3] = phi_dd),
+                [state_priority = 10, description = "3 angle second derivatives"]
+            end
+            append!(eqs,
+                    [R_rel ~ axes_rotations(sequence, phi, phi_d)
+                    collect(w_rel) .~ angular_velocity2(R_rel)
+                    collect(phi_d .~ D.(phi))
+                    collect(phi_dd .~ D.(phi_d))])
         end
-        append!(eqs,
-                [R_rel ~ axes_rotations(sequence, phi, phi_d)
-                 collect(w_rel) .~ angular_velocity2(R_rel)
-                 collect(phi_d .~ D.(phi))
-                 collect(phi_dd .~ D.(phi_d))])
         if isroot
             append!(eqs,
                     [connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut)
@@ -682,7 +689,9 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `a_rel_a`
 """
 @component function FreeMotion(; name, state = true, sequence = [1, 2, 3], isroot = true,
+                    quat = false,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
+                    iscut = false,
                     phi_d = 0,
                     phi_dd = 0,
                     w_rel_b = 0,
@@ -695,13 +704,13 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     end
     @variables begin
         (phi(t)[1:3] = phi),
-        [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-        (phi_d(t)[1:3] = phi_d), [state_priority = 10, description = "Derivatives of phi"]
+        [state_priority = 4, description = "3 angles to rotate frame_a into frame_b"]
+        (phi_d(t)[1:3] = phi_d), [state_priority = 4, description = "Derivatives of phi"]
         (phi_dd(t)[1:3] = phi_dd),
-        [state_priority = 10, description = "Second derivatives of phi"]
+        [state_priority = 4, description = "Second derivatives of phi"]
         (w_rel_b(t)[1:3] = w_rel_b),
         [
-            state_priority = 10,
+            state_priority = quat ? 4.0 : 1.0,
             description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
         ]
         (r_rel_a(t)[1:3] = r_rel_a),
@@ -733,18 +742,24 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     if state
         if isroot
             append!(eqs,
-                    ori(frame_b) ~ absolute_rotation(frame_a, R_rel))
+                    connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut))
         else
             append!(eqs,
                     [R_rel_inv ~ inverse_rotation(R_rel)
-                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)])
+                     connect_orientation(ori(frame_a), absolute_rotation(frame_b, R_rel_inv); iscut)])
         end
 
-        append!(eqs,
-                [phi_d .~ D.(phi)
-                 phi_dd .~ D.(phi_d)
-                 R_rel ~ axes_rotations(sequence, phi, phi_d)
-                 w_rel_b .~ angular_velocity2(R_rel)])
+        if quat
+            # @named Q = NumQuaternion() 
+            append!(eqs, nonunit_quaternion_equations(R_rel, w_rel_b))
+
+        else
+            append!(eqs,
+                    [phi_d .~ D.(phi)
+                    phi_dd .~ D.(phi_d)
+                    R_rel ~ axes_rotations(sequence, phi, phi_d)
+                    w_rel_b .~ angular_velocity2(R_rel)])
+        end
 
     else
         # Free motion joint does not have state
