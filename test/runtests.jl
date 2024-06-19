@@ -337,17 +337,21 @@ end
 # ==============================================================================
 
 @testset "Spring damper system" begin
-world = Multibody.world
-@named begin
+systems = @named begin
+    world = W()
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
                  I_33 = 0.1, r_0 = [0.3, -0.2, 0], quat=false) # This is root since there is no joint parallel to the spring leading to this body
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
+    body3 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
+                 I_33 = 0.1, r_0 = [1.8, -0.2, 0], quat=false)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
+    bar3 = FixedTranslation(r = [0.9, 0, 0])
     p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true, isroot = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
+    springdamper = SpringDamperParallel(c=30, d=2, s_unstretched = 0.1)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
        connect(bar1.frame_b, bar2.frame_a)
@@ -358,20 +362,14 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(damper1.frame_a, bar1.frame_b)
        connect(spring1.frame_a, bar1.frame_b)
        connect(damper1.frame_b, body1.frame_a)
-       connect(spring1.frame_b, body1.frame_a)]
+       connect(spring1.frame_b, body1.frame_a)
+       
+       connect(bar2.frame_b, bar3.frame_a)
+       connect(bar3.frame_b, springdamper.frame_a)
+       connect(springdamper.frame_b, body3.frame_a)
+       ]
 
-@named model = ODESystem(eqs, t,
-                         systems = [
-                             world,
-                             body1,
-                             body2,
-                             bar1,
-                             bar2,
-                             p2,
-                             spring1,
-                             spring2,
-                             damper1,
-                         ])
+@named model = ODESystem(eqs, t; systems)
 # ssys = structural_simplify(model, allow_parameter = false)
 ssys = structural_simplify(IRSystem(model))#, alias_eliminate = false)
 
@@ -398,9 +396,11 @@ sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test sol(sol.t[end], idxs = spring1.v)≈0 atol=0.01 # damped oscillation
 
-doplot() && plot(sol, idxs = [spring1.s, spring2.s])
+@test norm([1 -1]*Matrix(sol(0:1:10, idxs=[spring1.s, springdamper.s]))) < 1e-10 # Test that the difference is small
+
+doplot() && plot(sol, idxs = [spring1.s, spring2.s, springdamper.s])
 doplot() && plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
-doplot() && plot(sol, idxs = [spring1.f, spring2.f])
+doplot() && plot(sol, idxs = [spring1.f, spring2.f, springdamper.f])
 end
 # ==============================================================================
 ## Three springs ===============================================================
