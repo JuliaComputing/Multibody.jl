@@ -135,7 +135,7 @@ include("frames.jl")
 export PartialTwoFrames
 include("interfaces.jl")
 
-export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, Rope
+export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, Rope
 include("components.jl")
 
 export Revolute, Prismatic, Spherical, Universal, GearConstraint, RollingWheelJoint,

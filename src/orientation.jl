@@ -395,7 +395,6 @@ function rotz(t, deg = false)
          0 0 1]
 end
 
-
 function from_nxy(n_x, n_y)
     e_x = norm(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
     e_y = norm(n_y) < 1e-10 ? [0, 1.0, 0] : _normalize(n_y)
@@ -409,7 +408,7 @@ function from_nxy(n_x, n_y)
     # end
     e_z_aux = cross(e_x, n_y_aux)
     e_z = _normalize(e_z_aux)
-    RotationMatrix([e_x e_y e_z], zeros(3))
+    RotationMatrix([e_x cross(e_z, e_x) e_z]', zeros(3))
 end
 
 # function from_nxy(n_x, n_y)

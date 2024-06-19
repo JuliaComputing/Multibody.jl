@@ -320,7 +320,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
            end
            collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
 
-    # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
+    # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
     sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
     add_params(sys, [radius; color]; name)
@@ -448,4 +448,179 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     end
 
     ODESystem(eqs, t; name, systems = [systems; links; joints])
+end
+
+# @component function BodyCylinder(; name, m = 1, r = [0.1, 0, 0], r_0 = 0, r_shape=zeros(3), length = _norm(r - r_shape), kwargs...)
+#     @parameters begin
+#         # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+#         #     description = "Vector from frame_a to frame_b resolved in frame_a",
+#         # ]
+#         # r_shape[1:3]=zeros(3), [
+#         #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+#         # ]
+#     end
+#     r, r_shape = collect.((r, r_shape))
+#     @parameters begin
+#         dir[1:3] = r - r_shape, [
+#             description = "Vector in length direction of cylinder, resolved in frame_a",
+#         ]
+#         length = _norm(r - r_shape), [
+#             description = "Length of cylinder",
+#         ]
+#         length2 = _norm(r - r_shape), [ # NOTE: strange bug in JSCompiler when both I and r_cm that are parameters if Body depend on the same paramter length. Introducing a dummy parameter with the same value works around the issue. This is not ideal though, since the two parameters must have the same value.
+#             description = "Length of cylinder",
+#         ]
+#         diameter = 1, [#length/5, [
+#             description = "Diameter of cylinder",
+#         ]
+#         inner_diameter = 0, [
+#             description = "Inner diameter of cylinder (0 <= inner_diameter <= Diameter)",
+#         ]
+#         density = 7700, [
+#             description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+#         ]
+#     end
+#     # @variables length2(t)
+#     # @assert isequal(length, length2)
+#     dir = collect(dir) #.|> ParentScope # The ParentScope is required, otherwise JSCompiler thinks that these parameters belong to Body.
+#     # length = ParentScope(length)
+#     # diameter = ParentScope(diameter)
+#     # inner_diameter = ParentScope(inner_diameter)
+#     # density = ParentScope(density)
+
+#     radius = diameter/2
+#     innerRadius = inner_diameter/2
+#     mo = density*pi*length*radius^2
+#     mi = density*pi*length*innerRadius^2
+#     I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
+#     m = mo - mi
+#     R = from_nxy(r, [0, 1, 0]) 
+#     r_cm = r_shape + _normalize(dir)*length2/2
+#     I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22])) 
+
+#     # r_cm = ParentScope.(r_cm)
+#     # I = ParentScope.(I)
+#     # m = ParentScope(m)
+
+#     @variables begin
+#         r_0(t)[1:3]=r_0, [
+#             state_priority = 2,
+#             description = "Position vector from origin of world frame to origin of frame_a",
+#         ]
+#         v_0(t)[1:3]=0, [
+#             state_priority = 2,
+#             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+#         ]
+#         a_0(t)[1:3]=0, [
+#             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+#         ]
+#     end
+
+#     systems = @named begin
+#         frame_a = Frame()
+#         frame_b = Frame()
+#         frameTranslation = FixedTranslation(r = r)
+#         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], kwargs...)
+
+#     end
+#     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
+
+#     eqs = [r_0 .~ collect(frame_a.r_0)
+#            v_0 .~ D.(r_0)
+#            a_0 .~ D.(v_0)
+#            connect(frame_a, frameTranslation.frame_a)
+#            connect(frame_b, frameTranslation.frame_b)
+#            connect(frame_a, body.frame_a)]
+
+#     # pars = [
+#     #     dir; length; diameter; inner_diameter; density
+#     # ] 
+#     # vars = [r_0; v_0; a_0]
+#     # ODESystem(eqs, t, vars, pars; name, systems)
+#     ODESystem(eqs, t; name, systems)
+# end
+
+
+@mtkmodel BodyCylinder begin
+
+    @structural_parameters begin
+        r = [1, 0, 0]
+        r_shape = [0, 0, 0]
+    end
+
+    @parameters begin
+        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+        #     description = "Vector from frame_a to frame_b resolved in frame_a",
+        # ]
+        # r_shape[1:3]=zeros(3), [
+        #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+        # ]
+        dir[1:3] = r - r_shape, [
+            description = "Vector in length direction of cylinder, resolved in frame_a",
+        ]
+        length = _norm(r - r_shape), [
+            description = "Length of cylinder",
+        ]
+        length2 = _norm(r - r_shape), [ # NOTE: strange bug in JSCompiler when both I and r_cm that are parameters of Body depend on the same paramter length. Introducing a dummy parameter with the same value works around the issue. This is not ideal though, since the two parameters must have the same value.
+            description = "Length of cylinder",
+        ]
+        diameter = 1, [#length/5, [
+            description = "Diameter of cylinder",
+        ]
+        inner_diameter = 0, [
+            description = "Inner diameter of cylinder (0 <= inner_diameter <= diameter)",
+        ]
+        density = 7700, [
+            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+        ]
+    end
+    begin
+        radius = diameter/2
+        innerRadius = inner_diameter/2
+        mo = density*pi*length*radius^2
+        mi = density*pi*length*innerRadius^2
+        I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
+        m = mo - mi
+        R = from_nxy(r, [0, 1, 0]) 
+        r_cm = r_shape + _normalize(dir)*length2/2
+        I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22])) 
+    end
+
+    @variables begin
+        r_0(t)[1:3]=0, [
+            state_priority = 2,
+            description = "Position vector from origin of world frame to origin of frame_a",
+        ]
+        v_0(t)[1:3]=0, [
+            state_priority = 2,
+            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        ]
+        a_0(t)[1:3]=0, [
+            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        ]
+    end
+    begin
+        r_cm = collect(r_cm)
+    end
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        frameTranslation = FixedTranslation(r = r)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+    end
+
+    @equations begin
+        r_0[1] ~ ((frame_a.r_0)[1])
+        r_0[2] ~ ((frame_a.r_0)[2])
+        r_0[3] ~ ((frame_a.r_0)[3])
+        v_0[1] ~ D(r_0[1])
+        v_0[2] ~ D(r_0[2])
+        v_0[3] ~ D(r_0[3])
+        a_0[1] ~ D(v_0[1])
+        a_0[2] ~ D(v_0[2])
+        a_0[3] ~ D(v_0[3])
+        connect(frame_a, frameTranslation.frame_a)
+        connect(frame_b, frameTranslation.frame_b)
+        connect(frame_a, body.frame_a)
+    end
 end

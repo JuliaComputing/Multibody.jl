@@ -70,7 +70,11 @@ function get_color(sys, sol, default)
     try
         Makie.RGBA(sol(sol.t[1], idxs=collect(sys.color))...)
     catch
-        default
+        if default isa AbstractVector
+            Makie.RGBA(default...)
+        else
+            default
+        end
     end
 end
 
@@ -339,6 +343,25 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
 end
 
 
+function render!(scene, ::typeof(BodyCylinder), sys, sol, t)
+    
+    # NOTE: This draws a solid cylinder without the hole in the middle. Cannot figure out how to render a hollow cylinder
+    color = get_color(sys, sol, [1, 0.2, 1, 0.9])
+    radius = Float32(sol(sol.t[1], idxs=sys.diameter)/2)
+    r_0a = get_fun(sol, collect(sys.frame_a.r_0))
+    r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    thing = @lift begin
+        r1 = Point3f(r_0a($t))
+        r2 = Point3f(r_0b($t))
+        origin = r1
+        extremity = r2
+        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5))
+
+    true
+end
+
 function render!(scene, ::typeof(Damper), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
@@ -421,12 +444,11 @@ function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)
 end
 
 function rot_from_line(d)
-    d = d ./ norm(d)
     if d[1] == 0 && d[2] == 0
         return RotMatrix{3}(Matrix{Float32}(I, 3, 3))
     end
     d = d ./ norm(d)
-    z = [0, 0, 1]
+    z = SA[0, 0, 1]
     x = cross(z, d)
     x = x ./ norm(x)
     y = cross(d, x)
