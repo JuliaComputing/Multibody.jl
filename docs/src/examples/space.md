@@ -23,7 +23,7 @@ using OrdinaryDiffEq
 
 t = Multibody.t
 D = Differential(t)
-W() = Multibody.world
+W(;kwargs...) = Multibody.world
 
 @mtkmodel PointGrav begin
     @components begin
