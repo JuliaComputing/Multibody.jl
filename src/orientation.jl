@@ -199,12 +199,12 @@ function connect_orientation(R1,R2; iscut=false)
     end
 end
 
-function angular_velocity2(R::RotationMatrix)
-    R.w
+function angular_velocity2(R::RotationMatrix, w=R.w)
+    w
 end
 
-function angular_velocity1(R::RotationMatrix)
-    resolve1(R, R.w)
+function angular_velocity1(R::RotationMatrix, w=R.w)
+    resolve1(R, w)
 end
 
 function orientation_constraint(R::RotationMatrix)
