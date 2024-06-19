@@ -377,6 +377,8 @@ prob = ODEProblem(ssys,
                   [#collect(D.(body1.phid)) .=> 0;
                   collect(body1.v_0 .=> 0)
                   collect(body1.w_a .=> 0)
+                  collect(body3.w_a .=> 0)
+                  collect(body3.v_0 .=> 0)
                    damper1.d => 0], (0, 10)
 )
 du = similar(prob.u0)
@@ -390,6 +392,8 @@ endpoint = sol(sol.t[end], idxs = [spring1.s, spring2.s])
 prob = ODEProblem(ssys,
                   [collect(body1.v_0 .=> 0)
                   collect(body1.w_a .=> 0)
+                  collect(body3.w_a .=> 0)
+                  collect(body3.v_0 .=> 0)
                    damper1.d => 2], (0, 10))
 
 sol = solve(prob, Rodas4())
