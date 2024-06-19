@@ -146,6 +146,47 @@ sol = solve(prob, Rodas4())
 end
 
 # ==============================================================================
+## Point gravity ======================
+# ==============================================================================
+@mtkmodel PointGrav begin
+    @components begin
+        world = W()
+        body1 = Body(
+            m=1,
+            I_11=0.1,
+            I_22=0.1,
+            I_33=0.1,
+            r_0=[0,0.6,0],
+            isroot=true,
+            v_0=[1,0,0])
+        body2 = Body(
+            m=1,
+            I_11=0.1,
+            I_22=0.1,
+            I_33=0.1,
+            r_0=[0.6,0.6,0],
+            isroot=true,
+            v_0=[0.6,0,0])
+    end
+end
+@named model = PointGrav()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+defs = [
+    model.world.mu => 1
+    model.world.point_gravity => true
+    collect(model.body1.w_a) .=> 0
+    collect(model.body2.w_a) .=> 0
+    
+]
+prob = ODEProblem(ssys, defs, (0, 5))
+sol = solve(prob, Rodas4())
+
+@test sol(5, idxs=model.body2.r_0) ≈ [0.7867717, 0.478463, 0] atol=1e-1
+# plot(sol)
+
+
+# ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
 # ==============================================================================
 
