@@ -681,12 +681,10 @@ defs = [
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-
-
 @test_skip begin # Does not initialize
     ssys = structural_simplify(IRSystem(wheel))
     prob = ODEProblem(ssys, defs, (0, 10))
-    sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 0*1e-6 .* rand.(), initializealg=BrownFullBasicInit(0.001))
+    sol = solve(prob, Rodas5P(autodiff=false))
     @info "Write tests"
 end
 
