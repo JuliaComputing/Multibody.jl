@@ -7,6 +7,7 @@ using LinearAlgebra
 using ModelingToolkit
 export render
 using MeshIO, FileIO
+using StaticArrays
 
 
 """
