@@ -251,9 +251,9 @@ end
 
 Base.getindex(Q::Quaternion, i) = Q.Q[i]
 
-function NumQuaternion(; Q = [0.0, 0, 0, 1.0], w = zeros(3), name, varw = false)
+function NumQuaternion(; Q = [1.0, 0, 0, 0.0], w = zeros(3), name, varw = false)
     # Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
-    @variables Q(t)[1:4] = [0.0,0,0,1.0]
+    @variables Q(t)[1:4] = [1.0,0,0,0]
     if varw
         @variables w(t)[1:3]=w [description="angular velocity"]
         # w = at_variables_t(:w, 1:3, default = w)
@@ -274,23 +274,26 @@ orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
 # end
 
 Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
-function from_Q(Q, w)
-    Q2 = to_q(Q) # Due to different conventions
+function from_Q(Q2, w)
+    # Q2 = to_q(Q) # Due to different conventions
     q = Rotations.QuatRotation(Q2)
     R = RotMatrix(q)
     RotationMatrix(R, w)
 end
 
-to_q(Q) = SA[Q[4], Q[1], Q[2], Q[3]]
-to_mb(Q) = SA[Q[2], Q[3], Q[4], Q[1]]
+to_q(Q::AbstractVector) = SA[Q[4], Q[1], Q[2], Q[3]]
+to_q(Q::Rotations.QuatRotation) = to_q(vec(Q))
+to_mb(Q::AbstractVector) = SA[Q[2], Q[3], Q[4], Q[1]]
+to_mb(Q::Rotations.QuatRotation) = to_mb(vec(Q))
+Base.vec(Q::Rotations.QuatRotation) = SA[Q.q.s, Q.q.v1, Q.q.v2, Q.q.v3]
 
-function angular_velocity1(Q, der_Q)
-    2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
-end
+# function angular_velocity1(Q, der_Q)
+#     2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
+# end
 
-function angular_velocity2(Q, der_Q)
-    2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
-end
+# function angular_velocity2(Q, der_Q)
+#     2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
+# end
 
 
 ## Euler
@@ -481,26 +484,35 @@ function get_frame(sol, frame, t)
 end
 
 function nonunit_quaternion_equations(R, w)
-    @variables Q(t)[1:4]=[0,0,0,1], [description="Unit quaternion with [i,j,k,w]"] # normalized
-    @variables Q̂(t)[1:4]=[0,0,0,1], [description="Non-unit quaternion with [i,j,k,w]"] # Non-normalized
+    @variables Q(t)[1:4]=[1,0,0,0], [description="Unit quaternion with [w,i,j,k]"] # normalized
+    @variables Q̂(t)[1:4]=[1,0,0,0], [description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
     @variables n(t)=1 c(t)=0
     @parameters k = 0.1
     Q̂ = collect(Q̂)
+    Q = collect(Q)
+    # w is used in Ω, and Ω determines D(Q̂)
+    # This corresponds to modelica's 
+    # frame_a.R = from_Q(Q, angularVelocity2(Q, der(Q)));
+    # where angularVelocity2(Q, der(Q)) = 2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
+    # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
-    P = [
-        0 0 0 1
-        1 0 0 0
-        0 1 0 0
-        0 0 1 0
-    ]
-    Ω = P'Ω*P
+    # P = [
+    #     0 0 0 1
+    #     1 0 0 0
+    #     0 1 0 0
+    #     0 0 1 0
+    # ]
+    # Ω = P'Ω*P
+    # QR = from_Q(Q, angular_velocity2(Q, D.(Q))) # TODO: since from_Q from modelica was wrong in our context, also check angular_velocity2 for quaternions
+    QR = from_Q(Q, w)
     [
         n ~ Q̂'Q̂
         # n ~ _norm(Q̂)^2
         c ~ k * (1 - n)
-        D.(Q̂) .~ (Ω * Q̂) ./ 2 + c * Q̂
+        D.(Q̂) .~ (Ω' * Q̂) ./ 2 + c * Q̂
         Q .~ Q̂ ./ sqrt(n)
-        R ~ from_Q(Q, w)
+        R ~ QR
+        # w ~ QR.w
         # R.w ~ w
     ]
 end
