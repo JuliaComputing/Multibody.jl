@@ -662,6 +662,7 @@ end
 # ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
+using LinearAlgebra
 # The wheel does not need the world
 @testset "Rolling wheel" begin
 @named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
@@ -675,6 +676,8 @@ wheel = complete(wheel)
 
 defs = [
     collect(world.n .=> [0, 0, -1]);
+    vec(ori(wheel.frame_a).R .=> I(3));
+    vec(ori(wheel.body.frame_a).R .=> I(3));
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
@@ -683,7 +686,7 @@ defs = [
 @test_skip begin # Does not initialize
     ssys = structural_simplify(IRSystem(wheel))
     prob = ODEProblem(ssys, defs, (0, 10))
-    sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 1e-6 .* randn.())
+    sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 0*1e-6 .* rand.(), initializealg=BrownFullBasicInit(0.001))
     @info "Write tests"
 end
 
