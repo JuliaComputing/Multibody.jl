@@ -138,7 +138,7 @@ plot(sol, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green
 
 ```@example kinloop
 import CairoMakie
-Multibody.render(fourbar2, sol; x=-2, y = 3, z = 5, filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
+Multibody.render(fourbar2, sol; x=-2, y = 2, z = 3, filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
 nothing # hide
 ```
 

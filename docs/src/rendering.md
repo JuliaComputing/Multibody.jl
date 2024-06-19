@@ -18,6 +18,12 @@ After that, the [`render`](@ref) function is the main entry point to create 3D r
 - `render(model, solution)`: this method creates an animation corresponding to the mechanisms evolution in a simulation trajectory.
 - `scene, time = render(model, solution, t::Real)`: this method opens an interactive window with the mechanism in the configuration corresponding to the time `t`. Display `scene` to display the interactive window, and change the time by either dragging the slider in the window, or write to the observable `time[] = new_time`.
 
+## Colors
+Many components allows the user to select with which color it is rendered. This choice is made by providing a 4-element array with color values in the order (RGBA), where each value is between 0 and 1. The last value is the alpha channel which determines the opacity, i.e., 1 is opaque and 0 is invisible.
+
+## Rendering the world frame
+The display of the world frame can be turned off by setting `world.render => false` in the variable map.
+
 
 ## Rendering API
 
