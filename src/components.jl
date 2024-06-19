@@ -38,7 +38,7 @@ end
 """
     World(; name, render=true)
 """
-@component function World(; name, render=true)
+@component function World(; name, render=true, point_gravity=false)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
@@ -46,13 +46,15 @@ end
     @named frame_b = Frame()
     @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
     @parameters g=9.81 [description = "gravitational acceleration of world"]
+    @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
+    @parameters point_gravity = point_gravity
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
                    O ~ nullrotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
                    ]
-    ODESystem(eqs, t, [], [n; g; render]; name, systems = [frame_b])
+    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
 end
 
 """
@@ -61,7 +63,17 @@ The world component is the root of all multibody models. It is a fixed frame wit
 const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
-gravity_acceleration(r) = GlobalScope(world.g) * GlobalScope.(world.n) # NOTE: This is hard coded for now to use the the standard, parallel gravity model
+function gravity_acceleration(r)
+    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g), GlobalScope.(collect(world.n)), collect(r))
+end
+
+function inner_gravity(point_gravity, mu, g, n, r)
+    # This is slightly inefficient, producing three if statements, one for each array entry. The function registration for array-valued does not work properly so this is a workaround for now. Hitting, among other problems, https://github.com/SciML/ModelingToolkit.jl/issues/2808
+    gvp = -(mu/(r'r))*(r/_norm(r))
+    gvu = g * n
+    ifelse.(point_gravity==true, gvp, gvu)
+end
+
 
 @component function Fixed(; name, r = [0, 0, 0])
     systems = @named begin frame_b = Frame() end
@@ -221,6 +233,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
+              v_0 = 0,
               radius = 0.05,
               v_0 = 0,
               w_a = 0,
