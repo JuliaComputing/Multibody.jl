@@ -37,8 +37,8 @@ The primary difference between `NumRotationMatrix` and `RotationMatrix` is that 
 
 - `varw`: If true, `w` is a variable, otherwise it is derived from the derivative of `R` as `w = get_w(R)`.
 """
-function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = false)
-    R = at_variables_t(:R, 1:3, 1:3, default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
+function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = false, state_priority=nothing)
+    R = at_variables_t(:R, 1:3, 1:3; default = R, state_priority) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
