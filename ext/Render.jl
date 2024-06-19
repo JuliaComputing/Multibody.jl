@@ -70,7 +70,11 @@ function get_color(sys, sol, default)
     try
         Makie.RGBA(sol(sol.t[1], idxs=collect(sys.color))...)
     catch
-        default
+        if default isa AbstractVector
+            Makie.RGBA(default...)
+        else
+            default
+        end
     end
 end
 

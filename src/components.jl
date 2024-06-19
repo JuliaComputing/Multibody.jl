@@ -599,7 +599,9 @@ end
             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
         ]
     end
-
+    begin
+        r_cm = collect(r_cm)
+    end
     @components begin
         frame_a = Frame()
         frame_b = Frame()

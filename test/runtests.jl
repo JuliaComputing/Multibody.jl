@@ -1216,42 +1216,45 @@ end
 ## BodyCylinder ================================================================
 # ==============================================================================
 using LinearAlgebra
-world = Multibody.world
 
-@mtkmodel CylinderPend begin
-    @components begin
-        world = W()
-        body = BodyCylinder(r=[1,2,3], diameter=0.1)
-        joint = Revolute()
+@testset "BodyCylinder" begin
+    @info "Testing BodyCylinder"
+    world = Multibody.world
+    @mtkmodel CylinderPend begin
+        @components begin
+            world = W()
+            body = BodyCylinder(r=[1,2,3], diameter=0.1)
+            joint = Revolute()
+        end
+        @equations begin
+            connect(world.frame_b, joint.frame_a)
+            connect(joint.frame_b, body.frame_a)
+        end
     end
-    @equations begin
-        connect(world.frame_b, joint.frame_a)
-        connect(joint.frame_b, body.frame_a)
-    end
+
+    @named model = CylinderPend()
+    model = complete(model)
+    ssys = structural_simplify(IRSystem(model))
+
+    prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 10))
+    sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    @test sol(10, idxs=model.body.body.m) ≈ 226.27 rtol=1e-3 # Values from open modelica
+    @test sol(10, idxs=model.body.body.I_11) ≈ 245.28 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_22) ≈ 188.74 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_33) ≈ 94.515 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_21) ≈ -37.69 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_31) ≈ -56.53 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_32) ≈ -113 rtol=1e-3
+    @test sol(10, idxs=model.joint.phi) ≈ -2.1036 atol=1e-2
+    # using Plots; plot(sol)
+
+
+    prob = ODEProblem(ssys, [model.joint.phi => 0; model.body.inner_diameter=>0.05], (0, 10))
+    sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    @test sol(10, idxs=model.body.body.m) ≈ 169.7 rtol=1e-3 # Values from open modelica
+    @test sol(10, idxs=model.joint.phi) ≈ -2.0992 atol=1e-2
+    @test sol(10, idxs=model.body.body.I_31) ≈ -42.39 rtol=1e-3
+# using Plots; plot(sol)
 end
-
-@named model = CylinderPend()
-model = complete(model)
-ssys = structural_simplify(IRSystem(model))
-
-prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 10))
-sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
-@test sol(10, idxs=model.body.body.m) ≈ 226.27 rtol=1e-3 # Values from open modelica
-@test sol(10, idxs=model.body.body.I_11) ≈ 245.28 rtol=1e-3
-@test sol(10, idxs=model.body.body.I_22) ≈ 188.74 rtol=1e-3
-@test sol(10, idxs=model.body.body.I_33) ≈ 94.515 rtol=1e-3
-@test sol(10, idxs=model.body.body.I_21) ≈ -37.69 rtol=1e-3
-@test sol(10, idxs=model.body.body.I_31) ≈ -56.53 rtol=1e-3
-@test sol(10, idxs=model.body.body.I_32) ≈ -113 rtol=1e-3
-@test sol(10, idxs=model.joint.phi) ≈ -2.1036 atol=1e-2
-# using Plots; plot(sol)
-
-
-prob = ODEProblem(ssys, [model.joint.phi => 0; model.body.inner_diameter=>0.05], (0, 10))
-sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
-@test sol(10, idxs=model.body.body.m) ≈ 169.7 rtol=1e-3 # Values from open modelica
-@test sol(10, idxs=model.joint.phi) ≈ -2.0992 atol=1e-2
-@test sol(10, idxs=model.body.body.I_31) ≈ -42.39 rtol=1e-3
-# using Plots; plot(sol)
 
 ##
