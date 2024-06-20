@@ -385,15 +385,17 @@ function render!(scene, ::typeof(Spring), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     color = get_color(sys, sol, :blue)
+    n_wind = sol(sol.t[1], idxs=sys.num_windings)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    N = sol(sol.t[1], idxs=sys.N) |> Int
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
-        spring_mesh(r1,r2)
+        spring_mesh(r1,r2; n_wind, radius, N)
     end
     plot!(scene, thing; color)
     true
 end
-
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
     count(ModelingToolkit.isframe, sys.systems) == 2 || return false
@@ -422,24 +424,19 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
 end
 
 function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)
-    phi = range(0, n_wind*2π, length=N)
-    
+    phis = range(0, n_wind*2π, length=N)
     d = p2 - p1
-    
-    x = radius*cos.(phi)
-    y = radius*sin.(phi)
     z = range(0, norm(d), length=N) # Correct length
-    points = Point3f.(x, y, z)
+    dn = d ./ norm(d)
+    R = rot_from_line(dn)
 
-    d = d ./ norm(d)
+    points = map(enumerate(phis)) do (i,phi)
+        x = radius*cos(phi)
+        y = radius*sin(phi)
+        pᵢ = Point3f(x, y, z[i])
 
-    # Rotate
-    R = rot_from_line(d)
-    points = Ref(R) .* points
-
-    # Translate
-    points = points .+ p1
-
+        R * pᵢ + p1
+    end
 
     Makie.GeometryBasics.LineString(points)
 end

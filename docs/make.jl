@@ -12,6 +12,7 @@ makedocs(;
          sitename = "Multibody.jl",
          warnonly = [:missing_docs, :cross_references, :docs_block],
          pagesonly = true,
+        #  draft = true,
          format = Documenter.HTML(;
                                   prettyurls = get(ENV, "CI", nothing) == "true",
                                   edit_link = nothing),
