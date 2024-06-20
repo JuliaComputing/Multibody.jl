@@ -247,33 +247,7 @@ function connect_loop(F1, F2)
 end
 
 ## Quaternions
-struct Quaternion <: Orientation
-    Q
-    w::Any
-end
 
-Base.getindex(Q::Quaternion, i) = Q.Q[i]
-
-"""
-Never call this function directly from a component constructor, instead call `f = Frame(); R = ori(f)` and add `f` to the subsystems.
-"""
-function NumQuaternion(; Q = [1.0, 0, 0, 0.0], w = zeros(3), name, varw = false)
-    # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
-    # Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
-    @variables Q(t)[1:4] = [1.0,0,0,0]
-    if varw
-        @variables w(t)[1:3]=w [description="angular velocity"]
-        # w = at_variables_t(:w, 1:3, default = w)
-    else
-        w = get_w(Q)
-    end
-    Q, w = collect.((Q, w))
-    Quaternion(Q, w)
-end
-
-
-orientation_constraint(q::AbstractVector) = q'q - 1
-orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
 
 # function angular_velocity2(q::AbstractVector, q̇)
 #     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
@@ -292,7 +266,6 @@ to_q(Q::AbstractVector) = SA[Q[4], Q[1], Q[2], Q[3]]
 to_q(Q::Rotations.QuatRotation) = to_q(vec(Q))
 to_mb(Q::AbstractVector) = SA[Q[2], Q[3], Q[4], Q[1]]
 to_mb(Q::Rotations.QuatRotation) = to_mb(vec(Q))
-Base.vec(Q::Rotations.QuatRotation) = SA[Q.q.s, Q.q.v1, Q.q.v2, Q.q.v3]
 
 # function angular_velocity1(Q, der_Q)
 #     2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
@@ -332,78 +305,16 @@ Returns a `RotationMatrix` object.
 """
 function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
-        return RotationMatrix(rotx(angle), zeros(3))
+        return RotationMatrix(Rotations.RotX(angle), zeros(3))
     elseif sequence == 2
-        return RotationMatrix(roty(angle), zeros(3))
+        return RotationMatrix(Rotations.RotY(angle), zeros(3))
     elseif sequence == 3
-        return RotationMatrix(rotz(angle), zeros(3))
+        return RotationMatrix(Rotations.RotZ(angle), zeros(3))
     else
         error("Invalid sequence $sequence")
     end
 end
 
-"""
-    rotx(t, deg = false)
-
-Generate a rotation matrix for a rotation around the x-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function rotx(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [1 0 0
-         0 ct -st
-         0 st ct]
-end
-
-"""
-    roty(t, deg = false)
-
-Generate a rotation matrix for a rotation around the y-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function roty(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [ct 0 st
-         0 1 0
-         -st 0 ct]
-end
-
-"""
-    rotz(t, deg = false)
-
-Generate a rotation matrix for a rotation around the z-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function rotz(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [ct -st 0
-         st ct 0
-         0 0 1]
-end
 
 function from_nxy(n_x, n_y)
     e_x = norm(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
