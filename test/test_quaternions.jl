@@ -265,6 +265,7 @@ using ModelingToolkit
 # using Plots
 using JuliaSimCompiler
 using OrdinaryDiffEq
+using Multibody.Rotations: params
 
 @testset "FreeBody" begin
     t = Multibody.t
@@ -300,8 +301,8 @@ using OrdinaryDiffEq
                         collect(body.body.w_a .=> 0);
                     collect(body.body.v_0 .=> 0);
                     #   collect(body.body.phi .=> deg2rad(10));
-                        collect(body.body.Q) .=> vec(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
-                        collect(body.body.Q̂) .=> vec(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+                        collect(body.body.Q) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+                        collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
                     ], (0, 10))
 
     # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK

@@ -53,7 +53,7 @@ nothing # hide
 If we instead model a body suspended in springs without the presence of any joint, we need to _give the body state variables_. We do this by saying `isroot = true` when we create the body, we also use quaternions to represent angular state using `quat = true`.
 
 ```@example FREE_MOTION
-using Multibody.Rotations: QuatRotation, RotXYZ
+using Multibody.Rotations: QuatRotation, RotXYZ, params
 @named begin
     body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
                      r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true)
@@ -80,8 +80,8 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
-    collect(body.body.Q) .=> vec(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
-    collect(body.body.Q̂) .=> vec(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+    collect(body.body.Q) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+    collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
 ], (0, 4))
 
 sol = solve(prob, Rodas5P())

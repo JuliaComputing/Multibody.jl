@@ -33,6 +33,7 @@ makedocs(;
                  "Ropes, cables and chains" => "examples/ropes_and_cables.md",
                  "Bodies in space" => "examples/space.md",
              ],
+             "Rotations and orientation" => "rotations.md",
              "3D rendering" => "rendering.md",
          ])
 
