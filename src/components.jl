@@ -230,6 +230,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               I_31 = 0,
               I_32 = 0,
               isroot = false,
+              state = false,
+              vel_from_R = false,
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
@@ -283,13 +285,18 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     # DRa = D(Ra)
 
+    if state
+        # @warn "Make the body have state variables by using isroot=true rather than state=true"
+        isroot = true
+    end
+
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot
         
         if quat
             @named frame_a = Frame(varw = false)
             Ra = ori(frame_a, false)
-            nonunit_quaternion_equations(Ra, w_a);
+            qeeqs = nonunit_quaternion_equations(Ra, w_a)
         else
             @named frame_a = Frame(varw = true)
             Ra = ori(frame_a, true)
@@ -303,8 +310,11 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
                     phidd .~ D.(phid)
                     Ra ~ ar
                     Ra.w .~ w_a
-                    # w_a .~ angular_velocity2(ori(frame_a, false)) # This is required for FreeBody tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
-                    w_a .~ ar.w # This one for most systems
+                    if vel_from_R
+                        w_a .~ angular_velocity2(ori(frame_a, false)) # This is required for FreeBody and ThreeSprings tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
+                    else
+                        w_a .~ ar.w # This one for most systems
+                    end
                     ]
         end
     else

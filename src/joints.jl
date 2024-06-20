@@ -724,8 +724,10 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         (a_rel_a(t)[1:3] = a_rel_a), [description = "= der(v_rel_a)"]
     end
 
-    @named R_rel = NumRotationMatrix()
-    @named R_rel_inv = NumRotationMatrix()
+    @named R_rel_f = Frame()
+    @named R_rel_inv_f = Frame()
+    R_rel = ori(R_rel_f)
+    R_rel_inv = ori(R_rel_inv_f)
 
     eqs = [
            # Cut-forces and cut-torques are zero
@@ -750,7 +752,6 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
 
         if quat
-            # @named Q = NumQuaternion() 
             append!(eqs, nonunit_quaternion_equations(R_rel, w_rel_b))
 
         else
@@ -769,7 +770,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                                         R, angular_velocity1(frame_a)))
         end
     end
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    if state && !isroot
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, R_rel_f, R_rel_inv_f)
+    else
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, R_rel_f, )
+    end
 end
 
 """
