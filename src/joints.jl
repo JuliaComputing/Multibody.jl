@@ -180,6 +180,8 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    radius = 0.1,
                    quat = false,
                    )
+
+    dnum = d
     @named begin
         ptf = PartialTwoFrames()
         R_rel = NumRotationMatrix()
@@ -188,6 +190,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+        d = d
     end
     @unpack frame_a, frame_b = ptf
     # @parameters begin # Currently not using parameters due to these appearing in if statements
@@ -199,7 +202,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                      ] end
 
     # torque balance
-    if d <= 0
+    if dnum <= 0
         eqs = [zeros(3) .~ collect(frame_a.tau)
             zeros(3) .~ collect(frame_b.tau)
             collect(frame_b.r_0) .~ collect(frame_a.r_0)]
