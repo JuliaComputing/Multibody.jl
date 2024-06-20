@@ -414,8 +414,14 @@ There are three different methods of adding damping to the rope:
 - Damping in the stretching direction of the rope, controlled by the parameter `d`.
 - Damping in flexing of the rope, modeled as viscous friction in the joints between the links, controlled by the parameter `d_joint`.
 - Air resistance to the rope moving through the air, controlled by the parameter `air_resistance`. This damping is quadratic in the velocity (``f_d ~ -||v||v``) of each link relative to the world frame.
+
+## Rendering
+- `color = [255, 219, 120, 255]./255`
+- `radius = 0.05f0`
+- `jointradius=0`
+- `jointcolor=color`
 """
-function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, cutspherical = false, cutprismatic=false, color = [255, 219, 120, 255]./255, radius = 0.05f0, kwargs...)
+function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, cutspherical = false, cutprismatic=false, color = [255, 219, 120, 255]./255, radius = 0.05f0, jointradius=0, jointcolor=color, kwargs...)
 
     @assert n >= 1
     systems = @named begin
@@ -433,6 +439,8 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         iscut = cutspherical && i == 1,
         # state=!(cutspherical && i == 1),
         state=true,
+        color=jointcolor,
+        radius=jointradius,
         d = d_joint) for i = 1:n+1]
 
     eqs = [
