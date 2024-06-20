@@ -305,78 +305,16 @@ Returns a `RotationMatrix` object.
 """
 function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
-        return RotationMatrix(rotx(angle), zeros(3))
+        return RotationMatrix(Rotations.RotX(angle), zeros(3))
     elseif sequence == 2
-        return RotationMatrix(roty(angle), zeros(3))
+        return RotationMatrix(Rotations.RotY(angle), zeros(3))
     elseif sequence == 3
-        return RotationMatrix(rotz(angle), zeros(3))
+        return RotationMatrix(Rotations.RotZ(angle), zeros(3))
     else
         error("Invalid sequence $sequence")
     end
 end
 
-"""
-    rotx(t, deg = false)
-
-Generate a rotation matrix for a rotation around the x-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function rotx(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [1 0 0
-         0 ct -st
-         0 st ct]
-end
-
-"""
-    roty(t, deg = false)
-
-Generate a rotation matrix for a rotation around the y-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function roty(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [ct 0 st
-         0 1 0
-         -st 0 ct]
-end
-
-"""
-    rotz(t, deg = false)
-
-Generate a rotation matrix for a rotation around the z-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function rotz(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [ct -st 0
-         st ct 0
-         0 0 1]
-end
 
 function from_nxy(n_x, n_y)
     e_x = norm(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
