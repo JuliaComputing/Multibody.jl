@@ -153,19 +153,19 @@ function planar_rotation(axis, phi, der_angle)
 end
 
 """
-    R2 = absolute_rotation(R1, R_rel)
+    R2 = absolute_rotation(R1, Rrel)
 
 - `R1`: `Orientation` object to rotate frame 0 into frame 1
-- `R_rel`: `Orientation` object to rotate frame 1 into frame 2
+- `Rrel`: `Orientation` object to rotate frame 1 into frame 2
 - `R2`: `Orientation` object to rotate frame 0 into frame 2
 """
-function absolute_rotation(R1, R_rel)
-    # R2 = R_rel.R*R1.R
-    # w = resolve2(R_rel, R1.w) + R_rel.w
+function absolute_rotation(R1, Rrel)
+    # R2 = Rrel.R*R1.R
+    # w = resolve2(Rrel, R1.w) + Rrel.w
     # RotationMatrix(R2, w)
     R1 isa ODESystem && (R1 = ori(R1))
-    R_rel isa ODESystem && (R_rel = ori(R_rel))
-    R_rel * R1
+    Rrel isa ODESystem && (Rrel = ori(Rrel))
+    Rrel * R1
 end
 
 function relative_rotation(R1, R2)
