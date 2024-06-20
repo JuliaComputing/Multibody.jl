@@ -70,13 +70,15 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, ImplicitEuler(autodiff=false), reltol=5e-3)
 @assert SciMLBase.successful_retcode(sol)
 ```
-This makes for a rather interesting-looking springy pendulum!
 
 ```@example SWING
 import CairoMakie
 Multibody.render(model, sol; z = -5, filename = "simple_swing.gif") # Use "simple_swing.mp4" for a video file
 nothing # hide
 ```
+![animation](simple_swing.gif)
+This makes for a rather interesting-looking springy pendulum!
+
 
 Next, we create the full swing assembly
 

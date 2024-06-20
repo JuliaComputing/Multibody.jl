@@ -1,5 +1,5 @@
 # Pendulum--The "Hello World of multi-body dynamics"
-This beginners tutorial will model a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
+This beginners tutorial will start by modeling a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
 
 To start, we load the required packages
 ```@example pendulum
@@ -12,11 +12,11 @@ We then access the world frame and time variable from the Multibody module
 ```@example pendulum
 t = Multibody.t
 world = Multibody.world
-show(stdout, MIME"text/plain"(), world)
+show(stdout, MIME"text/plain"(), world) # hide
 nothing # hide
 ```
 
-Unless otherwise specified, the world defaults to have a gravitational field pointing in the negative ``y`` direction and a gravitational acceleration of ``9.81``.
+Unless otherwise specified, the world defaults to having a gravitational field pointing in the negative ``y`` direction and a gravitational acceleration of ``9.81`` (See [Bodies in space](@ref) for more options).
 
 
 ## Modeling the pendulum
@@ -50,12 +50,12 @@ Before we can simulate the system, we must perform model compilation using [`str
 ```@example pendulum
 ssys = structural_simplify(IRSystem(model))
 ```
-This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations.
+This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
 
 We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
 ```@example pendulum
 D = Differential(t)
-defs = Dict(D(joint.phi) => 0, D(D(joint.phi)) => 0)
+defs = Dict(D(joint.phi) => 0, D(D(joint.phi)) => 0) # We may specify the initial condition here
 prob = ODEProblem(ssys, defs, (0, 3.35))
 
 sol = solve(prob, Rodas4())

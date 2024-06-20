@@ -673,7 +673,7 @@ Note, that bodies such as [`Body`](@ref), [`BodyShape`](@ref), have potential st
 
 The state of the FreeMotion object consits of:
 
-The relative position vector `r_rel_a` from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_a` and the relative velocity `v_rel_a` of the origin of `frame_b` with respect to the origin of `frame_a`, resolved in `frame_a (= der(r_rel_a))`.
+The relative position vector `r_rel_a` from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_a` and the relative velocity `v_rel_a` of the origin of `frame_b` with respect to the origin of `frame_a`, resolved in `frame_a (= D(r_rel_a))`.
 
 # Arguments
 
@@ -722,9 +722,9 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         ]
         (v_rel_a(t)[1:3] = v_rel_a),
         [
-            description = "= der(r_rel_a), i.e., velocity of origin of frame_b with respect to origin of frame_a, resolved in frame_a",
+            description = "= D(r_rel_a), i.e., velocity of origin of frame_b with respect to origin of frame_a, resolved in frame_a",
         ]
-        (a_rel_a(t)[1:3] = a_rel_a), [description = "= der(v_rel_a)"]
+        (a_rel_a(t)[1:3] = a_rel_a), [description = "= D(v_rel_a)"]
     end
 
     @named Rrel_f = Frame()

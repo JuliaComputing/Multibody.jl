@@ -159,7 +159,8 @@ The following animations give a quick overview of simple mechanisms that can be 
 
 - The torque variable in Multibody.jl is typically called `tau` rather than `t` to not conflict with the often used independent variable `t` used to denote time.
 - Multibody.jl occasionally requires the user to specify which component should act as the root of the kinematic tree. This only occurs when bodies are connected directly to force components without a joint parallel to the force component.
-- In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using he function [`ori`](@ref).
+- In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using the function [`ori`](@ref).
+- Quaternions in Multibody.jl follow the order ``[s, i, j, k]``, i.e., scalar/real part first.
 
 
 
