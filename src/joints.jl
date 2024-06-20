@@ -184,8 +184,8 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     dnum = d
     @named begin
         ptf = PartialTwoFrames()
-        R_rel = NumRotationMatrix()
-        R_rel_inv = NumRotationMatrix()
+        Rrel = NumRotationMatrix()
+        Rrel_inv = NumRotationMatrix()
     end
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
@@ -209,14 +209,14 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     else
         fric = d*w_rel
         eqs = [-fric .~ collect(frame_a.tau)
-        fric .~ resolve1(R_rel, collect(frame_b.tau))
+        fric .~ resolve1(Rrel, collect(frame_b.tau))
         collect(frame_b.r_0) .~ collect(frame_a.r_0)]
     end
 
     if state
         if quat
-            append!(eqs, nonunit_quaternion_equations(R_rel, w_rel))
-            # append!(eqs, collect(w_rel) .~ angularVelocity2(R_rel))
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel))
+            # append!(eqs, collect(w_rel) .~ angularVelocity2(Rrel))
         else
             @variables begin
                 (phi(t)[1:3] = phi),
@@ -227,20 +227,20 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                 [state_priority = 10, description = "3 angle second derivatives"]
             end
             append!(eqs,
-                    [R_rel ~ axes_rotations(sequence, phi, phi_d)
-                    collect(w_rel) .~ angular_velocity2(R_rel)
+                    [Rrel ~ axes_rotations(sequence, phi, phi_d)
+                    collect(w_rel) .~ angular_velocity2(Rrel)
                     collect(phi_d .~ D.(phi))
                     collect(phi_dd .~ D.(phi_d))])
         end
         if isroot
             append!(eqs,
-                    [connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut)
-                     zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
+                    [connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut)
+                     zeros(3) .~ collect(frame_a.f) + resolve1(Rrel, frame_b.f)])
         else
             append!(eqs,
-                    [connect_orientation(R_rel_inv, inverse_rotation(R_rel); iscut)
-                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)
-                     zeros(3) .~ collect(frame_b.f) + resolve2(R_rel, frame_a.f)])
+                    [connect_orientation(Rrel_inv, inverse_rotation(Rrel); iscut)
+                     ori(frame_a) ~ absolute_rotation(frame_b, Rrel_inv)
+                     zeros(3) .~ collect(frame_b.f) + resolve2(Rrel, frame_a.f)])
         end
 
     else
@@ -727,10 +727,10 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         (a_rel_a(t)[1:3] = a_rel_a), [description = "= der(v_rel_a)"]
     end
 
-    @named R_rel_f = Frame()
-    @named R_rel_inv_f = Frame()
-    R_rel = ori(R_rel_f)
-    R_rel_inv = ori(R_rel_inv_f)
+    @named Rrel_f = Frame()
+    @named Rrel_inv_f = Frame()
+    Rrel = ori(Rrel_f)
+    Rrel_inv = ori(Rrel_inv_f)
 
     eqs = [
            # Cut-forces and cut-torques are zero
@@ -747,22 +747,22 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     if state
         if isroot
             append!(eqs,
-                    connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut))
+                    connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut))
         else
             append!(eqs,
-                    [R_rel_inv ~ inverse_rotation(R_rel)
-                     connect_orientation(ori(frame_a), absolute_rotation(frame_b, R_rel_inv); iscut)])
+                    [Rrel_inv ~ inverse_rotation(Rrel)
+                     connect_orientation(ori(frame_a), absolute_rotation(frame_b, Rrel_inv); iscut)])
         end
 
         if quat
-            append!(eqs, nonunit_quaternion_equations(R_rel, w_rel_b))
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
 
         else
             append!(eqs,
                     [phi_d .~ D.(phi)
                     phi_dd .~ D.(phi_d)
-                    R_rel ~ axes_rotations(sequence, phi, phi_d)
-                    w_rel_b .~ angular_velocity2(R_rel)])
+                    Rrel ~ axes_rotations(sequence, phi, phi_d)
+                    w_rel_b .~ angular_velocity2(Rrel)])
         end
 
     else
@@ -774,9 +774,9 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
     end
     if state && !isroot
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, R_rel_f, R_rel_inv_f)
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
     else
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, R_rel_f, )
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, )
     end
 end
 
@@ -819,11 +819,11 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     @variables n(t)[1:3]
     
 
-    # @named R_rel = NumRotationMatrix()
+    # @named Rrel = NumRotationMatrix()
 
     Rrel0 = planar_rotation(n, 0, 0)
     varw = false
-    @named R_rel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
+    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
 
     n = collect(n)
     ey_a = collect(ey_a)
@@ -834,14 +834,14 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     Rb = ori(frame_b)
 
     eqs = [
-        R_rel ~ relative_rotation(ori(frame_a), ori(frame_b))
+        Rrel ~ relative_rotation(ori(frame_a), ori(frame_b))
         r_rel_a .~ resolve2(ori(frame_a), collect(frame_b.r_0 - frame_a.r_0))
         0 ~ (ex_a'r_rel_a)[]
         0 ~ (ey_a'r_rel_a)[]
         collect(frame_a.tau) .~ zeros(3)
         collect(frame_b.tau) .~ zeros(3)
         collect(frame_a.f) .~ vec([ex_a ey_a]*f_c)
-        collect(frame_b.f) .~ -resolve2(R_rel, frame_a.f)
+        collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f)
         collect(n) .~ n0
     ]
     ODESystem(eqs, t; name, systems=[frame_a, frame_b])

@@ -182,17 +182,17 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     # Relationships between quantities of frame_a and frame_b 
 
     if isroot
-        R_rel = planar_rotation(n, angle, 0)
-        eqs = [ori(frame_b) ~ absolute_rotation(frame_a, R_rel);
-               zeros(3) ~ fa + resolve1(R_rel, fb);
-               zeros(3) ~ taua + resolve1(R_rel, taub) - cross(r,
+        Rrel = planar_rotation(n, angle, 0)
+        eqs = [ori(frame_b) ~ absolute_rotation(frame_a, Rrel);
+               zeros(3) ~ fa + resolve1(Rrel, fb);
+               zeros(3) ~ taua + resolve1(Rrel, taub) - cross(r,
                                                                 fa)]
     else
-        R_rel_inv = planar_rotation(n, -angle, 0)
-        eqs = [ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv);
-               zeros(3) ~ fb + resolve1(R_rel_inv, fa);
-               zeros(3) ~ taub + resolve1(R_rel_inv, taua) +
-                           cross(resolve1(R_rel_inv, r), fb)]
+        Rrel_inv = planar_rotation(n, -angle, 0)
+        eqs = [ori(frame_a) ~ absolute_rotation(frame_b, Rrel_inv);
+               zeros(3) ~ fb + resolve1(Rrel_inv, fa);
+               zeros(3) ~ taub + resolve1(Rrel_inv, taua) +
+                           cross(resolve1(Rrel_inv, r), fb)]
     end
     eqs = collect(eqs)
     append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))

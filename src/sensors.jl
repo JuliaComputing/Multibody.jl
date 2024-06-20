@@ -99,13 +99,13 @@ function RelativeAngles(; name, sequence = [1, 2, 3])
         frame_b = Frame()
         angles = Blocks.RealOutput(nout = 3)
     end
-    @named R_rel = NumRotationMatrix()
+    @named Rrel = NumRotationMatrix()
     eqs = [frame_a.f .~ zeros(3) |> collect
            frame_a.tau .~ zeros(3) |> collect
            frame_b.f .~ zeros(3) |> collect
            frame_b.tau .~ zeros(3) |> collect
-           R_rel ~ relative_rotation(frame_a, frame_b)
-           angles .~ axes_rotationangles(R_rel, sequence, guessAngle1)]
+           Rrel ~ relative_rotation(frame_a, frame_b)
+           angles .~ axes_rotationangles(Rrel, sequence, guessAngle1)]
     compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
 end
 
