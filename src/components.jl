@@ -230,6 +230,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               I_31 = 0,
               I_32 = 0,
               isroot = false,
+              state = false,
               vel_from_R = false,
               phi0 = zeros(3),
               phid0 = zeros(3),
@@ -283,6 +284,11 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
 
     # DRa = D(Ra)
+
+    if state
+        # @warn "Make the body have state variables by using isroot=true rather than state=true"
+        isroot = true
+    end
 
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot

@@ -49,7 +49,8 @@ nothing # hide
 ```
 
 
-If we instead model a body suspended in springs without the presence of any joint, we need to give the body state variables. We do this by saying `isroot = true` when we create the body, we also use quaternions to represent angles using `quat = true`.
+## Body suspended in springs
+If we instead model a body suspended in springs without the presence of any joint, we need to _give the body state variables_. We do this by saying `isroot = true` when we create the body, we also use quaternions to represent angular state using `quat = true`.
 
 ```@example FREE_MOTION
 using Multibody.Rotations: QuatRotation, RotXYZ

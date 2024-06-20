@@ -119,6 +119,7 @@ end
 # Test that rotational velocity of 1 results in one full rotation in 2π seconds. Test rotation around all three major axes
 @test get_R(sol, body.frame_a, 0pi) ≈ I
 @test get_R(sol, body.frame_a, pi/2) ≈ [1 0 0; 0 0 -1; 0 1 0]' atol=1e-3
+@test get_rot(sol, body.frame_a, pi/2)*[0,1,0] ≈ [0,0,1] atol=1e-3 # Same test as above, but in one other way for sanity. They y-axis basis vector is rotated around x axis which aligns it with the z-axis basis vector. get_rot is used for this, which is the transpose of get_R
 @test get_R(sol, body.frame_a, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
 @test get_R(sol, body.frame_a, 2pi) ≈ I atol=1e-3
 
@@ -162,7 +163,7 @@ end
     # q0 = randn(4); q0 ./= norm(q0)
     q0 = [1,0,0,0]
     prob = ODEProblem(ssys, [
-        collect(body.w_a) .=> [1,1,1];
+        collect(body.w_a) .=> [1,0,0];
         collect(joint.Q) .=> q0;
         collect(joint.Q̂) .=> q0;
         ], (0, 2pi))
@@ -173,6 +174,7 @@ end
     # doplot() && plot(sol, layout=21)
 
 
+    # These tests all pass with Euler angles as state, but with quaternions as state there are rotation-matrix elements in the state and even though the system simplifies and solves, it does not solve correctly
     ts = 0:0.1:2pi
     Q = Matrix(sol(ts, idxs = [joint.Q...]))
     Qh = Matrix(sol(ts, idxs = [joint.Q̂...]))

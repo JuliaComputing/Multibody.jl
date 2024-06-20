@@ -36,8 +36,11 @@ Create a new [`RotationMatrix`](@ref) struct with symbolic elements. `R,w` deter
 The primary difference between `NumRotationMatrix` and `RotationMatrix` is that the `NumRotationMatrix` constructor is used in the constructor of a [`Frame`](@ref) in order to introduce the frame variables, whereas `RorationMatrix` (the struct) only wraps existing variables.
 
 - `varw`: If true, `w` is a variable, otherwise it is derived from the derivative of `R` as `w = get_w(R)`.
+
+Never call this function directly from a component constructor, instead call `f = Frame(); R = ori(f)` and add `f` to the subsystems.
 """
-function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = false, state_priority=nothing)
+function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name=:R, varw = false, state_priority=nothing)
+    # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
     R = at_variables_t(:R, 1:3, 1:3; default = R, state_priority) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
@@ -251,7 +254,11 @@ end
 
 Base.getindex(Q::Quaternion, i) = Q.Q[i]
 
+"""
+Never call this function directly from a component constructor, instead call `f = Frame(); R = ori(f)` and add `f` to the subsystems.
+"""
 function NumQuaternion(; Q = [1.0, 0, 0, 0.0], w = zeros(3), name, varw = false)
+    # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
     # Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
     @variables Q(t)[1:4] = [1.0,0,0,0]
     if varw
@@ -449,6 +456,8 @@ The rotation matrix returned, ``R_W^F``, is such that when a vector ``p_F`` expr
 p_W = R_W^F  p_F
 ```
 
+The columns of ``R_W_F`` indicate are the basis vectors of the frame ``F`` expressed in the world coordinate frame.
+
 See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_rot(sol, frame, t)
@@ -496,23 +505,13 @@ function nonunit_quaternion_equations(R, w)
     # where angularVelocity2(Q, der(Q)) = 2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
     # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
-    # P = [
-    #     0 0 0 1
-    #     1 0 0 0
-    #     0 1 0 0
-    #     0 0 1 0
-    # ]
-    # Ω = P'Ω*P
-    # QR = from_Q(Q, angular_velocity2(Q, D.(Q))) # TODO: since from_Q from modelica was wrong in our context, also check angular_velocity2 for quaternions
+    # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     QR = from_Q(Q, w)
     [
         n ~ Q̂'Q̂
-        # n ~ _norm(Q̂)^2
         c ~ k * (1 - n)
-        D.(Q̂) .~ (Ω' * Q̂) ./ 2 + c * Q̂
+        D.(Q̂) .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
         Q .~ Q̂ ./ sqrt(n)
         R ~ QR
-        # w ~ QR.w
-        # R.w ~ w
     ]
 end

@@ -35,6 +35,7 @@ W(;kwargs...) = Multibody.world
             I_33=0.1,
             r_0=[0,0.6,0],
             isroot=true,
+            # quat=true, # Activate to use quaternions as state instead of Euler angles
             v_0=[1,0,0])
         body2 = Body(
             m=1,
@@ -43,6 +44,7 @@ W(;kwargs...) = Multibody.world
             I_33=0.1,
             r_0=[0.6,0.6,0],
             isroot=true,
+            # quat=true, # Activate to use quaternions as state instead of Euler angles
             v_0=[0.6,0,0])
     end
 end
