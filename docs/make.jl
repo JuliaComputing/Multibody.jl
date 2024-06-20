@@ -31,6 +31,7 @@ makedocs(;
                  "Kinematic loops" => "examples/kinematic_loops.md",
                  "Industrial robot" => "examples/robot.md",
                  "Ropes, cables and chains" => "examples/ropes_and_cables.md",
+                 "Swing" => "examples/swing.md",
                  "Bodies in space" => "examples/space.md",
              ],
              "3D rendering" => "rendering.md",
