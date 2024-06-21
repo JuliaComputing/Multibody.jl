@@ -81,7 +81,7 @@ Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature 
 
 ```@example kinloop
 import CairoMakie
-Multibody.render(fourbar, sol, 0:0.033:10; x=4, y=-1, z=4, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
+Multibody.render(fourbar, sol, 0:0.05:10; x=4, y=-1, z=4, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
 nothing # hide
 ```
 

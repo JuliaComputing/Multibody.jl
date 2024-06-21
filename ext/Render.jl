@@ -108,10 +108,20 @@ function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=fals
     scene, fig
 end
 
+function default_framerate(filename)
+    if parse(Bool, get(ENV, "DOCS_BUILD", "false"))
+        return 20
+    elseif lowercase(last(splitext(filename))) == ".gif"
+        return 25
+    else
+        return 30
+    end
+end
 
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
-    framerate = 30,
+    filename = "multibody_$(model.name).mp4",
+    framerate = default_framerate(filename),
     x = 2,
     y = 0.5,
     z = 2,
@@ -119,7 +129,6 @@ function render(model, sol,
     up = Vec3f(0,1,0),
     show_axis = false,
     timescale = 1.0,
-    filename = "multibody_$(model.name).mp4",
     kwargs...
     )
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)

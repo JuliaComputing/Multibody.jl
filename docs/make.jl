@@ -2,6 +2,7 @@ using Multibody
 using Documenter
 using CairoMakie
 ENV["JULIA_DEBUG"]=Documenter # Enable this for debugging
+ENV["DOCS_BUILD"] = true # used to lower the default frame rate in animations for the docs
 
 DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = true)
 
