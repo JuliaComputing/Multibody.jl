@@ -31,7 +31,7 @@ jobs:
           juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
           private_registry_name: JuliaSimRegistry
           private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
-      - run: sudo apt-get update && sudo apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev xsettingsd x11-xserver-utils
+      - run: apt-get update && apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev xsettingsd x11-xserver-utils
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
                                       Pkg.setprotocol!(; domain = "github.com", protocol = "ssh"); 
