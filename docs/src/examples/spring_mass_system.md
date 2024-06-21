@@ -64,7 +64,7 @@ The plot indicates that the two systems behave identically.
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
-import CairoMakie
+import WGLMakie
 Multibody.render(model, sol; x=5, z = 5, filename = "springmass.gif")
 nothing # hide
 ```

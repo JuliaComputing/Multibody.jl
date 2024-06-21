@@ -97,7 +97,7 @@ plot(sol, idxs = [
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example robot
-import CairoMakie
+import WGLMakie
 Multibody.render(robot, sol; y=2, lookat=[0,1,0], filename = "robot.gif")
 nothing # hide
 ```

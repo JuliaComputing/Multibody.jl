@@ -93,7 +93,7 @@ plot(sol, idxs = [body.r_0...])
 ```
 
 ```@example FREE_MOTION
-import CairoMakie
+import WGLMakie
 Multibody.render(model, sol, filename = "free_body.gif")
 nothing # hide
 ```

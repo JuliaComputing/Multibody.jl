@@ -11,7 +11,7 @@ or
 using CairoMakie
 ```
 !!! note "Backend choice"
-    GLMakie produces much nicer-looking animations and is also significantly faster. CairoMakie is used to produce the graphics in the documentation due to the constraints imposed by the web environment. CairoMakie also struggles with the Z-order of drawn objects, sometimes making bodies that should have been visible hidden behind bodies that are further back in the scene.
+    GLMakie and WGLMakie produce much nicer-looking animations and is also significantly faster. CairoMakie may be used to produce the graphics in some web environments if constraints imposed by the web environment do not allow any of the GL alternatives. CairoMakie struggles with the Z-order of drawn objects, sometimes making bodies that should have been visible hidden behind bodies that are further back in the scene.
 
 After that, the [`render`](@ref) function is the main entry point to create 3D renderings. This function has the following methods:
 

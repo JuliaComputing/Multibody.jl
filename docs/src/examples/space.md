@@ -65,7 +65,7 @@ plot(sol)
 
 
 ```@example SPACE
-import CairoMakie
+import WGLMakie
 Multibody.render(model, sol, filename = "space.gif")
 nothing # hide
 ```
