@@ -67,7 +67,7 @@ The solution `sol` can be plotted directly if the Plots package is loaded. The f
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example pendulum
-import WGLMakie # GLMakie is another alternative, suitable for interactive plots
+import GLMakie # GLMakie is another alternative, suitable for interactive plots
 Multibody.render(model, sol; filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
 nothing # hide
 ```
@@ -226,7 +226,7 @@ plot(sol, layout=4)
 ```
 
 ```@example pendulum
-import WGLMakie
+import GLMakie
 Multibody.render(model, sol, filename = "furuta.gif")
 nothing # hide
 ```

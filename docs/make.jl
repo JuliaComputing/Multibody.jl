@@ -1,8 +1,7 @@
 using Multibody
 using Documenter
-using WGLMakie
-using Bonito
-WGLMakie.activate!()
+using GLMakie
+GLMakie.activate!()
 
 ENV["JULIA_DEBUG"]=Documenter # Enable this for debugging
 ENV["DOCS_BUILD"] = true # used to lower the default frame rate in animations for the docs
