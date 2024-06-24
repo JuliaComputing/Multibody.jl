@@ -45,7 +45,7 @@ end
     # = 12 equations 
     @named frame_b = Frame()
     @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
-    @parameters g=9.81 [description = "gravitational acceleration of world"]
+    @parameters g=9.80665 [description = "gravitational acceleration of world"]
     @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
@@ -58,7 +58,7 @@ end
 end
 
 """
-The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field and a gravity vector specified by the unit direction `world.n` (defaults to [0, -1, 0]) and magnitude `world.g` (defaults to 9.81).
+The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field and a gravity vector specified by the unit direction `world.n` (defaults to [0, -1, 0]) and magnitude `world.g` (defaults to 9.80665).
 """
 const world = World(; name = :world)
 
@@ -151,7 +151,7 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 - `sequence`: DESCRIPTION
 - `angle`: Angle of rotation around `n`, given in radians
 """
-@component function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
+@component function FixedRotation(; name, r=[0, 0, 0], n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
                        angle, n_x = [1, 0, 0], n_y = [0, 1, 0])
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
@@ -581,6 +581,8 @@ end
     @structural_parameters begin
         r = [1, 0, 0]
         r_shape = [0, 0, 0]
+        isroot = false
+        quat = false
     end
 
     @parameters begin
@@ -608,6 +610,7 @@ end
         density = 7700, [
             description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
         ]
+        color[1:4] = purple, [description = "Color of cylinder in animations"]
     end
     begin
         radius = diameter/2
@@ -641,7 +644,7 @@ end
         frame_a = Frame()
         frame_b = Frame()
         frameTranslation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], isroot, quat)
     end
 
     @equations begin
