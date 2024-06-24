@@ -643,8 +643,8 @@ end
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        frameTranslation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], isroot, quat)
+        translation = FixedTranslation(r = r)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
     end
 
     @equations begin
@@ -657,8 +657,106 @@ end
         a_0[1] ~ D(v_0[1])
         a_0[2] ~ D(v_0[2])
         a_0[3] ~ D(v_0[3])
-        connect(frame_a, frameTranslation.frame_a)
-        connect(frame_b, frameTranslation.frame_b)
+        connect(frame_a, translation.frame_a)
+        connect(frame_b, translation.frame_b)
+        connect(frame_a, body.frame_a)
+    end
+end
+
+
+@mtkmodel BodyBox begin
+
+    @structural_parameters begin
+        r = [1, 0, 0]
+        r_shape = [0, 0, 0]
+        width_dir = [0,1,0] # https://github.com/SciML/ModelingToolkit.jl/issues/2810
+    end
+
+    @parameters begin
+        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+        #     description = "Vector from frame_a to frame_b resolved in frame_a",
+        # ]
+        # r_shape[1:3]=zeros(3), [
+        #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+        # ]
+        dir[1:3] = r - r_shape, [
+            description = "Vector in length direction of cylinder, resolved in frame_a",
+        ]
+        length = _norm(r - r_shape), [
+            description = "Length of cylinder",
+        ]
+        length_dir[1:3] = _norm(r - r_shape), [
+            description = "Vector in length direction of box, resolved in frame_a",
+        ]
+
+        # width_dir[1:3] = [0,1,0], [ 
+        #     description = "Vector in width direction of box, resolved in frame_a",
+        # ]
+        width = 0.3*length, [
+            description = "Width of box",
+        ]
+        height = width, [
+            description = "Height of box",
+        ]
+
+        inner_width = 0, [
+            description = "Width of inner box surface (0 <= inner_width <= width)",
+        ]
+        inner_height = inner_width, [
+            description = "Height of inner box surface (0 <= inner_height <= height)",
+        ]
+        density = 7700, [
+            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+        ]
+        color[1:4] = purple, [description = "Color of box in animations"]
+    end
+    begin
+        mo = density*length*width*height
+        mi = density*length*inner_width*inner_height
+        m = mo - mi
+        R = from_nxy(r, width_dir) 
+        r_cm = r_shape + _normalize(length_dir)*length/2
+        r_cm = collect(r_cm)
+
+        I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
+        I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
+        I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
+        I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12)) 
+    end
+
+    @variables begin
+        r_0(t)[1:3]=zeros(3), [
+            state_priority = 2,
+            description = "Position vector from origin of world frame to origin of frame_a",
+        ]
+        v_0(t)[1:3]=zeros(3), [
+            state_priority = 2,
+            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        ]
+        a_0(t)[1:3]=zeros(3), [
+            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        ]
+    end
+
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        translation = FixedTranslation(r = r)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+    end
+
+    @equations begin
+        r_0[1] ~ ((frame_a.r_0)[1])
+        r_0[2] ~ ((frame_a.r_0)[2])
+        r_0[3] ~ ((frame_a.r_0)[3])
+        v_0[1] ~ D(r_0[1])
+        v_0[2] ~ D(r_0[2])
+        v_0[3] ~ D(r_0[3])
+        a_0[1] ~ D(v_0[1])
+        a_0[2] ~ D(v_0[2])
+        a_0[3] ~ D(v_0[3])
+        connect(frame_a, translation.frame_a)
+        connect(frame_b, translation.frame_b)
         connect(frame_a, body.frame_a)
     end
 end
