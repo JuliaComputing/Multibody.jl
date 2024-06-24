@@ -79,7 +79,7 @@ using Test
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example kinloop
-import CairoMakie
+import GLMakie
 Multibody.render(fourbar, sol, 0:0.05:10; x=4, y=-1, z=4, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
 nothing # hide
 ```
@@ -136,7 +136,7 @@ plot(sol, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green
 ```
 
 ```@example kinloop
-import CairoMakie
+import GLMakie
 Multibody.render(fourbar2, sol; x=-2, y = 2, z = 3, filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
 nothing # hide
 ```

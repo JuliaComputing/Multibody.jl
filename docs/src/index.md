@@ -65,7 +65,7 @@ prob = ODEProblem(ssys, [], (0.0, 3.51))
 sol = solve(prob, Rodas5P())
 Plots.plot(sol)
 
-import CairoMakie
+import GLMakie
 framerate = 30
 timevec = [zeros(30); range(sol.t[1], sol.t[end], step=1/framerate)] |> reverse
 render(logo, sol, timevec; z=-2.5, x=0, y=-0.5, lookat=[0.2,-0.5, 0], filename="JuliaSim_logo.gif", framerate)

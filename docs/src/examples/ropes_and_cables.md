@@ -35,7 +35,7 @@ prob = ODEProblem(ssys, [], (0, 5))
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 
-import CairoMakie
+import GLMakie
 Multibody.render(stiff_rope, sol, filename = "stiff_rope.gif") # May take long time for n>=10
 ```
 ![stiff_rope animation](stiff_rope.gif)

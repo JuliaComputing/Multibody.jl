@@ -72,7 +72,7 @@ sol = solve(prob, ImplicitEuler(autodiff=false), reltol=5e-3)
 ```
 
 ```@example SWING
-import CairoMakie
+import GLMakie
 Multibody.render(model, sol; z = -5, filename = "simple_swing.gif") # Use "simple_swing.mp4" for a video file
 nothing # hide
 ```
@@ -155,7 +155,7 @@ Plots.plot(sol, idxs = [collect(model.body.r_0);])
 ```
 
 ```@example SWING
-import CairoMakie
+import GLMakie
 Multibody.render(model, sol; y = -1, z = -3, lookat = [0, -1, 0], filename = "swing.gif") # Use "swing.mp4" for a video file
 nothing # hide
 ```
