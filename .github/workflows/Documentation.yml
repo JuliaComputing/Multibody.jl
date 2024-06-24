@@ -33,7 +33,7 @@ jobs:
           private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
-                                      ENV["DISPLAY"] = 0;
+                                      ENV["DISPLAY"] = "0";
                                       Pkg.setprotocol!(; domain = "github.com", protocol = "ssh"); 
                                       Pkg.add(PackageSpec(name = "JuliaSimCompiler", url = "https://github.com/JuliaComputing/JuliaSimCompiler.jl", rev = "master"));
                                       Pkg.develop(PackageSpec(path=pwd()));
