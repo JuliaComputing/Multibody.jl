@@ -409,7 +409,7 @@ function nonunit_quaternion_equations(R, w)
     @variables n(t)=1 c(t)=0
     @parameters k = 0.1
     Q̂ = collect(Q̂)
-    Q = collect(Q)
+    # Q = collect(Q)
     # w is used in Ω, and Ω determines D(Q̂)
     # This corresponds to modelica's 
     # frame_a.R = from_Q(Q, angularVelocity2(Q, der(Q)));
@@ -418,10 +418,10 @@ function nonunit_quaternion_equations(R, w)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     [
-        n ~ Q̂'Q̂
-        c ~ k * (1 - n)
+        # n ~ Q̂'Q̂
+        c ~ k * (1 - Q̂'Q̂)
         D.(Q̂) .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
         # Q .~ Q̂ ./ sqrt(n)
-        R ~ from_Q(Q̂ ./ sqrt(n), w)
+        R ~ from_Q(Q̂ ./ sqrt(Q̂'Q̂), w)
     ]
 end
