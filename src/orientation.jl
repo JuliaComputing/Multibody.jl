@@ -257,7 +257,7 @@ end
 Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
 function from_Q(Q2, w)
     # Q2 = to_q(Q) # Due to different conventions
-    q = Rotations.QuatRotation(Q2)
+    q = Rotations.QuatRotation(Q2, false)
     R = RotMatrix(q)
     RotationMatrix(R, w)
 end
