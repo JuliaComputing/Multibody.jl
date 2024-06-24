@@ -27,10 +27,10 @@ Create a 3D animation of a multibody system
 
 # Camera control
 The following keyword arguments are available to control the camera pose:
-_ `x = 5`
-_ `y = 0`
-_ `z = 5`
-_ `lookat = [0,0,0]`: a three-vector of coordinates indicating the point at which the camera looks.
+- `x = 2`
+- `y = 0.5`
+- `z = 2`
+- `lookat = [0,0,0]`: a three-vector of coordinates indicating the point at which the camera looks.
 - `up = [0,1,0]`: A vector indicating the direction that is up.
 """
 function render end

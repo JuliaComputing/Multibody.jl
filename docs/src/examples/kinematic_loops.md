@@ -61,7 +61,7 @@ connections = [
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 m = structural_simplify(IRSystem(fourbar))
-prob = ODEProblem(m, [], (0.0, 30.0))
+prob = ODEProblem(m, [world.g => 9.81], (0.0, 30.0))
 sol = solve(prob, Rodas4(autodiff=false))
 
 plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
@@ -72,7 +72,6 @@ using Test
 @test SciMLBase.successful_retcode(sol)
 @test sol(sol.t[end], idxs=j3.phi) % 2pi ≈ π/2 atol=0.3 # Test the the "pendulum" is hanging almost straight down after sufficient time has passed
 @test sol(sol.t[end], idxs=j2.phi) % 2pi ≈ -π/2 atol=0.3
-
 ```
 
 

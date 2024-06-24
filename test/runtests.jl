@@ -708,7 +708,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12
 
-prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -732,7 +732,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12 
 
-prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -752,6 +752,7 @@ ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [
+    world.g=>9.81; 
     collect(body.w_a .=> [0, 1, 0]); 
     collect(body.v_0 .=> [0, 0, 0]); 
 ], (0, 10))
