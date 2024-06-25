@@ -420,10 +420,10 @@ function nonunit_quaternion_equations(R, w)
     # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
-    QR = from_Q(Q̂ ./ sqrt(Q̂'Q̂), w)
+    QR = from_Q(Q̂ ./ sqrt(n), w)
     [
         n ~ Q̂'Q̂
-        c ~ k * (1 - Q̂'Q̂)
+        c ~ k * (1 - n)
         D.(Q̂) .~ Q̂d
         Q̂d .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
         Q .~ Q̂ ./ sqrt(n)
