@@ -489,6 +489,47 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     ODESystem(eqs, t; name, systems = [systems; links; joints])
 end
 
+
+function CutRope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, color = [255, 219, 120, 255]./255, radius = 0.05f0, jointradius=0, jointcolor=color, kwargs...)
+
+    @assert n >= 1
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+    dir = dir / norm(dir)
+
+    li = l / n # Segment length
+    mi = m / n # Segment mass
+
+    joints = [Spherical(name=Symbol("joint_$i"),
+        isroot = true,
+        state = true,
+        color = jointcolor,
+        radius = jointradius,
+        d = d_joint) for i = 1:n-1]
+
+    @named ss = SphericalSpherical(r_0 = li*dir, m=mi)
+    
+
+    links = [BodyShape(; m = mi, r = li*dir, name=Symbol("link_$i"), isroot=false, air_resistance, color, radius) for i = 1:n-1]
+
+    eqs = [
+        connect(frame_a, joints[1].frame_a)
+        connect(links[end].frame_b, ss.frame_a)
+        connect(ss.frame_b, frame_b)
+    ]
+
+    for i = 1:n-1
+        push!(eqs, connect(joints[i].frame_b, links[i].frame_a))
+        if i < n-1
+            push!(eqs, connect(links[i].frame_b, joints[i+1].frame_a))
+        end
+    end
+
+    ODESystem(eqs, t; name, systems = [systems; links; joints; ss])
+end
+
 # @component function BodyCylinder(; name, m = 1, r = [0.1, 0, 0], r_0 = 0, r_shape=zeros(3), length = _norm(r - r_shape), kwargs...)
 #     @parameters begin
 #         # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy

@@ -1036,3 +1036,25 @@ using LinearAlgebra
 end
 
 ##
+
+
+@mtkmodel TestSphericalSpherical begin
+    @components begin
+        world = W()
+        ss = SphericalSpherical(r_0 = [1, 0, 0], m = 1, kinematic_constraint=true)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1)
+        s = Spherical()
+        trans = FixedTranslation(r = [1,0,1])
+    end
+    @equations begin
+        connect(world.frame_b, ss.frame_a, trans.frame_a)
+        connect(ss.frame_b, ss2.frame_a)
+        connect(ss2.frame_b, s.frame_a)
+        connect(s.frame_b, trans.frame_b)
+    end
+end
+
+@named model = TestSphericalSpherical()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
