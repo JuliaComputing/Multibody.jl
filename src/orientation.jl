@@ -257,7 +257,7 @@ end
 Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
 function from_Q(Q2, w)
     # Q2 = to_q(Q) # Due to different conventions
-    q = Rotations.QuatRotation(Q2)
+    q = Rotations.QuatRotation(Q2, false)
     R = RotMatrix(q)
     RotationMatrix(R, w)
 end
@@ -404,11 +404,14 @@ function get_frame(sol, frame, t)
 end
 
 function nonunit_quaternion_equations(R, w)
-    @variables Q(t)[1:4]=[1,0,0,0], [description="Unit quaternion with [w,i,j,k]"] # normalized
-    @variables Q̂(t)[1:4]=[1,0,0,0], [description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+    @variables Q(t)[1:4]=[1,0,0,0], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
+    @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+    @variables Q̂d(t)[1:4]=[0,0,0,0], [state_priority=1000]
+    # NOTE: 
     @variables n(t)=1 c(t)=0
     @parameters k = 0.1
     Q̂ = collect(Q̂)
+    Q̂d = collect(Q̂d)
     Q = collect(Q)
     # w is used in Ω, and Ω determines D(Q̂)
     # This corresponds to modelica's 
@@ -417,12 +420,13 @@ function nonunit_quaternion_equations(R, w)
     # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
-    QR = from_Q(Q, w)
+    QR = from_Q(Q̂ ./ sqrt(n), w)
     [
         n ~ Q̂'Q̂
         c ~ k * (1 - n)
-        D.(Q̂) .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
+        D.(Q̂) .~ Q̂d
+        Q̂d .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
         Q .~ Q̂ ./ sqrt(n)
-        R ~ QR
+        R ~ from_Q(Q, w)
     ]
 end

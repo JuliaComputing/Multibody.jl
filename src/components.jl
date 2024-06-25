@@ -255,7 +255,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
     @variables w_a(t)[1:3]=w_a [guess = 0, 
-        state_priority = 2,
+        state_priority = 2+2quat*state,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3] [guess = 0, 
