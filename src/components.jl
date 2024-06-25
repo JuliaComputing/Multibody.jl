@@ -444,17 +444,18 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     mi = m / n # Segment mass
 
     joints = [Spherical(name=Symbol("joint_$i"),
-        # isroot=!(cutspherical && i == 1),
         isroot = true,
-        iscut = cutspherical && i == 1,
-        # state=!(cutspherical && i == 1),
+        # isroot=!(cutspherical && i == 1),
+        iscut = cutspherical && i == n,
+        # state = !(cutspherical && i == 1),
         state = true,
+        quat = true,
         color = jointcolor,
         radius = jointradius,
         d = d_joint) for i = 1:n+1]
-    if cutspherical
-        joints[1] = SphericalConstraint(; name=Symbol("joint_1"))
-    end
+    # if cutspherical
+    #     joints[n] = SphericalConstraint(; name=Symbol("joint_$(n)"))
+    # end
 
     eqs = [
         connect(frame_a, joints[1].frame_a)
