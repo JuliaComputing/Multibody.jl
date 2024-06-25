@@ -261,6 +261,57 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     add_params(sys, pars; name)
 end
 
+@component function SphericalConstraint(; name, sequence = [1, 2, 3],
+                   color = [1, 1, 0, 1],
+                   radius = 0.1,
+                   x_locked = true, y_locked = true, z_locked = true,
+)
+
+    @named begin
+        ptf = PartialTwoFrames()
+        Rrel = NumRotationMatrix()
+        Rrel_inv = NumRotationMatrix()
+    end
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+    end
+    @unpack frame_a, frame_b = ptf
+    @variables begin (r_rel_a(t)[1:3] = zeros(3)),
+                     [
+                         description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
+                     ] end
+
+    Rrel = relative_rotation(frame_a, frame_b)
+
+    eqs = [
+        if x_locked
+            r_rel_a[1] ~ 0
+        else
+            frame_a.f[1] ~ 0
+        end
+    
+        if y_locked
+            r_rel_a[2] ~ 0
+        else
+            frame_a.f[2] ~ 0
+        end
+    
+        if z_locked
+            r_rel_a[3] ~ 0
+        else
+            frame_a.f[3] ~ 0
+        end
+        r_rel_a .~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0);
+        zeros(3) .~ collect(frame_b.tau);
+        collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f);
+        zeros(3) .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
+    ]
+
+    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    add_params(sys, pars; name)
+end
+
 @component function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
                    phi_b = 0,
                    w_a = 0,

@@ -445,13 +445,16 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
 
     joints = [Spherical(name=Symbol("joint_$i"),
         # isroot=!(cutspherical && i == 1),
-        isroot=true,
+        isroot = true,
         iscut = cutspherical && i == 1,
         # state=!(cutspherical && i == 1),
-        state=true,
-        color=jointcolor,
-        radius=jointradius,
+        state = true,
+        color = jointcolor,
+        radius = jointradius,
         d = d_joint) for i = 1:n+1]
+    if cutspherical
+        joints[1] = SphericalConstraint(; name=Symbol("joint_1"))
+    end
 
     eqs = [
         connect(frame_a, joints[1].frame_a)

@@ -98,3 +98,33 @@ Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May 
 ```
 
 ![mounted_chain animation](mounted_chain.gif)
+
+
+## No spring
+
+```@example ropes_and_cables
+number_of_links = 3
+
+chain_length = 2
+x_dist = 1.5 # Distance between the two mounting points
+
+systems = @named begin
+    chain = Rope(l = chain_length, m = 5, n=number_of_links, c=0, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1], radius=0.05, cutprismatic=false, cutspherical=true)
+    fixed = FixedTranslation(; r=[x_dist, 0, 0], radius=0.02, color=[0.1,0.1,0.1,1]) # Second mounting point
+end
+
+connections = [
+    connect(world.frame_b, fixed.frame_a, chain.frame_a)
+    connect(chain.frame_b, fixed.frame_b)
+]
+
+@named mounted_chain = ODESystem(connections, t, systems = [systems; world])
+
+ssys = structural_simplify(IRSystem(mounted_chain))
+prob = ODEProblem(ssys, [
+    vec(ori(chain.link_1.frame_a).R.mat) .=> vec(I(3));
+], (0, 4))
+sol = solve(prob, Rodas4(autodiff=false))
+@test SciMLBase.successful_retcode(sol)
+Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May take long time for n>=10
+```
