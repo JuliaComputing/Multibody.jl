@@ -261,6 +261,169 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     add_params(sys, pars; name)
 end
 
+@component function SphericalSpherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
+                    r_0 = [0,0,0],
+                   color = [1, 1, 0, 1],
+                   m = 0,
+                   radius = 0.1,
+                   kinematic_constraint=true
+                   )
+
+    @named begin
+        ptf = PartialTwoFrames()
+        Rrel = NumRotationMatrix()
+    end
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+    end
+    @unpack frame_a, frame_b = ptf
+    # @parameters begin # Currently not using parameters due to these appearing in if statements
+    #     sequence[1:3] = sequence
+    # end
+
+    @variables f_rod(t), [description="Constraint force in direction of the rod (positive on frame_a, when directed from frame_a to frame_b)";]
+    @variables rRod_0(t)[1:3]=r_0, [description="Position vector from frame_a to frame_b resolved in world frame";]
+    @variables rRod_a(t)[1:3], [description="Position vector from frame_a to frame_b resolved in frame_a";]
+    @variables eRod_a(t)[1:3], [description="Unit vector in direction from frame_a to frame_b, resolved in frame_a";]
+    @variables r_CM_0(t)[1:3], [description="Dummy if m==0, or position vector from world frame to mid-point of rod, resolved in world frame";]
+    @variables v_CM_0(t)[1:3], [description="First derivative of r_CM_0";]
+    @variables f_CM_a(t)[1:3], [description="Dummy if m==0, or inertial force acting at mid-point of rod due to mass point acceleration, resolved in frame_a";]
+    @variables f_CM_e(t)[1:3], [description="Dummy if m==0, or projection of f_CM_a onto eRod_a, resolved in frame_a";]
+    @variables f_b_a1(t)[1:3], [description="Force acting at frame_b, but without force in rod, resolved in frame_a";]
+
+    rRod_0 = collect(rRod_0)
+    rRod_a = collect(rRod_a)
+    eRod_a = collect(eRod_a)
+    r_CM_0 = collect(r_CM_0)
+    v_CM_0 = collect(v_CM_0)
+    f_CM_a = collect(f_CM_a)
+    f_CM_e = collect(f_CM_e)
+    f_b_a1 = collect(f_b_a1)
+    rodlength = _norm(r_0)
+    constraint_residue = rRod_0'rRod_0 - rodlength^2
+
+   
+    eqs = [
+        # Determine relative position vector between the two frames
+  if kinematic_constraint
+    rRod_0 .~ transpose(ori(frame_b).R)*(ori(frame_b)*collect(frame_b.r_0)) - transpose(ori(frame_a).R)*(ori(frame_a)*collect(frame_a.r_0))
+  else
+    rRod_0 .~ frame_b.r_0 - frame_a.r_0
+  end
+
+  #rRod_0 = frame_b.r_0 - frame_a.r_0;
+  rRod_a .~ resolve2(ori(frame_a), rRod_0)
+  eRod_a .~ rRod_a/rodlength
+
+  # Constraint equation
+  constraint_residue ~ 0
+
+  # Cut-torques at frame_a and frame_b
+  frame_a.tau .~ zeros(3)
+  frame_b.tau .~ zeros(3)
+
+  #= Force and torque balance of rod
+     - Kinematics for center of mass CM of mass point
+       r_CM_0 = frame_a.r_0 + rRod_0/2;
+       v_CM_0 = der(r_CM_0);
+       a_CM_a = resolve2(ori(frame_a), der(v_CM_0) - world.gravity_acceleration(r_CM_0));
+     - Inertial and gravity force in direction (f_CM_e) and orthogonal (f_CM_n) to rod
+       f_CM_a = m*a_CM_a
+       f_CM_e = f_CM_a*eRod_a;           # in direction of rod
+       f_CM_n = rodlength(f_CM_a - f_CM_e);  # orthogonal to rod
+     - Force balance in direction of rod
+       f_CM_e = fa_rod_e + fb_rod_e;
+     - Force balance orthogonal to rod
+       f_CM_n = fa_rod_n + fb_rod_n;
+     - Torque balance with respect to frame_a
+       0 = (-f_CM_n)*rodlength/2 + fb_rod_n*rodlength
+     The result is:
+     fb_rod_n = f_CM_n/2;
+     fa_rod_n = fb_rod_n;
+     fb_rod_e = f_CM_e - fa_rod_e;
+     fa_rod_e is the unknown computed from loop
+  =#
+
+    # f_b_a1 is needed in aggregation joints to solve kinematic loops analytically
+  if m > 0
+    [r_CM_0 .~ frame_a.r_0 + rRod_0/2;
+    v_CM_0 .~ D.(r_CM_0);
+    f_CM_a .~ m*resolve2(ori(frame_a), D.(v_CM_0) - gravity_acceleration(r_CM_0))
+    f_CM_e .~ (f_CM_a'eRod_a)*eRod_a
+    frame_a.f .~ (f_CM_a - f_CM_e)./2 + f_rod*eRod_a
+    f_b_a1 .~ (f_CM_a + f_CM_e)./2
+    frame_b.f .~ resolve_relative(f_b_a1 - f_rod*eRod_a, ori(frame_a),
+      ori(frame_b));
+    ]
+  else
+    [r_CM_0 .~ zeros(3);
+    v_CM_0 .~ zeros(3);
+    f_CM_a .~ zeros(3);
+    f_CM_e .~ zeros(3);
+    f_b_a1 .~ zeros(3);
+    frame_a.f .~ f_rod*eRod_a;
+    frame_b.f .~ -resolve_relative(frame_a.f, ori(frame_a), ori(frame_b));
+    ]
+  end
+    ]
+    
+
+    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    add_params(sys, pars; name)
+end
+
+@component function SphericalConstraint(; name, sequence = [1, 2, 3],
+                   color = [1, 1, 0, 1],
+                   radius = 0.1,
+                   x_locked = true, y_locked = true, z_locked = true,
+)
+
+    @named begin
+        ptf = PartialTwoFrames()
+        Rrel = NumRotationMatrix()
+        Rrel_inv = NumRotationMatrix()
+    end
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+    end
+    @unpack frame_a, frame_b = ptf
+    @variables begin (r_rel_a(t)[1:3] = zeros(3)),
+                     [
+                         description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
+                     ] end
+
+    Rrel = relative_rotation(frame_a, frame_b)
+
+    eqs = [
+        if x_locked
+            r_rel_a[1] ~ 0
+        else
+            frame_a.f[1] ~ 0
+        end
+    
+        if y_locked
+            r_rel_a[2] ~ 0
+        else
+            frame_a.f[2] ~ 0
+        end
+    
+        if z_locked
+            r_rel_a[3] ~ 0
+        else
+            frame_a.f[3] ~ 0
+        end
+        r_rel_a .~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0);
+        zeros(3) .~ collect(frame_b.tau);
+        collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f);
+        zeros(3) .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
+    ]
+
+    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    add_params(sys, pars; name)
+end
+
 @component function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
                    phi_b = 0,
                    w_a = 0,
