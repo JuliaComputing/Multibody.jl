@@ -20,7 +20,7 @@ world = Multibody.world
 
 systems = @named begin
     spherical = Spherical(state=true, radius=0.02, color=[1,1,0,1])
-    body1 = BodyCylinder(r = [0.25, 0, 0], diameter = 0.05, isroot=false, quat=false)
+    body1 = BodyCylinder(r = [0.25, 0, 0], diameter = 0.05)
     rot = FixedRotation(; n = [0,1,0], angle=deg2rad(45))
     revolute = Revolute(n = [1,0,0], radius=0.06, color=[1,0,0,1])
     trans = FixedTranslation(r = [-0.1, 0, 0])

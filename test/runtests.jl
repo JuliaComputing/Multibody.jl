@@ -1036,3 +1036,71 @@ using LinearAlgebra
 end
 
 ##
+
+using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq
+using Multibody.Rotations: RotXYZ
+t = Multibody.t
+D = Multibody.D
+world = Multibody.world
+
+@named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=true, quat=true)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+prob = ODEProblem(ssys, [
+    # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
+    # D.(body.Q̂) .=> 0;
+
+], (0, 1))
+sol1 = solve(prob, Rodas4())
+
+## quat in joint
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=false, quat=false)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+prob = ODEProblem(ssys, [
+    # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
+    # D.(joint.Q̂) .=> 0;
+
+], (0, 1))
+sol2 = solve(prob, Rodas4())
+
+## euler
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=false)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=false, quat=false)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+prob = ODEProblem(ssys, [
+    # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
+    # D.(joint.Q̂) .=> 0;
+
+], (0, 1))
+sol3 = solve(prob, Rodas4())
+
+@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol2(0:0.1:1, idxs=collect(body.r_0)) atol=1e-5
+@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol3(0:0.1:1, idxs=collect(body.r_0)) atol=1e-3
