@@ -317,7 +317,7 @@ using Multibody.Rotations: params
         0.080562
     ] atol=1e-1
 
-    @test_broken get_rot(sol, body.frame_b, 10)[1,2] ≈ 0.104409 atol=0.01
+    @test get_rot(sol, body.frame_b, 10)[1,2] ≈ 0.104409 atol=0.01
 
     doplot() && plot(sol, idxs = [body.r_0...; body.body.w_a; body.body.v_0], layout=(3,3), size=(1000, 1000)) |> display
 
