@@ -405,7 +405,7 @@ end
 
 function nonunit_quaternion_equations(R, w)
     # @variables Q(t)[1:4]=[1,0,0,0], [description="Unit quaternion with [w,i,j,k]"] # normalized
-    @variables Q̂(t)[1:4]=[1,0,0,0], [description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+    @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
     @variables n(t)=1 c(t)=0
     @parameters k = 0.1
     Q̂ = collect(Q̂)
