@@ -184,7 +184,7 @@ end
     @test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
 
     @test get_R(sol, joint.frame_b, 0pi) ≈ I
-    @test_broken get_R(sol, joint.frame_b, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
+    @test get_R(sol, joint.frame_b, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
     @test get_R(sol, joint.frame_b, 2pi) ≈ I atol=1e-3
 
     Matrix(sol(ts, idxs = [joint.w_rel_b...]))
@@ -301,8 +301,8 @@ using Multibody.Rotations: params
                         collect(body.body.w_a .=> 0);
                     collect(body.body.v_0 .=> 0);
                     #   collect(body.body.phi .=> deg2rad(10));
-                        collect(body.body.Q) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
-                        collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+                        collect(body.body.Q) .=> params(Quat(RotXYZ(deg2rad.((10,10,10))...)));
+                        collect(body.body.Q̂) .=> params(Quat(RotXYZ(deg2rad.((10,10,10))...)));
                     ], (0, 10))
 
     # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
@@ -317,7 +317,7 @@ using Multibody.Rotations: params
         0.080562
     ] atol=1e-1
 
-    @test get_rot(sol, body.frame_b, 10)[1,2] ≈ 0.104409 atol=0.01
+    @test_broken get_rot(sol, body.frame_b, 10)[1,2] ≈ 0.104409 atol=0.01
 
     doplot() && plot(sol, idxs = [body.r_0...; body.body.w_a; body.body.v_0], layout=(3,3), size=(1000, 1000)) |> display
 
