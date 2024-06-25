@@ -757,17 +757,17 @@ wheel = complete(wheel)
 
 defs = [
     collect(world.n .=> [0, 0, -1]);
-    vec(ori(wheel.frame_a).R .=> I(3));
-    vec(ori(wheel.body.frame_a).R .=> I(3));
+    wheel.body.r_0[1] => 0.2;
+    wheel.body.r_0[2] => 0.2;
+    wheel.body.r_0[3] => 0.3;
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
 
-@test_skip begin # Does not initialize
-    ssys = structural_simplify(IRSystem(wheel))
-    prob = ODEProblem(ssys, defs, (0, 10))
-    sol = solve(prob, Rodas5P(autodiff=false))
-    @info "Write tests"
-end
+ssys = structural_simplify(IRSystem(wheel))
+prob = ODEProblem(ssys, defs, (0, 0.8))
+sol = solve(prob, RadauIIA5())
+@test_broken SciMLBase.successful_retcode(sol)
+@info "Write tests"
 
 end
 

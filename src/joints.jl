@@ -500,16 +500,16 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
+function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
     @named frame_a = Frame(varw=true)
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
-        (x(t) = x0), [state_priority = 1, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 1, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 1, description = "z-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 15, description = "y-position of the wheel axis"]
+        (z(t) = z0), [state_priority = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = zeros(3)), [description = "Derivatives of angles"]
+        [state_priority = 5, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
         (r_road_0(t)[1:3] = zeros(3)),
         [
             description = "Position vector from world frame to contact point on road, resolved in world frame",
@@ -543,8 +543,8 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0, se
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
-        (s(t) = 0), [state_priority = 1, description = "Road surface parameter 1"]
-        (w(t) = 0), [state_priority = 1, description = "Road surface parameter 2"]
+        (s(t) = 0), [description = "Road surface parameter 1"]
+        (w(t) = 0), [description = "Road surface parameter 2"]
         (e_s_0(t)[1:3] = zeros(3)),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
@@ -650,7 +650,7 @@ with the wheel itself.
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
     @named begin
         frame_a = Frame()
-        rollingWheel = RollingWheelJoint(; radius, angles, x0, y0, kwargs...)
+        rollingWheel = RollingWheelJoint(; radius, angles, x0, y0, der_angles, kwargs...)
         body = Body(r_cm = [0, 0, 0],
                     m = m,
                     I_11 = I_long,
@@ -669,11 +669,11 @@ with the wheel itself.
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 2.0, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 2.0, description = "y-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 20.0, description = "x-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 20.0, description = "y-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [state_priority = 3.0, description = "Derivatives of angles"]
+        [state_priority = 30.0, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 30.0, description = "Derivatives of angles"]
     end
     # sts = reduce(vcat, collect.(sts))
 
