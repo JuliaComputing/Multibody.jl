@@ -11,7 +11,7 @@ export Rotational, Translational
 export render, render!
 
 """
-    scene, time = render(model, sol, t::Real; framerate = 30)
+    scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
     path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1)
 
 Create a 3D animation of a multibody system
@@ -24,6 +24,7 @@ Create a 3D animation of a multibody system
 - `framerate`: Number of frames per second.
 - `timescale`: Scaling of the time vector. This argument can be made to speed up animations (`timescale < 1`) or slow them down (`timescale > 1`). A value of `timescale = 2` will be 2x slower than real time.
 - `filename` controls the name and the file type of the resulting animation
+- `traces`: An optional array of frames to show the trace of.
 
 # Camera control
 The following keyword arguments are available to control the camera pose:

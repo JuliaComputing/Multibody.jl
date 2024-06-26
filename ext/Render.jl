@@ -129,6 +129,7 @@ function render(model, sol,
     up = Vec3f(0,1,0),
     show_axis = false,
     timescale = 1.0,
+    traces = nothing,
     kwargs...
     )
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)
@@ -139,6 +140,16 @@ function render(model, sol,
     t = Observable(timevec[1])
 
     recursive_render!(scene, complete(model), sol, t)
+
+    if traces !== nothing
+        tvec = range(sol.t[1], stop=sol.t[end], length=500)
+        for frame in traces
+            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
+            points = get_trans(sol, frame, tvec) |> Matrix
+            Makie.lines!(scene, points)
+        end
+    end
+
     fn = record(fig, filename, timevec; framerate) do time
         t[] = time/timescale
     end
@@ -146,20 +157,32 @@ function render(model, sol,
 end
 
 function render(model, sol, time::Real;
+    traces = nothing,
+    x = 2,
+    y = 0.5,
+    z = 2,
     kwargs...,
     )
 
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
-    scene, fig = default_scene(0,0,10; kwargs...)
+    scene, fig = default_scene(x,y,z; kwargs...)
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
 
     t = Slider(fig[2, 1], range = steps, startvalue = time).value
-    
     recursive_render!(scene, complete(model), sol, t)
+
+    if traces !== nothing
+        tvec = range(sol.t[1], stop=sol.t[end], length=500)
+        for frame in traces
+            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
+            points = get_trans(sol, frame, tvec) |> Matrix
+            Makie.lines!(scene, points)
+        end
+    end
     fig, t
 end
 
