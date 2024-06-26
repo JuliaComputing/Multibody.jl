@@ -131,6 +131,7 @@ function render(model, sol,
     timescale = 1.0,
     traces = nothing,
     display = false,
+    loop = 1,
     kwargs...
     )
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)
@@ -150,7 +151,9 @@ function render(model, sol,
             Makie.lines!(scene, points)
         end
     end
-
+    if loop > 1
+        timevec = repeat(timevec, loop)
+    end
     if display
         Base.display(fig)
         sleep(2)
@@ -160,7 +163,7 @@ function render(model, sol,
                     Base.display(fig)
                 end
                 t[] = time/timescale
-                sleep(1/framerate)
+                sleep(max(0, 1/framerate))
             end
         end
         fn = fetch(fnt)
@@ -203,16 +206,16 @@ function render(model, sol, time::Real;
     fig, t
 end
 
-function Multibody.loop_render(model, sol; timescale = 1.0, framerate = 30, kwargs...)
+function Multibody.loop_render(model, sol; timescale = 1.0, framerate = 30, max_loop = 5, kwargs...)
     fig, t = render(model, sol, sol.t[1]; kwargs...)
     sleeptime = 1/framerate
     timevec = range(sol.t[1], sol.t[end]*timescale, step=sleeptime)
     display(fig)
     @async begin
-        for i = 1:5
+        for i = 1:max_loop
             for ti in timevec
                 execution_time = @elapsed t[] = ti
-                sleep(sleeptime - execution_time)
+                sleep(max(0, sleeptime - execution_time))
             end
         end
     end

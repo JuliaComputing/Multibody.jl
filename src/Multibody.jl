@@ -12,7 +12,7 @@ export render, render!
 
 """
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
-    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false)
+    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false, loop=1)
 
 Create a 3D animation of a multibody system
 
@@ -23,6 +23,7 @@ Create a 3D animation of a multibody system
 - `timevec`: If a vector of times is provided, an animation is created and the path to the file on disk is returned.
 - `framerate`: Number of frames per second.
 - `timescale`: Scaling of the time vector. This argument can be made to speed up animations (`timescale < 1`) or slow them down (`timescale > 1`). A value of `timescale = 2` will be 2x slower than real time.
+- `loop`: The animation will be looped this many times. Please note: looping the animation using this argument is only recommended when `display = true` for camera manipulation purposes. When the camera is not manipulated, looping the animation by other means is recommended to avoid an increase in the file size.
 - `filename` controls the name and the file type of the resulting animation
 - `traces`: An optional array of frames to show the trace of.
 
@@ -40,7 +41,7 @@ See also [`loop_render`](@ref)
 function render end
 
 """
-    loop_render(model, sol; framerate = 30, timescale = 1, kwargs...)
+    loop_render(model, sol; framerate = 30, timescale = 1, max_loop = 5, kwargs...)
 
 Similar to the method of [`render`](@ref) that produces an animation, but instead opens an interactive window where the time is automatically advanced in real time. This allows the user to manually manipulate the camera using the mouse is a live animation.
 """
