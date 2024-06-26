@@ -24,15 +24,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                                     body])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [
-    D.(freeMotion.r_rel_a) .=> randn();
-    D.(D.(freeMotion.r_rel_a)) .=> randn();
-    D.(freeMotion.phi) .=> randn();
-    D.(D.(freeMotion.phi)) .=> randn();
-    D.(body.w_a) .=> randn();
-    collect(body.w_a .=> 0);
-    collect(body.v_0 .=> 0);
-], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = body.r_0[2], title="Free falling body")

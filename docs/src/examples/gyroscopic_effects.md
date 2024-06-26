@@ -19,7 +19,7 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    spherical = Spherical(state=true, radius=0.02, color=[1,1,0,1])
+    spherical = Spherical(state=true, radius=0.02, color=[1,1,0,1], quat=true)
     body1 = BodyCylinder(r = [0.25, 0, 0], diameter = 0.05)
     rot = FixedRotation(; n = [0,1,0], angle=deg2rad(45))
     revolute = Revolute(n = [1,0,0], radius=0.06, color=[1,0,0,1])
@@ -42,7 +42,7 @@ ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [model.world.g => 9.80665, model.revolute.w => 10], (0, 5))
 
-sol = solve(prob, Rodas5P(), abstol=1e-6, reltol=1e-6)
+sol = solve(prob, Rodas5P(), abstol=1e-7, reltol=1e-7);
 @assert SciMLBase.successful_retcode(sol)
 using Test # hide
 @test sol(5, idxs=collect(model.body2.r_0[1:3])) ≈ [-0.0357364, -0.188245, 0.02076935] atol=1e-3 # hide

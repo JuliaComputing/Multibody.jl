@@ -55,7 +55,7 @@ This results in a simplified model with the minimum required variables and equat
 We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
 ```@example pendulum
 D = Differential(t)
-defs = Dict(D(joint.phi) => 0, D(D(joint.phi)) => 0) # We may specify the initial condition here
+defs = Dict() # We may specify the initial condition here
 prob = ODEProblem(ssys, defs, (0, 3.35))
 
 sol = solve(prob, Rodas4())
@@ -90,8 +90,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(joint.phi) => 0, D(D(joint.phi)) => 0],
-                  (0, 10))
+prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = joint.phi, title="Damped pendulum")
@@ -123,7 +122,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
 sol = solve(prob, Rodas4())
 Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")
@@ -149,11 +148,7 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
 ssys = structural_simplify(IRSystem(model))
 
-defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
-            collect(root_body.r_0 .=> [0, 0, 0])...,
-            collect(root_body.w_a .=> [0, 0, 0])...,
-            collect(root_body.v_0 .=> [0, 0, 0])...,
-)
+defs = Dict()
 
 prob = ODEProblem(ssys, defs, (0, 10))
 
@@ -220,7 +215,7 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 12))
+prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
 plot(sol, layout=4)
 ```
