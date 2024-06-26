@@ -24,6 +24,10 @@ Many components allows the user to select with which color it is rendered. This 
 ## Rendering the world frame
 The display of the world frame can be turned off by setting `world.render => false` in the variable map.
 
+## Tracing the path of a frame in 3D visualizations
+The path that a frame traces out during simulation can be visualized by passing a vector of frames to the `render` function using the `traces` keyword, e.g., `render(..., traces=[frame1, frame2])`.
+See the Furuta-pendulum demonstration [Going 3D](@ref) for an example of this.
+
 
 ## Rendering API
 

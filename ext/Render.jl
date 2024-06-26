@@ -1,11 +1,11 @@
 module Render
 using Makie
 using Multibody
-import Multibody: render, render!, encode, decode, get_rot, get_trans, get_frame
+import Multibody: render, render!, loop_render, encode, decode, get_rot, get_trans, get_frame
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
-export render
+export render, loop_render
 using MeshIO, FileIO
 using StaticArrays
 
@@ -129,6 +129,9 @@ function render(model, sol,
     up = Vec3f(0,1,0),
     show_axis = false,
     timescale = 1.0,
+    traces = nothing,
+    display = false,
+    loop = 1,
     kwargs...
     )
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)
@@ -139,28 +142,83 @@ function render(model, sol,
     t = Observable(timevec[1])
 
     recursive_render!(scene, complete(model), sol, t)
-    fn = record(fig, filename, timevec; framerate) do time
-        t[] = time/timescale
+
+    if traces !== nothing
+        tvec = range(sol.t[1], stop=sol.t[end], length=500)
+        for frame in traces
+            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
+            points = get_trans(sol, frame, tvec) |> Matrix
+            Makie.lines!(scene, points)
+        end
     end
+    if loop > 1
+        timevec = repeat(timevec, loop)
+    end
+    if display
+        Base.display(fig)
+        sleep(2)
+        fnt = @async begin
+            record(fig, filename, timevec; framerate) do time
+                if time == timevec[1]
+                    Base.display(fig)
+                end
+                t[] = time/timescale
+                sleep(max(0, 1/framerate))
+            end
+        end
+        fn = fetch(fnt)
+    else
+        fn = record(fig, filename, timevec; framerate) do time
+            t[] = time/timescale
+        end
+    end
+
     fn, scene, fig
 end
 
 function render(model, sol, time::Real;
+    traces = nothing,
+    x = 2,
+    y = 0.5,
+    z = 2,
     kwargs...,
     )
 
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
-    scene, fig = default_scene(0,0,10; kwargs...)
+    scene, fig = default_scene(x,y,z; kwargs...)
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
 
     t = Slider(fig[2, 1], range = steps, startvalue = time).value
-    
     recursive_render!(scene, complete(model), sol, t)
+
+    if traces !== nothing
+        tvec = range(sol.t[1], stop=sol.t[end], length=500)
+        for frame in traces
+            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
+            points = get_trans(sol, frame, tvec) |> Matrix
+            Makie.lines!(scene, points)
+        end
+    end
     fig, t
+end
+
+function Multibody.loop_render(model, sol; timescale = 1.0, framerate = 30, max_loop = 5, kwargs...)
+    fig, t = render(model, sol, sol.t[1]; kwargs...)
+    sleeptime = 1/framerate
+    timevec = range(sol.t[1], sol.t[end]*timescale, step=sleeptime)
+    display(fig)
+    @async begin
+        for i = 1:max_loop
+            for ti in timevec
+                execution_time = @elapsed t[] = ti
+                sleep(max(0, sleeptime - execution_time))
+            end
+        end
+    end
 end
 
 """

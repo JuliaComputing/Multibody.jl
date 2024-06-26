@@ -220,9 +220,10 @@ sol = solve(prob, Rodas4())
 plot(sol, layout=4)
 ```
 
+In the animation below, we visualize the path that the origin of the pendulum tip traces by providing the tip frame in a vector of frames passed to `traces`
 ```@example pendulum
 import GLMakie
-Multibody.render(model, sol, filename = "furuta.gif")
+Multibody.render(model, sol, filename = "furuta.gif", traces=[model.tip.frame_a])
 nothing # hide
 ```
 ![furuta](furuta.gif)

@@ -381,9 +381,8 @@ end
 Extract the translational part of a frame from a solution at time `t`.
 See also [`get_rot`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
-function get_trans(sol, frame, t)
-    SVector{3}(sol(t, idxs = collect(frame.r_0)))
-end
+get_trans(sol, frame, t::Number) = SVector{3}(sol(t, idxs = collect(frame.r_0)))
+get_trans(sol, frame, t::AbstractArray) = sol(t, idxs = collect(frame.r_0))
 
 """
     T_W_F = get_frame(sol, frame, t)
