@@ -748,7 +748,7 @@ using LinearAlgebra
 # @testset "Rolling wheel" begin
 @mtkmodel WheelInWorld begin
     @components begin
-        world = W()
+        world = World(n=[0,0,-1])
         wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
                             I_long = 0.12,
                             x0 = 0.2,
@@ -762,7 +762,6 @@ worldwheel = complete(worldwheel)
 
 # pars = collect(worldwheel.world.n) .=> [0,0,-1];
 defs = Dict([
-    collect(worldwheel.world.n) .=> [0,0,-1];
     worldwheel.wheel.body.r_0[1] => 0.2;
     worldwheel.wheel.body.r_0[2] => 0.2;
     worldwheel.wheel.body.r_0[3] => 0.3;

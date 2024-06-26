@@ -1,6 +1,7 @@
 # test utils
 import Multibody.Rotations.QuatRotation as Quat
 import Multibody.Rotations
+import Multibody.Rotations: RotXYZ
 function get_R(sol, frame, t)
     reshape(sol(t, idxs=vec(ori(frame).R.mat)), 3, 3)
 end

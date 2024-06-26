@@ -38,24 +38,27 @@ end
 """
     World(; name, render=true)
 """
-@component function World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665)
+@component function World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
     # = 12 equations 
+    n0 = n
+    g0 = g
+    mu0 = mu
     @named frame_b = Frame()
-    @parameters n[1:3]=n [description = "gravity direction of world"]
+    @parameters n[1:3] [description = "gravity direction of world"]
     @parameters g=g [description = "gravitational acceleration of world"]
-    @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
+    @parameters mu=mu [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
-    n = GlobalScope.(collect(n))
+    n = collect(n)
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
                    O ~ nullrotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
                    ]
-    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
+    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b], defaults=[n .=> n0; g => g0; mu => mu0])
 end
 
 """
