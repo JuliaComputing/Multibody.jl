@@ -761,8 +761,7 @@ end
 worldwheel = complete(worldwheel)
 
 defs = Dict([
-    worldwheel.world.n[2] => 0;
-    worldwheel.world.n[3] => -1;
+    collect(worldwheel.world.n) .=> [0,0,-1];
     worldwheel.wheel.body.r_0[1] => 0.2;
     worldwheel.wheel.body.r_0[2] => 0.2;
     worldwheel.wheel.body.r_0[3] => 0.3;
@@ -774,16 +773,18 @@ prob = ODEProblem(ssys, defs, (0, 4))
 @test prob[collect(worldwheel.world.n)] == [0,0,-1]
 @test prob[collect(worldwheel.wheel.der_angles)] == prob[collect(worldwheel.wheel.rollingWheel.der_angles)]
 
-sol = solve(prob, Rodas5P(autodiff=false))
-plot(sol, idxs=[
-    worldwheel.wheel.x;
-    worldwheel.wheel.y;
-    worldwheel.wheel.body.r_0[1];
-    worldwheel.wheel.body.r_0[2];
-])
-##
+sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol)
-@info "Write tests"
+
+# plot(sol, idxs=[
+#     worldwheel.wheel.x;
+#     worldwheel.wheel.y;
+#     worldwheel.wheel.body.r_0[1];
+#     worldwheel.wheel.body.r_0[2];
+# ])
+
+@test sol(4, idxs=[worldwheel.wheel.x; worldwheel.wheel.y]) ≈ [0.162547, -2.23778] atol=1e-3
+##
 
 # end
 

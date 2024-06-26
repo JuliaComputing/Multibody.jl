@@ -307,11 +307,11 @@ Returns a `RotationMatrix` object.
 """
 function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
-        return RotationMatrix(Rotations.RotX(angle), zeros(3))
+        return RotationMatrix(Rotations.RotX(-angle), zeros(3)) # - due to modelica convention 
     elseif sequence == 2
-        return RotationMatrix(Rotations.RotY(angle), zeros(3))
+        return RotationMatrix(Rotations.RotY(-angle), zeros(3))
     elseif sequence == 3
-        return RotationMatrix(Rotations.RotZ(angle), zeros(3))
+        return RotationMatrix(Rotations.RotZ(-angle), zeros(3))
     else
         error("Invalid sequence $sequence")
     end

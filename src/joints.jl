@@ -559,14 +559,14 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 
     angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
-    @named frame_a = Frame(varw=false)
-    Ra = ori(frame_a, false)
+    @named frame_a = Frame(varw=true)
+    Ra = ori(frame_a, true)
 
     Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = [
                 Ra ~ Rarot
-                # Ra.w ~ Rarot.w
+                Ra.w ~ Rarot.w
 
                  # frame_a.R is computed from generalized coordinates
                  collect(frame_a.r_0) .~ [x, y, z]
