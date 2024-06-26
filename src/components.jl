@@ -38,17 +38,18 @@ end
 """
     World(; name, render=true)
 """
-@component function World(; name, render=true, point_gravity=false)
+@component function World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
     # = 12 equations 
     @named frame_b = Frame()
-    @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
-    @parameters g=9.80665 [description = "gravitational acceleration of world"]
+    @parameters n[1:3]=n [description = "gravity direction of world"]
+    @parameters g=g [description = "gravitational acceleration of world"]
     @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
+    n = collect(n)
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
                    O ~ nullrotation()

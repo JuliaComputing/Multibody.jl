@@ -745,31 +745,47 @@ end
 # ==============================================================================
 using LinearAlgebra
 # The wheel does not need the world
-@testset "Rolling wheel" begin
-@named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
-                        I_long = 0.12,
-                        x0 = 0.2,
-                        y0 = 0.2,
-                        der_angles = [0, 5, 1])
+# @testset "Rolling wheel" begin
+@mtkmodel WheelInWorld begin
+    @components begin
+        world = World(render=true)
+        wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
+                            I_long = 0.12,
+                            x0 = 0.2,
+                            y0 = 0.2,
+                            der_angles = [0, 5, 1])
+    end
+end
 
+@named worldwheel = WheelInWorld()
+worldwheel = complete(worldwheel)
 
-wheel = complete(wheel)
-
-defs = [
-    collect(world.n .=> [0, 0, -1]);
-    wheel.body.r_0[1] => 0.2;
-    wheel.body.r_0[2] => 0.2;
-    wheel.body.r_0[3] => 0.3;
+defs = Dict([
+    worldwheel.world.n[2] => 0;
+    worldwheel.world.n[3] => -1;
+    worldwheel.wheel.body.r_0[1] => 0.2;
+    worldwheel.wheel.body.r_0[2] => 0.2;
+    worldwheel.wheel.body.r_0[3] => 0.3;
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
-]
+])
 
-ssys = structural_simplify(IRSystem(wheel))
-prob = ODEProblem(ssys, defs, (0, 0.8))
-sol = solve(prob, RadauIIA5())
-@test_broken SciMLBase.successful_retcode(sol)
+ssys = structural_simplify(IRSystem(worldwheel))
+prob = ODEProblem(ssys, defs, (0, 4))
+@test prob[collect(worldwheel.world.n)] == [0,0,-1]
+@test prob[collect(worldwheel.wheel.der_angles)] == prob[collect(worldwheel.wheel.rollingWheel.der_angles)]
+
+sol = solve(prob, Rodas5P(autodiff=false))
+plot(sol, idxs=[
+    worldwheel.wheel.x;
+    worldwheel.wheel.y;
+    worldwheel.wheel.body.r_0[1];
+    worldwheel.wheel.body.r_0[2];
+])
+##
+@test SciMLBase.successful_retcode(sol)
 @info "Write tests"
 
-end
+# end
 
 # ==============================================================================
 ## FreeMotion ==================================================================

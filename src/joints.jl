@@ -500,8 +500,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
-    @named frame_a = Frame(varw=true)
+@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
@@ -560,13 +559,14 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3
 
     angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
-    Ra = ori(frame_a, true)
+    @named frame_a = Frame(varw=false)
+    Ra = ori(frame_a, false)
 
     Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = [
                 Ra ~ Rarot
-                Ra.w ~ Rarot.w
+                # Ra.w ~ Rarot.w
 
                  # frame_a.R is computed from generalized coordinates
                  collect(frame_a.r_0) .~ [x, y, z]
@@ -652,6 +652,7 @@ with the wheel itself.
         frame_a = Frame()
         rollingWheel = RollingWheelJoint(; radius, angles, x0, y0, der_angles, kwargs...)
         body = Body(r_cm = [0, 0, 0],
+                    state_priority = 0,
                     m = m,
                     I_11 = I_long,
                     I_22 = I_axis,
@@ -669,11 +670,11 @@ with the wheel itself.
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 20.0, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 20.0, description = "y-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 20, description = "x-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 20, description = "y-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [state_priority = 30.0, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [state_priority = 30.0, description = "Derivatives of angles"]
+        [state_priority = 30, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 30, description = "Derivatives of angles"]
     end
     # sts = reduce(vcat, collect.(sts))
 
