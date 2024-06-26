@@ -12,7 +12,7 @@ export render, render!
 
 """
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
-    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1)
+    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false)
 
 Create a 3D animation of a multibody system
 
@@ -33,8 +33,18 @@ The following keyword arguments are available to control the camera pose:
 - `z = 2`
 - `lookat = [0,0,0]`: a three-vector of coordinates indicating the point at which the camera looks.
 - `up = [0,1,0]`: A vector indicating the direction that is up.
+- `display`: if `true`, the figure will be displayed during the recording process and time will advance in real-time. This allows the user to manipulate the camera options using the mouse during the recording.
+
+See also [`loop_render`](@ref)
 """
 function render end
+
+"""
+    loop_render(model, sol; framerate = 30, timescale = 1, kwargs...)
+
+Similar to the method of [`render`](@ref) that produces an animation, but instead opens an interactive window where the time is automatically advanced in real time. This allows the user to manually manipulate the camera using the mouse is a live animation.
+"""
+function loop_render end
 
 """
     did_render::Bool = render!(scene, ::typeof(ComponentConstructor), sys, sol, t)

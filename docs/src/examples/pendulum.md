@@ -220,7 +220,7 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 12))
+prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
 plot(sol, layout=4)
 ```
