@@ -47,18 +47,18 @@ end
     g0 = g
     mu0 = mu
     @named frame_b = Frame()
-    @parameters n[1:3] [description = "gravity direction of world"]
-    @parameters g=g [description = "gravitational acceleration of world"]
-    @parameters mu=mu [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
+    @parameters n[1:3]=n0 [description = "gravity direction of world"]
+    @parameters g=g0 [description = "gravitational acceleration of world"]
+    @parameters mu=mu0 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
-    n = collect(n)
+    # n = collect(n)
     O = ori(frame_b)
-    eqs = Equation[collect(frame_b.r_0) .~ 0;
-                   O ~ nullrotation()
-                   # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
-                   ]
-    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b], defaults=[n .=> n0; g => g0; mu => mu0])
+    eqs = Equation[
+        collect(frame_b.r_0) .~ 0;
+        O ~ nullrotation()
+    ]
+    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
 end
 
 """

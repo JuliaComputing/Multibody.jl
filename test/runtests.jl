@@ -3,6 +3,7 @@ using Multibody
 using Test
 using JuliaSimCompiler
 using OrdinaryDiffEq
+using LinearAlgebra
 t = Multibody.t
 D = Differential(t)
 doplot() = false
