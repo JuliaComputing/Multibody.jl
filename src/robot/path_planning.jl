@@ -4,22 +4,7 @@ using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
 include("ptp.jl")
 
 "Generate reference angles for specified kinematic movement"
-function PathPlanning1(; name, q0deg = 0, q1deg = 1, time = 0:0.01:10,
-                       swingtime = 0.5, speed_max=1, acc_max=1, kwargs...)
-    # @parameters begin
-    # q0deg = q0deg, [description = "Start angle"]
-    # q1deg = q1deg, [description = "End angle"]
-    # speed_max = speed_max, [description = "Maximum axis speed"]
-    # acc_max = acc_max, [description = "Maximum axis acceleration"]
-    # startTime = startTime, [description = "Start time of movement"]
-    # swingtime = swingtime,
-    # [
-    #     description = "Additional time after reference motion is in rest before simulation is stopped",
-    # ]
-    # angleBeg = deg2rad(q0deg), [description = "Start angles"]
-    # angleEnd = deg2rad(q1deg), [description = "End angles"]
-    # end
-
+function PathPlanning1(; name, q0deg = 0, q1deg = 1, time = 0:0.01:10, speed_max=1, acc_max=1, kwargs...)
     systems = @named begin
         controlBus = ControlBus()
         path = KinematicPTP(; q1 = deg2rad.(q1deg),
@@ -29,8 +14,6 @@ function PathPlanning1(; name, q0deg = 0, q1deg = 1, time = 0:0.01:10,
                             #  startTime = startTime,
                             q0 = deg2rad.(q0deg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = 1, axisUsed = 1)
-        # terminateSimulation = TerminateSimulation(condition = time >=
-        #                                                       path.endTime + swingtime)
     end
 
     eqs = [connect(path.q, pathToAxis1.q)
@@ -44,21 +27,7 @@ end
 function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
                        q1deg = ones(naxis), time = 0:0.01:4,
                        speed_max = fill(3, naxis),
-                       acc_max = fill(2.5, naxis), startTime = 0, swingtime = 0.5, kwargs...)
-    # @parameters begin
-    #     naxis = naxis, [description = "Number of driven axis"]
-    #     q0deg[1:naxis] = q0deg, [description = "Start angles"]
-    #     q1deg[1:naxis] = q1deg, [description = "End angles"]
-    #     # speed_max[1:naxis] = speed_max, [description = "Maximum axis speed"]
-    #     # acc_max[1:naxis] = acc_max, [description = "Maximum axis acceleration"]
-    #     # startTime = startTime, [description = "Start time of movement"]
-    #     swingtime = swingtime,
-    #                 [
-    #                     description = "Additional time after reference motion is in rest before simulation is stopped",
-    #                 ]
-    #     angleBeg[1:6] = deg2rad.(q0deg), [description = "Start angles"]
-    #     angleEnd[1:6] = deg2rad.(q1deg), [description = "End angles"]
-    # end
+                       acc_max = fill(2.5, naxis), kwargs...)
 
     systems = @named begin
         controlBus = ControlBus()
@@ -66,7 +35,6 @@ function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
                             time,
                              qd_max = speed_max,
                              qdd_max = acc_max,
-                            #  startTime = startTime,
                             q0 = deg2rad.(q0deg), kwargs...)
         pathToAxis1 = PathToAxisControlBus(nAxis = naxis, axisUsed = 1)
         pathToAxis2 = PathToAxisControlBus(nAxis = naxis, axisUsed = 2)
@@ -74,8 +42,6 @@ function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
         pathToAxis4 = PathToAxisControlBus(nAxis = naxis, axisUsed = 4)
         pathToAxis5 = PathToAxisControlBus(nAxis = naxis, axisUsed = 5)
         pathToAxis6 = PathToAxisControlBus(nAxis = naxis, axisUsed = 6)
-        # terminateSimulation = TerminateSimulation(condition = time >=
-        #                                                       path.endTime + swingtime)
     end
 
     eqs = [connect(path.q, pathToAxis1.q)

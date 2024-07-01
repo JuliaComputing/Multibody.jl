@@ -1,7 +1,10 @@
 using Multibody
 using Documenter
-using CairoMakie
+using GLMakie
+GLMakie.activate!()
+
 ENV["JULIA_DEBUG"]=Documenter # Enable this for debugging
+ENV["DOCS_BUILD"] = true # used to lower the default frame rate in animations for the docs
 
 DocMeta.setdocmeta!(Multibody, :DocTestSetup, :(using Multibody); recursive = true)
 
@@ -10,8 +13,9 @@ makedocs(;
          authors = "JuliaHub Inc.",
          #  strict = [:example_block, :setup_block, :eval_block],
          sitename = "Multibody.jl",
-         warnonly = [:missing_docs, :cross_references, :example_block, :docs_block],
+         warnonly = [:missing_docs, :cross_references, :docs_block],
          pagesonly = true,
+        #  draft = true,
          format = Documenter.HTML(;
                                   prettyurls = get(ENV, "CI", nothing) == "true",
                                   edit_link = nothing),
@@ -31,7 +35,11 @@ makedocs(;
                  "Kinematic loops" => "examples/kinematic_loops.md",
                  "Industrial robot" => "examples/robot.md",
                  "Ropes, cables and chains" => "examples/ropes_and_cables.md",
+                 "Swing" => "examples/swing.md",
+                 "Bodies in space" => "examples/space.md",
+                 "Gyroscopic effects" => "examples/gyroscopic_effects.md",
              ],
+             "Rotations and orientation" => "rotations.md",
              "3D rendering" => "rendering.md",
          ])
 

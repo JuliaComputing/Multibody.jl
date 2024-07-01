@@ -1,6 +1,6 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
-authors = ["JuliaHub Inc."]
+authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 version = "0.1.0"
 
 [deps]
@@ -23,10 +23,13 @@ Render = ["Makie"]
 
 [compat]
 CoordinateTransformations = "0.6"
+DataInterpolations = "5"
 FileIO = "1"
+JuliaSimCompiler = "0.1.12"
+LinearAlgebra = "1.6"
 MeshIO = "0.4"
 ModelingToolkit = "9"
-ModelingToolkitStandardLibrary = "2"
+ModelingToolkitStandardLibrary = "2.7.2"
 Rotations = "1.4"
 StaticArrays = "1"
 julia = "1"

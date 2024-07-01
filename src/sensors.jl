@@ -99,13 +99,13 @@ function RelativeAngles(; name, sequence = [1, 2, 3])
         frame_b = Frame()
         angles = Blocks.RealOutput(nout = 3)
     end
-    @named R_rel = NumRotationMatrix()
+    @named Rrel = NumRotationMatrix()
     eqs = [frame_a.f .~ zeros(3) |> collect
            frame_a.tau .~ zeros(3) |> collect
            frame_b.f .~ zeros(3) |> collect
            frame_b.tau .~ zeros(3) |> collect
-           R_rel ~ relative_rotation(frame_a, frame_b)
-           angles .~ axes_rotationangles(R_rel, sequence, guessAngle1)]
+           Rrel ~ relative_rotation(frame_a, frame_b)
+           angles .~ axes_rotationangles(Rrel, sequence, guessAngle1)]
     compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
 end
 
@@ -120,4 +120,30 @@ function AbsoluteAngles(; name, sequence = [1, 2, 3])
            collect(frame_a.tau .~ 0)
            angles.u .~ axes_rotationangles(ori(frame_a), [1, 2, 3])]
     extend(compose(ODESystem(eqs, t; name)), pas)
+end
+
+
+"""
+    Power(; name)
+
+A sensor measuring mechanical power transmitted from `frame_a` to `frame_b`.
+
+# Connectors:
+`power` of type `RealOutput`.
+"""
+function Power(; name)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        power = RealOutput()
+    end
+    eqs = [
+        frame_a.r_0 .~ frame_b.r_0 |> collect
+        ori(frame_a) ~ ori(frame_b)
+        0 .~ frame_a.f + frame_b.f |> collect
+        0 .~ frame_a.tau + frame_b.tau |> collect
+        power.u ~ collect(frame_a.f)'resolve2(frame_a, D.(frame_a.r_0)) +
+                    collect(frame_a.tau)'angular_velocity2(ori(frame_a))
+    ]
+    ODESystem(eqs, t; name, systems)
 end

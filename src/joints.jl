@@ -179,15 +179,20 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    d = 0,
                    phi_dd = 0,
                    color = [1, 1, 0, 1],
-                   radius = 0.1)
+                   radius = 0.1,
+                   quat = false,
+                   )
+
+    dnum = d
     @named begin
         ptf = PartialTwoFrames()
-        R_rel = NumRotationMatrix()
-        R_rel_inv = NumRotationMatrix()
+        Rrel = NumRotationMatrix()
+        Rrel_inv = NumRotationMatrix()
     end
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+        d = d
     end
     @unpack frame_a, frame_b = ptf
     # @parameters begin # Currently not using parameters due to these appearing in if statements
@@ -199,40 +204,45 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                      ] end
 
     # torque balance
-    if d <= 0
+    if dnum <= 0
         eqs = [zeros(3) .~ collect(frame_a.tau)
             zeros(3) .~ collect(frame_b.tau)
             collect(frame_b.r_0) .~ collect(frame_a.r_0)]
     else
         fric = d*w_rel
         eqs = [-fric .~ collect(frame_a.tau)
-        fric .~ resolve1(R_rel, collect(frame_b.tau))
+        fric .~ resolve1(Rrel, collect(frame_b.tau))
         collect(frame_b.r_0) .~ collect(frame_a.r_0)]
     end
 
     if state
-        @variables begin
-            (phi(t)[1:3] = phi),
-            [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-            (phi_d(t)[1:3] = phi_d),
-            [state_priority = 10, description = "3 angle derivatives"]
-            (phi_dd(t)[1:3] = phi_dd),
-            [state_priority = 10, description = "3 angle second derivatives"]
+        if quat
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel))
+            # append!(eqs, collect(w_rel) .~ angularVelocity2(Rrel))
+        else
+            @variables begin
+                (phi(t)[1:3] = phi),
+                [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
+                (phi_d(t)[1:3] = phi_d),
+                [state_priority = 10, description = "3 angle derivatives"]
+                (phi_dd(t)[1:3] = phi_dd),
+                [state_priority = 10, description = "3 angle second derivatives"]
+            end
+            append!(eqs,
+                    [Rrel ~ axes_rotations(sequence, phi, phi_d)
+                    collect(w_rel) .~ angular_velocity2(Rrel)
+                    collect(phi_d .~ D.(phi))
+                    collect(phi_dd .~ D.(phi_d))])
         end
-        append!(eqs,
-                [R_rel ~ axes_rotations(sequence, phi, phi_d)
-                 collect(w_rel) .~ angular_velocity2(R_rel)
-                 collect(phi_d .~ D.(phi))
-                 collect(phi_dd .~ D.(phi_d))])
         if isroot
             append!(eqs,
-                    [connect_orientation(ori(frame_b), absolute_rotation(frame_a, R_rel); iscut)
-                     zeros(3) .~ collect(frame_a.f) + resolve1(R_rel, frame_b.f)])
+                    [connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut)
+                     zeros(3) .~ collect(frame_a.f) + resolve1(Rrel, frame_b.f)])
         else
             append!(eqs,
-                    [connect_orientation(R_rel_inv, inverse_rotation(R_rel); iscut)
-                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)
-                     zeros(3) .~ collect(frame_b.f) + resolve2(R_rel, frame_a.f)])
+                    [connect_orientation(Rrel_inv, inverse_rotation(Rrel); iscut)
+                     ori(frame_a) ~ absolute_rotation(frame_b, Rrel_inv)
+                     zeros(3) .~ collect(frame_b.f) + resolve2(Rrel, frame_a.f)])
         end
 
     else
@@ -470,13 +480,13 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
-    @named frame_a = Frame()
+function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
+    @named frame_a = Frame(varw=true)
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
-        (x(t) = x0), [state_priority = 10, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 10, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 10, description = "z-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 1, description = "x-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 1, description = "y-position of the wheel axis"]
+        (z(t) = z0), [state_priority = 1, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = zeros(3)), [description = "Derivatives of angles"]
@@ -498,7 +508,7 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
         # ]
         (e_axis_0(t)[1:3] = zeros(3)),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = zeros(3)),
+        (delta_0(t)[1:3] = [0,0,-radius]),
         [description = "Distance vector from wheel center to contact point"]
         (e_n_0(t)[1:3] = zeros(3)),
         [
@@ -513,8 +523,8 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
-        (s(t) = 0), [state_priority = 10, description = "Road surface parameter 1"]
-        (w(t) = 0), [state_priority = 10, description = "Road surface parameter 2"]
+        (s(t) = 0), [state_priority = 1, description = "Road surface parameter 1"]
+        (w(t) = 0), [state_priority = 1, description = "Road surface parameter 2"]
         (e_s_0(t)[1:3] = zeros(3)),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
@@ -528,25 +538,33 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
         (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
     end
 
+    angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
+
+    Ra = ori(frame_a, true)
+
+    Rarot = axes_rotations(sequence, angles, der_angles)
+
     equations = [
+                Ra ~ Rarot
+                Ra.w ~ Rarot.w
+
                  # frame_a.R is computed from generalized coordinates
                  collect(frame_a.r_0) .~ [x, y, z]
-                 collect(der_angles) .~ D.(angles)
-                 ori(frame_a) ~ axes_rotations([3, 2, 1], angles, der_angles)
+                 der_angles .~ D.(angles)
 
                  # Road description
-                 collect(r_road_0) .~ [s, w, 0]
-                 collect(e_n_0) .~ [0, 0, 1]
-                 collect(e_s_0) .~ [1, 0, 0]
+                 r_road_0 .~ [s, w, 0]
+                 e_n_0 .~ [0, 0, 1]
+                 e_s_0 .~ [1, 0, 0]
 
                  # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
-                 collect(e_axis_0) .~ resolve1(ori(frame_a), [0, 1, 0])
-                 collect(aux) .~ collect(cross(e_n_0, e_axis_0))
-                 collect(e_long_0) .~ collect(aux ./ _norm(aux))
-                 collect(e_lat_0) .~ collect(cross(e_long_0, e_n_0))
+                 e_axis_0 .~ resolve1(Ra, [0, 1, 0])
+                 aux .~ (cross(e_n_0, e_axis_0))
+                 e_long_0 .~ (aux ./ _norm(aux))
+                 e_lat_0 .~ (cross(e_long_0, e_n_0))
 
                  # Determine point on road where the wheel is in contact with the road
-                 collect(delta_0) .~ collect(r_road_0 - frame_a.r_0)
+                 delta_0 .~ r_road_0 - frame_a.r_0
                  0 ~ delta_0'e_axis_0
                  0 ~ delta_0'e_long_0
 
@@ -557,9 +575,9 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
                 #  err ~ norm(delta_0) - radius
 
                  # Slip velocities
-                 collect(v_0) .~ D.(frame_a.r_0)
-                 collect(w_0) .~ angular_velocity1(ori(frame_a))
-                 collect(vContact_0) .~ collect(v_0) + cross(w_0, delta_0)
+                 v_0 .~ D.(frame_a.r_0)
+                 w_0 .~ angular_velocity1(Ra)
+                 vContact_0 .~ v_0 + cross(w_0, delta_0)
 
                  # Two non-holonomic constraint equations on velocity level (ideal rolling, no slippage)
                  0 ~ vContact_0'e_long_0
@@ -569,9 +587,9 @@ function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0)
                  f_wheel_0 .~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
 
                  # Force and torque balance at the wheel center
-                 zeros(3) .~ collect(frame_a.f) + resolve2(ori(frame_a), f_wheel_0)
+                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                  zeros(3) .~ collect(frame_a.tau) +
-                             resolve2(ori(frame_a), cross(delta_0, f_wheel_0))]
+                             resolve2(Ra, cross(delta_0, f_wheel_0))]
     compose(ODESystem(equations, t; name), frame_a)
 end
 
@@ -631,13 +649,13 @@ with the wheel itself.
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 10, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 10, description = "y-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 2.0, description = "x-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 2.0, description = "y-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [description = "Derivatives of angles"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 3.0, description = "Derivatives of angles"]
     end
-    sts = reduce(vcat, collect.(sts))
+    # sts = reduce(vcat, collect.(sts))
 
     equations = Equation[rollingWheel.x ~ x
                          rollingWheel.y ~ y
@@ -657,7 +675,7 @@ Note, that bodies such as [`Body`](@ref), [`BodyShape`](@ref), have potential st
 
 The state of the FreeMotion object consits of:
 
-The relative position vector `r_rel_a` from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_a` and the relative velocity `v_rel_a` of the origin of `frame_b` with respect to the origin of `frame_a`, resolved in `frame_a (= der(r_rel_a))`.
+The relative position vector `r_rel_a` from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_a` and the relative velocity `v_rel_a` of the origin of `frame_b` with respect to the origin of `frame_a`, resolved in `frame_a (= D(r_rel_a))`.
 
 # Arguments
 
@@ -676,7 +694,9 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 - `a_rel_a`
 """
 @component function FreeMotion(; name, state = true, sequence = [1, 2, 3], isroot = true,
+                    quat = false,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
+                    iscut = false,
                     phi_d = 0,
                     phi_dd = 0,
                     w_rel_b = 0,
@@ -689,13 +709,13 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     end
     @variables begin
         (phi(t)[1:3] = phi),
-        [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-        (phi_d(t)[1:3] = phi_d), [state_priority = 10, description = "Derivatives of phi"]
+        [state_priority = 4, description = "3 angles to rotate frame_a into frame_b"]
+        (phi_d(t)[1:3] = phi_d), [state_priority = 4, description = "Derivatives of phi"]
         (phi_dd(t)[1:3] = phi_dd),
-        [state_priority = 10, description = "Second derivatives of phi"]
+        [state_priority = 4, description = "Second derivatives of phi"]
         (w_rel_b(t)[1:3] = w_rel_b),
         [
-            state_priority = 10,
+            state_priority = quat ? 4.0 : 1.0,
             description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
         ]
         (r_rel_a(t)[1:3] = r_rel_a),
@@ -704,13 +724,15 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         ]
         (v_rel_a(t)[1:3] = v_rel_a),
         [
-            description = "= der(r_rel_a), i.e., velocity of origin of frame_b with respect to origin of frame_a, resolved in frame_a",
+            description = "= D(r_rel_a), i.e., velocity of origin of frame_b with respect to origin of frame_a, resolved in frame_a",
         ]
-        (a_rel_a(t)[1:3] = a_rel_a), [description = "= der(v_rel_a)"]
+        (a_rel_a(t)[1:3] = a_rel_a), [description = "= D(v_rel_a)"]
     end
 
-    @named R_rel = NumRotationMatrix()
-    @named R_rel_inv = NumRotationMatrix()
+    @named Rrel_f = Frame()
+    @named Rrel_inv_f = Frame()
+    Rrel = ori(Rrel_f)
+    Rrel_inv = ori(Rrel_inv_f)
 
     eqs = [
            # Cut-forces and cut-torques are zero
@@ -727,18 +749,23 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     if state
         if isroot
             append!(eqs,
-                    ori(frame_b) ~ absolute_rotation(frame_a, R_rel))
+                    connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut))
         else
             append!(eqs,
-                    [R_rel_inv ~ inverse_rotation(R_rel)
-                     ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv)])
+                    [Rrel_inv ~ inverse_rotation(Rrel)
+                     connect_orientation(ori(frame_a), absolute_rotation(frame_b, Rrel_inv); iscut)])
         end
 
-        append!(eqs,
-                [phi_d .~ D.(phi)
-                 phi_dd .~ D.(phi_d)
-                 R_rel ~ axes_rotations(sequence, phi, phi_d)
-                 w_rel_b .~ angular_velocity2(R_rel)])
+        if quat
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
+
+        else
+            append!(eqs,
+                    [phi_d .~ D.(phi)
+                    phi_dd .~ D.(phi_d)
+                    Rrel ~ axes_rotations(sequence, phi, phi_d)
+                    w_rel_b .~ angular_velocity2(Rrel)])
+        end
 
     else
         # Free motion joint does not have state
@@ -748,7 +775,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                                         R, angular_velocity1(frame_a)))
         end
     end
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    if state && !isroot
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
+    else
+        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, )
+    end
 end
 
 """
@@ -790,11 +821,11 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     @variables n(t)[1:3]
     
 
-    # @named R_rel = NumRotationMatrix()
+    # @named Rrel = NumRotationMatrix()
 
     Rrel0 = planar_rotation(n, 0, 0)
     varw = false
-    @named R_rel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
+    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
 
     n = collect(n)
     ey_a = collect(ey_a)
@@ -805,14 +836,14 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     Rb = ori(frame_b)
 
     eqs = [
-        R_rel ~ relative_rotation(ori(frame_a), ori(frame_b))
+        Rrel ~ relative_rotation(ori(frame_a), ori(frame_b))
         r_rel_a .~ resolve2(ori(frame_a), collect(frame_b.r_0 - frame_a.r_0))
         0 ~ (ex_a'r_rel_a)[]
         0 ~ (ey_a'r_rel_a)[]
         collect(frame_a.tau) .~ zeros(3)
         collect(frame_b.tau) .~ zeros(3)
         collect(frame_a.f) .~ vec([ex_a ey_a]*f_c)
-        collect(frame_b.f) .~ -resolve2(R_rel, frame_a.f)
+        collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f)
         collect(n) .~ n0
     ]
     ODESystem(eqs, t; name, systems=[frame_a, frame_b])

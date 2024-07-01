@@ -46,12 +46,7 @@ eqs = [
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys,[
-                    D(p1.s) => 0,
-                    D(D(p1.s)) => 0,
-                    D(p2.s) => 0,
-                    D(D(p2.s)) => 0,
-                  ], (0, 5))
+prob = ODEProblem(ssys,[], (0, 5))
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
@@ -64,7 +59,7 @@ The plot indicates that the two systems behave identically.
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
-import CairoMakie
+import GLMakie
 Multibody.render(model, sol; x=5, z = 5, filename = "springmass.gif")
 nothing # hide
 ```

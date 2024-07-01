@@ -61,7 +61,7 @@ connections = [
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 m = structural_simplify(IRSystem(fourbar))
-prob = ODEProblem(m, [], (0.0, 30.0))
+prob = ODEProblem(m, [world.g => 9.81], (0.0, 30.0))
 sol = solve(prob, Rodas4(autodiff=false))
 
 plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
@@ -72,7 +72,6 @@ using Test
 @test SciMLBase.successful_retcode(sol)
 @test sol(sol.t[end], idxs=j3.phi) % 2pi ≈ π/2 atol=0.3 # Test the the "pendulum" is hanging almost straight down after sufficient time has passed
 @test sol(sol.t[end], idxs=j2.phi) % 2pi ≈ -π/2 atol=0.3
-
 ```
 
 
@@ -80,8 +79,8 @@ using Test
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example kinloop
-import CairoMakie
-Multibody.render(fourbar, sol, 0:0.033:10; x=4, y=-1, z=4, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
+import GLMakie
+Multibody.render(fourbar, sol, 0:0.05:10; x=4, y=-1, z=4, lookat=[0, -1, 0], filename = "fourbar.gif") # Use "fourbar.mp4" for a video file
 nothing # hide
 ```
 
@@ -91,7 +90,7 @@ nothing # hide
 ## Using cut joints
 
 The mechanism below is another instance of a 4-bar linkage, this time with 6 revolute joints, 1 prismatic joint and 4 bodies. In order to simulate this mechanism, the user must
-1. Use the `iscut=true` keyword argument to one of the `Revolute` joints to indicate that the joint is a cut joint. A cut joint behaves similarly to a regular joint, but it introduces fewer constraints in order to avoid the otherwise over-constrained system resulting from closing the kinematic loop.
+1. Use the `iscut=true` keyword argument to one of the `Revolute` joints to indicate that the joint is a cut joint. A cut joint behaves similarly to a regular joint, but it introduces fewer constraints in order to avoid the otherwise over-constrained system resulting from closing the kinematic loop. While almost any joint can be chosen as the cut joint, it might be worthwhile experimenting with this choice in order to get an efficient representation. In this example, cutting `j5` produces an 8-dimensional state realization, while all other joints result in a 17-dimensional state.
 2. Increase the `state_priority` of the joint `j1` above the default joint priority 3. This encourages the model compiler to choose the joint coordinate of `j1` as state variable. The joint coordinate of `j1` is the only coordinate that uniquely determines the configuration of the mechanism. The choice of any other joint coordinate would lead to a singular representation in at least one configuration of the mechanism. The joint `j1` is the revolute joint located in the origin, see the animation below where this joint is made larger than the others.
 
 
@@ -104,11 +103,11 @@ systems = @named begin
     b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
     b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
     b3 = BodyShape(r = [-1, 0.3, 0.1], radius=0.03)
-    rev = Revolute(n = [0, 1, 0], iscut=true)
+    rev = Revolute(n = [0, 1, 0])
     rev1 = Revolute()
     j3 = Revolute(n = [1, 0, 0])
     j4 = Revolute(n = [0, 1, 0])
-    j5 = Revolute(n = [0, 0, 1])
+    j5 = Revolute(n = [0, 0, 1], iscut=true)
     b0 = FixedTranslation(r = [1.2, 0, 0], radius=0)
 end
 
@@ -131,14 +130,14 @@ m = structural_simplify(IRSystem(fourbar2))
 
 prob = ODEProblem(m, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
 
-sol = solve(prob, Rodas4(autodiff=true))
+sol = solve(prob, FBDF(autodiff=true));
 @test SciMLBase.successful_retcode(sol)
 plot(sol, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green in the animation below)
 ```
 
 ```@example kinloop
-import CairoMakie
-Multibody.render(fourbar2, sol; x=-2, y = 3, z = 5, filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
+import GLMakie
+Multibody.render(fourbar2, sol; x=-2, y = 2, z = 3, filename = "fourbar2.gif") # Use "fourbar2.mp4" for a video file
 nothing # hide
 ```
 

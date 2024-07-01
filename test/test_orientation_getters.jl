@@ -32,7 +32,7 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 12))
+prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1, model.world.g => 9.81], (0, 12))
 sol = solve(prob, Rodas4())
 
 
@@ -71,7 +71,7 @@ arm_r = sol(1, idxs=collect(model.upper_arm.r))
 
 # The lower arm is finally having an extent along the $y$-axis. At the final time when the pendulum motion has been fully damped, we see that the second frame of this body ends up with an $y$-coordinate of `-0.6`:
 t1 = get_trans(sol, model.lower_arm.frame_b, 12)
-@test t1 ≈ [-0.009040487302666853, -0.59999996727278, 0.599931920189277]
+@test t1 ≈ [-0.009040487302666853, -0.59999996727278, 0.599931920189277] rtol=1e-6
 
 
 # If we rotate the vector of extent of the lower arm to the world frame, we indeed see that the only coordinate that is nonzero is the $y$ coordinate:

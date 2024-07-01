@@ -40,6 +40,11 @@ end
     include("test_orientation_getters.jl")
 end
 
+@testset "quaternions" begin
+    @info "Testing quaternions"
+    include("test_quaternions.jl")
+end
+
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -58,9 +63,8 @@ t = Multibody.t
 D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
-    @named spring = Multibody.Spring(c = 1, fixed_rotation_at_frame_a = false,
-                                    fixed_rotation_at_frame_b = false)
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
+    @named spring = Multibody.Spring(c = 1)
 
     connections = [connect(world.frame_b, spring.frame_a)
                 connect(spring.frame_b, body.frame_a)]
@@ -77,7 +81,10 @@ D = Differential(t)
     # @test all(isfinite, du)
 
     # @test_skip begin # Yingbo: instability
-    prob = ODEProblem(ssys, unknowns(ssys) .=> 0, (0, 10))
+    prob = ODEProblem(ssys, [
+        collect(body.w_a) .=> 0.01;
+        collect(body.v_0) .=> 0;
+    ], (0, 10))
     sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
@@ -86,7 +93,7 @@ D = Differential(t)
     @test sol(pi, idxs = body.r_0[2]) < -2
 
     doplot() &&
-        plot(sol, idxs = [collect(body.r_0); collect(body.v_0); collect(body.phi)], layout = 9)
+        plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6)
 end
 
 # ==============================================================================
@@ -94,22 +101,27 @@ end
 # ==============================================================================
 using LinearAlgebra, ModelingToolkit
 @testset "Simple pendulum" begin
-@named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true)
+@named joint = Multibody.Revolute(n = [0, 0, 1], isroot = true, axisflange=true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
 @named torksensor = CutTorque()
 @named forcesensor = CutForce()
+@named powersensor = Multibody.Power()
+@named damper = Rotational.Damper(d = 1e-300)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, body.frame_a, torksensor.frame_a,
-                       forcesensor.frame_a)]
+                       forcesensor.frame_a, powersensor.frame_a)]
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, torksensor.frame_a)
                connect(torksensor.frame_b, forcesensor.frame_a)
-               connect(forcesensor.frame_b, body.frame_a)]
+               connect(damper.flange_a, joint.axis)
+               connect(damper.flange_b, joint.support)
+               connect(forcesensor.frame_b, powersensor.frame_a)
+               connect(powersensor.frame_b, body.frame_a)]
 
 @named model = ODESystem(connections, t,
-                         systems = [world, joint, body, torksensor, forcesensor])
+                         systems = [world, joint, body, torksensor, forcesensor, powersensor, damper])
 modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
@@ -117,8 +129,7 @@ irsys = IRSystem(modele)
 ssys = structural_simplify(irsys)
 
 D = Differential(t)
-defs = Dict(collect((D.(joint.phi)) .=> [0, 0, 0])...,
-            collect(D.(D.(joint.phi)) .=> [0, 0, 0])...)
+defs = Dict()
 prob = ODEProblem(ssys, defs, (0, 10))
 
 using OrdinaryDiffEq
@@ -130,9 +141,57 @@ sol = solve(prob, Rodas4())
 
 @test maximum(norm.(eachcol(reduce(hcat, sol[collect(forcesensor.force.u)])))) ≈
       maximum(norm.(eachcol(reduce(hcat, sol[collect(joint.frame_a.f)]))))
-
+@test norm(sol[powersensor.power.u]) < 1e-16
 doplot() && plot(sol, idxs = collect(joint.phi))
+
+# Test power sensos
+defs = Dict(damper.d => 10)
+prob = ODEProblem(ssys, defs, (0, 1))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+@test sol(1, idxs=powersensor.power.u) ≈ -1.94758 atol=1e-2
 end
+
+# ==============================================================================
+## Point gravity ======================
+# ==============================================================================
+@mtkmodel PointGrav begin
+    @components begin
+        world = W()
+        body1 = Body(
+            m=1,
+            I_11=0.1,
+            I_22=0.1,
+            I_33=0.1,
+            r_0=[0,0.6,0],
+            isroot=true,
+            v_0=[1,0,0])
+        body2 = Body(
+            m=1,
+            I_11=0.1,
+            I_22=0.1,
+            I_33=0.1,
+            r_0=[0.6,0.6,0],
+            isroot=true,
+            v_0=[0.6,0,0])
+    end
+end
+@named model = PointGrav()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+defs = [
+    model.world.mu => 1
+    model.world.point_gravity => true
+    collect(model.body1.w_a) .=> 0
+    collect(model.body2.w_a) .=> 0
+    
+]
+prob = ODEProblem(ssys, defs, (0, 5))
+sol = solve(prob, Rodas4())
+
+@test sol(5, idxs=model.body2.r_0) ≈ [0.7867717, 0.478463, 0] atol=1e-1
+# plot(sol)
+
 
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
@@ -326,17 +385,21 @@ end
 # ==============================================================================
 
 @testset "Spring damper system" begin
-world = Multibody.world
-@named begin
+systems = @named begin
+    world = W()
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
                  I_33 = 0.1, r_0 = [0.3, -0.2, 0], quat=false) # This is root since there is no joint parallel to the spring leading to this body
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
+    body3 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
+                 I_33 = 0.1, r_0 = [1.8, -0.2, 0], quat=false)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
+    bar3 = FixedTranslation(r = [0.9, 0, 0])
     p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
+    springdamper = SpringDamperParallel(c=30, d=2, s_unstretched = 0.1)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
        connect(bar1.frame_b, bar2.frame_a)
@@ -347,20 +410,14 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(damper1.frame_a, bar1.frame_b)
        connect(spring1.frame_a, bar1.frame_b)
        connect(damper1.frame_b, body1.frame_a)
-       connect(spring1.frame_b, body1.frame_a)]
+       connect(spring1.frame_b, body1.frame_a)
+       
+       connect(bar2.frame_b, bar3.frame_a)
+       connect(bar3.frame_b, springdamper.frame_a)
+       connect(springdamper.frame_b, body3.frame_a)
+       ]
 
-@named model = ODESystem(eqs, t,
-                         systems = [
-                             world,
-                             body1,
-                             body2,
-                             bar1,
-                             bar2,
-                             p2,
-                             spring1,
-                             spring2,
-                             damper1,
-                         ])
+@named model = ODESystem(eqs, t; systems)
 # ssys = structural_simplify(model, allow_parameter = false)
 ssys = structural_simplify(IRSystem(model))#, alias_eliminate = false)
 
@@ -368,6 +425,8 @@ prob = ODEProblem(ssys,
                   [#collect(D.(body1.phid)) .=> 0;
                   collect(body1.v_0 .=> 0)
                   collect(body1.w_a .=> 0)
+                  collect(body3.w_a .=> 0)
+                  collect(body3.v_0 .=> 0)
                    damper1.d => 0], (0, 10)
 )
 du = similar(prob.u0)
@@ -381,15 +440,19 @@ endpoint = sol(sol.t[end], idxs = [spring1.s, spring2.s])
 prob = ODEProblem(ssys,
                   [collect(body1.v_0 .=> 0)
                   collect(body1.w_a .=> 0)
+                  collect(body3.w_a .=> 0)
+                  collect(body3.v_0 .=> 0)
                    damper1.d => 2], (0, 10))
 
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test sol(sol.t[end], idxs = spring1.v)≈0 atol=0.01 # damped oscillation
 
-doplot() && plot(sol, idxs = [spring1.s, spring2.s])
+@test norm([1 -1]*Matrix(sol(0:1:10, idxs=[spring1.s, springdamper.s]))) < 1e-10 # Test that the difference is small
+
+doplot() && plot(sol, idxs = [spring1.s, spring2.s, springdamper.s])
 doplot() && plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])
-doplot() && plot(sol, idxs = [spring1.f, spring2.f])
+doplot() && plot(sol, idxs = [spring1.f, spring2.f, springdamper.f])
 end
 # ==============================================================================
 ## Three springs ===============================================================
@@ -448,18 +511,8 @@ sol = solve(prob, Rodas4())#, u0 = prob.u0 .+ 1e-1 .* rand.())
 
 doplot() && plot(sol, idxs = [body1.r_0...]) |> display
 # end
-# TODO: add tutorial explaining what interesting things this demos illustrates
 # fixed_rotation_at_frame_a and b = true required
 end
-# ==============================================================================
-## FreeBody ====================================================================
-# ==============================================================================
-# https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.FreeBody.html
-using Multibody
-using ModelingToolkit
-# using Plots
-using JuliaSimCompiler
-using OrdinaryDiffEq
 
 @testset "FreeBody" begin
 t = Multibody.t
@@ -544,6 +597,7 @@ sol = solve(prob, Rodas4())
 @test sol(2, idxs=sys.body.r_0) ≈ [1.0907, -18.28, 0] atol=1e-3
 
 # plot(sol)
+
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
 # ==============================================================================
@@ -688,6 +742,7 @@ end
 # ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
+using LinearAlgebra
 # The wheel does not need the world
 @testset "Rolling wheel" begin
 @named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
@@ -701,15 +756,15 @@ wheel = complete(wheel)
 
 defs = [
     collect(world.n .=> [0, 0, -1]);
+    vec(ori(wheel.frame_a).R .=> I(3));
+    vec(ori(wheel.body.frame_a).R .=> I(3));
     # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
 ]
-
-
 
 @test_skip begin # Does not initialize
     ssys = structural_simplify(IRSystem(wheel))
     prob = ODEProblem(ssys, defs, (0, 10))
-    sol = solve(prob, Rodas5P(autodiff=false), u0 = prob.u0 .+ 1e-6 .* randn.())
+    sol = solve(prob, Rodas5P(autodiff=false))
     @info "Write tests"
 end
 
@@ -737,7 +792,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12
 
-prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -761,7 +816,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12 
 
-prob = ODEProblem(ssys, [collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -781,6 +836,7 @@ ssys = structural_simplify(IRSystem(model))
 @test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [
+    world.g=>9.81; 
     collect(body.w_a .=> [0, 1, 0]); 
     collect(body.v_0 .=> [0, 0, 0]); 
 ], (0, 10))
@@ -829,44 +885,6 @@ doplot() && plot(sol, idxs = collect(body.body.phi), title = "Dzhanibekov effect
 
 end
 
-
-# ==============================================================================
-## Harmonic oscillator with Body as root and quaternions as state variables
-# ==============================================================================
-
-@testset "Harmonic oscillator with Body as root and quaternions as state variables" begin
-
-@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], quat=true) # This time the body isroot since there is no joint containing state
-@named spring = Multibody.Spring(c = 1)
-
-connections = [connect(world.frame_b, spring.frame_a)
-               connect(spring.frame_b, body.frame_a)]
-
-@named model = ODESystem(connections, t, systems = [world, spring, body])
-model = complete(model)
-# ssys = structural_simplify(model, allow_parameter = false)
-
-irsys = IRSystem(model)
-ssys = structural_simplify(irsys)
-@test length(unknowns(ssys)) == 13 # One extra due to quaternions
-D = Differential(t)
-
-# du = prob.f.f.f_oop(prob.u0, prob.p, 0)
-# @test all(isfinite, du)
-
-# prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
-prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 0, 0]); ], (0, 10))
-sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
-
-doplot() &&
-    plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6) |> display
-
-@test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
-@test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
-@test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
-@test sol(pi, idxs = body.r_0[2]) < -2
-
-end
 
 ## Actuated joint
 using Multibody
@@ -1028,3 +1046,145 @@ sol = solve(prob, Rodas4())
 
 tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
+
+
+@test_skip begin # Produces state with rotation matrix
+    number_of_links = 3
+    chain_length = 2
+    x_dist = 1.5 # Distance between the two mounting points
+    systems = @named begin
+        chain = Rope(l = chain_length, m = 5, n=number_of_links, c=1, d_joint=0.2, dir=[1, 0, 0], color=[0.5, 0.5, 0.5, 1], radius=0.05, cutprismatic=false, cutspherical=true)
+        fixed = FixedTranslation(; r=[x_dist, 0, 0], radius=0.02, color=[0.1,0.1,0.1,1]) # Second mounting point
+    end
+
+    connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
+                connect(chain.frame_b, fixed.frame_b)]
+
+    @named mounted_chain = ODESystem(connections, t, systems = [systems; world])
+
+    ssys = structural_simplify(IRSystem(mounted_chain))
+    prob = ODEProblem(ssys, [
+        collect(chain.link_3.body.w_a) .=> [0,0,0]; 
+        collect(chain.link_3.frame_b.r_0) .=> [x_dist,0,0]; 
+    ], (0, 4))
+    sol = solve(prob, Rodas4(autodiff=false))
+    @test SciMLBase.successful_retcode(sol)
+
+    # Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May take long time for n>=10
+end
+
+
+# ==============================================================================
+## BodyCylinder ================================================================
+# ==============================================================================
+using LinearAlgebra
+
+@testset "BodyCylinder" begin
+    @info "Testing BodyCylinder"
+    world = Multibody.world
+    @mtkmodel CylinderPend begin
+        @components begin
+            world = W()
+            body = BodyCylinder(r=[1,2,3], diameter=0.1)
+            joint = Revolute()
+        end
+        @equations begin
+            connect(world.frame_b, joint.frame_a)
+            connect(joint.frame_b, body.frame_a)
+        end
+    end
+
+    @named model = CylinderPend()
+    model = complete(model)
+    ssys = structural_simplify(IRSystem(model))
+
+    prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 10))
+    sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    @test sol(10, idxs=model.body.body.m) ≈ 226.27 rtol=1e-3 # Values from open modelica
+    @test sol(10, idxs=model.body.body.I_11) ≈ 245.28 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_22) ≈ 188.74 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_33) ≈ 94.515 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_21) ≈ -37.69 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_31) ≈ -56.53 rtol=1e-3
+    @test sol(10, idxs=model.body.body.I_32) ≈ -113 rtol=1e-3
+    @test sol(10, idxs=model.joint.phi) ≈ -2.1036 atol=1e-2
+    # using Plots; plot(sol)
+
+
+    prob = ODEProblem(ssys, [model.joint.phi => 0; model.body.inner_diameter=>0.05], (0, 10))
+    sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    @test sol(10, idxs=model.body.body.m) ≈ 169.7 rtol=1e-3 # Values from open modelica
+    @test sol(10, idxs=model.joint.phi) ≈ -2.0992 atol=1e-2
+    @test sol(10, idxs=model.body.body.I_31) ≈ -42.39 rtol=1e-3
+# using Plots; plot(sol)
+end
+
+##
+
+using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq
+using Multibody.Rotations: RotXYZ
+t = Multibody.t
+D = Multibody.D
+world = Multibody.world
+
+@named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=true, quat=true)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+prob = ODEProblem(ssys, [
+    # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
+    # D.(body.Q̂) .=> 0;
+
+], (0, 1))
+sol1 = solve(prob, Rodas4())
+
+## quat in joint
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=false, quat=false)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+prob = ODEProblem(ssys, [
+    # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
+    # D.(joint.Q̂) .=> 0;
+
+], (0, 1))
+sol2 = solve(prob, Rodas4())
+
+## euler
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=false)
+@named rod = FixedTranslation(; r = [1, 0, 0])
+@named body = Body(; m = 1, isroot=false, quat=false)
+
+connections = [connect(world.frame_b, joint.frame_a)
+               connect(joint.frame_b, rod.frame_a)
+               connect(rod.frame_b, body.frame_a)]
+
+@named model = ODESystem(connections, t,
+                         systems = [world, joint, body, rod])
+irsys = IRSystem(model)
+ssys = structural_simplify(irsys)
+prob = ODEProblem(ssys, [
+    # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
+    # D.(joint.Q̂) .=> 0;
+
+], (0, 1))
+sol3 = solve(prob, Rodas4())
+
+@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol2(0:0.1:1, idxs=collect(body.r_0)) atol=1e-5
+@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol3(0:0.1:1, idxs=collect(body.r_0)) atol=1e-3

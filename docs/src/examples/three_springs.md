@@ -20,14 +20,13 @@ world = Multibody.world
 
 systems = @named begin
     body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
-                 r_cm = [0, -0.2, 0], isroot = false)
+                 r_cm = [0, -0.2, 0], isroot=true, quat=true)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0, 0, 0.3])
-    spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1,
-                               r_rel_0 = [-0.2, -0.2, 0.2])
-    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1,
-                               fixed_rotation_at_frame_a = true, fixed_rotation_at_frame_b = true)
-    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1)
+    spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, fixed_rotation_at_frame_b=true,
+                               r_rel_0 = [-0.2, -0.2, 0.2], radius=0.05, num_windings=10)
+    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1, color=[0,0,0.3,1])
+    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, radius=0.05, num_windings=10)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
        connect(world.frame_b, bar2.frame_a)
@@ -39,22 +38,38 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 
 @named model = ODESystem(eqs, t, systems = [world; systems])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [
-    D.(spring3.lineforce.r_rel_0) .=> 0;
-    collect(body1.v_0) .=> 0;
-], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
-sol = solve(prob, Rodas4(), u0=prob.u0 .+ 1e-1*randn(length(prob.u0)))
+sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = [body1.r_0...])
+```
+
+```@setup
+# States selected by Dymola
+# Statically selected continuous time states
+# body1.frame_a.r_0[1]
+# body1.frame_a.r_0[2]
+# body1.frame_a.r_0[3]
+# body1.v_0[1]
+# body1.v_0[2]
+# body1.v_0[3]
+# body1.w_a[1]
+# body1.w_a[2]
+# body1.w_a[3]
+
+# Dynamically selected continuous time states
+# There is one set of dynamic state selection.
+# There are 3 states to be selected from:
+# body1.Q[]
 ```
 
 ## 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example spring_mass_system
-import CairoMakie
+import GLMakie
 Multibody.render(model, sol; filename = "three_springs.gif") # Use "three_springs.mp4" for a video file
 nothing # hide
 ```

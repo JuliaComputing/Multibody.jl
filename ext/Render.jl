@@ -1,12 +1,13 @@
 module Render
 using Makie
 using Multibody
-import Multibody: render, render!, encode, decode, get_rot, get_trans, get_frame
+import Multibody: render, render!, loop_render, encode, decode, get_rot, get_trans, get_frame
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
-export render
+export render, loop_render
 using MeshIO, FileIO
+using StaticArrays
 
 
 """
@@ -70,7 +71,11 @@ function get_color(sys, sol, default)
     try
         Makie.RGBA(sol(sol.t[1], idxs=collect(sys.color))...)
     catch
-        default
+        if default isa AbstractVector
+            Makie.RGBA(default...)
+        else
+            default
+        end
     end
 end
 
@@ -103,10 +108,20 @@ function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=fals
     scene, fig
 end
 
+function default_framerate(filename)
+    if parse(Bool, get(ENV, "DOCS_BUILD", "false"))
+        return 20
+    elseif lowercase(last(splitext(filename))) == ".gif"
+        return 25
+    else
+        return 30
+    end
+end
 
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
-    framerate = 30,
+    filename = "multibody_$(model.name).mp4",
+    framerate = default_framerate(filename),
     x = 2,
     y = 0.5,
     z = 2,
@@ -114,7 +129,9 @@ function render(model, sol,
     up = Vec3f(0,1,0),
     show_axis = false,
     timescale = 1.0,
-    filename = "multibody_$(model.name).mp4",
+    traces = nothing,
+    display = false,
+    loop = 1,
     kwargs...
     )
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)
@@ -125,28 +142,83 @@ function render(model, sol,
     t = Observable(timevec[1])
 
     recursive_render!(scene, complete(model), sol, t)
-    fn = record(fig, filename, timevec; framerate) do time
-        t[] = time/timescale
+
+    if traces !== nothing
+        tvec = range(sol.t[1], stop=sol.t[end], length=500)
+        for frame in traces
+            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
+            points = get_trans(sol, frame, tvec) |> Matrix
+            Makie.lines!(scene, points)
+        end
     end
+    if loop > 1
+        timevec = repeat(timevec, loop)
+    end
+    if display
+        Base.display(fig)
+        sleep(2)
+        fnt = @async begin
+            record(fig, filename, timevec; framerate) do time
+                if time == timevec[1]
+                    Base.display(fig)
+                end
+                t[] = time/timescale
+                sleep(max(0, 1/framerate))
+            end
+        end
+        fn = fetch(fnt)
+    else
+        fn = record(fig, filename, timevec; framerate) do time
+            t[] = time/timescale
+        end
+    end
+
     fn, scene, fig
 end
 
 function render(model, sol, time::Real;
+    traces = nothing,
+    x = 2,
+    y = 0.5,
+    z = 2,
     kwargs...,
     )
 
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
-    scene, fig = default_scene(0,0,10; kwargs...)
+    scene, fig = default_scene(x,y,z; kwargs...)
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
 
     t = Slider(fig[2, 1], range = steps, startvalue = time).value
-    
     recursive_render!(scene, complete(model), sol, t)
+
+    if traces !== nothing
+        tvec = range(sol.t[1], stop=sol.t[end], length=500)
+        for frame in traces
+            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
+            points = get_trans(sol, frame, tvec) |> Matrix
+            Makie.lines!(scene, points)
+        end
+    end
     fig, t
+end
+
+function Multibody.loop_render(model, sol; timescale = 1.0, framerate = 30, max_loop = 5, kwargs...)
+    fig, t = render(model, sol, sol.t[1]; kwargs...)
+    sleeptime = 1/framerate
+    timevec = range(sol.t[1], sol.t[end]*timescale, step=sleeptime)
+    display(fig)
+    @async begin
+        for i = 1:max_loop
+            for ti in timevec
+                execution_time = @elapsed t[] = ti
+                sleep(max(0, sleeptime - execution_time))
+            end
+        end
+    end
 end
 
 """
@@ -339,6 +411,25 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
 end
 
 
+function render!(scene, ::typeof(BodyCylinder), sys, sol, t)
+    
+    # NOTE: This draws a solid cylinder without the hole in the middle. Cannot figure out how to render a hollow cylinder
+    color = get_color(sys, sol, [1, 0.2, 1, 0.9])
+    radius = Float32(sol(sol.t[1], idxs=sys.diameter)/2)
+    r_0a = get_fun(sol, collect(sys.frame_a.r_0))
+    r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    thing = @lift begin
+        r1 = Point3f(r_0a($t))
+        r2 = Point3f(r_0b($t))
+        origin = r1
+        extremity = r2
+        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5))
+
+    true
+end
+
 function render!(scene, ::typeof(Damper), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
@@ -361,15 +452,17 @@ function render!(scene, ::typeof(Spring), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     color = get_color(sys, sol, :blue)
+    n_wind = sol(sol.t[1], idxs=sys.num_windings)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    N = sol(sol.t[1], idxs=sys.N) |> Int
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
-        spring_mesh(r1,r2)
+        spring_mesh(r1,r2; n_wind, radius, N)
     end
     plot!(scene, thing; color)
     true
 end
-
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
     count(ModelingToolkit.isframe, sys.systems) == 2 || return false
@@ -398,35 +491,29 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
 end
 
 function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)
-    phi = range(0, n_wind*2π, length=N)
-    
+    phis = range(0, n_wind*2π, length=N)
     d = p2 - p1
-    
-    x = radius*cos.(phi)
-    y = radius*sin.(phi)
     z = range(0, norm(d), length=N) # Correct length
-    points = Point3f.(x, y, z)
+    dn = d ./ norm(d)
+    R = rot_from_line(dn)
 
-    d = d ./ norm(d)
+    points = map(enumerate(phis)) do (i,phi)
+        x = radius*cos(phi)
+        y = radius*sin(phi)
+        pᵢ = Point3f(x, y, z[i])
 
-    # Rotate
-    R = rot_from_line(d)
-    points = Ref(R) .* points
-
-    # Translate
-    points = points .+ p1
-
+        R * pᵢ + p1
+    end
 
     Makie.GeometryBasics.LineString(points)
 end
 
 function rot_from_line(d)
-    d = d ./ norm(d)
     if d[1] == 0 && d[2] == 0
         return RotMatrix{3}(Matrix{Float32}(I, 3, 3))
     end
     d = d ./ norm(d)
-    z = [0, 0, 1]
+    z = SA[0, 0, 1]
     x = cross(z, d)
     x = x ./ norm(x)
     y = cross(d, x)

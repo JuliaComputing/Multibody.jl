@@ -11,8 +11,8 @@ export Rotational, Translational
 export render, render!
 
 """
-    scene, time = render(model, sol, t::Real; framerate = 30)
-    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1)
+    scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
+    path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false, loop=1)
 
 Create a 3D animation of a multibody system
 
@@ -23,17 +23,29 @@ Create a 3D animation of a multibody system
 - `timevec`: If a vector of times is provided, an animation is created and the path to the file on disk is returned.
 - `framerate`: Number of frames per second.
 - `timescale`: Scaling of the time vector. This argument can be made to speed up animations (`timescale < 1`) or slow them down (`timescale > 1`). A value of `timescale = 2` will be 2x slower than real time.
+- `loop`: The animation will be looped this many times. Please note: looping the animation using this argument is only recommended when `display = true` for camera manipulation purposes. When the camera is not manipulated, looping the animation by other means is recommended to avoid an increase in the file size.
 - `filename` controls the name and the file type of the resulting animation
+- `traces`: An optional array of frames to show the trace of.
 
 # Camera control
 The following keyword arguments are available to control the camera pose:
-_ `x = 5`
-_ `y = 0`
-_ `z = 5`
-_ `lookat = [0,0,0]`: a three-vector of coordinates indicating the point at which the camera looks.
+- `x = 2`
+- `y = 0.5`
+- `z = 2`
+- `lookat = [0,0,0]`: a three-vector of coordinates indicating the point at which the camera looks.
 - `up = [0,1,0]`: A vector indicating the direction that is up.
+- `display`: if `true`, the figure will be displayed during the recording process and time will advance in real-time. This allows the user to manipulate the camera options using the mouse during the recording.
+
+See also [`loop_render`](@ref)
 """
 function render end
+
+"""
+    loop_render(model, sol; framerate = 30, timescale = 1, max_loop = 5, kwargs...)
+
+Similar to the method of [`render`](@ref) that produces an animation, but instead opens an interactive window where the time is automatically advanced in real time. This allows the user to manually manipulate the camera using the mouse is a live animation.
+"""
+function loop_render end
 
 """
     did_render::Bool = render!(scene, ::typeof(ComponentConstructor), sys, sol, t)
@@ -82,11 +94,14 @@ end
 
 Emulates the `@variables` macro but does never creates array variables. Also never introuces the variable names into the calling scope.
 """
-function at_variables_t(args...; default = nothing)
+function at_variables_t(args...; default = nothing, state_priority = nothing)
     xs = Symbolics.variables(args...; T = Symbolics.FnType)
     xs = map(x -> x(t), xs)
     if default !== nothing
         xs = Symbolics.setdefaultval.(xs, default)
+    end
+    if state_priority !== nothing
+        xs = Symbolics.setmetadata.(xs, ModelingToolkit.VariableStatePriority, state_priority)
     end
     xs
 end
@@ -135,7 +150,7 @@ include("frames.jl")
 export PartialTwoFrames
 include("interfaces.jl")
 
-export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, Rope
+export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, Rope
 include("components.jl")
 
 export Revolute, Prismatic, Planar, Spherical, Universal, GearConstraint, RollingWheelJoint,
@@ -145,7 +160,7 @@ include("joints.jl")
 export Spring, Damper, SpringDamperParallel, Torque, Force
 include("forces.jl")
 
-export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce
+export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce, Power
 include("sensors.jl")
 
 export point_to_point, traj5, KinematicPTP, Kinematic5
