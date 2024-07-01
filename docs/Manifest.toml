@@ -1553,9 +1553,7 @@ version = "9.19.0"
 
 [[deps.ModelingToolkitStandardLibrary]]
 deps = ["ChainRulesCore", "DiffEqBase", "IfElse", "LinearAlgebra", "ModelingToolkit", "Symbolics"]
-git-tree-sha1 = "8cfb89cdb4f147810a45efbcc5f98ef6596d60d4"
-repo-rev = "main"
-repo-url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl.git"
+git-tree-sha1 = "e36487496e263d82e866ce5f9d3e87f44765e6ea"
 uuid = "16a59e39-deab-5bd0-87e4-056b12336739"
 version = "2.7.2"
 
