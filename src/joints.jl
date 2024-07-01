@@ -868,21 +868,24 @@ s_y=prismatic_y.s=0 and phi=revolute.phi=0.
         n
         n_x
     end
+    begin
+        cylindercolor = [1, 0, 1, 1]
+        boxcolor = [0, 0, 1, 1]
+        radius = 0.05
+    end
     @parameters begin
         # (n[1:3]), [description = "Axis orthogonal to unconstrained plane, resolved in frame_a (= same as in frame_b)"]
         # (n_x[1:3]), [description = "Vector in direction of x-axis of plane, resolved in frame_a (n_x shall be orthogonal to n)"]
         cylinderlength = 0.1, [description = "Length of revolute cylinder"]
         cylinderdiameter = 0.05, [description = "Diameter of revolute cylinder"]
-        cylindercolor[1:4] = purple, [description = "Color of revolute cylinder"]
+        # cylindercolor[1:4] = cylindercolordefault, [description = "Color of revolute cylinder"] # Endless bugs with array parameters
         boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
         boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
-        boxcolor[1:4] = purple, [description = "Color of prismatic joint boxes"]
+        # boxcolor[1:4] = boxcolordefault, [description = "Color of prismatic joint boxes"]
     end
     begin
         n = collect(n)
         n_x = collect(n_x)
-        # cylindercolor = collect(cylindercolor)
-        # boxcolor = collect(boxcolor)
     end
     # @defaults begin
     #     n .=> [0, 0, 1]
@@ -894,9 +897,9 @@ s_y=prismatic_y.s=0 and phi=revolute.phi=0.
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n))
-        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x))
-        revolute = Revolute(; state_priority=2.1, n, isroot=false)
+        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor)
+        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor)
+        revolute = Revolute(; state_priority=2.1, n, isroot=false, color=cylindercolor, radius)
     end
     @variables begin
         (s_x(t) = 0), [state_priority = 3.0, description = "Relative distance along first prismatic joint starting at frame_a"]
