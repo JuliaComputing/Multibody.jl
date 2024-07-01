@@ -842,10 +842,10 @@ s_y=prismatic_y.s=0 and phi=revolute.phi=0.
         # (n_x[1:3]), [description = "Vector in direction of x-axis of plane, resolved in frame_a (n_x shall be orthogonal to n)"]
         cylinderlength = 0.1, [description = "Length of revolute cylinder"]
         cylinderdiameter = 0.05, [description = "Diameter of revolute cylinder"]
-        cylindercolor[1:4], [description = "Color of revolute cylinder"]
+        cylindercolor[1:4] = purple, [description = "Color of revolute cylinder"]
         boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
         boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
-        boxcolor[1:4], [description = "Color of prismatic joint boxes"]
+        boxcolor[1:4] = purple, [description = "Color of prismatic joint boxes"]
     end
     begin
         n = collect(n)
