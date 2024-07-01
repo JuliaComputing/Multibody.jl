@@ -138,6 +138,7 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
     ODESystem(eqs, t; name, systems)
 end
 
+
 function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
     J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
     # @parameters begin

@@ -1,5 +1,5 @@
 # Pendulum--The "Hello World of multi-body dynamics"
-This beginners tutorial will model a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
+This beginners tutorial will start by modeling a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
 
 To start, we load the required packages
 ```@example pendulum
@@ -12,11 +12,11 @@ We then access the world frame and time variable from the Multibody module
 ```@example pendulum
 t = Multibody.t
 world = Multibody.world
-show(stdout, MIME"text/plain"(), world)
+show(stdout, MIME"text/plain"(), world) # hide
 nothing # hide
 ```
 
-Unless otherwise specified, the world defaults to have a gravitational field pointing in the negative ``y`` direction and a gravitational acceleration of ``9.81``.
+Unless otherwise specified, the world defaults to having a gravitational field pointing in the negative ``y`` direction and a gravitational acceleration of ``9.81`` (See [Bodies in space](@ref) for more options).
 
 
 ## Modeling the pendulum
@@ -50,12 +50,12 @@ Before we can simulate the system, we must perform model compilation using [`str
 ```@example pendulum
 ssys = structural_simplify(IRSystem(model))
 ```
-This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations.
+This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
 
 We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
 ```@example pendulum
 D = Differential(t)
-defs = Dict(D(joint.phi) => 0, D(D(joint.phi)) => 0)
+defs = Dict() # We may specify the initial condition here
 prob = ODEProblem(ssys, defs, (0, 3.35))
 
 sol = solve(prob, Rodas4())
@@ -67,7 +67,7 @@ The solution `sol` can be plotted directly if the Plots package is loaded. The f
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
 
 ```@example pendulum
-import CairoMakie # GLMakie is another alternative, suitable for interactive plots
+import GLMakie # GLMakie is another alternative, suitable for interactive plots
 Multibody.render(model, sol; filename = "pendulum.gif") # Use "pendulum.mp4" for a video file
 nothing # hide
 ```
@@ -90,8 +90,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(joint.phi) => 0, D(D(joint.phi)) => 0],
-                  (0, 10))
+prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = joint.phi, title="Damped pendulum")
@@ -123,7 +122,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [damper.s_rel => 1, D(D(joint.s)) => 0], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
 sol = solve(prob, Rodas4())
 Plots.plot(sol, idxs = joint.s, title="Mass-spring-damper system")
@@ -149,13 +148,9 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
 ssys = structural_simplify(IRSystem(model))
 
-defs = Dict(collect(multibody_spring.r_rel_0 .=> [0, 1, 0])...,
-            collect(root_body.r_0 .=> [0, 0, 0])...,
-            collect(root_body.w_a .=> [0, 0, 0])...,
-            collect(root_body.v_0 .=> [0, 0, 0])...,
-)
+defs = Dict()
 
-prob = ODEProblem(ssys, defs, (0, 15))
+prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring system without joint")
@@ -169,7 +164,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, defs, (0, 15))
+prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")
@@ -191,11 +186,11 @@ W(args...; kwargs...) = Multibody.world
 @mtkmodel FurutaPendulum begin
     @components begin
         world = W()
-        shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, axisflange = true)
-        elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, axisflange = true, phi0=0.1)
-        upper_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0, 0.6], radius=0.04)
-        lower_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0.6, 0], radius=0.04)
-        tip = Body(; m = 0.3, isroot = false)
+        shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true)
+        elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1)
+        upper_arm = BodyShape(; m = 0.1, r = [0, 0, 0.6], radius=0.04)
+        lower_arm = BodyShape(; m = 0.1, r = [0, 0.6, 0], radius=0.04)
+        tip = Body(; m = 0.3)
 
         damper1 = RDamper(d = 0.07)
         damper2 = RDamper(d = 0.07)
@@ -220,14 +215,15 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 12))
+prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
 plot(sol, layout=4)
 ```
 
+In the animation below, we visualize the path that the origin of the pendulum tip traces by providing the tip frame in a vector of frames passed to `traces`
 ```@example pendulum
-import CairoMakie
-Multibody.render(model, sol, filename = "furuta.gif")
+import GLMakie
+Multibody.render(model, sol, filename = "furuta.gif", traces=[model.tip.frame_a])
 nothing # hide
 ```
 ![furuta](furuta.gif)

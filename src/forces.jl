@@ -141,9 +141,9 @@ function Force(; name, resolve_frame = :frame_b)
 end
 
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
-                       fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
-    @named frame_a = Frame()
-    @named frame_b = Frame()
+    fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
+    @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
+    @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
 
     @variables length(t) [
         description = "Distance between the origin of frame_a and the origin of frame_b",
@@ -182,7 +182,7 @@ function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_fr
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
-function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kwargs...)
+function LineForceWithMass(; name, length = 0, m = 1.0, lengthfraction = 0.5, kwargs...)
     m0 = m
     @named lfb = LineForceBase(; length, kwargs...)
     @unpack length, s, r_rel_0, e_rel_0, frame_a, frame_b = lfb
@@ -196,7 +196,7 @@ function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kw
     ]
     @variables v_CM_0(t)[1:3]=zeros(3) [description = "First derivative of r_CM_0"]
     @variables ag_CM_0(t)[1:3]=zeros(3) [description = "D(v_CM_0) - gravityAcceleration"]
-    @parameters lengthFraction=lengthFraction [
+    @parameters lengthfraction=lengthfraction [
         description = "Location of point mass with respect to frame_a as a fraction of the distance from frame_a to frame_b",
         bounds = (0, 1),
     ]
@@ -215,13 +215,13 @@ function LineForceWithMass(; name, length = 0, m = 1.0, lengthFraction = 0.5, kw
     # NOTE, both frames are assumed to be connected, while modelica has special handling if they aren't
     if m0 > 0
         eqs = [eqs
-               collect(r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthFraction)
+               collect(r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthfraction)
                v_CM_0 .~ D.(r_CM_0)
                ag_CM_0 .~ D.(v_CM_0) - gravity_acceleration(r_CM_0)
                frame_a.f .~ resolve2(ori(frame_a),
-                                     (m * (1 - lengthFraction)) * ag_CM_0 - e_rel_0 * fa)
+                                     (m * (1 - lengthfraction)) * ag_CM_0 - e_rel_0 * fa)
                frame_b.f .~ resolve2(ori(frame_b),
-                                     (m * lengthFraction) * ag_CM_0 - e_rel_0 * fb)]
+                                     (m * lengthfraction) * ag_CM_0 - e_rel_0 * fb)]
     else
         eqs = [eqs
                r_CM_0 .~ zeros(3)
@@ -265,7 +265,7 @@ function PartialLineForce(; name, kwargs...)
 end
 
 """
-    Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs)
+    Spring(; c, name, m = 0, lengthfraction = 0.5, s_unstretched = 0, kwargs)
 
 Linear spring acting as line force between `frame_a` and `frame_b`.
 A force `f` is exerted on the origin of `frame_b` and with opposite sign
@@ -285,23 +285,35 @@ additional equations to handle the mass are removed.
 # Arguments:
 - `c`: Spring stiffness
 - `m`: Mass of the spring (can be zero)
-- `lengthFraction`: Location of spring mass with respect to `frame_a` as a fraction of the distance from `frame_a` to `frame_b` (=0: at `frame_a`; =1: at `frame_b`)
+- `lengthfraction`: Location of spring mass with respect to `frame_a` as a fraction of the distance from `frame_a` to `frame_b` (=0: at `frame_a`; =1: at `frame_b`)
 - `s_unstretched`: Length of the spring when it is unstretched
 - `kwargs`: are passed to `LineForceWithMass`
 
+# Rendering
+- `num_windings = 6`
+- `color = [0,0,1,1]`
+- `radius = 0.1`
+- `N = 200`
+
 See also [`SpringDamperParallel`](@ref)
 """
-@component function Spring(; c, name, m = 0, lengthFraction = 0.5, s_unstretched = 0, kwargs...)
+@component function Spring(; c, name, m = 0, lengthfraction = 0.5, s_unstretched = 0, num_windings=6, color=[0,0,1,1], radius=0.1, N=200, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
-    @named lineforce = LineForceWithMass(; length = s_unstretched, m, lengthFraction,
+    pars = @parameters begin
+    #     c=c, [description = "spring constant", bounds = (0, Inf)]
+    #     s_unstretched=s_unstretched, [
+    #         description = "unstretched length of spring",
+    #         bounds = (0, Inf),
+    #     ] # Bug in MTK where parameters only passed to sub components are ignored
+        num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
+        color[1:4] = color
+        radius = radius, [description = "Radius of spring when rendered"]
+        N = N, [description = "Number of points in mesh when rendered"]
+    end
+    @named lineforce = LineForceWithMass(; length = s_unstretched, m, lengthfraction,
                                          kwargs...)
     
-    # @parameters c=c [description = "spring constant", bounds = (0, Inf)]
-    # @parameters s_unstretched=s_unstretched [
-    #     description = "unstretched length of spring",
-    #     bounds = (0, Inf),
-    # ] # Bug in MTK where parameters only passed to sub components are ignored
     @named spring2d = TP.Spring(; c, s_rel0 = s_unstretched)
 
     @variables r_rel_a(t)[1:3]=0 [
@@ -342,7 +354,8 @@ See also [`SpringDamperParallel`](@ref)
            connect(spring2d.flange_b, lineforce.flange_b)
            connect(spring2d.flange_a, lineforce.flange_a)]
 
-    extend(ODESystem(eqs, t; name, systems = [lineforce, spring2d]), ptf)
+    sys = extend(ODESystem(eqs, t; name=:nothing, systems = [lineforce, spring2d]), ptf)
+    add_params(sys, pars; name)
 end
 
 """

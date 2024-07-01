@@ -38,30 +38,42 @@ end
 """
     World(; name, render=true)
 """
-@component function World(; name, render=true)
+@component function World(; name, render=true, point_gravity=false)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
     # = 12 equations 
     @named frame_b = Frame()
     @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
-    @parameters g=9.81 [description = "gravitational acceleration of world"]
+    @parameters g=9.80665 [description = "gravitational acceleration of world"]
+    @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
+    @parameters point_gravity = point_gravity
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
                    O ~ nullrotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
                    ]
-    ODESystem(eqs, t, [], [n; g; render]; name, systems = [frame_b])
+    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
 end
 
 """
-The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field and a gravity vector specified by the unit direction `world.n` (defaults to [0, -1, 0]) and magnitude `world.g` (defaults to 9.81).
+The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field and a gravity vector specified by the unit direction `world.n` (defaults to [0, -1, 0]) and magnitude `world.g` (defaults to 9.80665).
 """
 const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
-gravity_acceleration(r) = GlobalScope(world.g) * GlobalScope.(world.n) # NOTE: This is hard coded for now to use the the standard, parallel gravity model
+function gravity_acceleration(r)
+    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g), GlobalScope.(collect(world.n)), collect(r))
+end
+
+function inner_gravity(point_gravity, mu, g, n, r)
+    # This is slightly inefficient, producing three if statements, one for each array entry. The function registration for array-valued does not work properly so this is a workaround for now. Hitting, among other problems, https://github.com/SciML/ModelingToolkit.jl/issues/2808
+    gvp = -(mu/(r'r))*(r/_norm(r))
+    gvu = g * n
+    ifelse.(point_gravity==true, gvp, gvu)
+end
+
 
 @component function Fixed(; name, r = [0, 0, 0])
     systems = @named begin frame_b = Frame() end
@@ -139,7 +151,7 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 - `sequence`: DESCRIPTION
 - `angle`: Angle of rotation around `n`, given in radians
 """
-@component function FixedRotation(; name, r, n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
+@component function FixedRotation(; name, r=[0, 0, 0], n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
                        angle, n_x = [1, 0, 0], n_y = [0, 1, 0])
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
@@ -170,17 +182,17 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
     # Relationships between quantities of frame_a and frame_b 
 
     if isroot
-        R_rel = planar_rotation(n, angle, 0)
-        eqs = [ori(frame_b) ~ absolute_rotation(frame_a, R_rel);
-               zeros(3) ~ fa + resolve1(R_rel, fb);
-               zeros(3) ~ taua + resolve1(R_rel, taub) - cross(r,
+        Rrel = planar_rotation(n, angle, 0)
+        eqs = [ori(frame_b) ~ absolute_rotation(frame_a, Rrel);
+               zeros(3) ~ fa + resolve1(Rrel, fb);
+               zeros(3) ~ taua + resolve1(Rrel, taub) - cross(r,
                                                                 fa)]
     else
-        R_rel_inv = planar_rotation(n, -angle, 0)
-        eqs = [ori(frame_a) ~ absolute_rotation(frame_b, R_rel_inv);
-               zeros(3) ~ fb + resolve1(R_rel_inv, fa);
-               zeros(3) ~ taub + resolve1(R_rel_inv, taua) +
-                           cross(resolve1(R_rel_inv, r), fb)]
+        Rrel_inv = planar_rotation(n, -angle, 0)
+        eqs = [ori(frame_a) ~ absolute_rotation(frame_b, Rrel_inv);
+               zeros(3) ~ fb + resolve1(Rrel_inv, fa);
+               zeros(3) ~ taub + resolve1(Rrel_inv, taua) +
+                           cross(resolve1(Rrel_inv, r), fb)]
     end
     eqs = collect(eqs)
     append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))
@@ -218,9 +230,13 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               I_31 = 0,
               I_32 = 0,
               isroot = false,
+              state = false,
+              vel_from_R = false,
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
+              v_0 = 0,
+              w_a = 0,
               radius = 0.05,
               air_resistance = 0.0,
               color = [1,0,0,1],
@@ -229,7 +245,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3] [guess = 0, 
+    @variables v_0(t)[1:3]=v_0 [guess = 0, 
         state_priority = 2,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
@@ -238,8 +254,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
-    @variables w_a(t)[1:3] [guess = 0, 
-        state_priority = 2,
+    @variables w_a(t)[1:3]=w_a [guess = 0, 
+        state_priority = 2+2quat*state,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3] [guess = 0, 
@@ -269,43 +285,37 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     # DRa = D(Ra)
 
+    if state
+        # @warn "Make the body have state variables by using isroot=true rather than state=true"
+        isroot = true
+    end
+
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot
         
         if quat
-            @named frame_a = Frame(varw = true)
-            Ra = ori(frame_a, true)
-            # @variables q(t)[1:4] = [0.0,0,0,1.0]
-            # @variables qw(t)[1:3] = [0.0,0,0]
-            # q = collect(q)
-            # qw = collect(qw)
-            # Q = Quaternion(q, qw)
-            @named Q = NumQuaternion(varw=true) 
-            ar = from_Q(Q, angular_velocity2(Q, D.(Q.Q)))
-            Equation[
-                0 ~ orientation_constraint(Q)
-                Ra ~ ar
-                Ra.w .~ ar.w
-                Q.w .~ ar.w
-                collect(w_a .~ Ra.w)
-            ]
+            @named frame_a = Frame(varw = false)
+            Ra = ori(frame_a, false)
+            qeeqs = nonunit_quaternion_equations(Ra, w_a)
         else
             @named frame_a = Frame(varw = true)
+            Ra = ori(frame_a, true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
             phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axes_rotations([1, 2, 3], phi, phid)
-
-            Ra = ori(frame_a, true)
-
             Equation[
-                    # 0 .~ orientation_constraint(Ra); 
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
                     Ra ~ ar
-                    Ra.w .~ ar.w
-                    collect(w_a .~ Ra.w)]
+                    Ra.w .~ w_a
+                    if vel_from_R
+                        w_a .~ angular_velocity2(ori(frame_a, false)) # This is required for FreeBody and ThreeSprings tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
+                    else
+                        w_a .~ ar.w # This one for most systems
+                    end
+                    ]
         end
     else
         @named frame_a = Frame()
@@ -318,7 +328,6 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     end
 
     eqs = [eqs;
-           # collect(w_a .~ get_w(Ra));
            collect(r_0 .~ frame_a.r_0)
            collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
            collect(v_0 .~ D.(r_0))
@@ -333,7 +342,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
            end
            collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
 
-    # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;]
+    # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
     sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
     add_params(sys, [radius; color]; name)
@@ -415,8 +424,14 @@ There are three different methods of adding damping to the rope:
 - Damping in the stretching direction of the rope, controlled by the parameter `d`.
 - Damping in flexing of the rope, modeled as viscous friction in the joints between the links, controlled by the parameter `d_joint`.
 - Air resistance to the rope moving through the air, controlled by the parameter `air_resistance`. This damping is quadratic in the velocity (``f_d ~ -||v||v``) of each link relative to the world frame.
+
+## Rendering
+- `color = [255, 219, 120, 255]./255`
+- `radius = 0.05f0`
+- `jointradius=0`
+- `jointcolor=color`
 """
-function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, color = [255, 219, 120, 255]./255, radius = 0.05f0, kwargs...)
+function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_resistance=0, d_joint = 0, cutspherical = false, cutprismatic=false, color = [255, 219, 120, 255]./255, radius = 0.05f0, jointradius=0, jointcolor=color, kwargs...)
 
     @assert n >= 1
     systems = @named begin
@@ -428,8 +443,15 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     li = l / n # Segment length
     mi = m / n # Segment mass
 
-    # joints = [Spherical(name=Symbol("joint_$i"), isroot=!(iscut && i == 1), iscut = iscut && i == 1, state=true, d = d_joint) for i = 1:n+1]
-    joints = [Spherical(; name=Symbol("joint_$i"), isroot=true, state=true, d = d_joint, radius=0, color) for i = 1:n+1]
+    joints = [Spherical(name=Symbol("joint_$i"),
+        # isroot=!(cutspherical && i == 1),
+        isroot=true,
+        iscut = cutspherical && i == 1,
+        # state=!(cutspherical && i == 1),
+        state=true,
+        color=jointcolor,
+        radius=jointradius,
+        d = d_joint) for i = 1:n+1]
 
     eqs = [
         connect(frame_a, joints[1].frame_a)
@@ -443,7 +465,7 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
         masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance, color=0.9*color) for i = 1:n]
-        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color, radius) for i = 1:n]
+        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color, radius, iscut = cutprismatic && i == 1) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))
@@ -461,4 +483,182 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
     end
 
     ODESystem(eqs, t; name, systems = [systems; links; joints])
+end
+
+# @component function BodyCylinder(; name, m = 1, r = [0.1, 0, 0], r_0 = 0, r_shape=zeros(3), length = _norm(r - r_shape), kwargs...)
+#     @parameters begin
+#         # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+#         #     description = "Vector from frame_a to frame_b resolved in frame_a",
+#         # ]
+#         # r_shape[1:3]=zeros(3), [
+#         #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+#         # ]
+#     end
+#     r, r_shape = collect.((r, r_shape))
+#     @parameters begin
+#         dir[1:3] = r - r_shape, [
+#             description = "Vector in length direction of cylinder, resolved in frame_a",
+#         ]
+#         length = _norm(r - r_shape), [
+#             description = "Length of cylinder",
+#         ]
+#         length2 = _norm(r - r_shape), [ # NOTE: strange bug in JSCompiler when both I and r_cm that are parameters if Body depend on the same paramter length. Introducing a dummy parameter with the same value works around the issue. This is not ideal though, since the two parameters must have the same value.
+#             description = "Length of cylinder",
+#         ]
+#         diameter = 1, [#length/5, [
+#             description = "Diameter of cylinder",
+#         ]
+#         inner_diameter = 0, [
+#             description = "Inner diameter of cylinder (0 <= inner_diameter <= Diameter)",
+#         ]
+#         density = 7700, [
+#             description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+#         ]
+#     end
+#     # @variables length2(t)
+#     # @assert isequal(length, length2)
+#     dir = collect(dir) #.|> ParentScope # The ParentScope is required, otherwise JSCompiler thinks that these parameters belong to Body.
+#     # length = ParentScope(length)
+#     # diameter = ParentScope(diameter)
+#     # inner_diameter = ParentScope(inner_diameter)
+#     # density = ParentScope(density)
+
+#     radius = diameter/2
+#     innerRadius = inner_diameter/2
+#     mo = density*pi*length*radius^2
+#     mi = density*pi*length*innerRadius^2
+#     I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
+#     m = mo - mi
+#     R = from_nxy(r, [0, 1, 0]) 
+#     r_cm = r_shape + _normalize(dir)*length2/2
+#     I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22])) 
+
+#     # r_cm = ParentScope.(r_cm)
+#     # I = ParentScope.(I)
+#     # m = ParentScope(m)
+
+#     @variables begin
+#         r_0(t)[1:3]=r_0, [
+#             state_priority = 2,
+#             description = "Position vector from origin of world frame to origin of frame_a",
+#         ]
+#         v_0(t)[1:3]=0, [
+#             state_priority = 2,
+#             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+#         ]
+#         a_0(t)[1:3]=0, [
+#             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+#         ]
+#     end
+
+#     systems = @named begin
+#         frame_a = Frame()
+#         frame_b = Frame()
+#         frameTranslation = FixedTranslation(r = r)
+#         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], kwargs...)
+
+#     end
+#     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
+
+#     eqs = [r_0 .~ collect(frame_a.r_0)
+#            v_0 .~ D.(r_0)
+#            a_0 .~ D.(v_0)
+#            connect(frame_a, frameTranslation.frame_a)
+#            connect(frame_b, frameTranslation.frame_b)
+#            connect(frame_a, body.frame_a)]
+
+#     # pars = [
+#     #     dir; length; diameter; inner_diameter; density
+#     # ] 
+#     # vars = [r_0; v_0; a_0]
+#     # ODESystem(eqs, t, vars, pars; name, systems)
+#     ODESystem(eqs, t; name, systems)
+# end
+
+
+@mtkmodel BodyCylinder begin
+
+    @structural_parameters begin
+        r = [1, 0, 0]
+        r_shape = [0, 0, 0]
+        isroot = false
+        quat = false
+    end
+
+    @parameters begin
+        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+        #     description = "Vector from frame_a to frame_b resolved in frame_a",
+        # ]
+        # r_shape[1:3]=zeros(3), [
+        #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+        # ]
+        dir[1:3] = r - r_shape, [
+            description = "Vector in length direction of cylinder, resolved in frame_a",
+        ]
+        length = _norm(r - r_shape), [
+            description = "Length of cylinder",
+        ]
+        length2 = _norm(r - r_shape), [ # NOTE: strange bug in JSCompiler when both I and r_cm that are parameters of Body depend on the same paramter length. Introducing a dummy parameter with the same value works around the issue. This is not ideal though, since the two parameters must have the same value.
+            description = "Length of cylinder",
+        ]
+        diameter = 1, [#length/5, [
+            description = "Diameter of cylinder",
+        ]
+        inner_diameter = 0, [
+            description = "Inner diameter of cylinder (0 <= inner_diameter <= diameter)",
+        ]
+        density = 7700, [
+            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+        ]
+        color[1:4] = purple, [description = "Color of cylinder in animations"]
+    end
+    begin
+        radius = diameter/2
+        innerRadius = inner_diameter/2
+        mo = density*pi*length*radius^2
+        mi = density*pi*length*innerRadius^2
+        I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
+        m = mo - mi
+        R = from_nxy(r, [0, 1, 0]) 
+        r_cm = r_shape + _normalize(dir)*length2/2
+        I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22])) 
+    end
+
+    @variables begin
+        r_0(t)[1:3]=0, [
+            state_priority = 2,
+            description = "Position vector from origin of world frame to origin of frame_a",
+        ]
+        v_0(t)[1:3]=0, [
+            state_priority = 2,
+            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        ]
+        a_0(t)[1:3]=0, [
+            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        ]
+    end
+    begin
+        r_cm = collect(r_cm)
+    end
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        frameTranslation = FixedTranslation(r = r)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], isroot, quat)
+    end
+
+    @equations begin
+        r_0[1] ~ ((frame_a.r_0)[1])
+        r_0[2] ~ ((frame_a.r_0)[2])
+        r_0[3] ~ ((frame_a.r_0)[3])
+        v_0[1] ~ D(r_0[1])
+        v_0[2] ~ D(r_0[2])
+        v_0[3] ~ D(r_0[3])
+        a_0[1] ~ D(v_0[1])
+        a_0[2] ~ D(v_0[2])
+        a_0[3] ~ D(v_0[3])
+        connect(frame_a, frameTranslation.frame_a)
+        connect(frame_b, frameTranslation.frame_b)
+        connect(frame_a, body.frame_a)
+    end
 end

@@ -36,9 +36,12 @@ Create a new [`RotationMatrix`](@ref) struct with symbolic elements. `R,w` deter
 The primary difference between `NumRotationMatrix` and `RotationMatrix` is that the `NumRotationMatrix` constructor is used in the constructor of a [`Frame`](@ref) in order to introduce the frame variables, whereas `RorationMatrix` (the struct) only wraps existing variables.
 
 - `varw`: If true, `w` is a variable, otherwise it is derived from the derivative of `R` as `w = get_w(R)`.
+
+Never call this function directly from a component constructor, instead call `f = Frame(); R = ori(f)` and add `f` to the subsystems.
 """
-function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name, varw = false)
-    R = at_variables_t(:R, 1:3, 1:3, default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
+function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name=:R, varw = false, state_priority=nothing)
+    # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
+    R = at_variables_t(:R, 1:3, 1:3; default = R, state_priority) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
@@ -150,19 +153,19 @@ function planar_rotation(axis, phi, der_angle)
 end
 
 """
-    R2 = absolute_rotation(R1, R_rel)
+    R2 = absolute_rotation(R1, Rrel)
 
 - `R1`: `Orientation` object to rotate frame 0 into frame 1
-- `R_rel`: `Orientation` object to rotate frame 1 into frame 2
+- `Rrel`: `Orientation` object to rotate frame 1 into frame 2
 - `R2`: `Orientation` object to rotate frame 0 into frame 2
 """
-function absolute_rotation(R1, R_rel)
-    # R2 = R_rel.R*R1.R
-    # w = resolve2(R_rel, R1.w) + R_rel.w
+function absolute_rotation(R1, Rrel)
+    # R2 = Rrel.R*R1.R
+    # w = resolve2(Rrel, R1.w) + Rrel.w
     # RotationMatrix(R2, w)
     R1 isa ODESystem && (R1 = ori(R1))
-    R_rel isa ODESystem && (R_rel = ori(R_rel))
-    R_rel * R1
+    Rrel isa ODESystem && (Rrel = ori(Rrel))
+    Rrel * R1
 end
 
 function relative_rotation(R1, R2)
@@ -199,12 +202,12 @@ function connect_orientation(R1,R2; iscut=false)
     end
 end
 
-function angular_velocity2(R::RotationMatrix)
-    R.w
+function angular_velocity2(R::RotationMatrix, w=R.w)
+    w
 end
 
-function angular_velocity1(R::RotationMatrix)
-    resolve1(R, R.w)
+function angular_velocity1(R::RotationMatrix, w=R.w)
+    resolve1(R, w)
 end
 
 function orientation_constraint(R::RotationMatrix)
@@ -244,49 +247,33 @@ function connect_loop(F1, F2)
 end
 
 ## Quaternions
-struct Quaternion <: Orientation
-    Q
-    w::Any
-end
 
-Base.getindex(Q::Quaternion, i) = Q.Q[i]
-
-function NumQuaternion(; Q = [0.0, 0, 0, 1.0], w = zeros(3), name, varw = false)
-    # Q = at_variables_t(:Q, 1:4, default = Q) #[description="Orientation rotation matrix ∈ SO(3)"]
-    @variables Q(t)[1:4] = [0.0,0,0,1.0]
-    if varw
-        @variables w(t)[1:3]=w [description="angular velocity"]
-        # w = at_variables_t(:w, 1:3, default = w)
-    else
-        w = get_w(Q)
-    end
-    Q, w = collect.((Q, w))
-    Quaternion(Q, w)
-end
-
-
-orientation_constraint(q::AbstractVector) = q'q - 1
-orientation_constraint(q::Quaternion) = orientation_constraint(q.Q)
 
 # function angular_velocity2(q::AbstractVector, q̇)
 #     Q = [q[4] q[3] -q[2] -q[1]; -q[3] q[4] q[1] -q[2]; q[2] -q[1] q[4] -q[3]]
 #     2 * Q * q̇
 # end
 
-function from_Q(Q, w)
-    R = 2*[(Q[1]*Q[1] + Q[4]*Q[4])-1  (Q[1]*Q[2] + Q[3]*Q[4]) (Q[1]*Q[3] - Q[2]*Q[4]);
-    (Q[2]*Q[1] - Q[3]*Q[4])  (Q[2]*Q[2] + Q[4]*Q[4])-1  (Q[2]*Q[3] + Q[1]*Q[4]);
-    (Q[3]*Q[1] + Q[2]*Q[4])  (Q[3]*Q[2] - Q[1]*Q[4])  (Q[3]*Q[3] + Q[4]*Q[4])-1]
+Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
+function from_Q(Q2, w)
+    # Q2 = to_q(Q) # Due to different conventions
+    q = Rotations.QuatRotation(Q2, false)
+    R = RotMatrix(q)
     RotationMatrix(R, w)
 end
 
-function angular_velocity1(Q, der_Q)
-    2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
-end
+to_q(Q::AbstractVector) = SA[Q[4], Q[1], Q[2], Q[3]]
+to_q(Q::Rotations.QuatRotation) = to_q(vec(Q))
+to_mb(Q::AbstractVector) = SA[Q[2], Q[3], Q[4], Q[1]]
+to_mb(Q::Rotations.QuatRotation) = to_mb(vec(Q))
 
-function angular_velocity2(Q, der_Q)
-    2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
-end
+# function angular_velocity1(Q, der_Q)
+#     2*([Q[4] -Q[3] Q[2] -Q[1]; Q[3] Q[4] -Q[1] -Q[2]; -Q[2] Q[1] Q[4] -Q[3]]*der_Q)
+# end
+
+# function angular_velocity2(Q, der_Q)
+#     2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
+# end
 
 
 ## Euler
@@ -318,77 +305,14 @@ Returns a `RotationMatrix` object.
 """
 function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
-        return RotationMatrix(rotx(angle), zeros(3))
+        return RotationMatrix(Rotations.RotX(angle), zeros(3))
     elseif sequence == 2
-        return RotationMatrix(roty(angle), zeros(3))
+        return RotationMatrix(Rotations.RotY(angle), zeros(3))
     elseif sequence == 3
-        return RotationMatrix(rotz(angle), zeros(3))
+        return RotationMatrix(Rotations.RotZ(angle), zeros(3))
     else
         error("Invalid sequence $sequence")
     end
-end
-
-"""
-    rotx(t, deg = false)
-
-Generate a rotation matrix for a rotation around the x-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function rotx(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [1 0 0
-         0 ct -st
-         0 st ct]
-end
-
-"""
-    roty(t, deg = false)
-
-Generate a rotation matrix for a rotation around the y-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function roty(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [ct 0 st
-         0 1 0
-         -st 0 ct]
-end
-
-"""
-    rotz(t, deg = false)
-
-Generate a rotation matrix for a rotation around the z-axis.
-
-- `t`: The angle of rotation (in radians, unless `deg` is set to true)
-- `deg`: (Optional) If true, the angle is in degrees
-
-Returns a 3x3 rotation matrix.
-"""
-function rotz(t, deg = false)
-    if deg
-        t *= pi / 180
-    end
-    ct = cos(t)
-    st = sin(t)
-    R = [ct -st 0
-         st ct 0
-         0 0 1]
 end
 
 
@@ -405,7 +329,7 @@ function from_nxy(n_x, n_y)
     # end
     e_z_aux = cross(e_x, n_y_aux)
     e_z = _normalize(e_z_aux)
-    RotationMatrix([e_x e_y e_z], zeros(3))
+    RotationMatrix([e_x cross(e_z, e_x) e_z]', zeros(3))
 end
 
 # function from_nxy(n_x, n_y)
@@ -443,6 +367,8 @@ The rotation matrix returned, ``R_W^F``, is such that when a vector ``p_F`` expr
 p_W = R_W^F  p_F
 ```
 
+The columns of ``R_W_F`` indicate are the basis vectors of the frame ``F`` expressed in the world coordinate frame.
+
 See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_rot(sol, frame, t)
@@ -455,9 +381,8 @@ end
 Extract the translational part of a frame from a solution at time `t`.
 See also [`get_rot`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
-function get_trans(sol, frame, t)
-    SVector{3}(sol(t, idxs = collect(frame.r_0)))
-end
+get_trans(sol, frame, t::Number) = SVector{3}(sol(t, idxs = collect(frame.r_0)))
+get_trans(sol, frame, t::AbstractArray) = sol(t, idxs = collect(frame.r_0))
 
 """
     T_W_F = get_frame(sol, frame, t)
@@ -475,4 +400,32 @@ function get_frame(sol, frame, t)
     R = get_rot(sol, frame, t)
     tr = get_trans(sol, frame, t)
     [R tr; 0 0 0 1]
+end
+
+function nonunit_quaternion_equations(R, w)
+    @variables Q(t)[1:4]=[1,0,0,0], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
+    @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+    @variables Q̂d(t)[1:4]=[0,0,0,0], [state_priority=1000]
+    # NOTE: 
+    @variables n(t)=1 c(t)=0
+    @parameters k = 0.1
+    Q̂ = collect(Q̂)
+    Q̂d = collect(Q̂d)
+    Q = collect(Q)
+    # w is used in Ω, and Ω determines D(Q̂)
+    # This corresponds to modelica's 
+    # frame_a.R = from_Q(Q, angularVelocity2(Q, der(Q)));
+    # where angularVelocity2(Q, der(Q)) = 2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
+    # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
+    Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
+    # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
+    QR = from_Q(Q̂ ./ sqrt(n), w)
+    [
+        n ~ Q̂'Q̂
+        c ~ k * (1 - n)
+        D.(Q̂) .~ Q̂d
+        Q̂d .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
+        Q .~ Q̂ ./ sqrt(n)
+        R ~ from_Q(Q, w)
+    ]
 end

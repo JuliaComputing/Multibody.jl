@@ -24,15 +24,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                                     body])
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [
-    D.(freeMotion.r_rel_a) .=> randn();
-    D.(D.(freeMotion.r_rel_a)) .=> randn();
-    D.(freeMotion.phi) .=> randn();
-    D.(D.(freeMotion.phi)) .=> randn();
-    D.(body.w_a) .=> randn();
-    collect(body.w_a .=> 0);
-    collect(body.v_0 .=> 0);
-], (0, 10))
+prob = ODEProblem(ssys, [], (0, 10))
 
 sol = solve(prob, Rodas4())
 plot(sol, idxs = body.r_0[2], title="Free falling body")
@@ -49,12 +41,14 @@ nothing # hide
 ```
 
 
-If we instead model a body suspended in springs without the presence of any joint, we need to give the body state variables. We do this by saying `isroot = true` when we create the body.
+## Body suspended in springs
+If we instead model a body suspended in springs without the presence of any joint, we need to _give the body state variables_. We do this by saying `isroot = true` when we create the body, we also use quaternions to represent angular state using `quat = true`.
 
 ```@example FREE_MOTION
+using Multibody.Rotations: QuatRotation, RotXYZ, params
 @named begin
     body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                     r_0 = [0.2, -0.5, 0.1], isroot = true)
+                     r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true)
     bar2 = FixedTranslation(r = [0.8, 0, 0])
     spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
     spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
@@ -78,16 +72,20 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
-], (0, 3))
+    collect(body.body.Q) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+    collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+], (0, 4))
 
 sol = solve(prob, Rodas5P())
 @assert SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [body.r_0...])
+# plot(sol, idxs = [body.body.Q...])
+
 ```
 
 ```@example FREE_MOTION
-import CairoMakie
+import GLMakie
 Multibody.render(model, sol, filename = "free_body.gif")
 nothing # hide
 ```

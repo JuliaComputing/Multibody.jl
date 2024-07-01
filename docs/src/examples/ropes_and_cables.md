@@ -22,7 +22,7 @@ t = Multibody.t
 
 world = Multibody.world
 number_of_links = 6
-@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1, radius=0.03, color=[0.5, 0.4, 0.4, 1])
+@named rope = Rope(l = 1, m = 1, n=number_of_links, c=0, d=0, air_resistance=0, d_joint=1, radius=0.03, color=[0.5, 0.4, 0.4, 1], dir=[0.05, 1, 0])
 @named body = Body(; m = 1, radius=0.2)
 
 connections = [connect(world.frame_b, rope.frame_a)
@@ -31,14 +31,11 @@ connections = [connect(world.frame_b, rope.frame_a)
 @named stiff_rope = ODESystem(connections, t, systems = [world, body, rope])
 
 ssys = structural_simplify(IRSystem(stiff_rope))
-prob = ODEProblem(ssys, [
-    collect(body.r_0) .=> [1,1,1];
-    collect(body.w_a) .=> [1,1,1]
-], (0, 5))
-sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1);
+prob = ODEProblem(ssys, [], (0, 5))
+sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 
-import CairoMakie
+import GLMakie
 Multibody.render(stiff_rope, sol, filename = "stiff_rope.gif") # May take long time for n>=10
 ```
 ![stiff_rope animation](stiff_rope.gif)
@@ -48,7 +45,7 @@ Next up we model an elastic rope, we do this by setting `c > 0`. We also introdu
 ```@example ropes_and_cables
 world = Multibody.world
 number_of_links = 6
-@named rope = Rope(l = 1, m = 5, n=number_of_links, c=800.0, d=0.01, d_joint=0.1, air_resistance=0.2)
+@named rope = Rope(l = 1, m = 5, n=number_of_links, c=800.0, d=0.01, d_joint=0.1, air_resistance=0.2, dir=[0.2, 1, 0])
 @named body = Body(; m = 300, radius=0.2)
 
 connections = [connect(world.frame_b, rope.frame_a)
@@ -57,12 +54,8 @@ connections = [connect(world.frame_b, rope.frame_a)
 @named flexible_rope = ODESystem(connections, t, systems = [world, body, rope])
 
 ssys = structural_simplify(IRSystem(flexible_rope))
-prob = ODEProblem(ssys, [
-    collect(body.r_0) .=> [1,1,1];
-    collect(body.w_a) .=> [1,1,1];
-    collect(body.v_0) .=> [10,10,10]
-], (0, 8))
-sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
+prob = ODEProblem(ssys, [], (0, 8))
+sol = solve(prob, Rodas4(autodiff=false));
 @test SciMLBase.successful_retcode(sol)
 
 Multibody.render(flexible_rope, sol, y = -3, x = -6, z = -6, lookat=[0, -3, 0], filename = "flexible_rope.gif") # May take long time for n>=10
@@ -73,7 +66,7 @@ Multibody.render(flexible_rope, sol, y = -3, x = -6, z = -6, lookat=[0, -3, 0], 
 
 
 ## A chain suspended in two points
-When a [`Rope`](@ref) component is used to model a chain that is suspended between two fixed points, a kinematic loop (kinematic chain) is formed. To break this loop, we introduce a spring in one end. 
+When a [`Rope`](@ref) component is used to model a chain that is suspended between two fixed points, a kinematic loop is formed. To break this loop, we introduce a spring in one end. 
 
 ```@example ropes_and_cables
 number_of_links = 8

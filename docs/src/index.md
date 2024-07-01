@@ -65,7 +65,7 @@ prob = ODEProblem(ssys, [], (0.0, 3.51))
 sol = solve(prob, Rodas5P())
 Plots.plot(sol)
 
-import CairoMakie
+import GLMakie
 framerate = 30
 timevec = [zeros(30); range(sol.t[1], sol.t[end], step=1/framerate)] |> reverse
 render(logo, sol, timevec; z=-2.5, x=0, y=-0.5, lookat=[0.2,-0.5, 0], filename="JuliaSim_logo.gif", framerate)
@@ -79,6 +79,79 @@ Built on top of the Julia language and the JuliaSim suite of tools for modeling,
 
 In this documentation, you will find everything you need to get started with Multibody.jl, from basic component descriptions to detailed examples showcasing the package's capabilities. As you explore this documentation, you'll learn how to create complex models, work with forces and torques, simulate various types of motions, and visualize your results in both 2D and 3D. Whether you are a seasoned researcher or a newcomer to the field, Multibody.jl will empower you to bring your ideas to life and unlock new possibilities in the fascinating world of multibody dynamics.
 
+## Example overview
+The following animations give a quick overview of simple mechanisms that can be modeled using Multibody.jl. The examples are ordered from simple at the top, to more advanced at the bottom. Please browse the examples for even more examples!
+```@raw html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIF Grid</title>
+    <style>
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, auto);
+            gap: 10px;
+            padding: 20px;
+        }
+        .grid-item {
+            width: 100%;
+            height: auto;
+        }
+        .grid-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="grid-container">
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/pendulum/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/furuta.gif" alt="Furuta">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/spring_damper_system/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/springdamper.gif" alt="springdamper">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/spherical_pendulum/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/spherical.gif" alt="spherical">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/three_springs/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/three_springs.gif" alt="three_springs">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/space/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/space.gif" alt="space">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/free_motion/#Body-suspended-in-springs">
+        <img src="https://help.juliahub.com/multibody/dev/examples/free_body.gif" alt="free_body">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/ropes_and_cables/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/flexible_rope.gif" alt="flexible_rope">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/ropes_and_cables/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/mounted_chain.gif" alt="mounted_chain">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/ropes_and_cables/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/stiff_rope.gif" alt="stiff_rope">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/kinematic_loops/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/fourbar2.gif" alt="fourbar2">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/kinematic_loops/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/fourbar.gif" alt="fourbar">
+    </a>
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/robot/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/robot.gif" alt="robot">
+    </a>
+</div>
+
+</body>
+</html>
+```
+
 
 
 
@@ -86,7 +159,8 @@ In this documentation, you will find everything you need to get started with Mul
 
 - The torque variable in Multibody.jl is typically called `tau` rather than `t` to not conflict with the often used independent variable `t` used to denote time.
 - Multibody.jl occasionally requires the user to specify which component should act as the root of the kinematic tree. This only occurs when bodies are connected directly to force components without a joint parallel to the force component.
-- In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using he function [`ori`](@ref).
+- In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using the function [`ori`](@ref).
+- Quaternions in Multibody.jl follow the order ``[s, i, j, k]``, i.e., scalar/real part first.
 
 
 

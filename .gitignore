@@ -1,5 +1,9 @@
 *.jl.*.cov
 *.jl.cov
 *.jl.mem
+*.gif
+*.mp4
+*.mo
+*.mat
 /Manifest.toml
 /docs/build/

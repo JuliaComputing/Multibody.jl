@@ -13,7 +13,7 @@
     r_0, f, tau = collect.((r_0, f, tau))
     # R: Orientation object to rotate the world frame into the connector frame
 
-    R = NumRotationMatrix(; name, varw)
+    R = NumRotationMatrix(; name, varw, state_priority=-1)
 
     ODESystem(Equation[], t, [r_0; f; tau], []; name,
               metadata = Dict(:orientation => R, :frame => true))
