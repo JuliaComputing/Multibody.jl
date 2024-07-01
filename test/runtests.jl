@@ -749,7 +749,8 @@ using LinearAlgebra
 # @testset "Rolling wheel" begin
 @mtkmodel WheelInWorld begin
     @components begin
-        world = World(n=[0,0,-1])
+        # world = World(n=[0,0,-1])
+        world = W()
         wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
                             I_long = 0.12,
                             x0 = 0.2,
@@ -763,6 +764,7 @@ worldwheel = complete(worldwheel)
 
 # pars = collect(worldwheel.world.n) .=> [0,0,-1];
 defs = Dict([
+    collect(worldwheel.world.n) .=> [0,0,-1];
     worldwheel.wheel.body.r_0[1] => 0.2;
     worldwheel.wheel.body.r_0[2] => 0.2;
     worldwheel.wheel.body.r_0[3] => 0.3;
@@ -771,6 +773,7 @@ defs = Dict([
 
 ssys = structural_simplify(IRSystem(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 4))
+length(filter(x->occursin("world₊n", string(x)), parameters(worldwheel))) == 3
 @test prob[collect(worldwheel.world.n)] == [0,0,-1]
 @test prob[collect(worldwheel.wheel.der_angles)] == prob[collect(worldwheel.wheel.rollingWheel.der_angles)]
 
