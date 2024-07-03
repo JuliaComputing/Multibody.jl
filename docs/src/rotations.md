@@ -8,9 +8,11 @@ Orientations and rotations in 3D can be represented in multiple different ways. 
 Most components that may use Euler angles also allow you to select the sequence of axis around which to perform the rotations, e.g., `sequence = [1,2,3]` performs rotations around ``x`` first, then ``y`` and ``z``.
 
 ## Quaternions
-A [quaternion](https://en.wikipedia.org/wiki/Quaternion) represents an orientation using 4 numbers. This is a non-minimal representation, but in return it is also singularity free. Multibody.jl uses non-unit quaternions to represent orientation when `quat = true` is provided to components that support this option. The convention used for quaternions is ``[s, v_1, v_2, v_3]``, sometimes also referred to as ``[w, i, j, k]``, i.e., the real/scalar part comes first, followed by the three imaginary numbers.
+A [quaternion](https://en.wikipedia.org/wiki/Quaternion) represents an orientation using 4 numbers. This is a non-minimal representation, but in return it is also singularity free. Multibody.jl uses _non-unit quaternions_[^quat] to represent orientation when `quat = true` is provided to components that support this option. The convention used for quaternions is ``[s, v_1, v_2, v_3]``, sometimes also referred to as ``[w, i, j, k]``, i.e., the real/scalar part comes first, followed by the three imaginary numbers. When quaternions are used, state variables `Q̂` denote non-unit quaternions, while normalized unit quaternions are available as observable variables `Q`. The use of non-unit quaternions allows Multibody to integrate rotations without using dynamic state selection or introducing algebraic equations. 
 
-Multibody.jl depends on [Rotations.jl](https://github.com/JuliaGeometry/Rotations.jl) which in turn uses [Quaternions.jl](https://github.com/JuliaGeometry/Quaternions.jl) for quaternion computations. If you manually create quaternions using these packages, you may convert them to a vector to provide, e.g., initial conditions, using `vec(Q)`.
+[^quat]: "Integrating Rotations using Non-Unit Quaternions", Caleb Rucker, https://par.nsf.gov/servlets/purl/10097724
+
+Multibody.jl depends on [Rotations.jl](https://github.com/JuliaGeometry/Rotations.jl) which in turn uses [Quaternions.jl](https://github.com/JuliaGeometry/Quaternions.jl) for quaternion computations. If you manually create quaternions using these packages, you may convert them to a vector to provide, e.g., initial conditions, using `Rotations.params(Q)` (see [Conversion between formats](@ref) below).
 
 ### Examples using quaternions
 - [Free motions](@ref) (second example on the page)
