@@ -17,9 +17,9 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    joint = Spherical(state=true, isroot=true, phi = 1, radius=0.2, color=[1,1,0,1])
+    joint = Spherical(state=true, isroot=true, phi = 1, phi_d = 3, radius=0.1, color=[1,1,0,1])
     bar = FixedTranslation(r = [0, -1, 0])
-    body = Body(; m = 1, isroot = false)
+    body = Body(; m = 1, isroot = false, r_cm=[0.1, 0, 0])
 end
 
 connections = [connect(world.frame_b, joint.frame_a)

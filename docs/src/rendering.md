@@ -2,16 +2,16 @@
 
 Multibody.jl has an automatic 3D-rendering feature that draws a mechanism in 3D. This can be used to create animations of the mechanism's motion from a solution trajectory, as well as to create interactive applications where the evolution of time can be controlled by the user.
 
-The functionality requires the user to load any of the Makie frontend packages, e.g., 
+The functionality requires the user to install and load one of the [Makie backend packages](https://docs.makie.org/), e.g., 
 ```julia
-using GLMakie # Preferred when running locally
+using GLMakie # Preferred
 ```
 or 
 ```julia
 using CairoMakie
 ```
 !!! note "Backend choice"
-    GLMakie and WGLMakie produce much nicer-looking animations and is also significantly faster than CairoMakie. CairoMakie may be used to produce the graphics in some web environments if constraints imposed by the web environment do not allow any of the GL alternatives. CairoMakie struggles with the Z-order of drawn objects, sometimes making bodies that should have been visible hidden behind bodies that are further back in the scene.
+    GLMakie and WGLMakie produce much nicer-looking animations and are also significantly faster than CairoMakie. CairoMakie may be used to produce the graphics in some web environments if constraints imposed by the web environment do not allow any of the GL alternatives. CairoMakie struggles with the Z-order of drawn objects, sometimes making bodies that should have been visible hidden behind bodies that are further back in the scene.
 
 After that, the [`render`](@ref) function is the main entry point to create 3D renderings. This function has the following methods:
 

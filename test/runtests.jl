@@ -545,17 +545,13 @@ ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
 # ssys = structural_simplify(model, allow_parameters = false)
 prob = ODEProblem(ssys,
                   [collect(body.body.w_a .=> 0);
-                  collect(body.body.v_0 .=> 0);
-                   collect(D.(body.body.phi)) .=> 1;
-                #    collect((body.body.r_0)) .=> collect((body.r_0));
-                   collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
+                  collect(body.body.v_0 .=> 0);], (0, 10))
 
 # @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
 # Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 
-@info "Initialization broken, initial value for body.r_0 not respected, add tests when MTK has a working initialization"
 doplot() && plot(sol, idxs = [body.r_0...]) |> display
 # end
 
@@ -650,29 +646,28 @@ end
 # ==============================================================================
 ## universal pendulum
 # ==============================================================================
-
+using LinearAlgebra
 @testset "Universal pendulum" begin
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 @named begin
-    joint = Universal()
+    joint = Universal(length=0.1)
     bar = FixedTranslation(r = [0, -1, 0])
-    body = Body(; m = 1, isroot = false)
+    body = Body(; m = 1, isroot = false, r_cm=[0.1, 0, 0])
 end
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, bar.frame_a)
                connect(bar.frame_b, body.frame_a)]
 @named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys,
                   [
                     joint.phi_b => sqrt(2);
                    joint.revolute_a.phi => sqrt(2);
-                   D(joint.revolute_a.phi) => 0;
                    joint.revolute_b.phi => 0;
-                   D(joint.revolute_b.phi) => 0
                    ], (0, 10))
 sol2 = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol2)
