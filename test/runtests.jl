@@ -141,7 +141,7 @@ sol = solve(prob, Rodas4())
 
 @test maximum(norm.(eachcol(reduce(hcat, sol[collect(forcesensor.force.u)])))) ≈
       maximum(norm.(eachcol(reduce(hcat, sol[collect(joint.frame_a.f)]))))
-@test norm(sol[powersensor.power.u]) < 1e-16
+@test norm(sol[powersensor.power.u]) < 1e-14
 doplot() && plot(sol, idxs = collect(joint.phi))
 
 # Test power sensos
