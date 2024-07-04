@@ -108,23 +108,23 @@ nothing # hide
 The coordinates of any point on the mechanism may be obtained in the world coordinate frame by either
 
 ```@example robot
-output = collect(robot.mechanics.b6.frame_b.r_0)
-fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+outputs = collect(robot.mechanics.b6.frame_b.r_0)
+fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, outputs)
 fkine(prob.u0, prob.p, 0)
 ```
 
-Query the solution object with the desired output, e.g.,
+Query the solution object with the desired outputs, e.g.,
 ```@example robot
-sol(0, idxs=output)
+sol(0, idxs=outputs)
 ```
-query the problem with the output, in which case the initial condition is used to compute the output
+query the problem with the outputs, in which case the initial condition is used to compute the outputs
 ```@example robot
-prob[output]
+prob[outputs]
 ```
 
-or by building an explicit function `(state, parameters, time) -> output`
+or by building an explicit function `(state, parameters, time) -> outputs`
 ```@example robot
-fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, outputs)
 fkine(prob.u0, prob.p, 0)
 ```
 !!! note
@@ -140,3 +140,19 @@ unknowns(ssys)[nonzero_inds]
 ```
 We see that the end-effector position depends on all mechanical angles except for the last one, which is expected since the end-effector origin is on the axis of rotation of joint 6. 
 
+We can explicitly build a function that only takes the joint angles as inputs using `build_fun`, but care must be taken to provide all variables that actually do matter.
+```@example robot
+inputs = [
+    robot.mechanics.r1.phi
+    robot.mechanics.r2.phi
+    robot.mechanics.r3.phi
+    robot.mechanics.r4.phi
+    robot.mechanics.r5.phi
+    robot.mechanics.r6.phi
+]
+
+fkine = Multibody.build_fun(prob, inputs, outputs)
+u0dict = Dict(nameof.(unknowns(ssys)) .=> prob.u0)
+q = [u0dict[nameof(i.val.f)] for i in inputs]
+fkine(q)
+``` 
