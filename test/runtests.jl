@@ -514,6 +514,90 @@ doplot() && plot(sol, idxs = [body1.r_0...]) |> display
 # fixed_rotation_at_frame_a and b = true required
 end
 
+@testset "FreeBody" begin
+t = Multibody.t
+D = Differential(t)
+world = Multibody.world
+
+@named begin
+    body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
+                     r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true)
+    bar2 = FixedTranslation(r = [0.8, 0, 0])
+    spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
+    spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
+end
+
+eqs = [connect(bar2.frame_a, world.frame_b)
+       connect(spring1.frame_b, body.frame_a)
+       connect(bar2.frame_b, spring2.frame_a)
+       connect(spring1.frame_a, world.frame_b)
+       connect(body.frame_b, spring2.frame_b)]
+
+@named model = ODESystem(eqs, t,
+                         systems = [
+                             world,
+                             body,
+                             bar2,
+                             spring1,
+                             spring2,
+                         ])
+ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
+# ssys = structural_simplify(model, allow_parameters = false)
+prob = ODEProblem(ssys,
+                  [collect(body.body.w_a .=> 0);
+                  collect(body.body.v_0 .=> 0);
+                   collect(D.(body.body.phi)) .=> 1;
+                #    collect((body.body.r_0)) .=> collect((body.r_0));
+                   collect(D.(D.(body.body.phi))) .=> 1], (0, 10))
+
+# @test_skip begin # The modelica example uses angles_fixed = true, which causes the body component to run special code for variable initialization. This is not yet supported by MTK
+# Without proper initialization, the example fails most of the time. Random perturbation of u0 can make it work sometimes.
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+
+@info "Initialization broken, initial value for body.r_0 not respected, add tests when MTK has a working initialization"
+doplot() && plot(sol, idxs = [body.r_0...]) |> display
+# end
+
+end
+
+# ==============================================================================
+## Planar joint ================================================================
+# ==============================================================================
+using LinearAlgebra
+@mtkmodel PlanarTest begin
+    @components begin
+        world = W()
+        planar = Planar(n=[0,0,1], n_x=[1,0,0])
+        force = Force()
+        body = Body(m=1)
+    end
+    @equations begin
+        connect(world.frame_b, planar.frame_a, force.frame_a)
+        connect(planar.frame_b, body.frame_a, force.frame_b)
+        force.force.u[1] ~ sin(t)
+        force.force.u[2] ~ t
+        force.force.u[3] ~ t^2/2
+        # force.force.u .~ [sin(t), t, t^2]
+    end
+end
+@named sys = PlanarTest()
+sys = complete(sys)
+ssys = structural_simplify(IRSystem(sys))
+prob = ODEProblem(ssys, [
+    sys.world.g => 9.80665; # Modelica default
+    # collect(sys.body.w_a) .=> 0;
+    # collect(sys.body.v_0) .=> 0;
+], (0, 2))
+
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+
+# plot(sol, idxs=sys.force.frame_a.f)
+@test sol(2, idxs=sys.body.r_0) ≈ [1.0907, -18.28, 0] atol=1e-3
+
+# plot(sol)
+
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
 # ==============================================================================
