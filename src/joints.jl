@@ -19,10 +19,11 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 
 # Rendering options
 - `radius = 0.05`: Radius of the joint in animations
+- `length = radius`: Length of the joint in animations
 - `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
-                  isroot = true, iscut = false, radius = 0.05, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
+                  isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
     if !(eltype(n) <: Num)
         norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     end
@@ -31,6 +32,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
     @parameters n[1:3]=n [description = "axis of rotation"]
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
+        length = length, [description = "length of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
     end
     @variables tau(t)=0 [
@@ -263,16 +265,32 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     add_params(sys, pars; name)
 end
 
+
+"""
+    Universal(; name, n_a, n_b, phi_a = 0, phi_b = 0, w_a = 0, w_b = 0, a_a = 0, a_b = 0, state_priority=10)
+
+Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and `frame_b` rotates around axis `n_b` which is fixed in `frame_b`. The two frames coincide when `revolute_a.phi=0` and `revolute_b.phi=0`. This joint has the following potential states;
+
+- The relative angle `phi_a = revolute_a.phi` [rad] around axis `n_a`
+- the relative angle `phi_b = revolute_b.phi` [rad] around axis `n_b`
+- the relative angular velocity `w_a = D(phi_a)`
+- the relative angular velocity `w_b = D(phi_b)`
+"""
 @component function Universal(; name, n_a = [1, 0, 0], n_b = [0, 1, 0], phi_a = 0,
                    phi_b = 0,
+                   state_priority = 10,
                    w_a = 0,
                    w_b = 0,
                    a_a = 0,
-                   a_b = 0)
+                   a_b = 0,
+                   radius = 0.05f0,
+                   length = radius, 
+                   color = [1,0,0,1]
+)
     @named begin
         ptf = PartialTwoFrames()
-        revolute_a = Revolute(n = n_a, isroot = false)
-        revolute_b = Revolute(n = n_b, isroot = false)
+        revolute_a = Revolute(n = n_a, isroot = false, radius, length, color)
+        revolute_b = Revolute(n = n_b, isroot = false, radius, length, color)
     end
     @unpack frame_a, frame_b = ptf
     @parameters begin
@@ -288,32 +306,32 @@ end
     @variables begin
         (phi_a(t) = phi_a),
         [
-            state_priority = 10,
+            state_priority = state_priority,
             description = "Relative rotation angle from frame_a to intermediate frame",
         ]
         (phi_b(t) = phi_b),
         [
-            state_priority = 10,
+            state_priority = state_priority,
             description = "Relative rotation angle from intermediate frame to frame_b",
         ]
         (w_a(t) = w_a),
         [
-            state_priority = 10,
+            state_priority = state_priority,
             description = "First derivative of angle phi_a (relative angular velocity a)",
         ]
         (w_b(t) = w_b),
         [
-            state_priority = 10,
+            state_priority = state_priority,
             description = "First derivative of angle phi_b (relative angular velocity b)",
         ]
         (a_a(t) = a_a),
         [
-            state_priority = 10,
+            state_priority = state_priority,
             description = "Second derivative of angle phi_a (relative angular acceleration a)",
         ]
         (a_b(t) = a_b),
         [
-            state_priority = 10,
+            state_priority = state_priority,
             description = "Second derivative of angle phi_b (relative angular acceleration b)",
         ]
     end
@@ -855,12 +873,12 @@ LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)
 """
     Planar(; n = [0,0,1], n_x = [1,0,0], cylinderlength = 0.1, cylinderdiameter = 0.05, cylindercolor = [1, 0, 1, 1], boxwidth = 0.3*cylinderdiameter, boxheight = boxwidth, boxcolor = [0, 0, 1, 1])
 
-Joint where frame_b can move in a plane and can rotate around an
+Joint where `frame_b` can move in a plane and can rotate around an
 axis orthogonal to the plane. The plane is defined by
 vector `n` which is perpendicular to the plane and by vector `n_x`,
 which points in the direction of the x-axis of the plane.
-frame_a and frame_b coincide when s_x=prismatic_x.s=0,
-s_y=prismatic_y.s=0 and phi=revolute.phi=0.
+`frame_a` and `frame_b` coincide when `s_x=prismatic_x.s=0,
+s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
 """
 @mtkmodel Planar begin
     @structural_parameters begin

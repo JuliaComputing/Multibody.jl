@@ -309,8 +309,7 @@ function render!(scene, ::typeof(World), sys, sol, t)
     true
 end
 
-function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)
-    # TODO: change to cylinder
+function render!(scene, T::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     n = get_fun(sol, collect(sys.n))
     color = get_color(sys, sol, :red)
@@ -321,19 +320,25 @@ function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConst
     catch
         0.05f0
     end |> Float32
+    length = try
+        sol(sol.t[1], idxs=sys.length)
+    catch
+        radius
+    end |> Float32
     thing = @lift begin
-        # radius = sol($t, idxs=sys.radius)
         O = r_0($t)
         n_a = n($t)
         R_w_a = rotfun($t)
         n_w = R_w_a*n_a # Rotate to the world frame
-        p1 = Point3f(O + radius*n_w)
-        p2 = Point3f(O - radius*n_w)
+        p1 = Point3f(O + length*n_w)
+        p2 = Point3f(O - length*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
+
+render!(scene, ::typeof(Universal), sys, sol, t) = false # To recurse down to rendering the revolute joints
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
     vars = get_fun(sol, collect(sys.frame_a.r_0))
