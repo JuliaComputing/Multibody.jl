@@ -317,16 +317,24 @@ end
 
 
 function from_nxy(n_x, n_y)
-    e_x = norm(n_x) < 1e-10 ? [1.0, 0, 0] : _normalize(n_x)
-    e_y = norm(n_y) < 1e-10 ? [0, 1.0, 0] : _normalize(n_y)
+
+    nn_x = collect(n_x) ./ _norm(n_x)
+    nn_y = collect(n_y) ./ _norm(n_y)
+
+    e_x = [ifelse(_norm(n_x) < 1e-10, [1.0, 0, 0][i], nn_x[i]) for i in 1:3]
+    e_y = [ifelse(_norm(n_y) < 1e-10, [0, 1.0, 0][i], nn_y[i]) for i in 1:3]
     n_z_aux = cross(e_x, e_y)
-    n_y_aux = #if n_z_aux' * n_z_aux > 1.0e-6 # TODO: MTK too buggy with ifelse to handle this logic
-        e_y
-    # elseif abs(e_x[1]) > 1.0e-6
-    #     [0, 1.0, 0]
-    # else
-    #     [1.0, 0, 0]
-    # end
+
+    cond = n_z_aux' * n_z_aux > 1.0e-6
+
+    n_y_aux = [ifelse(
+        cond,
+        e_y[i],
+        ifelse(
+            abs(e_x[1]) > 1.0e-6,
+            [0, 1.0, 0][i],
+            [1.0, 0, 0][i])
+    ) for i = 1:3]
     e_z_aux = cross(e_x, n_y_aux)
     e_z = _normalize(e_z_aux)
     RotationMatrix([e_x cross(e_z, e_x) e_z]', zeros(3))

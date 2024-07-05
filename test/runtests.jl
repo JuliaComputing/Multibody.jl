@@ -1121,13 +1121,14 @@ end
 # ==============================================================================
 using LinearAlgebra
 
-@testset "BodyBox" begin
+# @testset "BodyBox" begin
+    # NOTE: r = [0,1,0] yields unstable simulation due to the commented branch in from_nxy: if n_z_aux' * n_z_aux > 1.0e-6
+    # NOTE: for r=[0,0,1], r_shape=[0.1, 0, 0] the render of the box appears to have negative gravity
     @info "Testing BodyBox"
-    world = Multibody.world
     @mtkmodel BoxPend begin
         @components begin
             world = W()
-            body = BodyBox(r=[1,2,3], width=0.2, inner_width=0.1)
+            body = Multibody.BodyBox(r=[0,0,1], r_shape=[0.1, 0, 0], width=0.1, height=0.3, inner_width=0.1)
             joint = Revolute()
         end
         @equations begin
@@ -1159,7 +1160,7 @@ using LinearAlgebra
     # @test sol(10, idxs=model.joint.phi) ≈ -2.0992 atol=1e-2
     # @test sol(10, idxs=model.body.body.I_31) ≈ -42.39 rtol=1e-3
 # using Plots; plot(sol)
-end
+# end
 
 ##
 
