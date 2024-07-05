@@ -1128,7 +1128,7 @@ using LinearAlgebra
     @mtkmodel BoxPend begin
         @components begin
             world = W()
-            body = Multibody.BodyBox(r=[0,0,1], r_shape=[0.1, 0, 0], width=0.1, height=0.3, inner_width=0.1)
+            body = Multibody.BodyBox(r=[0.1, 1, 0.2], r_shape=[0, 0, 0], width=0.1, height=0.3, inner_width=0.05)
             joint = Revolute()
         end
         @equations begin
@@ -1141,8 +1141,9 @@ using LinearAlgebra
     model = complete(model)
     ssys = structural_simplify(IRSystem(model))
 
-    prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 10))
+    prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 1))
     sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    # first(render(model, sol, 0, x=2.5, y=1.5, z=2.5, show_axis=true))
     # @test sol(10, idxs=model.body.body.m) ≈ 226.27 rtol=1e-3 # Values from open modelica
     # @test sol(10, idxs=model.body.body.I_11) ≈ 245.28 rtol=1e-3
     # @test sol(10, idxs=model.body.body.I_22) ≈ 188.74 rtol=1e-3

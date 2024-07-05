@@ -672,8 +672,12 @@ end
         r_shape = [0, 0, 0]
         width_dir = [0,1,0] # https://github.com/SciML/ModelingToolkit.jl/issues/2810
         length_dir = _normalize(r - r_shape)
-        dir = r - r_shape
         length = _norm(r - r_shape)
+    end
+    begin
+        iszero(r_shape) || error("non-zero r_shape not supported")
+        width_dir = collect(width_dir)
+        length_dir = collect(length_dir)
     end
 
     @parameters begin
@@ -695,11 +699,11 @@ end
         # ]
 
         # NOTE: these are workarounds to allow rendering of this component. Unfortunately, MTK/JSCompiler cannot handle parameter arrays well enough to let these be actual parameters
-        render_r[1:3]=r
-        render_r_shape[1:3]=r_shape
-        render_length = length
-        render_length_dir[1:3] = length_dir
-        render_width_dir[1:3] = width_dir
+        render_r[1:3]=r, [description="For internal use only"]
+        render_r_shape[1:3]=r_shape, [description="For internal use only"]
+        render_length = length, [description="For internal use only"]
+        render_length_dir[1:3] = length_dir, [description="For internal use only"]
+        render_width_dir[1:3] = width_dir, [description="For internal use only"]
 
 
         width = 0.3*length, [

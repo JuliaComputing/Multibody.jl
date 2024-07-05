@@ -443,24 +443,29 @@ function render!(scene, ::typeof(BodyBox), sys, sol, t)
     height = Float32(sol(sol.t[1], idxs=sys.height))
     length = Float32(sol(sol.t[1], idxs=sys.render_length))
 
-    width_dir = sol(sol.t[1], idxs=collect(sys.render_width_dir))
     length_dir = sol(sol.t[1], idxs=collect(sys.render_length_dir))
-    height_dir = normalize(cross(length_dir, width_dir))
+    width_dir = sol(sol.t[1], idxs=collect(sys.render_width_dir))
+    height_dir = normalize(cross(normalize(length_dir), normalize(width_dir)))
+    width_dir = normalize(cross(height_dir, length_dir))
 
-    r_0a = get_fun(sol, collect(sys.frame_a.r_0)) # Origin is translated by r_shape
     Rfun = get_rot_fun(sol, sys.frame_a)
+    r_0a = get_fun(sol, collect(sys.frame_a.r_0)) # Origin is translated by r_shape
+    r_shape = sol(sol.t[1], idxs=collect(sys.render_r_shape))
+    r = sol(sol.t[1], idxs=collect(sys.render_r))
 
     R0 = [length_dir width_dir height_dir]
+    # R0 = Multibody.from_nxy(r, width_dir).R'
+    @assert isapprox(det(R0), 1.0, atol=1e-6)
     # NOTE: The rotation by this R and the translation with r_shape needs to be double checked
 
-    origin = R0*Vec3f(0, -width/2, -height/2)
-    extent = R0*Vec3f(length, width, height)
+    origin = Vec3f(0, -width/2, -height/2) + r_shape
+    extent = Vec3f(length, width, height) 
     thing = Makie.Rect3f(origin, extent)
     m = mesh!(scene, thing; color, specular = Vec3f(1.5))
     on(t) do t
         r1 = Point3f(r_0a(t))
         R = Rfun(t)
-        q = Rotations.QuatRotation(R).q
+        q = Rotations.QuatRotation(R*R0).q
         Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
         Makie.transform!(m, translation=r1, rotation=Q)
     end
