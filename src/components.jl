@@ -357,6 +357,8 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 - `shapefile`: A path::String to a CAD model that can be imported by MeshIO for 3D rendering. If none is provided, a cylinder shape is rendered.
+
+See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", kwargs...)
     systems = @named begin
