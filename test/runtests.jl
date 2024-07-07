@@ -1114,6 +1114,55 @@ using LinearAlgebra
 # using Plots; plot(sol)
 end
 
+#
+
+# ==============================================================================
+## BodyBox =====================================================================
+# ==============================================================================
+using LinearAlgebra
+
+# @testset "BodyBox" begin
+    # NOTE: r = [0,1,0] yields unstable simulation due to the commented branch in from_nxy: if n_z_aux' * n_z_aux > 1.0e-6
+    # NOTE: for r=[0,0,1], r_shape=[0.1, 0, 0] the render of the box appears to have negative gravity
+    @info "Testing BodyBox"
+    @mtkmodel BoxPend begin
+        @components begin
+            world = W()
+            body = Multibody.BodyBox(r=[0.1, 1, 0.2], r_shape=[0, 0, 0], width=0.1, height=0.3, inner_width=0.05)
+            joint = Revolute()
+        end
+        @equations begin
+            connect(world.frame_b, joint.frame_a)
+            connect(joint.frame_b, body.frame_a)
+        end
+    end
+
+    @named model = BoxPend()
+    model = complete(model)
+    ssys = structural_simplify(IRSystem(model))
+
+    prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 1))
+    sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    # first(render(model, sol, 0, x=2.5, y=1.5, z=2.5, show_axis=true))
+    # @test sol(10, idxs=model.body.body.m) ≈ 226.27 rtol=1e-3 # Values from open modelica
+    # @test sol(10, idxs=model.body.body.I_11) ≈ 245.28 rtol=1e-3
+    # @test sol(10, idxs=model.body.body.I_22) ≈ 188.74 rtol=1e-3
+    # @test sol(10, idxs=model.body.body.I_33) ≈ 94.515 rtol=1e-3
+    # @test sol(10, idxs=model.body.body.I_21) ≈ -37.69 rtol=1e-3
+    # @test sol(10, idxs=model.body.body.I_31) ≈ -56.53 rtol=1e-3
+    # @test sol(10, idxs=model.body.body.I_32) ≈ -113 rtol=1e-3
+    # @test sol(10, idxs=model.joint.phi) ≈ -2.1036 atol=1e-2
+    # # using Plots; plot(sol)
+
+
+    # prob = ODEProblem(ssys, [model.joint.phi => 0; model.body.inner_width=>0.05], (0, 10))
+    # sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    # @test sol(10, idxs=model.body.body.m) ≈ 169.7 rtol=1e-3 # Values from open modelica
+    # @test sol(10, idxs=model.joint.phi) ≈ -2.0992 atol=1e-2
+    # @test sol(10, idxs=model.body.body.I_31) ≈ -42.39 rtol=1e-3
+# using Plots; plot(sol)
+# end
+
 ##
 
 using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq

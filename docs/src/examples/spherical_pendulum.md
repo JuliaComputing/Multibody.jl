@@ -2,7 +2,7 @@
 
 ![animation](spherical.gif)
 
-This example models a spherical pendulum. The pivot point is modeled using a [`Spherical`](@ref) joint, the pendulum rod is modeled using a [`FixedTranslation`](@ref) and the mass is modeled using a [`Body`](@ref). In this example, we choose the joint to be the root (joints are often better root objects than bodies).
+This example models a spherical pendulum. The pivot point is modeled using a [`Spherical`](@ref) joint, this lets the pendulum rotate in three directions. The pendulum rod is modeled using a [`FixedTranslation`](@ref), a component without inertial properties, and the mass of the tip is modeled using a [`Body`](@ref). To model a rod with inertial properties, see, e.g., [`BodyShape`](@ref) or [`BodyCylinder`](@ref), In this example, we choose the joint to be the root (joints are often better root objects than bodies).
 
 
 ```@example spring_mass_system

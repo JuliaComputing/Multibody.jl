@@ -26,6 +26,7 @@ Create a 3D animation of a multibody system
 - `loop`: The animation will be looped this many times. Please note: looping the animation using this argument is only recommended when `display = true` for camera manipulation purposes. When the camera is not manipulated, looping the animation by other means is recommended to avoid an increase in the file size.
 - `filename` controls the name and the file type of the resulting animation
 - `traces`: An optional array of frames to show the trace of.
+- `show_axis = false`: Whether or not to show the plot axes, including background grid.
 
 # Camera control
 The following keyword arguments are available to control the camera pose:
@@ -150,7 +151,7 @@ include("frames.jl")
 export PartialTwoFrames
 include("interfaces.jl")
 
-export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, Rope
+export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, BodyBox, Rope
 include("components.jl")
 
 export Revolute, Prismatic, Planar, Spherical, Universal, GearConstraint, RollingWheelJoint,

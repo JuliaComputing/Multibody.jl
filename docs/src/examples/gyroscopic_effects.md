@@ -7,7 +7,7 @@ In this example, we demonstrate how a rotating body creates a reaction torque wh
 The system consists of a pendulum suspended in a spherical joint, a joint without any rotational constraints. The tip of the pendulum is a cylinder that is rotating around a revolute joint in its center. When the pendulum swings, the rotation axis of the rotating tip is changed, this causes the entire pendulum to rotate around the axis through the pendulum rod.
 
 
-```@example spring_mass_system
+```@example GYRO
 using Multibody
 using ModelingToolkit
 using Plots
@@ -42,7 +42,7 @@ ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [model.world.g => 9.80665, model.revolute.w => 10], (0, 5))
 
-sol = solve(prob, Rodas5P(), abstol=1e-7, reltol=1e-7);
+sol = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8);
 @assert SciMLBase.successful_retcode(sol)
 using Test # hide
 @test sol(5, idxs=collect(model.body2.r_0[1:3])) ≈ [-0.0357364, -0.188245, 0.02076935] atol=1e-3 # hide
