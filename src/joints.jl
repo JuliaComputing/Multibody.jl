@@ -241,6 +241,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                     [connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut)
                      zeros(3) .~ collect(frame_a.f) + resolve1(Rrel, frame_b.f)])
         else
+            # NOTE: this branch should never happen
             append!(eqs,
                     [connect_orientation(Rrel_inv, inverse_rotation(Rrel); iscut)
                      ori(frame_a) ~ absolute_rotation(frame_b, Rrel_inv)
