@@ -357,6 +357,8 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `r`: Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - All `kwargs` are passed to the internal `Body` component.
 - `shapefile`: A path::String to a CAD model that can be imported by MeshIO for 3D rendering. If none is provided, a cylinder shape is rendered.
+
+See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", kwargs...)
     systems = @named begin
@@ -643,8 +645,8 @@ end
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        frameTranslation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], isroot, quat)
+        translation = FixedTranslation(r = r)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
     end
 
     @equations begin
@@ -657,8 +659,240 @@ end
         a_0[1] ~ D(v_0[1])
         a_0[2] ~ D(v_0[2])
         a_0[3] ~ D(v_0[3])
-        connect(frame_a, frameTranslation.frame_a)
-        connect(frame_b, frameTranslation.frame_b)
+        connect(frame_a, translation.frame_a)
+        connect(frame_b, translation.frame_b)
         connect(frame_a, body.frame_a)
     end
 end
+
+
+@mtkmodel BodyBox begin
+    @structural_parameters begin
+        r = [1, 0, 0]
+        r_shape = [0, 0, 0]
+        width_dir = [0,1,0] # https://github.com/SciML/ModelingToolkit.jl/issues/2810
+        length_dir = _normalize(r - r_shape)
+        length = _norm(r - r_shape)
+    end
+    begin
+        iszero(r_shape) || error("non-zero r_shape not supported")
+        width_dir = collect(width_dir)
+        length_dir = collect(length_dir)
+    end
+
+    @parameters begin
+        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+        #     description = "Vector from frame_a to frame_b resolved in frame_a",
+        # ]
+        # r_shape[1:3]=zeros(3), [
+        #     description = "Vector from frame_a to box origin, resolved in frame_a",
+        # ]
+        # length = _norm(r - r_shape), [
+        #     description = "Length of box",
+        # ]
+        # length_dir[1:3] = _norm(r - r_shape), [
+        #     description = "Vector in length direction of box, resolved in frame_a",
+        # ]
+
+        # width_dir[1:3] = width_dir0, [ 
+        #     description = "Vector in width direction of box, resolved in frame_a",
+        # ]
+
+        # NOTE: these are workarounds to allow rendering of this component. Unfortunately, MTK/JSCompiler cannot handle parameter arrays well enough to let these be actual parameters
+        render_r[1:3]=r, [description="For internal use only"]
+        render_r_shape[1:3]=r_shape, [description="For internal use only"]
+        render_length = length, [description="For internal use only"]
+        render_length_dir[1:3] = length_dir, [description="For internal use only"]
+        render_width_dir[1:3] = width_dir, [description="For internal use only"]
+
+
+        width = 0.3*length, [
+            description = "Width of box",
+        ]
+        height = width, [
+            description = "Height of box",
+        ]
+
+        inner_width = 0, [
+            description = "Width of inner box surface (0 <= inner_width <= width)",
+        ]
+        inner_height = inner_width, [
+            description = "Height of inner box surface (0 <= inner_height <= height)",
+        ]
+        density = 7700, [
+            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+        ]
+        color[1:4] = purple, [description = "Color of box in animations"]
+    end
+    begin
+        mo = density*length*width*height
+        mi = density*length*inner_width*inner_height
+        m = mo - mi
+        R = from_nxy(r, width_dir) 
+        r_cm = r_shape + _normalize(length_dir)*length/2
+        r_cm = collect(r_cm)
+
+        I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
+        I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
+        I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
+        I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12)) 
+    end
+
+    @variables begin
+        r_0(t)[1:3]=zeros(3), [
+            state_priority = 2,
+            description = "Position vector from origin of world frame to origin of frame_a",
+        ]
+        v_0(t)[1:3]=zeros(3), [
+            state_priority = 2,
+            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        ]
+        a_0(t)[1:3]=zeros(3), [
+            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        ]
+    end
+
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        translation = FixedTranslation(r = r)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+    end
+
+    @equations begin
+        r_0[1] ~ ((frame_a.r_0)[1])
+        r_0[2] ~ ((frame_a.r_0)[2])
+        r_0[3] ~ ((frame_a.r_0)[3])
+        v_0[1] ~ D(r_0[1])
+        v_0[2] ~ D(r_0[2])
+        v_0[3] ~ D(r_0[3])
+        a_0[1] ~ D(v_0[1])
+        a_0[2] ~ D(v_0[2])
+        a_0[3] ~ D(v_0[3])
+        connect(frame_a, translation.frame_a)
+        connect(frame_b, translation.frame_b)
+        connect(frame_a, body.frame_a)
+    end
+end
+
+# function BodyBox2(;
+#         r = [1, 0, 0],
+#         # r_shape = [0, 0, 0],
+#         width_dir = [0,1,0],
+#         # length_dir = _normalize(r - r_shape),
+#         # length = _norm(r - r_shape),
+
+#         # r,
+#         r_shape = nothing,
+#         length = nothing,
+#         length_dir = nothing,
+#         # width_dir = nothing,
+#         width = nothing,
+#         height = nothing,
+#         inner_width = nothing,
+#         inner_height = nothing,
+#         density = nothing,
+#         color = nothing,
+#         name,
+# )
+
+    
+#     # @parameters r[1:3]=something(r, [1,0,0]), [
+#     #         description = "Vector from frame_a to frame_b resolved in frame_a",
+#     #     ]
+#     r = collect(r)
+#     @parameters r_shape[1:3]=something(r_shape, zeros(3)), [
+#             description = "Vector from frame_a to box origin, resolved in frame_a",
+#         ]
+#     r_shape = collect(r_shape)
+#     @parameters length_dir[1:3] = something(length_dir, _norm(r - r_shape)), [
+#             description = "Vector in length direction of box, resolved in frame_a",
+#         ]
+#     length_dir = collect(length_dir)
+#     # @parameters width_dir[1:3] = something(width_dir, [0,1,0]), [ 
+#     #         description = "Vector in width direction of box, resolved in frame_a",
+#     #     ]
+#     width_dir = collect(width_dir)
+#     @parameters color[1:4] = something(color, purple), [
+#             description = "Color of box in animations"
+#         ]
+#     color = collect(color)
+#     pars = @parameters begin
+#         length = something(length, _norm(r - r_shape)), [
+#             description = "Length of box",
+#         ]
+#         width = something(width, 0.3*length), [
+#             description = "Width of box",
+#         ]
+#         height = something(height, width), [
+#             description = "Height of box",
+#         ]
+#         inner_width = something(inner_width, 0), [
+#             description = "Width of inner box surface (0 <= inner_width <= width)",
+#         ]
+#         inner_height = something(inner_height, inner_width), [
+#             description = "Height of inner box surface (0 <= inner_height <= height)",
+#         ]
+#         density = something(density, 7700), [
+#             description = "Density of box (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+#         ]
+#     end
+#     pars = [
+#         pars; 
+#         # collect(r);
+#         collect(r_shape);
+#         collect(length_dir);
+#         # collect(width_dir);
+#         collect(color);
+#     ]
+#     mo = density*length*width*height
+#     mi = density*length*inner_width*inner_height
+#     m = mo - mi
+#     R = from_nxy(r, width_dir) 
+#     r_cm = r_shape + _normalize(length_dir)*length/2
+#     r_cm = collect(r_cm)
+
+#     I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
+#     I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
+#     I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
+#     I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12)) 
+
+#     @variables begin
+#         r_0(t)[1:3]=zeros(3), [
+#             state_priority = 2,
+#             description = "Position vector from origin of world frame to origin of frame_a",
+#         ]
+#         v_0(t)[1:3]=zeros(3), [
+#             state_priority = 2,
+#             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+#         ]
+#         a_0(t)[1:3]=zeros(3), [
+#             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+#         ]
+#     end
+#     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
+#     vars = [r_0; v_0; a_0]
+
+#     systems = @named begin
+#         frame_a = Frame()
+#         frame_b = Frame()
+#         translation = FixedTranslation(r = r)
+#         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+#     end
+
+#     equations = [
+#         r_0[1] ~ ((frame_a.r_0)[1])
+#         r_0[2] ~ ((frame_a.r_0)[2])
+#         r_0[3] ~ ((frame_a.r_0)[3])
+#         v_0[1] ~ D(r_0[1])
+#         v_0[2] ~ D(r_0[2])
+#         v_0[3] ~ D(r_0[3])
+#         a_0[1] ~ D(v_0[1])
+#         a_0[2] ~ D(v_0[2])
+#         a_0[3] ~ D(v_0[3])
+#         connect(frame_a, translation.frame_a)
+#         connect(frame_b, translation.frame_b)
+#         connect(frame_a, body.frame_a)
+#     ]
+#     ODESystem(equations, t, vars, pars; name, systems)
+# end
