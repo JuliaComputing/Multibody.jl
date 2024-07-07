@@ -665,7 +665,24 @@ end
     end
 end
 
+"""
+    BodyBox(; name, m = 1, r = [1, 0, 0], r_shape = [0, 0, 0], width_dir = [0,1,0])
 
+Rigid body with box shape. The mass properties of the body (mass, center of mass, inertia tensor) are computed from the box data. Optionally, the box may be hollow. The (outer) box shape is used in the animation, the hollow part is not shown in the animation. The two connector frames `frame_a` and `frame_b` are always parallel to each other.
+
+# Parameters
+- `r`: (structural parameter) Vector from `frame_a` to `frame_b` resolved in `frame_a`
+- `r_shape`: (structural parameter) Vector from `frame_a` to box origin, resolved in `frame_a`
+- `width_dir`: (structural parameter) Vector in width direction of box, resolved in `frame_a`
+- `length_dir`: (structural parameter) Vector in length direction of box, resolved in `frame_a`
+- `length`: (structural parameter) Length of box
+- `width = 0.3length`: Width of box
+- `height = width`: Height of box
+- `inner_width`: Width of inner box surface (0 <= inner_width <= width)
+- `inner_height`: Height of inner box surface (0 <= inner_height <= height)
+- `density = 7700`: Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)
+- `color`: Color of box in animations
+"""
 @mtkmodel BodyBox begin
     @structural_parameters begin
         r = [1, 0, 0]
