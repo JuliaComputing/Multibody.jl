@@ -604,19 +604,19 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
 @mtkmodel BodyCylinder begin
 
     @structural_parameters begin
-        r = [1, 0, 0]
-        r_shape = [0, 0, 0]
+        # r = [1, 0, 0]
+        # r_shape = [0, 0, 0]
         isroot = false
         quat = false
     end
 
     @parameters begin
-        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
-        #     description = "Vector from frame_a to frame_b resolved in frame_a",
-        # ]
-        # r_shape[1:3]=zeros(3), [
-        #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
-        # ]
+        r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
+            description = "Vector from frame_a to frame_b resolved in frame_a",
+        ]
+        r_shape[1:3]=zeros(3), [
+            description = "Vector from frame_a to cylinder origin, resolved in frame_a",
+        ]
         dir[1:3] = r - r_shape, [
             description = "Vector in length direction of cylinder, resolved in frame_a",
         ]
