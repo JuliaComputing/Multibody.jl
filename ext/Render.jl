@@ -242,11 +242,8 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     color = get_color(sys, sol, :purple)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
-    radius = try
-        sol(sol.t[1], idxs=sys.radius)
-    catch
-        0.05f0
-    end
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    cylinder_radius = sol(sol.t[1], idxs=sys.cylinder_radius) |> Float32
     thing = @lift begin # Sphere
         Ta = framefun($t)
         coords = (Ta*[r_cm($t); 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
@@ -257,7 +254,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
 
     iszero(r_cm(sol.t[1])) && (return true)
 
-    thing = @lift begin # Cylinder
+    thing2 = @lift begin # Cylinder
         Ta = framefun($t)
                
         r_cmt = r_cm($t) # r_cm is the center of the sphere in frame a
@@ -274,10 +271,9 @@ function render!(scene, ::typeof(Body), sys, sol, t)
         extremity = tip
         origin = point
 
-        radius = 0.05f0
-        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+        Makie.GeometryBasics.Cylinder(origin, extremity, cylinder_radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing2; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 
