@@ -12,7 +12,7 @@ A [quaternion](https://en.wikipedia.org/wiki/Quaternion) represents an orientati
 
 [^quat]: "Integrating Rotations using Non-Unit Quaternions", Caleb Rucker, https://par.nsf.gov/servlets/purl/10097724
 
-Multibody.jl depends on [Rotations.jl](https://github.com/JuliaGeometry/Rotations.jl) which in turn uses [Quaternions.jl](https://github.com/JuliaGeometry/Quaternions.jl) for quaternion computations. If you manually create quaternions using these packages, you may convert them to a vector to provide, e.g., initial conditions, using `Rotations.params(Q)` (see [Conversion between formats](@ref) below).
+Multibody.jl depends on [Rotations.jl](https://github.com/JuliaGeometry/Rotations.jl) which in turn uses [Quaternions.jl](https://github.com/JuliaGeometry/Quaternions.jl) for quaternion computations. If you manually create quaternions using these packages, you may convert them to a vector to provide, e.g., initial conditions, using `Rotations.params(Q)` (see [Conversion between orientation formats](@ref) below).
 
 ### Examples using quaternions
 - [Free motions](@ref) (second example on the page)
@@ -23,7 +23,7 @@ Multibody.jl depends on [Rotations.jl](https://github.com/JuliaGeometry/Rotation
 Rotation matrices represent orientation using a ``3\times 3`` matrix ``\in SO(3)``. These are used in the equations of multibody components and connectors, but should for the most part be invisible to the user. In particular, they should never appear as state variables after simplification. 
 
 
-## Conversion between formats
+## Conversion between orientation formats
 You may convert between different representations of orientation using the appropriate constructors from Rotations.jl, for example:
 ```@example ORI
 using Multibody.Rotations

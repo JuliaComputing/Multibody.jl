@@ -141,18 +141,18 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
 end
 
 """
-    FixedRotation(; name, r, n, sequence, isroot = false, angle, n_x, n_y)
+    FixedRotation(; name, r, n, sequence, isroot = false, angle)
 
 Fixed translation followed by a fixed rotation of `frame_b` with respect to `frame_a`
 
-
 - `r`: Translation vector
 - `n`: Axis of rotation, resolved in frame_a
-- `sequence`: DESCRIPTION
 - `angle`: Angle of rotation around `n`, given in radians
+
+To obtain an axis-angle representation of any rotation, see [Conversion between orientation formats](@ref)
 """
-@component function FixedRotation(; name, r=[0, 0, 0], n = [1, 0, 0], sequence = [1, 2, 3], isroot = false,
-                       angle, n_x = [1, 0, 0], n_y = [0, 1, 0])
+@component function FixedRotation(; name, r=[0, 0, 0], n = [1, 0, 0], isroot = false,
+                       angle)
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
