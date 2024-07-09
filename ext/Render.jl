@@ -473,13 +473,14 @@ function render!(scene, ::typeof(Damper), sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     color = get_color(sys, sol, :gray)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    length_fraction = sol(sol.t[1], idxs=sys.length_fraction) |> Float32
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
         origin = r1
         d = r2 - r1
-        extremity = d / norm(d) * 0.2f0 + r1 
-        radius = 0.1f0
+        extremity = d / norm(d) * length_fraction + r1 
         Makie.GeometryBasics.Cylinder(origin, extremity, Float32(radius))
     end
     mesh!(scene, thing; color)

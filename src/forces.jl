@@ -290,10 +290,10 @@ additional equations to handle the mass are removed.
 - `kwargs`: are passed to `LineForceWithMass`
 
 # Rendering
-- `num_windings = 6`
-- `color = [0,0,1,1]`
-- `radius = 0.1`
-- `N = 200`
+- `num_windings = 6`: Number of windings of the coil when rendered
+- `color = [0,0,1,1]`: Color of the spring when rendered
+- `radius = 0.1`: Radius of spring when rendered
+- `N = 200`: Number of points in mesh when rendered. Rendering time can be reduced somewhat by reducing this number.
 
 See also [`SpringDamperParallel`](@ref)
 """
@@ -301,11 +301,11 @@ See also [`SpringDamperParallel`](@ref)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     pars = @parameters begin
-    #     c=c, [description = "spring constant", bounds = (0, Inf)]
-    #     s_unstretched=s_unstretched, [
-    #         description = "unstretched length of spring",
-    #         bounds = (0, Inf),
-    #     ] # Bug in MTK where parameters only passed to sub components are ignored
+        c=c, [description = "spring constant", bounds = (0, Inf)]
+        s_unstretched=s_unstretched, [
+            description = "unstretched length of spring",
+            bounds = (0, Inf),
+        ]
         num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
         color[1:4] = color
         radius = radius, [description = "Radius of spring when rendered"]
@@ -375,16 +375,26 @@ and `D(s)` is the time derivative of `s`.
 # Arguments:
 - `d`: Damping coefficient
 
+# Rendering
+- `radius = 0.1`: Radius of damper when rendered
+- `length_fraction = 0.2`: Fraction of the length of the damper that is rendered
+- `color = [0.5, 0.5, 0.5, 1]`: Color of the damper when rendered
+
 See also [`SpringDamperParallel`](@ref)
 """
-@component function Damper(; d, name, kwargs...)
+@component function Damper(; d, name, radius = 0.1, length_fraction = 0.2, color = [0.5, 0.5, 0.5, 1],kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
-    @parameters d=d [description = "damping constant", bounds = (0, Inf)]
+    pars = @parameters begin
+        d=d, [description = "damping constant", bounds = (0, Inf)]
+        radius = radius, [description = "Radius of damper when rendered"]
+        length_fraction = length_fraction, [description = "Fraction of the length of the damper that is rendered"]
+        color[1:4] = color
+    end
     eqs = [
         f ~ d * D(s),
     ]
-    extend(ODESystem(eqs, t; name), plf)
+    extend(ODESystem(eqs, t, [s, f], pars; name), plf)
 end
 
 """

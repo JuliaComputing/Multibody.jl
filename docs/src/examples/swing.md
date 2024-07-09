@@ -24,10 +24,10 @@ W(args...; kwargs...) = Multibody.world
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        joint1 = Spherical(isroot=true, state=true, d=0.001)
+        joint1 = Spherical(isroot=true, state=true, d=0.001, color=[0.7, 0.7, 0.7, 0.7])
         rope = BodyShape(r=[0.0,-1,0], m=0.05, radius=0.01)
-        spring = Spring(c = inv(0.04/60), m=0.01)
-        damper = Damper(d = 50.0)
+        spring = Spring(c = inv(0.04/60), m=0.01, radius=0.06)
+        damper = Damper(d = 50.0, radius=0.05, length_fraction=0.1)
     end
     @equations begin
         connect(frame_a, joint1.frame_a)
