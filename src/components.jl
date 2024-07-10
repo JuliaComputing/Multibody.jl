@@ -240,6 +240,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               w_a = 0,
               radius = 0.05,
               cylinder_radius = radius/2,
+              length_fraction = 1,
               air_resistance = 0.0,
               color = [1,0,0,1],
               quat=false,)
@@ -275,6 +276,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
         description = "Radius of the cylinder from frame to COM in animations",
     ]
     @parameters color[1:4] = color [description = "Color of the body in animations (RGBA)"]
+    @parameters length_fraction=length_fraction, [description = "Fraction of the length of the body that is the cylinder from frame to COM in animations"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
     @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
@@ -350,7 +352,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
     sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
-    add_params(sys, [radius; cylinder_radius; color]; name)
+    add_params(sys, [radius; cylinder_radius; color; length_fraction]; name)
 end
 
 
