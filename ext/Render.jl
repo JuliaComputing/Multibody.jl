@@ -240,6 +240,7 @@ render!(scene, ::Any, args...) = false # Fallback for systems that have no rende
 
 function render!(scene, ::typeof(Body), sys, sol, t)
     color = get_color(sys, sol, :purple)
+    cylinder_color = Makie.RGBA(sol(sol.t[1], idxs=sys.cylinder_color)...)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
@@ -273,7 +274,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
 
         Makie.GeometryBasics.Cylinder(origin, extremity, cylinder_radius)
     end
-    mesh!(scene, thing2; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing2; color=cylinder_color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 
