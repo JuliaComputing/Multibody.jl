@@ -243,6 +243,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    length_fraction = sol(sol.t[1], idxs=sys.length_fraction) |> Float32
     cylinder_radius = sol(sol.t[1], idxs=sys.cylinder_radius) |> Float32
     thing = @lift begin # Sphere
         Ta = framefun($t)
@@ -265,9 +266,8 @@ function render!(scene, ::typeof(Body), sys, sol, t)
         tip = Point3f(Ta[1:3, 4]) # Origin of frame a in world coords
 
         d = tip - point
-        d = d ./ norm(d)
         # d = Point3f(Ta[1:3, 1])
-        tip = point + 0.2f0d
+        tip = point + length_fraction*d
         extremity = tip
         origin = point
 
