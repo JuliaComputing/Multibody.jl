@@ -584,7 +584,26 @@ end
 #     ODESystem(eqs, t; name, systems)
 # end
 
+"""
+    BodyCylinder(; name, m = 1, r = [0.1, 0, 0], r_shape = [0, 0, 0], dir = r - r_shape, length = _norm(r - r_shape), diameter = 1, inner_diameter = 0, density = 7700, color = purple)
 
+Rigid body with cylinder shape. The mass properties of the body (mass, center of mass, inertia tensor) are computed from the cylinder data. Optionally, the cylinder may be hollow. The two connector frames `frame_a` and `frame_b` are always parallel to each other.
+
+# Parameters
+- `r`: (Structural parameter) Vector from `frame_a` to `frame_b` resolved in `frame_a`
+- `r_shape`: (Structural parameter) Vector from `frame_a` to cylinder origin, resolved in `frame_a`
+- `dir`: Vector in length direction of cylinder, resolved in `frame_a`
+- `length`: Length of cylinder
+- `diameter`: Diameter of cylinder
+- `inner_diameter`: Inner diameter of cylinder (0 <= inner_diameter <= diameter)
+- `density`: Density of cylinder [kg/m³] (e.g., steel: 7700 .. 7900, wood : 400 .. 800)
+- `color`: Color of cylinder in animations
+
+# Variables
+- `r_0`: Position vector from origin of world frame to origin of `frame_a`
+- `v_0`: Absolute velocity of `frame_a`, resolved in world frame (= D(r_0))
+- `a_0`: Absolute acceleration of `frame_a` resolved in world frame (= D(v_0))
+"""
 @mtkmodel BodyCylinder begin
 
     @structural_parameters begin
@@ -617,7 +636,7 @@ end
             description = "Inner diameter of cylinder (0 <= inner_diameter <= diameter)",
         ]
         density = 7700, [
-            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
+            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800) [kg/m³]",
         ]
         color[1:4] = purple, [description = "Color of cylinder in animations"]
     end

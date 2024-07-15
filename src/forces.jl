@@ -113,6 +113,20 @@ function BasicForce(; name, resolve_frame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [force]), ptf)
 end
 
+function BasicWorldForce(; name, resolve_frame = :world)
+    @named force = Blocks.RealInput(; nin = 3)
+    @named frame_b = Frame()
+    eqs = if resolve_frame == :world
+        collect(frame_b.f) .~ -resolve2(ori(frame_b), collect(force.u))
+    elseif resolve_frame == :frame_b
+        collect(frame_b.f) .~ -force.u
+    else
+        collect(frame_b.f) .~ zeros(3)
+    end |> collect
+    append!(eqs, collect(frame_b.tau) .~ zeros(3))
+    ODESystem(eqs, t; name, systems = [force, frame_b])
+end
+
 """
     Force(; name, resolve_frame = :frame_b)
 
@@ -138,6 +152,29 @@ function Force(; name, resolve_frame = :frame_b)
            connect(basicForce.frame_b, frame_b)
            connect(basicForce.force, force)]
     extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
+end
+
+"""
+    WorldForce(; name, resolve_frame = :world)
+
+External force acting at `frame_b`, defined by 3 input signals and resolved in frame `:world` or `:frame_b`.
+
+# Connectors:
+- `frame_b`: Frame at which the force is acting
+- `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolve_frame`.
+"""
+function WorldForce(; name, resolve_frame = :world)
+    @named begin
+        frame_b = Frame()
+        force = Blocks.RealInput(; nin = 3) # x-, y-, z-coordinates of force resolved in frame defined by resolve_frame
+        basicWorldForce = BasicWorldForce(; resolve_frame)
+    end
+
+    eqs = [
+        connect(basicWorldForce.frame_b, frame_b)
+        connect(basicWorldForce.force, force)
+    ]
+    ODESystem(eqs, t; name, systems = [force, basicWorldForce, frame_b])
 end
 
 function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
