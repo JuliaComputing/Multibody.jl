@@ -279,26 +279,27 @@ end
 
 function render!(scene, ::typeof(World), sys, sol, t)
     sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
-    radius = 0.01f0
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    length = sol(sol.t[1], idxs=sys.length) |> Float32
     r_0 = get_fun(sol, collect(sys.frame_b.r_0))
 
     thing = @lift begin
         O = Point3f(r_0($t)) # Assume world is never moving
-        x = O .+ Point3f(1,0,0)
+        x = O .+ Point3f(length,0,0)
         Makie.GeometryBasics.Cylinder(O, x, radius)
     end
     mesh!(scene, thing, color=:red)
 
     thing = @lift begin
         O = Point3f(r_0($t))
-        y = O .+ Point3f(0,1,0)
+        y = O .+ Point3f(0,length,0)
         Makie.GeometryBasics.Cylinder(O, y, radius)
     end
     mesh!(scene, thing, color=:green)
 
     thing = @lift begin
         O = Point3f(r_0($t))
-        z = O .+ Point3f(0,0,1)
+        z = O .+ Point3f(0,0,length)
         Makie.GeometryBasics.Cylinder(O, z, radius)
     end
     mesh!(scene, thing, color=:blue)

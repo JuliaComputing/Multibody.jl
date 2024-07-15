@@ -20,7 +20,7 @@ Unless otherwise specified, the world defaults to having a gravitational field p
 
 
 ## Modeling the pendulum
-Our simple pendulum will initially consist of a [`Body`](@ref) (point mass) and a [`Revolute`](@ref) joint (the pivot joint). We construct these elements by calling their constructors
+Our simple pendulum will initially consist of a [`Body`](@ref) (point mass with inertial properties) and a [`Revolute`](@ref) joint (the pivot joint). We construct these elements by calling their constructors
 ```@example pendulum
 @named joint = Revolute(n = [0, 0, 1], isroot = true)
 @named body = Body(; m = 1, isroot = false, r_cm = [0.5, 0, 0])
@@ -175,7 +175,7 @@ The figure above should look identical to the simulation of the mass-spring-damp
 ## Going 3D
 The systems we have modeled so far have all been _planar_ mechanisms. We now extend this to a 3-dimensional system, the [_Furuta pendulum_](https://en.wikipedia.org/wiki/Furuta_pendulum).
 
-This pendulum, sometimes referred to as a _rotary pendulum_, has two joints, one in the "shoulder", which is typically configured to rotate around the gravitational axis, and one in the "elbow", which is typically configured to rotate around the axis of the upper arm. The upper arm is attached to the shoulder joint, and the lower arm is attached to the elbow joint. The tip of the pendulum is attached to the lower arm.
+This pendulum, sometimes referred to as a _rotary pendulum_, has two joints, one in the "shoulder", which is typically configured to rotate around the gravitational axis, and one in the "elbow", which is typically configured to rotate around the axis of the upper arm. The upper arm is attached to the shoulder joint, and the lower arm is attached to the elbow joint. The tip of the pendulum is attached to the lower arm. The arms are modeled using [`BodyCylinder`](@ref) components, these components automatically compute the inertial properties of the body given the geometry and density of the material (which defaults to the density 7700 kg/m³ of steel).
 
 ```@example pendulum
 using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
@@ -186,14 +186,14 @@ W(args...; kwargs...) = Multibody.world
 @mtkmodel FurutaPendulum begin
     @components begin
         world = W()
-        shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true)
-        elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1)
-        upper_arm = BodyShape(; m = 0.1, r = [0, 0, 0.6], radius=0.04)
-        lower_arm = BodyShape(; m = 0.1, r = [0, 0.6, 0], radius=0.04)
-        tip = Body(; m = 0.3)
+        shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true, radius=0.007)
+        elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1, radius=0.007)
+        upper_arm = BodyCylinder(; r = [0, 0, 0.12], diameter=0.01)
+        lower_arm = BodyCylinder(; r = [0, 0.12, 0], diameter=0.01)
+        tip = Body(; m = 0.1, radius=0.01)
 
-        damper1 = RDamper(d = 0.07)
-        damper2 = RDamper(d = 0.07)
+        damper1 = RDamper(d = 0.002)
+        damper2 = RDamper(d = 0.002)
     end
     @equations begin
         connect(world.frame_b, shoulder_joint.frame_a)
@@ -215,7 +215,7 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
-prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
+prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1, model.world.radius =>0.001, model.world.length => 0.06], (0, 10))
 sol = solve(prob, Rodas4())
 plot(sol, layout=4)
 ```
@@ -223,7 +223,7 @@ plot(sol, layout=4)
 In the animation below, we visualize the path that the origin of the pendulum tip traces by providing the tip frame in a vector of frames passed to `traces`
 ```@example pendulum
 import GLMakie
-Multibody.render(model, sol, filename = "furuta.gif", traces=[model.tip.frame_a])
+Multibody.render(model, sol, x=0.3, y=0.2, z=0.3, filename = "furuta.gif", traces=[model.tip.frame_a])
 nothing # hide
 ```
 ![furuta](furuta.gif)
@@ -257,7 +257,7 @@ sol(1, idxs=model.shoulder_joint.phi)
 
 Here, we made use of the function [`get_rot`](@ref), we will now make use of also [`get_trans`](@ref) and [`get_frame`](@ref).
 
-The next body is the upper arm. This body has an extent of `0.6` in the $z$ direction, as measured in its local `frame_a`
+The next body is the upper arm. This body has an extent of `0.12` in the $z$ direction, as measured in its local `frame_a`
 ```@example pendulum
 get_trans(sol, model.upper_arm.frame_b, 0)
 ```
@@ -305,3 +305,7 @@ r_A = [r_A; 1] # Homogeneous coordinates
 get_frame(sol, model.lower_arm.frame_a, 12)*r_A
 ```
 the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.
+
+
+## Summary
+We have demonstrated how to model different kinds of pendula, starting with the simplest version where the tip of the pendulum was modeled using a [`Body`](@ref), and the rod was modeled using a [`FixedTranslation`](@ref), to a 3D rotary Furuta pendulum where the rods were modeled as [`BodyShape`](@ref) components. Whether to use the massless [`FixedTranslation`](@ref) or a component with inertial properties like [`BodyShape`](@ref) to model the rod depends the requirements of the application. The computation of inertial properties during simulation incurs some additional computational expense, but may be necessary to model the dynamics of the system accurately. [`FixedTranslation`](@ref) components, and the related [`FixedOrientation`](@ref), are often used to describe rigid relations between coordinate frames in simulations where the inertial properties of the components are modeled using other components, e.g., when rigidly attaching components at a particular location on another body.
