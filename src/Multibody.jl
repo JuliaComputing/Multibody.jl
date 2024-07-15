@@ -148,6 +148,10 @@ include("orientation.jl")
 export Frame
 include("frames.jl")
 
+export Visualizers
+include("visualizers.jl")
+import .Visualizers as Viz
+
 export PartialTwoFrames
 include("interfaces.jl")
 
@@ -168,7 +172,6 @@ export point_to_point, traj5, KinematicPTP, Kinematic5
 include("robot/path_planning.jl")
 include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
-
 
 
 end
