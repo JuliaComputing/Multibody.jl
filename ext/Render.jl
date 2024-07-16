@@ -504,6 +504,22 @@ function render!(scene, ::typeof(Spring), sys, sol, t)
     true
 end
 
+function render!(scene, ::typeof(Multibody.WorldForce), sys, sol, t)
+    r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    f = get_fun(sol, collect(sys.frame_b.f))
+    R = get_rot_fun(sol, sys.frame_b)
+    color = get_color(sys, sol, :green)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    scale = sol(sol.t[1], idxs=sys.scale) |> Float32
+
+    origin = @lift [Point3f(r_0b($t))]
+    d = @lift [-scale*Vec3f(R($t)*f($t))]
+
+    Makie.arrows!(origin, d, linecolor = color, arrowcolor = color,
+    linewidth = radius, arrowsize = Vec3f(1.3*radius, 1.3*radius, 1.4*radius))
+    true
+end
+
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
     count(ModelingToolkit.isframe, sys.systems) == 2 || return false
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))

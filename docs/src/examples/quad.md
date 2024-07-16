@@ -5,11 +5,13 @@
 using Multibody
 using ModelingToolkit
 using ModelingToolkitStandardLibrary.Blocks
+using LinearAlgebra
 using Plots
 using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 t = Multibody.t
+D = Differential(t)
 
 world = Multibody.world
 
@@ -20,92 +22,194 @@ arm_outer_diameter = 0.03
 arm_inner_diameter = 0.02
 arm_density = 800 # Density of the arm [kg/m³].
 body_mass = 0.2 # Mass of the body.
-load_mass = 1.0 # Mass of the load.
+load_mass = 0.1 # Mass of the load.
 cable_length = 1 # Length of the cable.
 cable_mass = 0.1 # Mass of the cable.
 cable_diameter = 0.01 # Diameter of the cable.
 number_of_links = 3 # Number of links in the cable.
-thrust = 13
-
-arms = [
-    BodyCylinder(
-        r = [arm_length*cos(angle_between_arms*(i-1)), 0, arm_length*sin(angle_between_arms*(i-1))],
-        diameter = arm_outer_diameter,
-        density = arm_density,
-        name=Symbol("arm$i")
-    ) for i = 1:num_arms
-]
+kalt = 1
+Tialt = 10
+Tdalt = 0.01
+kroll = 0.1
+Tiroll = 10
+Tdroll = 0.01
+kpitch = 0.1
+Tipitch = 10
+Tdpitch = 0.01
 
 @mtkmodel Thruster begin
     @components begin
         frame_b = Frame()
-        thrust3d = WorldForce(resolve_frame = :frame_b)
+        thrust3d = WorldForce(resolve_frame = :frame_b, scale=1, radius=0.02)
         thrust = RealInput()
+    end
+    @variables begin
+        u(t), [state_priority=1000]
     end
     @equations begin
         thrust3d.force.u[1] ~ 0
         thrust3d.force.u[2] ~ thrust.u
         thrust3d.force.u[3] ~ 0
+        thrust.u ~ u
         connect(frame_b, thrust3d.frame_b)
     end
 end
 
-thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
+function RotorCraft(; cl = true, addload=true)
+    arms = [
+        BodyCylinder(
+            r = [arm_length*cos(angle_between_arms*(i-1)), 0, arm_length*sin(angle_between_arms*(i-1))],
+            diameter = arm_outer_diameter,
+            density = arm_density,
+            name=Symbol("arm$i")
+        ) for i = 1:num_arms
+    ]
 
-@named body = Body(m = body_mass)
-@named load = Body(m = load_mass)
+    thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
 
-@named cable = Rope(
-    l = 1,
-    m = cable_mass,
-    n = number_of_links,
-    c = 0,
-    d = 0,
-    air_resistance = 0.1,
-    d_joint = 0.1,
-    radius = cable_diameter/2,
-    color = [0.5, 0.4, 0.4, 1],
-    dir = [0.0, -1, 0]
-)
+    # @named feedback_gain = MatrixGain(K = -[kp*I(4) kd*I(4) ki*I(4)])
 
-@named freemotion = FreeMotion( # This connects the rotorcraft to the world, and is needed to give the rotorcraft a state.
-    state = true,
-    isroot = true,
-    quat = true,
-)
+    Galt = ones(4)
+    Groll = Float64[1,0,0,-1]
+    Gpitch = Float64[0,1,-1,0]
 
-connections = [
-    connect(world.frame_b, freemotion.frame_a)
-    connect(freemotion.frame_b, body.frame_a)
-    [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
-    connect(body.frame_a, cable.frame_a)
-    connect(cable.frame_b, load.frame_a)
-    [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
-    [thrusters[i].thrust.u ~ thrust * t for i = 1:num_arms]
-]
+    @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
+    # @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
+    # @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
+    # @named Calt = PI(; k=kalt, T=Tialt)
+    @named Croll = PI(; k=kroll, T=Tiroll)
+    @named Cpitch = PI(; k=kpitch, T=Tipitch)
 
-@named model = ODESystem(connections, t, systems = [world; body; load; arms; thrusters; cable; freemotion])
-model = complete(model)
+    @named body = Body(m = body_mass, state=false, isroot=false)
+    @named load = Body(m = load_mass)
+    @named freemotion = FreeMotion(state=true, isroot=true)
+
+    @named cable = Rope(
+        l = 1,
+        m = cable_mass,
+        n = number_of_links,
+        c = 0,
+        d = 0,
+        air_resistance = 0.1,
+        d_joint = 0.1,
+        radius = cable_diameter/2,
+        color = [0.5, 0.4, 0.4, 1],
+        dir = [0.0, -1, 0]
+    )
+
+    connections = [
+        connect(world.frame_b, freemotion.frame_a)
+        connect(freemotion.frame_b, body.frame_a)
+        [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
+        [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
+    ]
+    systems = [world; arms; body; thrusters; freemotion]
+    if addload
+        push!(systems, load)
+        push!(systems, cable)
+        
+        push!(connections, connect(body.frame_a, cable.frame_a))
+        push!(connections, connect(cable.frame_b, load.frame_a))
+    end
+    if cl
+
+        uc = Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
+        append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
+
+        append!(connections, [
+            Calt.err_input.u ~ -body.frame_a.r_0[2],
+            Croll.err_input.u ~ -freemotion.phi[3],
+            Cpitch.err_input.u ~ -freemotion.phi[1]
+        ])
+        append!(systems, [Calt; Croll; Cpitch])
+
+        # append!(connections, [thrusters[i].thrust.u ~ feedback_gain.output.u[i] for i = 1:num_arms])
+        # append!(connections, [feedback_gain.input.u[i] ~ arms[i].frame_b.r_0[2] for i = 1:num_arms ]) # Connect positions to controller
+        # append!(connections, [feedback_gain.input.u[i+num_arms] ~ D(arms[i].frame_b.r_0[2]) for i = 1:num_arms]) # Connect velocities to controller
+        # append!(connections, [feedback_gain.input.u[i+2num_arms] ~ Ie[i] for i = 1:num_arms]) #
+
+        # append!(connections, [feedback_gain.input.u[i] ~ freemotion.phi[[1,3][i]] for i = 1:2 ]) # Connect positions to controller
+        # append!(connections, [feedback_gain.input.u[i+2] ~ freemotion.phid[[1,3][i]] for i = 1:2]) # Connect velocities to controller
+        # push!(systems, feedback_gain)
+    end
+    @named model = ODESystem(connections, t; systems)
+    complete(model)
+end
+model = RotorCraft(cl=true, addload=false)
 ssys = structural_simplify(IRSystem(model))
 
 
-# ModelingToolkit.generate_initializesystem(IRSystem(model); u0map)
+op = [
+    # model.load.v_0[1] => 0.0;
+    model.body.v_0[1] => 0;
+    # collect(model.cable.joint_2.phid) .=> 0.001;
+    model.world.g => 1;
+    ]
+# ModelingToolkit.generate_initializesystem(ssys; u0map=op)
 
-prob = ODEProblem(ssys, [
-    load.v_0[1] => 2;
-    body.v_0[1] => 0;
-    collect(cable.joint_2.phi_d) .=> 1;
-    ], (0, 13))
+prob = ODEProblem(ssys, op, (0, 1))
 
-sol = solve(prob, Tsit5())
+# sol = solve(prob, Rodas4(autodiff=false))
+sol = solve(prob, Tsit5(), abstol=1e-5, reltol=1e-5)
 @test SciMLBase.successful_retcode(sol)
-plot(sol) |> display
+# plot(sol) |> display
+plot(sol, idxs=[model.freemotion.phi; model.freemotion.phid; model.arm1.r_0], layout=9) |> display
+# plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4) |> display
+# plot(sol, idxs=[model.Calt.ctr_output.u, model.Croll.ctr_output.u, model.Cpitch.ctr_output.u], layout=3) |> display
 
-import GLMakie
+# plot(sol, idxs=[model.Calt.ctr_output.u], layout=1) |> display
+
+# import GLMakie
 # first(render(model, sol, 0, show_axis=true)) # Interactive plot
-Multibody.render(model, sol, filename = "quad.gif")
+# Multibody.render(model, sol, filename = "quad.gif")
 # nothing # hide
 ```
 
 
 ![quadrotor animation](quad.gif)
+
+```@example QUAD
+using FiniteDiff
+outputs = [model.freemotion.phi; model.freemotion.phid]
+inputs = [model.thruster1.u; model.thruster2.u; model.thruster3.u; model.thruster4.u]
+irsys = IRSystem(RotorCraft(false))
+ssys = structural_simplify(irsys, (inputs, []))
+
+
+
+linop = [
+    op;
+    inputs .=> 1
+]
+prob = ODEProblem(ssys, linop, (0, 53))
+
+oidxs = [3,1,24,22]
+# unknowns(ssys)[idxs]
+nx = length(unknowns(ssys))
+nu = 4
+
+A = FiniteDiff.finite_difference_jacobian(prob.u0) do x
+    dx = similar(x) .= 0
+    prob.f(dx, x, prob.p, 0)
+    dx
+end
+B = FiniteDiff.finite_difference_jacobian(ones(nu)) do u
+    pu = copy(prob.p)
+    pu[end-nu+1:end] .= u
+    dx = similar(u, nx) .= 0
+    prob.f(dx, prob.u0, pu, 0)
+end
+
+eigvals(A)
+
+@variables x[1:nx]
+x = collect(x)
+dx = similar(x)
+prob.f(dx, x, prob.p, 0)
+
+
+L = kp*I(4)
+using ControlSystemsBase
+C = (1:nx)' .== oidxs
+G = ss(A, L, C, 0)
+```
