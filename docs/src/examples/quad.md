@@ -26,21 +26,21 @@ load_mass = 0.1 # Mass of the load.
 cable_length = 1 # Length of the cable.
 cable_mass = 0.1 # Mass of the cable.
 cable_diameter = 0.01 # Diameter of the cable.
-number_of_links = 3 # Number of links in the cable.
-kalt = 1
-Tialt = 10
-Tdalt = 0.01
-kroll = 0.1
+number_of_links = 5 # Number of links in the cable.
+kalt = 10
+Tialt = 3
+Tdalt = 3
+kroll = 2
 Tiroll = 10
 Tdroll = 0.01
-kpitch = 0.1
+kpitch = 2
 Tipitch = 10
 Tdpitch = 0.01
 
 @mtkmodel Thruster begin
     @components begin
         frame_b = Frame()
-        thrust3d = WorldForce(resolve_frame = :frame_b, scale=1, radius=0.02)
+        thrust3d = WorldForce(resolve_frame = :frame_b, scale=0.1, radius=0.02)
         thrust = RealInput()
     end
     @variables begin
@@ -60,6 +60,7 @@ function RotorCraft(; cl = true, addload=true)
         BodyCylinder(
             r = [arm_length*cos(angle_between_arms*(i-1)), 0, arm_length*sin(angle_between_arms*(i-1))],
             diameter = arm_outer_diameter,
+            inner_diameter = arm_inner_diameter,
             density = arm_density,
             name=Symbol("arm$i")
         ) for i = 1:num_arms
@@ -69,9 +70,9 @@ function RotorCraft(; cl = true, addload=true)
 
     # @named feedback_gain = MatrixGain(K = -[kp*I(4) kd*I(4) ki*I(4)])
 
-    Galt = ones(4)
-    Groll = Float64[1,0,0,-1]
-    Gpitch = Float64[0,1,-1,0]
+    @parameters Galt[1:4] = ones(4)
+    @parameters Groll[1:4] = [1,0,-1,0]
+    @parameters Gpitch[1:4] = [0,1,0,-1]
 
     @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
     # @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
@@ -80,12 +81,12 @@ function RotorCraft(; cl = true, addload=true)
     @named Croll = PI(; k=kroll, T=Tiroll)
     @named Cpitch = PI(; k=kpitch, T=Tipitch)
 
-    @named body = Body(m = body_mass, state=false, isroot=false)
+    @named body = Body(m = body_mass, state_priority = 20, state=true, isroot=true, quat=false, vel_from_R=true, I_11=0.1, I_22=0.1, I_33=0.1)
     @named load = Body(m = load_mass)
-    @named freemotion = FreeMotion(state=true, isroot=true)
+    # @named freemotion = FreeMotion(state=true, isroot=true, quat=true)
 
     @named cable = Rope(
-        l = 1,
+        l = cable_length,
         m = cable_mass,
         n = number_of_links,
         c = 0,
@@ -98,12 +99,12 @@ function RotorCraft(; cl = true, addload=true)
     )
 
     connections = [
-        connect(world.frame_b, freemotion.frame_a)
-        connect(freemotion.frame_b, body.frame_a)
+        # connect(world.frame_b, freemotion.frame_a)
+        # connect(freemotion.frame_b, body.frame_a)
         [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
         [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
     ]
-    systems = [world; arms; body; thrusters; freemotion]
+    systems = [world; arms; body; thrusters]
     if addload
         push!(systems, load)
         push!(systems, cable)
@@ -113,13 +114,13 @@ function RotorCraft(; cl = true, addload=true)
     end
     if cl
 
-        uc = Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
+        uc = collect(Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u)
         append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
 
         append!(connections, [
-            Calt.err_input.u ~ -body.frame_a.r_0[2],
-            Croll.err_input.u ~ -freemotion.phi[3],
-            Cpitch.err_input.u ~ -freemotion.phi[1]
+            Calt.err_input.u ~ -body.r_0[2]
+            Croll.err_input.u ~ -body.phi[3]
+            Cpitch.err_input.u ~ -body.phi[1]
         ])
         append!(systems, [Calt; Croll; Cpitch])
 
@@ -135,28 +136,29 @@ function RotorCraft(; cl = true, addload=true)
     @named model = ODESystem(connections, t; systems)
     complete(model)
 end
-model = RotorCraft(cl=true, addload=false)
+model = RotorCraft(cl=true, addload=true)
 ssys = structural_simplify(IRSystem(model))
 
 
 op = [
     # model.load.v_0[1] => 0.0;
     model.body.v_0[1] => 0;
-    # collect(model.cable.joint_2.phid) .=> 0.001;
+    collect(model.cable.joint_2.phi) .=> 0.3;
     model.world.g => 1;
     ]
 # ModelingToolkit.generate_initializesystem(ssys; u0map=op)
 
-prob = ODEProblem(ssys, op, (0, 1))
+prob = ODEProblem(ssys, op, (0, 8))
 
-# sol = solve(prob, Rodas4(autodiff=false))
-sol = solve(prob, Tsit5(), abstol=1e-5, reltol=1e-5)
+sol = solve(prob, Rodas4(autodiff=false))
+# sol = solve(prob, Tsit5(), abstol=1e-5, reltol=1e-5)
 @test SciMLBase.successful_retcode(sol)
 # plot(sol) |> display
-plot(sol, idxs=[model.freemotion.phi; model.freemotion.phid; model.arm1.r_0], layout=9) |> display
-# plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4) |> display
+# plot(sol, idxs=[model.body.phi;], layout=1) |> display
+# plot(sol, idxs=[model.freemotion.phi; model.freemotion.phid; model.arm1.r_0], layout=9) |> display
+plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4) |> display
 # plot(sol, idxs=[model.Calt.ctr_output.u, model.Croll.ctr_output.u, model.Cpitch.ctr_output.u], layout=3) |> display
-
+# plot(sol, idxs=[model.thruster1.u, model.thruster2.u, model.thruster3.u, model.thruster4.u], layout=1) |> display
 # plot(sol, idxs=[model.Calt.ctr_output.u], layout=1) |> display
 
 # import GLMakie

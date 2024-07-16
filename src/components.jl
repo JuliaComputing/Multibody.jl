@@ -201,7 +201,7 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
 end
 
 """
-    Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3))
+    Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3), state_priority = 2, quat=false)
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
@@ -212,6 +212,7 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
 - `phi0`: Initial orientation, only applicable if `isroot = true`
 - `phid0`: Initial angular velocity
+
 
 # Variables
 - `r_0`: Position vector from origin of world frame to origin of `frame_a`
@@ -243,22 +244,23 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               length_fraction = 1,
               air_resistance = 0.0,
               color = [1,0,0,1],
+              state_priority = 2,
               quat=false,)
     @variables r_0(t)[1:3]=r_0 [
-        state_priority = 2,
+        state_priority = state_priority,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
     @variables v_0(t)[1:3]=v_0 [guess = 0, 
-        state_priority = 2,
+        state_priority = state_priority,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
     @variables a_0(t)[1:3] [guess = 0, 
-        state_priority = 2,
+        state_priority = state_priority,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
     @variables w_a(t)[1:3]=w_a [guess = 0, 
-        state_priority = 2+2quat*state,
+        state_priority = state_priority+2quat*state,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3] [guess = 0, 
@@ -610,6 +612,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         r = [1, 0, 0]
         r_shape = [0, 0, 0]
         isroot = false
+        state = false
         quat = false
     end
 
@@ -672,7 +675,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot)
     end
 
     @equations begin

@@ -1232,3 +1232,114 @@ sol3 = solve(prob, Rodas4())
 
 @test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol2(0:0.1:1, idxs=collect(body.r_0)) atol=1e-5
 @test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol3(0:0.1:1, idxs=collect(body.r_0)) atol=1e-3
+
+
+## WorldForce
+@mtkmodel TestWorldForce begin
+    @components begin
+        world = W()
+        force = WorldForce()
+        body = Body(m=1, state=true, isroot=true)
+    end
+    @parameters begin
+        f[1:3]
+    end
+    begin
+        f = collect(f)
+    end
+    @equations begin
+        # connect(world.frame_b, body.frame_a)
+        connect(force.frame_b, body.frame_a)
+        force.force.u ~ f
+    end
+end
+
+@named testwf = TestWorldForce()
+testwf = complete(testwf)
+ssys = structural_simplify(IRSystem(testwf))
+prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+sol = solve(prob, Tsit5())
+# plot(sol)
+@test sol(1, idxs=testwf.body.r_0) ≈ [0.5*1^2*1, 0, 0] atol=1e-3
+
+
+prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+sol = solve(prob, Tsit5())
+# plot(sol)
+@test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.5*1^2*1, 0] atol=1e-3
+
+
+# NOTE: These tests fail in really funky ways if Euler angles are used, there really shouldn't be any difference here. vel_from_R "fixes" that problem
+
+@mtkmodel TestWorldForce begin
+    @components begin
+        world = W()
+        forcea = WorldForce(resolve_frame=:world)
+        forceb = WorldForce(resolve_frame=:world)
+        body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=true)
+    end
+    @parameters begin
+        f[1:3]
+    end
+    begin
+        f = collect(f)
+    end
+    @equations begin
+        # connect(world.frame_b, body.frame_a)
+        connect(forcea.frame_b, body.frame_a)
+        connect(forceb.frame_b, body.frame_b)
+        forcea.force.u ~ f
+        forceb.force.u ~ -f
+    end
+end
+
+@named testwf = TestWorldForce()
+testwf = complete(testwf)
+ssys = structural_simplify(IRSystem(testwf))
+prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+sol = solve(prob, Tsit5())
+# plot(sol)
+@test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
+
+
+prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+sol = solve(prob, Tsit5())
+# plot(sol)
+@test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.5696510513789, 0.4736801629827617, 0.0] atol=1e-3
+
+##
+@mtkmodel TestWorldForce begin
+    @components begin
+        world = W()
+        forcea = WorldForce(resolve_frame=:frame_b)
+        forceb = WorldForce(resolve_frame=:frame_b)
+        body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=true)
+    end
+    @parameters begin
+        f[1:3]
+    end
+    begin
+        f = collect(f)
+    end
+    @equations begin
+        # connect(world.frame_b, body.frame_a)
+        connect(forcea.frame_b, body.frame_a)
+        connect(forceb.frame_b, body.frame_b)
+        forcea.force.u ~ f
+        forceb.force.u ~ -f
+    end
+end
+
+@named testwf = TestWorldForce()
+testwf = complete(testwf)
+ssys = structural_simplify(IRSystem(testwf))
+prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+sol = solve(prob, Tsit5())
+# plot(sol)
+@test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
+
+
+prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+sol = solve(prob, Tsit5())
+# plot(sol)
+@test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [1.0386354560089686, -0.17651590050417074, 0.0] atol=1e-3
