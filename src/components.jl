@@ -233,7 +233,8 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               I_32 = 0,
               isroot = false,
               state = false,
-              vel_from_R = false,
+              sequence = [1,2,3],
+              neg_w = false,
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
@@ -246,16 +247,20 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
               color = [1,0,0,1],
               state_priority = 2,
               quat=false,)
+    if state
+        # @warn "Make the body have state variables by using isroot=true rather than state=true"
+        isroot = true
+    end
     @variables r_0(t)[1:3]=r_0 [
-        state_priority = state_priority,
+        state_priority = state_priority+isroot,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
     @variables v_0(t)[1:3]=v_0 [guess = 0, 
-        state_priority = state_priority,
+        state_priority = state_priority+isroot,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
     @variables a_0(t)[1:3] [guess = 0, 
-        state_priority = state_priority,
+        state_priority = state_priority+isroot,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
@@ -294,11 +299,6 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
     # DRa = D(Ra)
 
-    if state
-        # @warn "Make the body have state variables by using isroot=true rather than state=true"
-        isroot = true
-    end
-
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
     eqs = if isroot # isRoot
         
@@ -307,33 +307,33 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
             Ra = ori(frame_a, false)
             qeeqs = nonunit_quaternion_equations(Ra, w_a)
         else
-            @named frame_a = Frame(varw = true)
-            Ra = ori(frame_a, true)
+            @named frame_a = Frame(varw = false)
+            Ra = ori(frame_a, false)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
             phi, phid, phidd = collect.((phi, phid, phidd))
-            ar = axes_rotations([1, 2, 3], phi, phid)
+            ar = axes_rotations(sequence, phi, phid)
             Equation[
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
                     Ra ~ ar
-                    Ra.w .~ w_a
-                    if vel_from_R
-                        w_a .~ angular_velocity2(ori(frame_a, false)) # This is required for FreeBody and ThreeSprings tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
+                    # Ra.w .~ ar.w
+                    if neg_w
+                        # w_a .~ -ar.w # This is required for FreeBody and ThreeSprings tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
+                        collect(w_a .~ -angular_velocity2(Ra))
                     else
-                        w_a .~ ar.w # This one for most systems
+                        collect(w_a .~ angular_velocity2(Ra))
+                        # w_a .~ ar.w # This one for most systems
                     end
                     ]
         end
     else
+        # This branch has never proven to be incorrect
         @named frame_a = Frame()
         Ra = ori(frame_a)
         # This equation is defined here and not in the Rotation component since the branch above might use another equation
-        Equation[
-                 # collect(w_a .~ DRa.w); # angular_velocity2(R, D.(R)): skew(R.w) = R.T*der(transpose(R.T))
-                 # vec(DRa.R .~ 0)
-                 collect(w_a .~ angular_velocity2(Ra));]
+        collect(w_a .~ angular_velocity2(Ra))
     end
 
     eqs = [eqs;
@@ -614,6 +614,8 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         isroot = false
         state = false
         quat = false
+        sequence = [1,2,3]
+        neg_w = false
     end
 
     @parameters begin
@@ -675,7 +677,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w)
     end
 
     @equations begin
@@ -719,6 +721,9 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         width_dir = [0,1,0] # https://github.com/SciML/ModelingToolkit.jl/issues/2810
         length_dir = _normalize(r - r_shape)
         length = _norm(r - r_shape)
+        isroot = false
+        state = false
+        quat = false
     end
     begin
         iszero(r_shape) || error("non-zero r_shape not supported")
@@ -802,7 +807,7 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot)
     end
 
     @equations begin
