@@ -48,7 +48,7 @@ If we instead model a body suspended in springs without the presence of any join
 using Multibody.Rotations: QuatRotation, RotXYZ, params
 @named begin
     body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                     r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true)
+                     r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true, neg_w=true)
     bar2 = FixedTranslation(r = [0.8, 0, 0])
     spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
     spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
@@ -72,7 +72,7 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
-    collect(body.body.Q) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+    # collect(body.body.phi .=> deg2rad.([10,10,10])); # If using Euler/Cardan angles
     collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
 ], (0, 4))
 

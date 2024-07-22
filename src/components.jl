@@ -300,40 +300,42 @@ Representing a body with 3 translational and 3 rotational degrees-of-freedom.
     # DRa = D(Ra)
 
     dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
+
     eqs = if isroot # isRoot
         
         if quat
-            @named frame_a = Frame(varw = false)
+            @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
-            qeeqs = nonunit_quaternion_equations(Ra, w_a)
+            qeeqs = nonunit_quaternion_equations(Ra, w_a; neg_w)
         else
-            @named frame_a = Frame(varw = false)
-            Ra = ori(frame_a, false)
+            @named frame_a = Frame(varw=true)
+            Ra = ori(frame_a, true)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
-            @variables phidd(t)[1:3]=zeros(3) [state_priority = 10]
+            @variables phidd(t)[1:3] [state_priority = 0]
             phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axes_rotations(sequence, phi, phid)
             Equation[
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
-                    Ra ~ ar
-                    # Ra.w .~ ar.w
+                    Ra.w .~ ar.w
                     if neg_w
                         # w_a .~ -ar.w # This is required for FreeBody and ThreeSprings tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
-                        collect(w_a .~ -angular_velocity2(Ra))
+                        collect(w_a .~ -angular_velocity2(ar))
                     else
-                        collect(w_a .~ angular_velocity2(Ra))
+                        collect(w_a .~ (angular_velocity2(ar)))
                         # w_a .~ ar.w # This one for most systems
                     end
+                    Ra ~ ar
                     ]
         end
     else
-        # This branch has never proven to be incorrect
         @named frame_a = Frame()
         Ra = ori(frame_a)
+        # This branch has never proven to be incorrect
         # This equation is defined here and not in the Rotation component since the branch above might use another equation
         collect(w_a .~ angular_velocity2(Ra))
+        # collect(w_a .~ get_w(Ra))
     end
 
     eqs = [eqs;
@@ -671,6 +673,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         ]
     end
     begin
+        r_0 = collect(r_0)
         r_cm = collect(r_cm)
     end
     @components begin

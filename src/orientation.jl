@@ -60,6 +60,7 @@ function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     # @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R,w = collect.((R,w))
+    error()
     R = at_variables_t(:R, 1:3, 1:3)
     w = at_variables_t(:w, 1:3)
 
@@ -74,13 +75,13 @@ function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
 end
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
-function (D::Differential)(RM::RotationMatrix)
-    # https://build.openmodelica.org/Documentation/Modelica.Mechanics.MultiBody.Frames.Orientation.html
-    R = RM.R
-    DR = D.(RM.R)
-    Dw = [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
-    RotationMatrix(DR, Dw)
-end
+# function (D::Differential)(RM::RotationMatrix)
+#     # https://build.openmodelica.org/Documentation/Modelica.Mechanics.MultiBody.Frames.Orientation.html
+#     R = RM.R
+#     DR = D.(RM.R)
+#     Dw = [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
+#     RotationMatrix(DR, Dw)
+# end
 
 """
     get_w(R)
@@ -93,17 +94,18 @@ function get_w(R::AbstractMatrix)
     [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]] |> collect
 end
 
-function get_w(RM)
-    R = RM.R
-    DR = D.(RM.R)
-    [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
-end
+# function get_w(RM)
+#     R = RM.R
+#     DR = D.(RM.R)
+#     [R[3, :]'DR[2, :], -R[3, :]'DR[1, :], R[2, :]'DR[1, :]]
+# end
 
-function get_w(Q::AbstractVector)
-    Q = collect(Q)
-    DQ = collect(D.(Q))
-    angular_velocity2(Q, DQ)
-end
+# function get_w(Q::AbstractVector)
+#     error()
+#     Q = collect(Q)
+#     DQ = collect(D.(Q))
+#     angular_velocity2(Q, DQ)
+# end
 
 """
     h2 = resolve2(R21, h1)
@@ -148,7 +150,7 @@ function planar_rotation(axis, phi, der_angle)
     axis = collect(axis)
     ee = collect(axis * axis')
     R = ee + (I(3) - ee) * cos(phi) - skew(axis) * sin(phi)
-    w = axis * phi
+    w = axis * der_angle
     RotationMatrix(R, w)
 end
 
@@ -410,7 +412,7 @@ function get_frame(sol, frame, t)
     [R tr; 0 0 0 1]
 end
 
-function nonunit_quaternion_equations(R, w)
+function nonunit_quaternion_equations(R, w; neg_w = false)
     @variables Q(t)[1:4]=[1,0,0,0], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
     @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
     @variables Q̂d(t)[1:4]=[0,0,0,0], [state_priority=1000]
@@ -426,14 +428,25 @@ function nonunit_quaternion_equations(R, w)
     # where angularVelocity2(Q, der(Q)) = 2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
     # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
+    if neg_w
+        Ω = Ω'
+    end
+
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     QR = from_Q(Q̂ ./ sqrt(n), w)
     [
         n ~ Q̂'Q̂
         c ~ k * (1 - n)
         D.(Q̂) .~ Q̂d
-        Q̂d .~ (Ω' * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
+        Q̂d .~ (Ω * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
         Q .~ Q̂ ./ sqrt(n)
         R ~ from_Q(Q, w)
+        # R.w .~ angularVelocity2(Q̂, Q̂d)
     ]
 end
+
+# function angularVelocity2(Q, der_Q)
+#     Q = to_mb(Q)
+#     der_Q = to_mb(der_Q)
+#     2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
+# end

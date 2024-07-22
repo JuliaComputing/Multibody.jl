@@ -293,7 +293,7 @@ D = Differential(t)
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 40))
 sol3 = solve(prob, Rodas4())
-@test SciMLBase.successful_retcode(sol2)
+@test SciMLBase.successful_retcode(sol3)
 @test minimum(sol3[rev.phi]) > -π
 @test sol3[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 doplot() && plot(sol3, idxs = rev.phi)

@@ -20,7 +20,7 @@ world = Multibody.world
 
 systems = @named begin
     body1 = Body(m = 0.8, I_11 = 0.1, I_22 = 0.1, I_33 = 0.1, r_0 = [0.5, -0.3, 0],
-                 r_cm = [0, -0.2, 0], isroot=true, quat=true)
+                 r_cm = [0, -0.2, 0], isroot=true, quat=true, neg_w=true)
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0, 0, 0.3])
     spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, fixed_rotation_at_frame_b=true,

@@ -163,7 +163,7 @@ The function returns an ODESystem representing the prismatic joint.
 end
 
 """
-    Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence, phi = 0, phi_d = 0, phi_dd = 0, d = 0)
+    Spherical(; name, state = false, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, sequence, phi = 0, phid = 0, phidd = 0, d = 0)
 
 Joint with 3 constraints that define that the origin of `frame_a` and the origin of `frame_b` coincide. By default this joint defines only the 3 constraints without any potential state variables. If parameter `state` is set to true, three states are introduced. The orientation of `frame_b` is computed by rotating `frame_a` along the axes defined in parameter vector `sequence` (default = [1,2,3], i.e., the Cardan angle sequence) around the angles used as state. If angles are used as state there is the slight disadvantage that a singular configuration is present leading to a division by zero.
 
@@ -177,9 +177,9 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 """
 @component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
-                   phi_d = 0,
+                   phid = 0,
                    d = 0,
-                   phi_dd = 0,
+                   phidd = 0,
                    color = [1, 1, 0, 1],
                    radius = 0.1,
                    quat = false,
@@ -225,16 +225,16 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
             @variables begin
                 (phi(t)[1:3] = phi),
                 [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
-                (phi_d(t)[1:3] = phi_d),
+                (phid(t)[1:3] = phid),
                 [state_priority = 10, description = "3 angle derivatives"]
-                (phi_dd(t)[1:3] = phi_dd),
+                (phidd(t)[1:3] = phidd),
                 [state_priority = 10, description = "3 angle second derivatives"]
             end
             append!(eqs,
-                    [Rrel ~ axes_rotations(sequence, phi, phi_d)
+                    [Rrel ~ axes_rotations(sequence, phi, phid)
                     collect(w_rel) .~ angular_velocity2(Rrel)
-                    collect(phi_d .~ D.(phi))
-                    collect(phi_dd .~ D.(phi_d))])
+                    collect(phid .~ D.(phi))
+                    collect(phidd .~ D.(phid))])
         end
         if isroot
             append!(eqs,
@@ -686,7 +686,7 @@ with the wheel itself.
 end
 
 """
-    FreeMotion(; name, state = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phi_d = 0, phi_dd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
+    FreeMotion(; name, state = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phid = 0, phidd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
 
 Joint which _does not_ constrain the motion between `frame_a` and `frame_b`. Such a joint is only meaningful if the relative distance and orientation between `frame_a` and `frame_b`, and their derivatives, shall be used as state.
 
@@ -699,14 +699,14 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 # Arguments
 
 - `state`: Enforce this joint having state, this is often desired and is the default choice.
-- `sequence`: Rotation sequence
+- `sequence`: Rotation sequence, defaults to `[1, 2, 3]`
 - `w_rel_a_fixed`: = true, if `w_rel_a_start` are used as initial values, else as guess values
 - `z_rel_a_fixed`: = true, if `z_rel_a_start` are used as initial values, else as guess values
 
 # Initial condition arguments:
 - `phi`
-- `phi_d`
-- `phi_dd`
+- `phid`
+- `phidd`
 - `w_rel_b`
 - `r_rel_a`
 - `v_rel_a`
@@ -716,8 +716,10 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                     quat = false,
                     w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
                     iscut = false,
-                    phi_d = 0,
-                    phi_dd = 0,
+                    state_priority = 4,
+                    phid = 0,
+                    phidd = 0,
+                    neg_w = false,
                     w_rel_b = 0,
                     r_rel_a = 0,
                     v_rel_a = 0,
@@ -728,21 +730,23 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     end
     @variables begin
         (phi(t)[1:3] = phi),
-        [state_priority = 4, description = "3 angles to rotate frame_a into frame_b"]
-        (phi_d(t)[1:3] = phi_d), [state_priority = 4, description = "Derivatives of phi"]
-        (phi_dd(t)[1:3] = phi_dd),
-        [state_priority = 4, description = "Second derivatives of phi"]
+        [state_priority = state_priority, description = "3 angles to rotate frame_a into frame_b"]
+        (phid(t)[1:3] = phid), [state_priority = state_priority, description = "Derivatives of phi"]
+        (phidd(t)[1:3] = phidd),
+        [state_priority = state_priority, description = "Second derivatives of phi"]
         (w_rel_b(t)[1:3] = w_rel_b),
         [
-            state_priority = quat ? 4.0 : 1.0,
+            state_priority = quat ? state_priority : 1.0,
             description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
         ]
         (r_rel_a(t)[1:3] = r_rel_a),
         [
+            state_priority = state_priority,
             description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
         ]
         (v_rel_a(t)[1:3] = v_rel_a),
         [
+            state_priority = state_priority,
             description = "= D(r_rel_a), i.e., velocity of origin of frame_b with respect to origin of frame_a, resolved in frame_a",
         ]
         (a_rel_a(t)[1:3] = a_rel_a), [description = "= D(v_rel_a)"]
@@ -776,14 +780,14 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
 
         if quat
-            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b; neg_w))
 
         else
             append!(eqs,
-                    [phi_d .~ D.(phi)
-                    phi_dd .~ D.(phi_d)
-                    Rrel ~ axes_rotations(sequence, phi, phi_d)
-                    w_rel_b .~ angular_velocity2(Rrel)])
+                    [phid .~ D.(phi)
+                    phidd .~ D.(phid)
+                    Rrel ~ axes_rotations(sequence, phi, phid)
+                    w_rel_b .~ (neg_w ? -1 : 1) * angular_velocity2(Rrel)])
         end
 
     else
