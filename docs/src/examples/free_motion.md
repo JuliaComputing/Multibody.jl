@@ -22,6 +22,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                          systems = [world;
                                     freeMotion;
                                     body])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [], (0, 10))

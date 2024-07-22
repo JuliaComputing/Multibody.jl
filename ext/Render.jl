@@ -2,6 +2,7 @@ module Render
 using Makie
 using Multibody
 import Multibody: render, render!, loop_render, encode, decode, get_rot, get_trans, get_frame
+using Multibody.Visualizers
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
@@ -240,6 +241,7 @@ render!(scene, ::Any, args...) = false # Fallback for systems that have no rende
 
 function render!(scene, ::typeof(Body), sys, sol, t)
     color = get_color(sys, sol, :purple)
+    cylinder_color = Makie.RGBA(sol(sol.t[1], idxs=sys.cylinder_color)...)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
@@ -273,36 +275,29 @@ function render!(scene, ::typeof(Body), sys, sol, t)
 
         Makie.GeometryBasics.Cylinder(origin, extremity, cylinder_radius)
     end
-    mesh!(scene, thing2; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing2; color=cylinder_color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    true
+end
+
+function render!(scene, ::typeof(Visualizers.CylinderPrimitive), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    r_0 = get_fun(sol, collect(sys.frame_a.r_0))
+    color = get_color(sys, sol, :red)
+    r = get_fun(sol, collect(sys.r))
+
+    thing = @lift begin
+        O = Point3f(r_0($t)) # Assume world is never moving
+        tip = O .+ Point3f(r($t)...)
+        Makie.GeometryBasics.Cylinder(O, tip, radius)
+    end
+    mesh!(scene, thing; color)
+
     true
 end
 
 function render!(scene, ::typeof(World), sys, sol, t)
-    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
-    radius = 0.01f0
-    r_0 = get_fun(sol, collect(sys.frame_b.r_0))
-
-    thing = @lift begin
-        O = Point3f(r_0($t)) # Assume world is never moving
-        x = O .+ Point3f(1,0,0)
-        Makie.GeometryBasics.Cylinder(O, x, radius)
-    end
-    mesh!(scene, thing, color=:red)
-
-    thing = @lift begin
-        O = Point3f(r_0($t))
-        y = O .+ Point3f(0,1,0)
-        Makie.GeometryBasics.Cylinder(O, y, radius)
-    end
-    mesh!(scene, thing, color=:green)
-
-    thing = @lift begin
-        O = Point3f(r_0($t))
-        z = O .+ Point3f(0,0,1)
-        Makie.GeometryBasics.Cylinder(O, z, radius)
-    end
-    mesh!(scene, thing, color=:blue)
-    true
+    false # Handled by internal viz
 end
 
 function render!(scene, T::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)

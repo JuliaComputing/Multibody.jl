@@ -38,23 +38,27 @@ end
 """
     World(; name, render=true)
 """
-@component function World(; name, render=true, point_gravity=false)
+@component function World(; name, render=true, point_gravity=false, kwargs...)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
     # = 12 equations 
-    @named frame_b = Frame()
     @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
     @parameters g=9.80665 [description = "gravitational acceleration of world"]
     @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
+    systems = @named begin
+        frame_b = Frame()
+        viz = Visualizers.FixedFrame(; render, kwargs...)
+    end
     O = ori(frame_b)
     eqs = Equation[collect(frame_b.r_0) .~ 0;
                    O ~ nullrotation()
                    # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
+                   connect(frame_b, viz.frame_a)
                    ]
-    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
+    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems)
 end
 
 """
@@ -223,7 +227,9 @@ This component has a single frame, `frame_a`. To represent bodies with more than
 # Rendering options
 - `radius`: Radius of the joint in animations
 - `cylinder_radius`: Radius of the cylinder from frame to COM in animations (only drawn if `r_cm` is non-zero). Defaults to `radius/2`
+- `length_fraction`: Fraction of the length of the body that is the cylinder from frame to COM in animations
 - `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
+- `cylinder_color`: Color of the cylinder from frame to COM in animations. Defaults to the same color as the body, but with an alpha value of 0.4
 """
 @component function Body(; name, m = 1, r_cm = [0, 0, 0],
               I_11 = 0.001,
@@ -245,6 +251,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               length_fraction = 1,
               air_resistance = 0.0,
               color = [1,0,0,1],
+              cylinder_color = [color[1:3]; 0.4],
               quat=false,)
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
@@ -278,6 +285,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         description = "Radius of the cylinder from frame to COM in animations",
     ]
     @parameters color[1:4] = color [description = "Color of the body in animations (RGBA)"]
+    @parameters cylinder_color[1:4] = cylinder_color [description = "Color of the cylinder from frame to COM in animations (RGBA)"]
     @parameters length_fraction=length_fraction, [description = "Fraction of the length of the body that is the cylinder from frame to COM in animations"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
@@ -354,7 +362,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
     sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
-    add_params(sys, [radius; cylinder_radius; color; length_fraction]; name)
+    add_params(sys, [radius; cylinder_radius; color; length_fraction; cylinder_color]; name)
 end
 
 
@@ -656,6 +664,7 @@ end
         frame_b = Frame()
         translation = FixedTranslation(r = r)
         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
+        viz = Viz.Cylinder(; color, radius=diameter/2)
     end
 
     @equations begin
@@ -668,9 +677,8 @@ end
         a_0[1] ~ D(v_0[1])
         a_0[2] ~ D(v_0[2])
         a_0[3] ~ D(v_0[3])
-        connect(frame_a, translation.frame_a)
-        connect(frame_b, translation.frame_b)
-        connect(frame_a, body.frame_a)
+        connect(frame_a, translation.frame_a, body.frame_a, viz.frame_a)
+        connect(frame_b, translation.frame_b, viz.frame_b)
     end
 end
 
