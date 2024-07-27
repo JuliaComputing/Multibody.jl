@@ -201,16 +201,18 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
 end
 
 """
-    Body(; name, m = 1, r_cm, I = collect(0.001 * LinearAlgebra.I(3)), isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3), state_priority = 2, quat=false)
+    Body(; name, m = 1, r_cm, isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3), state_priority = 2, quat=false)
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
+
+This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref).
 
 # Parameters
 - `m`: Mass
 - `r_cm`: Vector from `frame_a` to center of mass, resolved in `frame_a`
-- `I`: Inertia matrix of the body
+- `I_11, I_22, I_33, I_21, I_31, I_32`: Inertia-matrix elements
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
-- `phi0`: Initial orientation, only applicable if `isroot = true`
+- `phi0`: Initial orientation, only applicable if `isroot = true` and `quat = false`
 - `phid0`: Initial angular velocity
 
 
