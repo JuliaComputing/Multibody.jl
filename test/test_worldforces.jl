@@ -217,7 +217,7 @@ ssys = structural_simplify(IRSystem(testwf))
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
-@test_broken sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
+@test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 @test sol(1, idxs=testwf.body.body.w_a[3]-testwf.b0.w_a[3]) ≈ 0 atol=1e-3 # These should be identical
 
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
@@ -259,7 +259,7 @@ ssys = structural_simplify(IRSystem(testwf))
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
-@test_broken sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
+@test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 
 
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
@@ -474,3 +474,6 @@ sol = solve(prob, Tsit5())
 @test iszero(sol(0, idxs=testwf.forcea.frame_b.f + testwf.b0.frame_a.f + testwf.tr.frame_a.f))
 @test iszero(sol(0, idxs=testwf.forceb.frame_b.f + testwf.body.frame_a.f + testwf.tr.frame_b.f))
 
+
+
+##
