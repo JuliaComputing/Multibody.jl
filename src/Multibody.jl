@@ -69,7 +69,7 @@ A boolean indicating whether or not the component performed any rendering. Typic
 function render! end
 
 const t = let
-    (@variables t)[1]
+    (@independent_variables t)[1]
 end
 const D = Differential(t)
 

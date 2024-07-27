@@ -76,7 +76,7 @@ sol = solve(prob, Tsit5())
         world = W()
         forcea = WorldForce(resolve_frame=:world)
         forceb = WorldForce(resolve_frame=:world)
-        body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=false)
+        body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=true)
     end
     @parameters begin
         f[1:3]
@@ -105,7 +105,7 @@ sol = solve(prob, Tsit5())
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5(), reltol=1e-8)
 # plot(sol)
-@test_broken sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.572800369240885, 0.4946715021692289, 0.0] atol=1e-3 # Spinning around center of mass
+@test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.572800369240885, 0.4946715021692289, 0.0] atol=1e-3 # Spinning around center of mass
 # passes with neg_w = true
 
 # ==============================================================================
@@ -116,7 +116,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
         world = W()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
-        body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=false)
+        body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=true)
     end
     @parameters begin
         f[1:3]
@@ -144,7 +144,7 @@ sol = solve(prob, Tsit5())
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5(), reltol=1e-8)
 # plot(sol)
-@test_broken sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.9419246090353689, -0.23388592078659548, 0.0] atol=1e-3
+@test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.9419246090353689, -0.23388592078659548, 0.0] atol=1e-3
 # passes with neg_w = true
 # ==============================================================================
 ## Same as above but with BodyCylinder instead
@@ -154,7 +154,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
         world = W()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
-        body = BodyCylinder(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=false, density=1, diameter=0.1)
+        body = BodyCylinder(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=true, density=1, diameter=0.1)
     end
     @parameters begin
         f[1:3]
@@ -182,7 +182,7 @@ sol = solve(prob, Tsit5())
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
 sol = solve(prob, Tsit5(), reltol=1e-8)
 # plot(sol)
-@test_broken sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36637355877861, 0.4818152481205165, 0.0] atol=1e-3
+@test sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36637355877861, 0.4818152481205165, 0.0] atol=1e-3
 # passes with neg_w = true
 
 # ==============================================================================
@@ -195,7 +195,7 @@ using LinearAlgebra
         forcea = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         forceb = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         b0 = Body(m=1e-32, I_11=1e-32, I_22=1e-32, I_33=1e-32, state_priority=0, radius=0.14, color=[1,0,0,0.5])
-        body = BodyCylinder(r=[1,0,0], density=1, diameter=0.1, state=true, isroot=true, quat=false, neg_w=false, color=[0,0,1,0.5])
+        body = BodyCylinder(r=[1,0,0], density=1, diameter=0.1, state=true, isroot=true, quat=false, neg_w=true, color=[0,0,1,0.5])
     end
     @parameters begin
         f[1:3]
@@ -223,9 +223,9 @@ sol = solve(prob, Tsit5())
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Rodas4(), reltol=1e-8)
 # plot(sol)
-@test_broken sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36595999301484056, 0.48169308140123934, 0.0] atol=1e-3 # Identical to the test above without extra body b0
+@test sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36595999301484056, 0.48169308140123934, 0.0] atol=1e-3 # Identical to the test above without extra body b0
 
-@test_broken sol(1, idxs=testwf.body.body.w_a[3]-testwf.b0.w_a[3]) ≈ 0 atol=1e-3 # These should be identical
+@test sol(1, idxs=testwf.body.body.w_a[3]-testwf.b0.w_a[3]) ≈ 0 atol=1e-3 # These should be identical
 # plot(sol, idxs=[testwf.body.body.w_a[3], testwf.b0.w_a[3]])
 
 # ==============================================================================
@@ -237,7 +237,7 @@ sol = solve(prob, Rodas4(), reltol=1e-8)
         forcea = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         forceb = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         b0 = Body(m=1e-32, I_11=1e-32, I_22=1e-32, I_33=1e-32, state_priority=0, radius=0.14, color=[1,0,0,0.5])
-        body = BodyCylinder(r=[1,0,0], density=1, diameter=0.1, color=[0,0,1,0.5], state=true, isroot=true, quat=false, neg_w=false)
+        body = BodyCylinder(r=[1,0,0], density=1, diameter=0.1, color=[0,0,1,0.5], state=true, isroot=true, quat=false, neg_w=true)
     end
     @parameters begin
         f[1:3]
@@ -265,7 +265,7 @@ sol = solve(prob, Tsit5())
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
 sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 # plot(sol)
-@test_broken sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36595999301484056, 0.48169308140123934, 0.0] atol=1e-3
+@test sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36595999301484056, 0.48169308140123934, 0.0] atol=1e-3
 
 
 
@@ -385,7 +385,7 @@ sol = solve(prob, Tsit5())
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0)
-        body = Body(m=1, state=true, isroot=true, quat=true, neg_w=false)
+        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=true)
         tr = FixedTranslation(r=[1,0,0])
     end
     @parameters begin
@@ -414,8 +414,8 @@ sol = solve(prob, Tsit5())
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,10,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
-@test_broken !iszero(sol(1, idxs=testwf.body.frame_a.r_0))
-@test_broken sol(1, idxs=testwf.body.frame_a.r_0) ≈ [-0.9300324062366484, 0.25508128572301375, 0.0] atol=1e-3
+@test !iszero(sol(1, idxs=testwf.body.frame_a.r_0))
+@test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [-0.9300324062366484, 0.25508128572301375, 0.0] atol=1e-3
 # Passes with neg_w = true
 
 sol(0, idxs=testwf.forcea.frame_b.f + testwf.b0.frame_a.f + testwf.tr.frame_a.f)
