@@ -48,7 +48,7 @@ If we instead model a body suspended in springs without the presence of any join
 using Multibody.Rotations: QuatRotation, RotXYZ, params
 @named begin
     body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                     r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true, neg_w=true)
+                     r_0 = [0.2, -0.5, 0.1], isroot = true, quat=true)
     bar2 = FixedTranslation(r = [0.8, 0, 0])
     spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
     spring2 = Multibody.Spring(c = 20, s_unstretched = 0)

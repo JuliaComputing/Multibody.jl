@@ -68,7 +68,7 @@ t = Multibody.t
 D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, -1, 0], quat=true, neg_w=true) # This time the body isroot since there is no joint containing state
     @named spring = Multibody.Spring(c = 1)
 
     connections = [connect(world.frame_b, spring.frame_a)
@@ -87,10 +87,11 @@ D = Differential(t)
 
     # @test_skip begin # Yingbo: instability
     prob = ODEProblem(ssys, [
-        collect(body.w_a) .=> 0.01;
+        collect(body.r_0) .=> [0, -1e-5, 0]; # To make sure the spring has non-zero extent
+        collect(body.w_a) .=> 0.00;
         collect(body.v_0) .=> 0;
     ], (0, 10))
-    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
+    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 0*1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
     @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3

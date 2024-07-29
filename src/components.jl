@@ -236,7 +236,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               isroot = false,
               state = false,
               sequence = [1,2,3],
-              neg_w = false,
+              neg_w = true,
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
@@ -267,7 +267,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
     @variables w_a(t)[1:3]=w_a [guess = 0, 
-        state_priority = state_priority+2quat*state,
+        state_priority = state_priority-1+2quat*state,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3] [guess = 0, 
@@ -619,7 +619,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         state = false
         quat = false
         sequence = [1,2,3]
-        neg_w = false
+        neg_w = true
     end
 
     @parameters begin
