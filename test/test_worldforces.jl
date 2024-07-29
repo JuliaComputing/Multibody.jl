@@ -1,3 +1,14 @@
+using ModelingToolkit
+using Multibody
+using Test
+using JuliaSimCompiler
+using OrdinaryDiffEq
+doplot() = false
+world = Multibody.world
+W(args...; kwargs...) = Multibody.world
+t = Multibody.t
+D = Differential(t)
+
 # ==============================================================================
 ## The simplest of them all, two WorldForces attached to the same body. The forces add to zero, resulting in no movement
 # ==============================================================================
@@ -385,7 +396,7 @@ sol = solve(prob, Tsit5())
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0)
-        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=true)
+        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=false)
         tr = FixedTranslation(r=[1,0,0])
     end
     @parameters begin
