@@ -1178,7 +1178,7 @@ world = Multibody.world
 
 @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
-@named body = Body(; m = 1, isroot=true, quat=true)
+@named body = Body(; m = 1, isroot=true, quat=true, neg_w=true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
@@ -1193,10 +1193,10 @@ prob = ODEProblem(ssys, [
     # D.(body.Q̂) .=> 0;
 
 ], (0, 1))
-sol1 = solve(prob, Rodas4())
+sol1 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
 ## quat in joint
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=true, neg_w=true)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1213,10 +1213,10 @@ prob = ODEProblem(ssys, [
     # D.(joint.Q̂) .=> 0;
 
 ], (0, 1))
-sol2 = solve(prob, Rodas4())
+sol2 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
 ## euler
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=false)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=false, neg_w=true)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1233,8 +1233,8 @@ prob = ODEProblem(ssys, [
     # D.(joint.Q̂) .=> 0;
 
 ], (0, 1))
-sol3 = solve(prob, Rodas4())
+sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
-@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol2(0:0.1:1, idxs=collect(body.r_0)) atol=1e-5
-@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol3(0:0.1:1, idxs=collect(body.r_0)) atol=1e-3
+@test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol2(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
+@test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol3(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
 
