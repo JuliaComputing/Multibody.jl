@@ -142,21 +142,29 @@ function RotorCraft(; cl = true, addload=true)
     @named model = ODESystem(connections, t; systems)
     complete(model)
 end
-model = RotorCraft(cl=true, addload=true)
+model = RotorCraft(cl=true, addload=false)
 ssys = structural_simplify(IRSystem(model))
 
 
 op = [
     # model.load.v_0[1] => 0.0;
     model.body.v_0[1] => 0;
-    collect(model.freemotion.phi) .=> 0.1;
-    collect(model.cable.joint_2.phi) .=> 0.03;
+    # collect(model.freemotion.phi) .=> 0.1;
+    # collect(model.cable.joint_2.phi) .=> 0.03;
     model.world.g => 2;
     model.body.frame_a.render => true
     model.body.frame_a.radius => 0.01
     model.body.frame_a.length => 0.1
+    # collect(model.body.a_0) .=> 0;
     ]
 # ModelingToolkit.generate_initializesystem(ssys; u0map=op)
+
+
+# init_sys_ir = generate_initializesystem(ssys, u0map = op)
+# isys_ir = structural_simplify(init_sys_ir, fully_determined = false)
+# init_prob_ir = NonlinearProblem(isys_ir, [model.Calt.int.y => 1], [t => 0.0])
+# sol_ir = solve(init_prob_ir)
+
 
 prob = ODEProblem(ssys, op, (0, 30))
 sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
@@ -181,47 +189,11 @@ plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3
 ![quadrotor animation](quad.gif)
 
 ```@example QUAD
-using FiniteDiff
-outputs = [model.freemotion.phi; model.freemotion.phid]
+outputs = []# [model.freemotion.phi; model.freemotion.phid]
 inputs = [model.thruster1.u; model.thruster2.u; model.thruster3.u; model.thruster4.u]
 irsys = IRSystem(RotorCraft(cl=false))
-ssys = structural_simplify(irsys, (inputs, []))
+ssys, diff_idxs, alge_idxs, input_idxs = JuliaSimCompiler.io_preprocessing(irsys, inputs, [])
 
+ModelingToolkit.linearization_function(irsys, inputs, outputs)
 
-
-linop = [
-    op;
-    inputs .=> 1
-]
-prob = ODEProblem(ssys, linop, (0, 53))
-
-oidxs = [3,1,24,22]
-# unknowns(ssys)[idxs]
-nx = length(unknowns(ssys))
-nu = 4
-
-A = FiniteDiff.finite_difference_jacobian(prob.u0) do x
-    dx = similar(x) .= 0
-    prob.f(dx, x, prob.p, 0)
-    dx
-end
-B = FiniteDiff.finite_difference_jacobian(ones(nu)) do u
-    pu = copy(prob.p)
-    pu[end-nu+1:end] .= u
-    dx = similar(u, nx) .= 0
-    prob.f(dx, prob.u0, pu, 0)
-end
-
-eigvals(A)
-
-@variables x[1:nx]
-x = collect(x)
-dx = similar(x)
-prob.f(dx, x, prob.p, 0)
-
-
-L = kp*I(4)
-using ControlSystemsBase
-C = (1:nx)' .== oidxs
-G = ss(A, L, C, 0)
 ```

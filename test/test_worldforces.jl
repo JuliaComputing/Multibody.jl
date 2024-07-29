@@ -396,7 +396,7 @@ sol = solve(prob, Tsit5())
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0)
-        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=false)
+        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=true)
         tr = FixedTranslation(r=[1,0,0])
     end
     @parameters begin
