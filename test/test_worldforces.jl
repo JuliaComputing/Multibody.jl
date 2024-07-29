@@ -396,7 +396,8 @@ sol = solve(prob, Tsit5())
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0)
-        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=false)
+        #body = Body(m=1, state=true, isroot=true, quat=false, neg_w=false)
+        body = Body(m=1, state=true, isroot=true, quat=false, neg_w=true)
         tr = FixedTranslation(r=[1,0,0])
     end
     @parameters begin
@@ -415,9 +416,29 @@ end
 
 @named testwf = TestWorldForce()
 testwf = complete(testwf)
+u0 = [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]]
+#ssys = structural_simplify(IRSystem(testwf), alias_eliminate = false, tearing = false)
+#old_u0 = unknowns(testwf) .=> sol_old[unknowns(testwf), 1]
+#vvv = [
+#    vec(Multibody.ori(world.frame_b).R)
+#    vec(Multibody.ori(testwf.tr.frame_a).R)
+#    vec(Multibody.ori(testwf.tr.frame_b).R)
+#    vec(Multibody.ori(testwf.forcea.frame_b).R)
+#    vec(Multibody.ori(testwf.forceb.frame_b).R)
+#    vec(Multibody.ori(testwf.forcea.basicWorldForce.frame_b).R)
+#    vec(Multibody.ori(testwf.forceb.basicWorldForce.frame_b).R)
+#    vec(D.(D.(collect(testwf.body.phi))))
+#    vec(D.(collect(testwf.body.phi)))
+#    vec(D.(collect(testwf.body.r_0)))
+#    vec(D.(D.(collect(testwf.body.r_0))))
+#   ]
+#for v in vvv
+#    old_u0 = [old_u0; v .=> sol_old[v, 1]]
+#end
+#prob = ODEProblem(ssys, [old_u0; u0], (0, 1))
 ssys = structural_simplify(IRSystem(testwf))
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
-sol = solve(prob, Tsit5())
+prob = ODEProblem(ssys, u0, (0, 1))
+sol = solve(prob, Rodas5P())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
 
