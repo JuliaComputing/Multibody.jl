@@ -30,12 +30,14 @@ number_of_links = 5 # Number of links in the cable.
 kalt = 1
 Tialt = 3
 Tdalt = 3
-kroll = 0
-Tiroll = 1
-Tdroll = 0.01
-kpitch = 0.5
-Tipitch = 1
-Tdpitch = 0.01
+
+kroll = 0.02
+Tiroll = 100
+Tdroll = 1
+
+kpitch = 0.02
+Tipitch = 100
+Tdpitch = 1
 
 @mtkmodel Thruster begin
     @components begin
@@ -77,15 +79,15 @@ function RotorCraft(; cl = true, addload=true)
     @parameters Gpitch[1:4] = [0,1,0,-1]
 
     @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
-    # @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
-    # @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
+    @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
+    @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
     # @named Calt = PI(; k=kalt, T=Tialt)
-    @named Croll = PI(; k=kroll, T=Tiroll)
-    @named Cpitch = PI(; k=kpitch, T=Tipitch)
+    # @named Croll = PI(; k=kroll, T=Tiroll)
+    # @named Cpitch = PI(; k=kpitch, T=Tipitch)
 
     @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
     @named load = Body(m = load_mass, air_resistance=1)
-    @named freemotion = FreeMotion(state=true, isroot=true, quat=true, state_priority=1000, neg_w=true)
+    @named freemotion = FreeMotion(state=true, isroot=true, quat=false, state_priority=1000, neg_w=false)
 
     @named cable = Rope(
         l = cable_length,
@@ -116,14 +118,14 @@ function RotorCraft(; cl = true, addload=true)
     end
     if cl
 
-        uc = Galt*Calt.ctr_output.u #+ Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
+        uc = Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
         uc = collect(uc)
         append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
 
         append!(connections, [
             Calt.err_input.u ~ -body.r_0[2]
-            Croll.err_input.u ~ 0#-body.phi[3]
-            Cpitch.err_input.u ~ 0#-body.phi[1]
+            Croll.err_input.u ~ freemotion.phi[3]
+            Cpitch.err_input.u ~ -freemotion.phi[1]
         ])
         append!(systems, [Calt; Croll; Cpitch])
 
@@ -140,28 +142,30 @@ function RotorCraft(; cl = true, addload=true)
     @named model = ODESystem(connections, t; systems)
     complete(model)
 end
-model = RotorCraft(cl=true, addload=false)
+model = RotorCraft(cl=true, addload=true)
 ssys = structural_simplify(IRSystem(model))
 
 
 op = [
     # model.load.v_0[1] => 0.0;
     model.body.v_0[1] => 0;
-    # collect(model.cable.joint_2.phi) .=> 0.3;
-    model.world.g => 1;
+    collect(model.freemotion.phi) .=> 0.1;
+    collect(model.cable.joint_2.phi) .=> 0.03;
+    model.world.g => 2;
     model.body.frame_a.render => true
     model.body.frame_a.radius => 0.01
     model.body.frame_a.length => 0.1
     ]
 # ModelingToolkit.generate_initializesystem(ssys; u0map=op)
 
-prob = ODEProblem(ssys, op, (0, 2))
+prob = ODEProblem(ssys, op, (0, 30))
 sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
 # sol = solve(prob, Tsit5(), abstol=1e-5, reltol=1e-5)
 @test SciMLBase.successful_retcode(sol)
 # plot(sol) |> display
-# plot(sol, idxs=[model.body.phi;], layout=1) |> display
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4) |> display
+plot(sol, idxs=[model.freemotion.phi;], layout=1) |> display
+
+plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines) |> display
 # plot(sol, idxs=[model.arm1.frame_b.f[2], model.arm2.frame_b.f[2], model.arm3.frame_b.f[2], model.arm4.frame_b.f[2]], layout=1) |> display
 # plot(sol, idxs=[model.Calt.ctr_output.u, model.Croll.ctr_output.u, model.Cpitch.ctr_output.u], layout=3) |> display
 # plot(sol, idxs=[model.thruster1.u, model.thruster2.u, model.thruster3.u, model.thruster4.u], layout=1) |> display
@@ -180,7 +184,7 @@ plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3
 using FiniteDiff
 outputs = [model.freemotion.phi; model.freemotion.phid]
 inputs = [model.thruster1.u; model.thruster2.u; model.thruster3.u; model.thruster4.u]
-irsys = IRSystem(RotorCraft(false))
+irsys = IRSystem(RotorCraft(cl=false))
 ssys = structural_simplify(irsys, (inputs, []))
 
 
