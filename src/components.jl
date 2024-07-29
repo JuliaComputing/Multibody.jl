@@ -236,7 +236,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               isroot = false,
               state = false,
               sequence = [1,2,3],
-              neg_w = true,
+              neg_w = false,
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = 0,
@@ -619,7 +619,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         state = false
         quat = false
         sequence = [1,2,3]
-        neg_w = true
+        neg_w = false
     end
 
     @parameters begin
