@@ -146,9 +146,9 @@ op = [
     # collect(model.freemotion.phi) .=> 0.1;
     collect(model.cable.joint_2.phi) .=> 0.03;
     model.world.g => 2;
-    model.body.frame_a.render => true
-    model.body.frame_a.radius => 0.01
-    model.body.frame_a.length => 0.1
+    # model.body.frame_a.render => true
+    # model.body.frame_a.radius => 0.01
+    # model.body.frame_a.length => 0.1
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
