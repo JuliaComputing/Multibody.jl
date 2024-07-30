@@ -54,6 +54,10 @@ E = RotXYZ(R)
 Evec = params(E)
 ```
 
+```@example ORI
+rotation_axis(R), rotation_angle(R) # Get an axis-angle representation
+```
+
 ## Conventions for modeling
 See [Orientations and directions](@ref)
 
