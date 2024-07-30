@@ -67,6 +67,11 @@ sol = solve(prob, FBDF(autodiff=false))
 plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
 ```
 
+```@example kinloop
+using Test
+@test SciMLBase.successful_retcode(sol)
+```
+
 
 ### 3D animation
 Multibody.jl supports automatic 3D rendering of mechanisms, we use this feature to illustrate the result of the simulation below:
