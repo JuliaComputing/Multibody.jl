@@ -253,7 +253,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
 
-    iszero(r_cm(sol.t[1])) && (return true)
+    iszero(r_cm(sol.t[1])) && (return false)
 
     thing2 = @lift begin # Cylinder
         Ta = framefun($t)
@@ -274,7 +274,7 @@ function render!(scene, ::typeof(Body), sys, sol, t)
         Makie.GeometryBasics.Cylinder(origin, extremity, cylinder_radius)
     end
     mesh!(scene, thing2; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
-    true
+    false
 end
 
 function render!(scene, ::typeof(World), sys, sol, t)

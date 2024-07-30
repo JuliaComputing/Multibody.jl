@@ -1,5 +1,10 @@
 # Quadrotor with cable-suspended load
 
+![quadrotor animation](quadrotor.gif)
+
+This example builds a simple model of a quadrotor that carries a load suspended by a cable. The quadrotor has four arms, each with a thruster at the end. The quadrotor is controlled by three PID controllers: one for altitude, one for roll, and one for pitch (for simplicity, no position controller is included here).
+
+The main body of the aircraft is modeled using a [`Body`](@ref), and the arms are modeled using [`BodyCylinder`](@ref) components. The total inertia of the body and arms are automatically computed using the geometry and density properties of the bodies involved. The thrusters are modeled using a custom component called `Thruster` that applies a force in the y-direction. The thruster model is kinematical only, and does not model the rotation dynamics of the motors or any aerodynamics. The quadrotor is connected to the world frame using a [`FreeMotion`](@ref) joint, which allows the quadrotor to move freely in space.
 
 ```@example QUAD
 using Multibody
@@ -27,6 +32,8 @@ cable_length = 1 # Length of the cable.
 cable_mass = 0.1 # Mass of the cable.
 cable_diameter = 0.01 # Diameter of the cable.
 number_of_links = 5 # Number of links in the cable.
+
+# Controller parameters
 kalt = 1
 Tialt = 3
 Tdalt = 3
@@ -42,7 +49,7 @@ Tdpitch = 1
 @mtkmodel Thruster begin
     @components begin
         frame_b = Frame()
-        thrust3d = WorldForce(resolve_frame = :frame_b, scale=0.1, radius=0.02)
+        thrust3d = WorldForce(resolve_frame = :frame_b, scale=0.1, radius=0.02) # The thrust force is resolved in the local frame of the thruster.
         thrust = RealInput()
     end
     @variables begin
@@ -57,12 +64,10 @@ Tdpitch = 1
     end
 end
 
-rou(x) = round(x, digits=3)
-
-function RotorCraft(; cl = true, addload=true)
+function RotorCraft(; closed_loop = true, addload=true)
     arms = [
         BodyCylinder(
-            r = rou.([arm_length*cos(angle_between_arms*(i-1)), 0, arm_length*sin(angle_between_arms*(i-1))]),
+            r = [arm_length*cos(angle_between_arms*(i-1)), 0, arm_length*sin(angle_between_arms*(i-1))],
             diameter = arm_outer_diameter,
             inner_diameter = arm_inner_diameter,
             density = arm_density,
@@ -71,32 +76,8 @@ function RotorCraft(; cl = true, addload=true)
     ]
 
     thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
-
-    @parameters Galt[1:4] = ones(4)
-    @parameters Groll[1:4] = [1,0,-1,0]
-    @parameters Gpitch[1:4] = [0,1,0,-1]
-
-    @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
-    @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
-    @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
-
-
     @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
-    @named load = Body(m = load_mass, air_resistance=1)
-    @named freemotion = FreeMotion(state=true, isroot=true, quat=false, state_priority=1000, neg_w=false)
-
-    @named cable = Rope(
-        l = cable_length,
-        m = cable_mass,
-        n = number_of_links,
-        c = 0,
-        d = 0,
-        air_resistance = 0.5,
-        d_joint = 0.1,
-        radius = cable_diameter/2,
-        color = [0.5, 0.4, 0.4, 1],
-        dir = [0.0, -1, 0]
-    )
+    @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
 
     connections = [
         connect(world.frame_b, freemotion.frame_a)
@@ -106,13 +87,35 @@ function RotorCraft(; cl = true, addload=true)
     ]
     systems = [world; arms; body; thrusters; freemotion]
     if addload
+        @named load = Body(m = load_mass, air_resistance=0.1)
+        @named cable = Rope(
+            l = cable_length,
+            m = cable_mass,
+            n = number_of_links,
+            c = 0,
+            d = 0,
+            air_resistance = 0.1,
+            d_joint = 0.1,
+            radius = cable_diameter/2,
+            color = [0.5, 0.4, 0.4, 1],
+            dir = [0.0, -1, 0]
+        )
         push!(systems, load)
         push!(systems, cable)
         
         push!(connections, connect(body.frame_a, cable.frame_a))
         push!(connections, connect(cable.frame_b, load.frame_a))
     end
-    if cl
+    if closed_loop # add controllers
+
+        # Mixing matrices for the control signals
+        @parameters Galt[1:4] = ones(4) # The altitude controller affects all thrusters equally
+        @parameters Groll[1:4] = [-1,0,1,0]
+        @parameters Gpitch[1:4] = [0,1,0,-1]
+
+        @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
+        @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
+        @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
 
         uc = Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
         uc = collect(uc)
@@ -120,7 +123,7 @@ function RotorCraft(; cl = true, addload=true)
 
         append!(connections, [
             Calt.err_input.u ~ -body.r_0[2]
-            Croll.err_input.u ~ freemotion.phi[3]
+            Croll.err_input.u ~ -freemotion.phi[3]
             Cpitch.err_input.u ~ -freemotion.phi[1]
         ])
         append!(systems, [Calt; Croll; Cpitch])
@@ -138,12 +141,11 @@ function RotorCraft(; cl = true, addload=true)
     @named model = ODESystem(connections, t; systems)
     complete(model)
 end
-model = RotorCraft(cl=true, addload=true)
+model = RotorCraft(closed_loop=true, addload=true)
 ssys = structural_simplify(IRSystem(model))
 
 op = [
     model.body.v_0[1] => 0;
-    # collect(model.freemotion.phi) .=> 0.1;
     collect(model.cable.joint_2.phi) .=> 0.03;
     model.world.g => 2;
     # model.body.frame_a.render => true
@@ -167,3 +169,4 @@ nothing # hide
 
 ![quadrotor animation](quadrotor.gif)
 
+The green arrows in the animation indicate the force applied by the thrusters.
