@@ -144,3 +144,71 @@ nothing # hide
 ```
 
 ![animation](fourbar2.gif)
+
+
+## Centrifugal governor
+
+The centrifugal governor is a device used to regulate the speed of a steam engine. The mechanism consists of two balls connected to a rotating shaft. As the shaft rotates, the balls move outwards due to centrifugal force, which in turn moves a lever that regulates the steam flow and thus the engine speed. The mechanism is a kinematic loop with a prismatic joint and three revolute joints per arm.
+
+```@example kinloop
+W(;kwargs...) = Multibody.world
+
+arm_r = 0.03
+
+@mtkmodel GovernorArm begin
+    # @structural_parameters begin
+    # end
+    @components begin
+        j1 = Revolute(n = [0, 0, 1], phi0 = -deg2rad(10), isroot=true, radius=1.1arm_r)
+        # j2 = Revolute(n = [0, 0, 1], isroot=false, iscut=true)
+        j2 = RevolutePlanarLoopConstraint(n = [0, 0, 1], radius=1.1arm_r)
+        j3 = Revolute(n = [0, 0, 1], isroot=false, radius=1.1arm_r)
+        # TODO: add heavy ball
+        b1 = BodyShape(r = [0.1, 0, 0], radius=arm_r)
+        b2 = BodyShape(r = [-0.1, 0, 0], radius=arm_r)
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+    @equations begin
+        connect(frame_a, j1.frame_a)
+        connect(j1.frame_b, b1.frame_a)
+        connect(b1.frame_b, j2.frame_a)
+        connect(j2.frame_b, b2.frame_a)
+        connect(b2.frame_b, j3.frame_a)
+        connect(j3.frame_b, frame_b)
+    end
+end
+
+
+r = 0.02
+l = 0.05
+@mtkmodel Governor begin
+    @components begin
+        world = W()
+        arm1 = GovernorArm()
+        # arm2 = GovernorArm()
+        cylinder = BodyCylinder(r = [0, -l, 0], diameter = 2r, inner_diameter = 0.03)
+        mount1 = FixedTranslation(r = [-r, -l/2, 0])
+        # mount2 = FixedTranslation(r = [r, -l/2, 0])
+        prismatic = Prismatic(n = [0, -1, 0], s0 = 0.1, radius=0.8arm_r)
+    end
+    @equations begin
+        # connect(arm1.frame_a, world.frame_b, arm2.frame_a, prismatic.frame_a)
+        # connect(arm1.frame_b, mount1.frame_b)
+        # connect(arm2.frame_b, mount2.frame_b)
+        # connect(mount1.frame_a, cylinder.frame_a, mount2.frame_a, prismatic.frame_b)
+
+
+        connect(arm1.frame_a, world.frame_b, prismatic.frame_a)
+        connect(arm1.frame_b, mount1.frame_b)
+        connect(mount1.frame_a, cylinder.frame_a, prismatic.frame_b)
+    end
+end
+
+@named model = Governor()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [], (0.0, 1.0))
+sol = solve(prob, FBDF(autodiff=true))
+plot(sol)
+```
