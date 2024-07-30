@@ -72,8 +72,6 @@ function RotorCraft(; cl = true, addload=true)
 
     thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
 
-    # @named feedback_gain = MatrixGain(K = -[kp*I(4) kd*I(4) ki*I(4)])
-
     @parameters Galt[1:4] = ones(4)
     @parameters Groll[1:4] = [1,0,-1,0]
     @parameters Gpitch[1:4] = [0,1,0,-1]
@@ -81,9 +79,7 @@ function RotorCraft(; cl = true, addload=true)
     @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
     @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
     @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
-    # @named Calt = PI(; k=kalt, T=Tialt)
-    # @named Croll = PI(; k=kroll, T=Tiroll)
-    # @named Cpitch = PI(; k=kpitch, T=Tipitch)
+
 
     @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
     @named load = Body(m = load_mass, air_resistance=1)
@@ -142,58 +138,32 @@ function RotorCraft(; cl = true, addload=true)
     @named model = ODESystem(connections, t; systems)
     complete(model)
 end
-model = RotorCraft(cl=true, addload=false)
+model = RotorCraft(cl=true, addload=true)
 ssys = structural_simplify(IRSystem(model))
 
-
 op = [
-    # model.load.v_0[1] => 0.0;
     model.body.v_0[1] => 0;
     # collect(model.freemotion.phi) .=> 0.1;
-    # collect(model.cable.joint_2.phi) .=> 0.03;
+    collect(model.cable.joint_2.phi) .=> 0.03;
     model.world.g => 2;
     model.body.frame_a.render => true
     model.body.frame_a.radius => 0.01
     model.body.frame_a.length => 0.1
-    # collect(model.body.a_0) .=> 0;
-    ]
-# ModelingToolkit.generate_initializesystem(ssys; u0map=op)
+]
 
-
-# init_sys_ir = generate_initializesystem(ssys, u0map = op)
-# isys_ir = structural_simplify(init_sys_ir, fully_determined = false)
-# init_prob_ir = NonlinearProblem(isys_ir, [model.Calt.int.y => 1], [t => 0.0])
-# sol_ir = solve(init_prob_ir)
-
-
-prob = ODEProblem(ssys, op, (0, 30))
+prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
-# sol = solve(prob, Tsit5(), abstol=1e-5, reltol=1e-5)
 @test SciMLBase.successful_retcode(sol)
-# plot(sol) |> display
-plot(sol, idxs=[model.freemotion.phi;], layout=1) |> display
 
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines) |> display
-# plot(sol, idxs=[model.arm1.frame_b.f[2], model.arm2.frame_b.f[2], model.arm3.frame_b.f[2], model.arm4.frame_b.f[2]], layout=1) |> display
-# plot(sol, idxs=[model.Calt.ctr_output.u, model.Croll.ctr_output.u, model.Cpitch.ctr_output.u], layout=3) |> display
-# plot(sol, idxs=[model.thruster1.u, model.thruster2.u, model.thruster3.u, model.thruster4.u], layout=1) |> display
-# plot(sol, idxs=[model.Calt.ctr_output.u], layout=1) |> display
-
-# import GLMakie
-# first(render(model, sol, 0, show_axis=true)) # Interactive plot
-# Multibody.render(model, sol, filename = "quad.gif")
-# nothing # hide
+plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
 ```
-
-
-![quadrotor animation](quad.gif)
 
 ```@example QUAD
-outputs = []# [model.freemotion.phi; model.freemotion.phid]
-inputs = [model.thruster1.u; model.thruster2.u; model.thruster3.u; model.thruster4.u]
-irsys = IRSystem(RotorCraft(cl=false))
-ssys, diff_idxs, alge_idxs, input_idxs = JuliaSimCompiler.io_preprocessing(irsys, inputs, [])
-
-ModelingToolkit.linearization_function(irsys, inputs, outputs)
-
+import GLMakie
+render(model, sol, 0:0.1:sol.t[end], x=-3, z=-3, y=-1, lookat=[0,-1,0], show_axis=false, filename="quadrotor.gif", framerate=25)
+nothing # hide
 ```
+
+
+![quadrotor animation](quadrotor.gif)
+

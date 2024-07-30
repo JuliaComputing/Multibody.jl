@@ -33,7 +33,7 @@ systems = @named begin
     b3 = BodyShape(m=1, r = [-l, 0, 0], radius=0.03)
     b4 = BodyShape(m=1, r = [0.0, -l, 0], radius=0.03)
     damper1 = Rotational.Damper(d=0.1)
-    damper2 = Rotational.Damper(d=0.1)
+    damper2 = Rotational.Damper(d=0.11)
 end
 
 connections = [
@@ -62,7 +62,7 @@ connections = [
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 m = structural_simplify(IRSystem(fourbar))
 prob = ODEProblem(m, [world.g => 9.81], (0.0, 30.0))
-sol = solve(prob, Rodas4(autodiff=false))
+sol = solve(prob, FBDF(autodiff=false))
 
 plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
 ```
