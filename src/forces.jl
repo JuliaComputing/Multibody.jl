@@ -75,6 +75,53 @@ Torque acting between two frames, defined by 3 input signals and resolved in fra
     extend(ODESystem(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
 end
 
+@component function BasicWorldTorque(; name, resolve_frame = :world)
+    @named torque = Blocks.RealInput(; nin = 3)
+    @named frame_b = Frame()
+    eqs = if resolve_frame == :world
+        collect(frame_b.tau) .~ -resolve2(ori(frame_b), collect(torque.u))
+    elseif resolve_frame == :frame_b
+        collect(frame_b.tau) .~ -torque.u
+    else
+        collect(frame_b.tau) .~ zeros(3)
+    end |> collect
+    append!(eqs, collect(frame_b.f) .~ zeros(3))
+    ODESystem(eqs, t; name, systems = [torque, frame_b])
+end
+
+"""
+    WorldTorque(; name, resolve_frame = :world)
+
+External torque acting at `frame_b`, defined by 3 input signals and resolved in frame `:world` or `:frame_b`.
+
+# Connectors:
+- `frame_b`: Frame at which the torque is acting
+- `torque`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of torque resolved in frame defined by `resolve_frame`.
+
+# Rendering options
+- `scale = 0.1`: scaling factor for the force [m/N]
+- `color = [0,1,0,0.5]`: color of the force arrow in rendering
+- `radius = 0.05`: radius of the force arrow in rendering
+"""
+@component function WorldTorque(; name, resolve_frame = :world, scale = 0.1, color = [0, 1, 0, 0.5], radius = 0.05)
+    @named begin
+        torque = Blocks.RealInput(; nin = 3)
+        frame_b = Frame()
+        basicWorldTorque = BasicWorldTorque(; resolve_frame)
+    end
+    pars = @parameters begin
+        scale = scale, [description = "scaling factor for the force [m/N]"]
+        color[1:4] = color, [description = "color of the force arrow in rendering"]
+        radius = radius, [description = "radius of the force arrow in rendering"]
+    end
+    eqs = [
+        connect(basicWorldTorque.frame_b, frame_b)
+        connect(basicWorldTorque.torque, torque)
+    ]
+    ODESystem(eqs, t, [], pars; name, systems = [torque, basicWorldTorque, frame_b])
+end
+
+
 @component function BasicForce(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @named force = Blocks.RealInput(; nin = 3)

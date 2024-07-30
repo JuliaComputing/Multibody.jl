@@ -158,7 +158,7 @@ export Revolute, Prismatic, Planar, Spherical, Universal, GearConstraint, Rollin
        RollingWheel, FreeMotion, RevolutePlanarLoopConstraint
 include("joints.jl")
 
-export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce
+export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce, WorldTorque
 include("forces.jl")
 
 export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce, Power
