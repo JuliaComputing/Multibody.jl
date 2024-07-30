@@ -38,6 +38,7 @@ makedocs(;
                  "Swing" => "examples/swing.md",
                  "Bodies in space" => "examples/space.md",
                  "Gyroscopic effects" => "examples/gyroscopic_effects.md",
+                 "Quadrotor with cable-suspended load" => "examples/quad.md",
              ],
              "Rotations and orientation" => "rotations.md",
              "3D rendering" => "rendering.md",

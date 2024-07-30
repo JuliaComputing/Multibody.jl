@@ -69,7 +69,7 @@ A boolean indicating whether or not the component performed any rendering. Typic
 function render! end
 
 const t = let
-    (@variables t)[1]
+    (@independent_variables t)[1]
 end
 const D = Differential(t)
 
@@ -158,7 +158,7 @@ export Revolute, Prismatic, Planar, Spherical, Universal, GearConstraint, Rollin
        RollingWheel, FreeMotion, RevolutePlanarLoopConstraint
 include("joints.jl")
 
-export Spring, Damper, SpringDamperParallel, Torque, Force
+export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce
 include("forces.jl")
 
 export PartialCutForceBaseSensor, BasicCutForce, BasicCutTorque, CutTorque, CutForce, Power

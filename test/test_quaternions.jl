@@ -74,7 +74,7 @@ using OrdinaryDiffEq, Test
 
 t = Multibody.t
 @named joint = Multibody.FreeMotion(isroot = true, state=false)
-@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, quat=true, w_a=[1,0.5,0.2])
+@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, quat=true, w_a=[1,0.5,0.2], neg_w=true)
 
 # @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true)
 # @named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=false, w_a=[1,1,1])
@@ -148,7 +148,7 @@ end
     t = Multibody.t
     world = Multibody.world
 
-    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true)
+    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true, neg_w=false)
     @named body = Body(; m = 1, r_cm = [0.0, 0, 0])
 
     connections = [connect(world.frame_b, joint.frame_a)
@@ -184,6 +184,7 @@ end
     @test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
 
     @test get_R(sol, joint.frame_b, 0pi) ≈ I
+    @test_broken get_R(sol, joint.frame_b, pi/2)*[0,1,0] ≈ [0,0,1] atol=1e-3
     @test get_R(sol, joint.frame_b, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
     @test get_R(sol, joint.frame_b, 2pi) ≈ I atol=1e-3
 
@@ -202,7 +203,7 @@ end
 
     @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
     @named rod = FixedTranslation(; r = [1, 0, 0])
-    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0)
+    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0, neg_w=false)
 
     # @named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
     # @named body = Body(; m = 1, r_cm = [1.0, 0, 0], isroot=false)
@@ -220,10 +221,10 @@ end
 
 
         D = Differential(t)
-        q0 = randn(4); q0 ./= norm(q0)
+        # q0 = randn(4); q0 ./= norm(q0)
         # q0 = [1,0,0,0]
         prob = ODEProblem(ssys, [
-            # collect(body.w_a) .=> [1,0,0];
+            collect(body.w_a) .=> [1,0,0];
             # collect(body.Q) .=> q0;
             # collect(body.Q̂) .=> q0;
             ], (0, 30))
@@ -244,12 +245,12 @@ end
 
         Matrix(sol(ts, idxs = [body.w_a...]))
 
-        @test get_R(joint.frame_b, 0pi) ≈ I
-        @test get_R(joint.frame_b, sqrt(9.81/1)) ≈ diagm([1, -1, -1]) atol=1e-3
-        @test get_R(joint.frame_b, 2pi) ≈ I atol=1e-3
+        @test get_R(sol, joint.frame_b, 0pi) ≈ I
+        @test get_R(sol, joint.frame_b, sqrt(9.81/1)) ≈ diagm([1, -1, -1]) atol=1e-3
+        @test get_R(sol, joint.frame_b, 2pi) ≈ I atol=1e-3
 
 
-        Matrix(sol(ts, idxs = [joint.w_rel_b...]))
+        # Matrix(sol(ts, idxs = [joint.w_rel_b...]))
 
         # render(model, sol)
     end
@@ -274,7 +275,7 @@ using Multibody.Rotations: params
 
     @named begin
         body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                        r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true)
+                        r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true, neg_w=true)
         bar2 = FixedTranslation(r = [0.8, 0, 0])
         spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
         spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
@@ -317,7 +318,7 @@ using Multibody.Rotations: params
         0.080562
     ] atol=1e-1
 
-    @test_broken get_rot(sol, body.frame_b, 10)[1,2] ≈ 0.104409 atol=0.01
+    @test_broken get_rot(sol, body.frame_a, 10)[1,2] ≈ 0.104409 atol=0.01
 
     doplot() && plot(sol, idxs = [body.r_0...; body.body.w_a; body.body.v_0], layout=(3,3), size=(1000, 1000)) |> display
 

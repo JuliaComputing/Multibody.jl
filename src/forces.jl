@@ -61,7 +61,7 @@ Torque acting between two frames, defined by 3 input signals and resolved in fra
 # Keyword arguments:
 - `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
 """
-function Torque(; name, resolve_frame = :frame_b)
+@component function Torque(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named begin
@@ -75,7 +75,7 @@ function Torque(; name, resolve_frame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
 end
 
-function BasicForce(; name, resolve_frame = :frame_b)
+@component function BasicForce(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @named force = Blocks.RealInput(; nin = 3)
     @unpack frame_a, frame_b = ptf
@@ -113,6 +113,20 @@ function BasicForce(; name, resolve_frame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [force]), ptf)
 end
 
+@component function BasicWorldForce(; name, resolve_frame = :world)
+    @named force = Blocks.RealInput(; nin = 3)
+    @named frame_b = Frame()
+    eqs = if resolve_frame == :world
+        collect(frame_b.f) .~ -resolve2(ori(frame_b), collect(force.u))
+    elseif resolve_frame == :frame_b
+        collect(frame_b.f) .~ -force.u
+    else
+        collect(frame_b.f) .~ zeros(3)
+    end |> collect
+    append!(eqs, collect(frame_b.tau) .~ zeros(3))
+    ODESystem(eqs, t; name, systems = [force, frame_b])
+end
+
 """
     Force(; name, resolve_frame = :frame_b)
 
@@ -126,7 +140,7 @@ Force acting between two frames, defined by 3 input signals and resolved in fram
 # Keyword arguments:
 - `resolve_frame`: The frame in which the cut force and cut torque are resolved. Default is `:frame_b`, options include `:frame_a` and `:world`.
 """
-function Force(; name, resolve_frame = :frame_b)
+@component function Force(; name, resolve_frame = :frame_b)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     @named begin
@@ -140,7 +154,40 @@ function Force(; name, resolve_frame = :frame_b)
     extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
 end
 
-function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
+"""
+    WorldForce(; name, resolve_frame = :world)
+
+External force acting at `frame_b`, defined by 3 input signals and resolved in frame `:world` or `:frame_b`.
+
+# Connectors:
+- `frame_b`: Frame at which the force is acting
+- `force`: Of type `Blocks.RealInput(3)`. x-, y-, z-coordinates of force resolved in frame defined by `resolve_frame`.
+
+# Rendering options
+- `scale = 0.1`: scaling factor for the force [m/N]
+- `color = [0,1,0,0.5]`: color of the force arrow in rendering
+- `radius = 0.05`: radius of the force arrow in rendering
+"""
+@component function WorldForce(; name, resolve_frame = :world, scale = 0.1, color = [0, 1, 0, 0.5], radius = 0.05)
+    @named begin
+        frame_b = Frame()
+        force = Blocks.RealInput(; nin = 3) # x-, y-, z-coordinates of force resolved in frame defined by resolve_frame
+        basicWorldForce = BasicWorldForce(; resolve_frame)
+    end
+    pars = @parameters begin
+        scale = scale, [description = "scaling factor for the force [m/N]"]
+        color[1:4] = color, [description = "color of the force arrow in rendering"]
+        radius = radius, [description = "radius of the force arrow in rendering"]
+    end
+
+    eqs = [
+        connect(basicWorldForce.frame_b, frame_b)
+        connect(basicWorldForce.force, force)
+    ]
+    ODESystem(eqs, t, [], pars; name, systems = [force, basicWorldForce, frame_b])
+end
+
+@component function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
     fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
     @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
     @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
@@ -182,7 +229,7 @@ function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_fr
     compose(ODESystem(eqs, t; name), frame_a, frame_b)
 end
 
-function LineForceWithMass(; name, length = 0, m = 1.0, lengthfraction = 0.5, kwargs...)
+@component function LineForceWithMass(; name, length = 0, m = 1.0, lengthfraction = 0.5, kwargs...)
     m0 = m
     @named lfb = LineForceBase(; length, kwargs...)
     @unpack length, s, r_rel_0, e_rel_0, frame_a, frame_b = lfb
@@ -234,7 +281,7 @@ function LineForceWithMass(; name, length = 0, m = 1.0, lengthfraction = 0.5, kw
     extend(ODESystem(eqs, t; name, systems = [flange_a, flange_b]), lfb)
 end
 
-function PartialLineForce(; name, kwargs...)
+@component function PartialLineForce(; name, kwargs...)
     @named lfb = LineForceBase(; kwargs...)
     @unpack length, s, r_rel_0, e_rel_0, frame_a, frame_b = lfb
 

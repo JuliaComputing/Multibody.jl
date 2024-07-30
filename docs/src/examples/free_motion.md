@@ -72,7 +72,7 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
     collect(body.body.w_a .=> 0);
-    collect(body.body.Q) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+    # collect(body.body.phi .=> deg2rad.([10,10,10])); # If using Euler/Cardan angles
     collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
 ], (0, 4))
 

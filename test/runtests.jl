@@ -45,6 +45,11 @@ end
     include("test_quaternions.jl")
 end
 
+@testset "worldforces" begin
+    @info "Testing worldforces"
+    include("test_worldforces.jl")
+end
+
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -63,7 +68,7 @@ t = Multibody.t
 D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], quat=false) # This time the body isroot since there is no joint containing state
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, -1, 0], quat=true, neg_w=true) # This time the body isroot since there is no joint containing state
     @named spring = Multibody.Spring(c = 1)
 
     connections = [connect(world.frame_b, spring.frame_a)
@@ -82,10 +87,11 @@ D = Differential(t)
 
     # @test_skip begin # Yingbo: instability
     prob = ODEProblem(ssys, [
-        collect(body.w_a) .=> 0.01;
+        collect(body.r_0) .=> [0, -1e-5, 0]; # To make sure the spring has non-zero extent
+        collect(body.w_a) .=> 0.00;
         collect(body.v_0) .=> 0;
     ], (0, 10))
-    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
+    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 0*1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
     @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
@@ -288,7 +294,7 @@ D = Differential(t)
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 40))
 sol3 = solve(prob, Rodas4())
-@test SciMLBase.successful_retcode(sol2)
+@test SciMLBase.successful_retcode(sol3)
 @test minimum(sol3[rev.phi]) > -π
 @test sol3[rev.phi][end]≈-π / 2 rtol=0.01 # pendulum settles at 90 degrees stable equilibrium
 doplot() && plot(sol3, idxs = rev.phi)
@@ -1173,7 +1179,7 @@ world = Multibody.world
 
 @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
-@named body = Body(; m = 1, isroot=true, quat=true)
+@named body = Body(; m = 1, isroot=true, quat=true, neg_w=true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
@@ -1188,10 +1194,10 @@ prob = ODEProblem(ssys, [
     # D.(body.Q̂) .=> 0;
 
 ], (0, 1))
-sol1 = solve(prob, Rodas4())
+sol1 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
 ## quat in joint
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=true, neg_w=true)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1208,10 +1214,10 @@ prob = ODEProblem(ssys, [
     # D.(joint.Q̂) .=> 0;
 
 ], (0, 1))
-sol2 = solve(prob, Rodas4())
+sol2 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
 ## euler
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=false)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=false, neg_w=true)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1228,7 +1234,8 @@ prob = ODEProblem(ssys, [
     # D.(joint.Q̂) .=> 0;
 
 ], (0, 1))
-sol3 = solve(prob, Rodas4())
+sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
-@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol2(0:0.1:1, idxs=collect(body.r_0)) atol=1e-5
-@test sol1(0:0.1:1, idxs=collect(body.r_0)) ≈ sol3(0:0.1:1, idxs=collect(body.r_0)) atol=1e-3
+@test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol2(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
+@test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol3(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
+
