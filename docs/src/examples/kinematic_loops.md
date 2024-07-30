@@ -159,11 +159,12 @@ arm_r = 0.03
     # @structural_parameters begin
     # end
     @components begin
-        j1 = Revolute(n = [0, 0, 1], phi0 = -deg2rad(10), isroot=true, radius=1.1arm_r)
-        # j2 = Revolute(n = [0, 0, 1], isroot=false, iscut=true)
+        j1 = Revolute(n = [0, 0, 1], phi0 = deg2rad(10), isroot=true, radius=1.1arm_r)
+        # j2 = Revolute(n = [0, 0, 1], isroot=true, state_priority=99)
         j2 = RevolutePlanarLoopConstraint(n = [0, 0, 1], radius=1.1arm_r)
         j3 = Revolute(n = [0, 0, 1], isroot=false, radius=1.1arm_r)
-        # TODO: add heavy ball
+        # j3 = RevolutePlanarLoopConstraint(n = [0, 0, 1], radius=1.1arm_r)
+        # todo: add heavy ball
         b1 = BodyShape(r = [0.1, 0, 0], radius=arm_r)
         b2 = BodyShape(r = [-0.1, 0, 0], radius=arm_r)
         frame_a = Frame()
@@ -190,16 +191,19 @@ l = 0.05
         cylinder = BodyCylinder(r = [0, -l, 0], diameter = 2r, inner_diameter = 0.03)
         mount1 = FixedTranslation(r = [-r, -l/2, 0])
         # mount2 = FixedTranslation(r = [r, -l/2, 0])
-        prismatic = Prismatic(n = [0, -1, 0], s0 = 0.1, radius=0.8arm_r)
+        rev = Revolute(n = [0, 1, 0], w0 = 30, radius=1.01arm_r, state_priority=100)
+        prismatic = Prismatic(n = [0, -1, 0], s0 = 0.1, radius=0.8arm_r, state_priority=101)
     end
     @equations begin
-        # connect(arm1.frame_a, world.frame_b, arm2.frame_a, prismatic.frame_a)
+        connect(world.frame_b, rev.frame_a)
+        # connect(arm1.frame_a, rev.frame_b, arm2.frame_a, prismatic.frame_a)
         # connect(arm1.frame_b, mount1.frame_b)
         # connect(arm2.frame_b, mount2.frame_b)
         # connect(mount1.frame_a, cylinder.frame_a, mount2.frame_a, prismatic.frame_b)
 
 
-        connect(arm1.frame_a, world.frame_b, prismatic.frame_a)
+
+        connect(arm1.frame_a, rev.frame_b, prismatic.frame_a)
         connect(arm1.frame_b, mount1.frame_b)
         connect(mount1.frame_a, cylinder.frame_a, prismatic.frame_b)
     end
@@ -208,7 +212,12 @@ end
 @named model = Governor()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [], (0.0, 1.0))
-sol = solve(prob, FBDF(autodiff=true))
+
+display([unknowns(ssys) diag(ssys.mass_matrix)])
+##
+prob = ODEProblem(ssys, [
+    model.rev.w => 32.5
+], (0.0, 1.0))
+sol = solve(prob, Rodas5P(autodiff=true), abstol=1e-8, reltol=1e-8)#, initializealg = ShampineCollocationInit())
 plot(sol)
 ```
