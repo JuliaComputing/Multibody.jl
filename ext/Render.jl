@@ -305,6 +305,42 @@ function render!(scene, ::typeof(World), sys, sol, t)
     true
 end
 
+function render!(scene, ::typeof(Frame), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    length = sol(sol.t[1], idxs=sys.length) |> Float32
+    T = get_frame_fun(sol, sys)
+
+    thing = @lift begin
+        Ti = T($t)
+        Rx = Ti[:, 1]
+        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
+        x = O .+ Point3f(length*Rx)
+        Makie.GeometryBasics.Cylinder(O, x, radius)
+    end
+    mesh!(scene, thing, color=:red)
+
+    thing = @lift begin
+        Ti = T($t)
+        Ry = Ti[:, 2]
+        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
+        y = O .+ Point3f(length*Ry)
+        Makie.GeometryBasics.Cylinder(O, y, radius)
+    end
+    mesh!(scene, thing, color=:green)
+
+    thing = @lift begin
+        Ti = T($t)
+        Rz = Ti[:, 3]
+        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
+        z = O .+ Point3f(length*Rz)
+        Makie.GeometryBasics.Cylinder(O, z, radius)
+    end
+    mesh!(scene, thing, color=:blue)
+
+    true
+end
+
 function render!(scene, T::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     n = get_fun(sol, collect(sys.n))
