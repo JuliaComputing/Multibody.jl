@@ -33,7 +33,7 @@ systems = @named begin
     b3 = BodyShape(m=1, r = [-l, 0, 0], radius=0.03)
     b4 = BodyShape(m=1, r = [0.0, -l, 0], radius=0.03)
     damper1 = Rotational.Damper(d=0.1)
-    damper2 = Rotational.Damper(d=0.11)
+    damper2 = Rotational.Damper(d=0.1)
 end
 
 connections = [
@@ -60,11 +60,15 @@ connections = [
     
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
-m = structural_simplify(IRSystem(fourbar))
-prob = ODEProblem(m, [world.g => 9.81], (0.0, 30.0))
-sol = solve(prob, FBDF(autodiff=false))
+fourbar = complete(fourbar)
+ssys = structural_simplify(IRSystem(fourbar))
+prob = ODEProblem(ssys, [fourbar.j1.phi => 0.1], (0.0, 10.0))
+sol = solve(prob, FBDF(autodiff=true))
 
-plot(sol, idxs = [j1.phi, j2.phi, j3.phi])
+plot(
+    plot(sol, idxs = [j1.phi, j2.phi, j3.phi]),
+    plot(sol, idxs = [j1.w, j2.w, j3.w]),
+)
 ```
 
 ```@example kinloop
@@ -124,9 +128,9 @@ connections = [connect(j2.frame_b, b2.frame_a)
                ]
 @named fourbar2 = ODESystem(connections, t, systems = [world; systems])
 fourbar2 = complete(fourbar2)
-m = structural_simplify(IRSystem(fourbar2))
+ssys = structural_simplify(IRSystem(fourbar2))
 
-prob = ODEProblem(m, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
+prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
 
 sol = solve(prob, FBDF(autodiff=true));
 @test SciMLBase.successful_retcode(sol)
