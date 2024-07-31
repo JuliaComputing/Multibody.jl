@@ -75,6 +75,12 @@ function RotorCraft(; closed_loop = true, addload=true)
         ) for i = 1:num_arms
     ]
 
+    @variables begin
+        y_alt(t)
+        y_roll(t)
+        y_pitch(t)
+    end
+
     thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
     @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
     @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
@@ -82,6 +88,9 @@ function RotorCraft(; closed_loop = true, addload=true)
     connections = [
         connect(world.frame_b, freemotion.frame_a)
         connect(freemotion.frame_b, body.frame_a)
+        y_alt ~ body.r_0[2]
+        y_roll ~ freemotion.phi[3]
+        y_pitch ~ freemotion.phi[1]
         [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
         [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
     ]
@@ -122,9 +131,9 @@ function RotorCraft(; closed_loop = true, addload=true)
         append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
 
         append!(connections, [
-            Calt.err_input.u ~ -body.r_0[2]
-            Croll.err_input.u ~ -freemotion.phi[3]
-            Cpitch.err_input.u ~ -freemotion.phi[1]
+            Calt.err_input.u ~ -y_alt
+            Croll.err_input.u ~ -y_roll
+            Cpitch.err_input.u ~ -y_pitch
         ])
         append!(systems, [Calt; Croll; Cpitch])
 

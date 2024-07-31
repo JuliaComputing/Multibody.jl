@@ -134,8 +134,8 @@ The following animations give a quick overview of simple mechanisms that can be 
     <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/ropes_and_cables/">
         <img src="https://help.juliahub.com/multibody/dev/examples/mounted_chain.gif" alt="mounted_chain">
     </a>
-    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/ropes_and_cables/">
-        <img src="https://help.juliahub.com/multibody/dev/examples/stiff_rope.gif" alt="stiff_rope">
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/quad/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/quadrotor.gif" alt="quadrotor">
     </a>
     <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/kinematic_loops/">
         <img src="https://help.juliahub.com/multibody/dev/examples/fourbar2.gif" alt="fourbar2">
