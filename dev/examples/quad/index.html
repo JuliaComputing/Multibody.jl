@@ -67,6 +67,12 @@ function RotorCraft(; closed_loop = true, addload=true)
         ) for i = 1:num_arms
     ]
 
+    @variables begin
+        y_alt(t)
+        y_roll(t)
+        y_pitch(t)
+    end
+
     thrusters = [Thruster(name = Symbol(&quot;thruster$i&quot;)) for i = 1:num_arms]
     @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
     @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
@@ -74,6 +80,9 @@ function RotorCraft(; closed_loop = true, addload=true)
     connections = [
         connect(world.frame_b, freemotion.frame_a)
         connect(freemotion.frame_b, body.frame_a)
+        y_alt ~ body.r_0[2]
+        y_roll ~ freemotion.phi[3]
+        y_pitch ~ freemotion.phi[1]
         [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
         [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
     ]
@@ -114,9 +123,9 @@ function RotorCraft(; closed_loop = true, addload=true)
         append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
 
         append!(connections, [
-            Calt.err_input.u ~ -body.r_0[2]
-            Croll.err_input.u ~ -freemotion.phi[3]
-            Cpitch.err_input.u ~ -freemotion.phi[1]
+            Calt.err_input.u ~ -y_alt
+            Croll.err_input.u ~ -y_roll
+            Cpitch.err_input.u ~ -y_pitch
         ])
         append!(systems, [Calt; Croll; Cpitch])
 
@@ -149,5 +158,5 @@ prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
 @test SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)</code></pre><img src="834960ef.svg" alt="Example block output"/><pre><code class="language-julia hljs">import GLMakie
-render(model, sol, 0:0.1:sol.t[end], x=-3, z=-3, y=-1, lookat=[0,-1,0], show_axis=false, filename=&quot;quadrotor.gif&quot;, framerate=25)</code></pre><p><img src="../quadrotor.gif" alt="quadrotor animation"/></p><p>The green arrows in the animation indicate the force applied by the thrusters.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gyroscopic_effects/">« Gyroscopic effects</a><a class="docs-footer-nextpage" href="../../rotations/">Rotations and orientation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Tuesday 30 July 2024 11:43">Tuesday 30 July 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)</code></pre><img src="d4e5f649.svg" alt="Example block output"/><pre><code class="language-julia hljs">import GLMakie
+render(model, sol, 0:0.1:sol.t[end], x=-3, z=-3, y=-1, lookat=[0,-1,0], show_axis=false, filename=&quot;quadrotor.gif&quot;, framerate=25)</code></pre><p><img src="../quadrotor.gif" alt="quadrotor animation"/></p><p>The green arrows in the animation indicate the force applied by the thrusters.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gyroscopic_effects/">« Gyroscopic effects</a><a class="docs-footer-nextpage" href="../../rotations/">Rotations and orientation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Wednesday 31 July 2024 08:49">Wednesday 31 July 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
