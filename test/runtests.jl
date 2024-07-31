@@ -1278,7 +1278,7 @@ sol = solve(prob, Rodas4())
 @mtkmodel TestSphericalSpherical begin
     @components begin
         world = W()
-        ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false)
+        ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false, sphere_diameter=0.3)
         ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
         s = Spherical()
         trans = FixedTranslation(r = [1,0,1])

@@ -67,9 +67,9 @@ function get_systemtype(sys)
     eval(meta.type)
 end
 
-function get_color(sys, sol, default)
+function get_color(sys, sol, default, var_name = :color)
     try
-        Makie.RGBA(sol(sol.t[1], idxs=collect(sys.color))...)
+        Makie.RGBA(sol(sol.t[1], idxs=collect(getproperty(sys, var_name)))...)
     catch
         if default isa AbstractVector
             Makie.RGBA(default...)
@@ -501,6 +501,38 @@ function render!(scene, ::typeof(BodyBox), sys, sol, t)
         Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
         Makie.transform!(m, translation=r1, rotation=Q)
     end
+
+    true
+end
+
+function render!(scene, ::typeof(UniversalSpherical), sys, sol, t)
+    sphere_diameter = Float32(sol(sol.t[1], idxs=sys.sphere_diameter))
+    sphere_color = get_color(sys, sol, [1, 0.2, 1, 0.9], :sphere_color)
+    rod_width = Float32(sol(sol.t[1], idxs=sys.rod_width))
+    rod_height = Float32(sol(sol.t[1], idxs=sys.rod_height))
+    rod_color = get_color(sys, sol, [0, 0.1, 1, 0.9], :rod_color)
+    cylinder_length = Float32(sol(sol.t[1], idxs=sys.cylinder_length))
+    cylinder_diameter = Float32(sol(sol.t[1], idxs=sys.cylinder_diameter))
+    cylinder_color = get_color(sys, sol, [1, 0.2, 0, 1], :cylinder_color)
+
+    # NOTE: the rod is not currently drawn as a box and the revolute cylinders are not drawn at all
+    r_0a = get_fun(sol, collect(sys.frame_a.r_0))
+    r_0b = get_fun(sol, collect(sys.frame_b.r_0))
+    thing = @lift begin
+        r1 = Point3f(r_0a($t))
+        r2 = Point3f(r_0b($t))
+        origin = r1
+        extremity = r2
+        Makie.GeometryBasics.Cylinder(origin, extremity, rod_width/2)
+    end
+    mesh!(scene, thing; color=rod_color, specular = Vec3f(1.5))
+
+    # render a sphere for the sperical joint at frame_b
+    thing = @lift begin
+        r2 = Point3f(r_0b($t))
+        Sphere(r2, sphere_diameter/2)
+    end
+    mesh!(scene, thing; color=sphere_color, specular = Vec3f(1.5))
 
     true
 end

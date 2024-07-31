@@ -1159,7 +1159,7 @@ In complex multibody systems with closed loops this may help to simplify the sys
 end
 
 """
-    UniversalSpherical(; name, n1_a, rRod_ia, sphereDiameter = 0.1, sphereColor, rodWidth = 0.1, rodHeight = 0.1, rodColor, cylinderLength = 0.1, cylinderDiameter = 0.1, cylinderColor, kinematic_constraint = true)
+    UniversalSpherical(; name, n1_a, rRod_ia, sphere_diameter = 0.1, sphere_color, rod_width = 0.1, rod_height = 0.1, rod_color, cylinder_length = 0.1, cylinder_diameter = 0.1, cylinder_color, kinematic_constraint = true)
 
 Universal - spherical joint aggregation (1 constraint, no potential states)
 
@@ -1186,26 +1186,26 @@ This joint aggregation can be used in cases where in reality a rod with spherica
 - `frame_ia`: Frame fixed in the rod at the origin of `frame_a`
 
 # Rendering parameters
-- `sphereDiameter`: Diameter of spheres representing the universal and the spherical joint
-- `sphereColor`: Color of spheres representing the universal and the spherical joint (RGBA)
-- `rodWidth`: Width of rod shape in direction of axis 2 of universal joint
-- `rodHeight`: Height of rod shape in direction that is orthogonal to rod and to axis 2
-- `rodColor`: Color of rod shape connecting the universal and the spherical joints (RGBA)
-- `cylinderLength`: Length of cylinders representing the two universal joint axes
-- `cylinderDiameter`: Diameter of cylinders representing the two universal joint axes
-- `cylinderColor`: Color of cylinders representing the two universal joint axes (RGBA)
+- `sphere_diameter`: Diameter of spheres representing the universal and the spherical joint
+- `sphere_color`: Color of spheres representing the universal and the spherical joint (RGBA)
+- `rod_width`: Width of rod shape in direction of axis 2 of universal joint
+- `rod_height`: Height of rod shape in direction that is orthogonal to rod and to axis 2
+- `rod_color`: Color of rod shape connecting the universal and the spherical joints (RGBA)
+- `cylinder_length`: Length of cylinders representing the two universal joint axes
+- `cylinder_diameter`: Diameter of cylinders representing the two universal joint axes
+- `cylinder_color`: Color of cylinders representing the two universal joint axes (RGBA)
 """
 @component function UniversalSpherical(; name,
                     n1_a = [0, 0, 1],
                     rRod_ia = [1, 0, 0],
-                    sphereDiameter = 0.1,
-                    sphereColor = [1, 1, 0, 1],
-                    rodWidth = 0.1,
-                    rodHeight = 0.1,
-                    rodColor = [1, 1, 0, 1],
-                    cylinderLength = 0.1,
-                    cylinderDiameter = 0.1,
-                    cylinderColor = [1, 1, 0, 1], 
+                    sphere_diameter = 0.1,
+                    sphere_color = [1, 0.2, 1, 0.9],
+                    rod_width = 0.1,
+                    rod_height = 0.1,
+                    rod_color = [0, 0.1, 1, 0.9],
+                    cylinder_length = 0.1,
+                    cylinder_diameter = 0.1,
+                    cylinder_color = [1, 0.2, 0, 1], 
                     kinematic_constraint = true,
 )
 
@@ -1218,14 +1218,14 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         # R_rel_ia_frame = Frame()
     end
     pars = @parameters begin
-        sphereDiameter = sphereDiameter, [description = "Diameter of spheres representing the universal and the spherical joint"]
-        sphereColor[1:4] = sphereColor, [description = "Color of spheres representing the universal and the spherical joint (RGBA)"]
-        rodWidth = rodWidth, [description = "Width of rod shape in direction of axis 2 of universal joint"]
-        rodHeight = rodHeight, [description = "Height of rod shape in direction that is orthogonal to rod and to axis 2"]
-        rodColor[1:4] = rodColor, [description = "Color of rod shape connecting the universal and the spherical joints (RGBA)"]
-        cylinderLength = cylinderLength, [description = "Length of cylinders representing the two universal joint axes"]
-        cylinderDiameter = cylinderDiameter, [description = "Diameter of cylinders representing the two universal joint axes"]
-        cylinderColor[1:4] = cylinderColor, [description = "Color of cylinders representing the two universal joint axes (RGBA)"]
+        sphere_diameter = sphere_diameter, [description = "Diameter of spheres representing the universal and the spherical joint"]
+        sphere_color[1:4] = sphere_color, [description = "Color of spheres representing the universal and the spherical joint (RGBA)"]
+        rod_width = rod_width, [description = "Width of rod shape in direction of axis 2 of universal joint"]
+        rod_height = rod_height, [description = "Height of rod shape in direction that is orthogonal to rod and to axis 2"]
+        rod_color[1:4] = rod_color, [description = "Color of rod shape connecting the universal and the spherical joints (RGBA)"]
+        cylinder_length = cylinder_length, [description = "Length of cylinders representing the two universal joint axes"]
+        cylinder_diameter = cylinder_diameter, [description = "Diameter of cylinders representing the two universal joint axes"]
+        cylinder_color[1:4] = cylinder_color, [description = "Color of cylinders representing the two universal joint axes (RGBA)"]
         n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod)"]
         rRod_ia[1:3] = rRod_ia, [description = "Vector from origin of frame_a to origin of frame_b, resolved in frame_ia (if computeRodLength=true, rRod_ia is only an axis vector along the connecting rod)"]
     end
@@ -1315,5 +1315,6 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         0 .~ collect(frame_a.tau) + t_ia_a + cross(rRod_a, f_b_a)
     ]
 
-    ODESystem(eqs, t; name, systems)
+    sys = ODESystem(eqs, t; name=:nothing, systems)
+    add_params(sys, pars; name)
 end
