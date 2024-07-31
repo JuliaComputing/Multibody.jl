@@ -1239,3 +1239,67 @@ sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 @test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol2(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
 @test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol3(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
 
+
+# ==============================================================================
+## SphericalSpherical
+# ==============================================================================
+
+@mtkmodel TestSphericalSpherical begin
+    @components begin
+        world = W()
+        ss = SphericalSpherical(r_0 = [1, 0, 0], m = 1, kinematic_constraint=false)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
+        s = Spherical()
+        trans = FixedTranslation(r = [1,0,1])
+    end
+    @equations begin
+        connect(world.frame_b, ss.frame_a, trans.frame_a)
+        connect(ss.frame_b, ss2.frame_a)
+        connect(ss2.frame_b, s.frame_a)
+        connect(s.frame_b, trans.frame_b)
+    end
+end
+
+@named model = TestSphericalSpherical()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.ss2.body.phi[1] => 0.1;
+    model.ss2.body.phid[3] => 0.0;
+], (0, 1.37))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+# plot(sol)
+
+# ==============================================================================
+## UniversalSpherical
+# ==============================================================================
+
+@mtkmodel TestSphericalSpherical begin
+    @components begin
+        world = W()
+        ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
+        s = Spherical()
+        trans = FixedTranslation(r = [1,0,1])
+        body2 = Body(; m = 1, isroot = true, r_cm=[0.1, 0, 0])
+    end
+    @equations begin
+        connect(world.frame_b, ss.frame_a, trans.frame_a)
+        connect(ss.frame_b, ss2.frame_a)
+        connect(ss2.frame_b, s.frame_a)
+        connect(s.frame_b, trans.frame_b)
+        connect(ss.frame_ia, body2.frame_a)
+    end
+end
+
+@named model = TestSphericalSpherical()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.ss2.body.phi[1] => 0.1;
+    model.ss2.body.phid[3] => 0.0;
+], (0, 1.37))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+# plot(sol)

@@ -71,7 +71,7 @@ end
 Base.:*(R1::RotationMatrix, x::AbstractArray) = R1.R * x
 Base.:*(x::AbstractArray, R2::RotationMatrix) = x * R2.R
 function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
-    RotationMatrix(R1.R.mat * R2.R.mat, R1 * R2.w + collect(R1.w))
+    RotationMatrix(R1.R.mat * R2.R.mat, R1 * collect(R2.w) + collect(R1.w))
 end
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
