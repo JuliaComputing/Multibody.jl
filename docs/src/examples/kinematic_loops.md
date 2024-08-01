@@ -144,3 +144,42 @@ nothing # hide
 ```
 
 ![animation](fourbar2.gif)
+
+## Using a joint assembly
+This example models a mechanism similar to the previous one, but replaces several joints and bodies with the aggregate [`UniversalSpherical`](@ref) joint. This joint is a combination of a universal joint and a spherical joint, with a bar in-between. A benefit of using this joint assembly in a kinematic loop is that some nonlinear equations are solved analytically, and the solver will thus see fewer nonlinear equations. This can lead to a faster simulation.
+
+```@example kinloop
+systems = @named begin
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755983, state_priority=12.0, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
+    b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
+    b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
+    b3 = FixedTranslation(r = [1.2, 0, 0], radius=0)
+    joint_us = UniversalSpherical(n1_a = [0, 1, 0], rRod_ia = [-1, 0.3, 0.1])
+end
+
+connections = [connect(j2.frame_b, b2.frame_a)
+               connect(j1.frame_b, b1.frame_a)
+               connect(j1.frame_a, world.frame_b)
+               connect(b1.frame_b, joint_us.frame_b)
+               connect(joint_us.frame_a, b2.frame_b)
+               connect(b3.frame_a, world.frame_b)
+               connect(b3.frame_b, j2.frame_a)
+]
+
+@named fourbar_analytic = ODESystem(connections, t, systems = [world; systems])
+fourbar_analytic = complete(fourbar_analytic)
+ssys = structural_simplify(IRSystem(fourbar_analytic))
+prob = ODEProblem(ssys, [], (0.0, 1.4399)) 
+sol2 = solve(prob, FBDF(autodiff=true)) # about 4x faster than the simulation above
+plot!(sol2, idxs=[j2.s]) # Plot the same coordinate as above
+```
+In practice, the two simulations are not exactly identical since we haven't modeled any mass attached to the rod in the joint assembly. We could add such mass to the rod by attaching to the `joint_us.frame_ia` connector.
+
+```@example kinloop
+import GLMakie
+Multibody.render(fourbar_analytic, sol2; x=-2, y = 2, z = 3, filename = "fourbar_analytic.gif")
+nothing # hide
+```
+
+![animation](fourbar_analytic.gif)

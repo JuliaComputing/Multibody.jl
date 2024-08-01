@@ -1279,10 +1279,10 @@ sol = solve(prob, Rodas4())
     @components begin
         world = W()
         ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false, sphere_diameter=0.3)
-        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true, neg_w=true)
         s = Spherical()
         trans = FixedTranslation(r = [1,0,1])
-        body2 = Body(; m = 1, isroot = true, r_cm=[0.1, 0, 0])
+        body2 = Body(; m = 1, isroot = false, r_cm=[0.1, 0, 0], neg_w=true)
     end
     @equations begin
         connect(world.frame_b, ss.frame_a, trans.frame_a)
@@ -1303,3 +1303,11 @@ prob = ODEProblem(ssys, [
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 # plot(sol)
+
+## =============================================================================
+@testset "fourbar" begin
+    @info "Testing fourbar"
+    include("test_fourbar.jl")
+end
+
+## =============================================================================
