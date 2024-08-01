@@ -617,7 +617,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
 
     Rrel0 = planar_rotation(n, 0, 0)
     varw = false
-    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
+    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw, state_priority = -1)
 
     n = collect(n)
     ey_a = collect(ey_a)
