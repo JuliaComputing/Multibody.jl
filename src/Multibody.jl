@@ -1,5 +1,6 @@
 module Multibody
-
+# Find variables that are both array form and scalarized / collected
+# foreach(println, sort(unknowns(IRSystem(model)), by=string))
 using LinearAlgebra
 using ModelingToolkit
 using JuliaSimCompiler
@@ -171,7 +172,5 @@ export point_to_point, traj5, KinematicPTP, Kinematic5
 include("robot/path_planning.jl")
 include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
-
-
 
 end

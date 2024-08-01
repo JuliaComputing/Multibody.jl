@@ -1258,6 +1258,7 @@ sol = solve(prob, Rodas4())
         s = Spherical()
         trans = FixedTranslation(r = [1,0,1])
         body2 = Body(; m = 1, isroot = false, r_cm=[0.1, 0, 0], neg_w=true)
+        rp = Multibody.RelativePosition(resolve_frame=:world)
     end
     @equations begin
         connect(world.frame_b, ss.frame_a, trans.frame_a)
@@ -1265,6 +1266,8 @@ sol = solve(prob, Rodas4())
         connect(ss2.frame_b, s.frame_a)
         connect(s.frame_b, trans.frame_b)
         connect(ss.frame_ia, body2.frame_a)
+        connect(world.frame_b, rp.frame_a)
+        connect(rp.frame_b, ss2.body.frame_a)
     end
 end
 
@@ -1277,6 +1280,7 @@ prob = ODEProblem(ssys, [
 ], (0, 1.37))
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
+@test sol[collect(model.rp.r_rel.u)] == sol[collect(model.ss.frame_b.r_0)]
 # plot(sol)
 
 ## =============================================================================
