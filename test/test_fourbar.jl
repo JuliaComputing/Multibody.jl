@@ -2,7 +2,6 @@ using Test
 using Multibody
 using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
-using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
 using JuliaSimCompiler
