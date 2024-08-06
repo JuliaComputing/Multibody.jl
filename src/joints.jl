@@ -891,6 +891,34 @@ vector `n` which is perpendicular to the plane and by vector `n_x`,
 which points in the direction of the x-axis of the plane.
 `frame_a` and `frame_b` coincide when `s_x=prismatic_x.s=0,
 s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
+
+# Structural parameters
+- `n`: Axis orthogonal to unconstrained plane, resolved in `frame_a` (= same as in `frame_b`)
+- `n_x`: Vector in direction of x-axis of plane, resolved in `frame_a` (`n_x` shall be orthogonal to `n`)
+
+# Connectors
+- `frame_a`: Frame for the joint
+- `frame_b`: Frame for the joint
+
+# Variables
+- `s_x`: Relative distance along first prismatic joint starting at `frame_a`
+- `s_y`: Relative distance along second prismatic joint starting at first prismatic joint
+- `phi`: Relative rotation angle from `frame_a` to `frame_b`
+- `v_x`: Relative velocity along first prismatic joint
+- `v_y`: Relative velocity along second prismatic joint
+- `w`: Relative angular velocity around revolute joint
+- `a_x`: Relative acceleration along first prismatic joint
+- `a_y`: Relative acceleration along second prismatic joint
+- `wd`: Relative angular acceleration around revolute joint
+
+# Rendering parameters
+- `cylinderlength`: Length of the revolute cylinder
+- `cylinderdiameter`: Diameter of the revolute cylinder
+- `cylindercolor`: (structural) Color of the revolute cylinder
+- `boxwidth`: Width of the prismatic joint boxes
+- `boxheight`: Height of the prismatic joint boxes
+- `boxcolor`: (structural) Color of the prismatic joint boxes
+- `radius`: (structural) Radius of the revolute cylinder
 """
 @mtkmodel Planar begin
     @structural_parameters begin
