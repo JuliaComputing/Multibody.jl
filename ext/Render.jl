@@ -553,7 +553,7 @@ function render!(scene, ::typeof(RollingWheelJoint), sys, sol, t)
         O = r_0($t)
         # T_w_a = framefun($t)
         R_w_a = rotfun($t)
-        n_w = R_w_a[:, 2] # Wheel rotates around y axis
+        n_w = R_w_a[:, 3] # Wheel rotates around z axis
         # n_w = R_w_a*n_a # Rotate to the world frame
         width = radius/10
         p1 = Point3f(O + width*n_w)

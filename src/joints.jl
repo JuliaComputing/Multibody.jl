@@ -449,9 +449,9 @@ end
 """
     RollingWheelJoint(; name, radius, angles, x0, y0, z0)
 
-Joint (no mass, no inertia) that describes an ideal rolling wheel (rolling on the plane z=0). See [`RollingWheel`](@ref) for a realistic wheel model with inertia.
+Joint (no mass, no inertia) that describes an ideal rolling wheel (rolling on the plane y=0). See [`RollingWheel`](@ref) for a realistic wheel model with inertia.
 
-A joint for a wheel rolling on the x-y plane of the world frame.
+A joint for a wheel rolling on the x-z plane of the world frame.
 The rolling contact is considered being ideal, i.e. there is no
 slip between the wheel and the ground. This is simply
 gained by two non-holonomic constraint equations on velocity level
@@ -462,8 +462,8 @@ the wheel can not take off.
 
 The origin of the frame `frame_a` is placed in the intersection
 of the wheel spin axis with the wheel middle plane and rotates
-with the wheel itself. The y-axis of `frame_a` is identical with
-the wheel spin axis, i.e. the wheel rotates about y-axis of `frame_a`.
+with the wheel itself. The z-axis of `frame_a` is identical with
+the wheel spin axis, i.e. the wheel rotates about z-axis of `frame_a`.
 A wheel body collecting the mass and inertia should be connected to
 this frame.
 
@@ -471,13 +471,13 @@ this frame.
 
 name: Name of the rolling wheel joint component
 radius: Radius of the wheel
-angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
+angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
 
 # Variables:
 - `x`: x-position of the wheel axis
 - `y`: y-position of the wheel axis
 - `z`: z-position of the wheel axis
-- `angles`: Angles to rotate world-frame into `frame_a` around z-, y-, x-axis
+- `angles`: Angles to rotate world-frame into `frame_a` around y-, z-, x-axis
 - `der_angles`: Derivatives of angles
 - `r_road_0`: Position vector from world frame to contact point on road, resolved in world frame
 - `f_wheel_0`: Force vector on wheel, resolved in world frame
@@ -500,12 +500,12 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
+@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0, y0 = radius, z0, sequence = [2, 3, 1])
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 15, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 0, description = "z-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
+        (z(t) = z0), [state_priority = 15, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = 5, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
@@ -527,7 +527,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
         # ]
         (e_axis_0(t)[1:3] = zeros(3)),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,0,-radius]),
+        (delta_0(t)[1:3] = [0,-radius, 0]),
         [description = "Distance vector from wheel center to contact point"]
         (e_n_0(t)[1:3] = zeros(3)),
         [
@@ -562,7 +562,7 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
     @named frame_a = Frame(varw=true)
     Ra = ori(frame_a, true)
 
-    Rarot = axes_rotations(sequence, angles, der_angles)
+    Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
 
     equations = [
                 Ra ~ Rarot
@@ -573,12 +573,12 @@ angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
                  der_angles .~ D.(angles)
 
                  # Road description
-                 r_road_0 .~ [s, w, 0]
-                 e_n_0 .~ [0, 0, 1]
+                 r_road_0 .~ [s, 0, w]
+                 e_n_0 .~ [0, 1, 0]
                  e_s_0 .~ [1, 0, 0]
 
                  # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
-                 e_axis_0 .~ resolve1(Ra, [0, 1, 0])
+                 e_axis_0 .~ resolve1(Ra, [0, 0, 1])
                  aux .~ (cross(e_n_0, e_axis_0))
                  e_long_0 .~ (aux ./ _norm(aux))
                  e_lat_0 .~ (cross(e_long_0, e_n_0))
@@ -616,13 +616,13 @@ end
 """
     RollingWheel(; name, radius, m, I_axis, I_long, width=0.035, x0, y0, kwargs...)
 
-Ideal rolling wheel on flat surface z=0 (5 positional, 3 velocity degrees of freedom)
+Ideal rolling wheel on flat surface y=0 (5 positional, 3 velocity degrees of freedom)
 
-A wheel rolling on the x-y plane of the world frame including wheel mass.
+A wheel rolling on the x-z plane of the world frame including wheel mass.
 The rolling contact is considered being ideal, i.e. there is no
 slip between the wheel and the ground.
 The wheel can not take off but it can incline toward the ground.
-The frame frame_a is placed in the wheel center point and rotates
+The frame `frame_a` is placed in the wheel center point and rotates
 with the wheel itself.
 
 # Arguments and parameters:
@@ -633,30 +633,30 @@ with the wheel itself.
 - `I_long`: Moment of inertia of the wheel perpendicular to its axis
 - `width`: Width of the wheel (default: 0.035)
 - `x0`: Initial x-position of the wheel axis
-- `y0`: Initial y-position of the wheel axis
+- `z0`: Initial z-position of the wheel axis
 - `kwargs...`: Additional keyword arguments passed to the `RollingWheelJoint` function
 
 # Variables:
 - `x`: x-position of the wheel axis
-- `y`: y-position of the wheel axis
-- `angles`: Angles to rotate world-frame into `frame_a` around z-, y-, x-axis
-- `der_angles`: Derivatives of angles
+- `z`: z-position of the wheel axis
+- `angles`: Angles to rotate world-frame into `frame_a` around y-, z-, x-axis
+- `der_angles`: Derivatives of angles  (y: like rotational velocity of a spinning coin, z: wheel forward spin speed, x: wheel falling over speed)
 
 # Named components:
 - `frame_a`: Frame for the wheel component
 - `rollingWheel`: Rolling wheel joint representing the wheel's contact with the road surface
 """
-@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
+@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, z0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
     @named begin
         frame_a = Frame()
-        rollingWheel = RollingWheelJoint(; radius, angles, x0, y0, der_angles, kwargs...)
+        rollingWheel = RollingWheelJoint(; radius, angles, x0, z0, der_angles, kwargs...)
         body = Body(r_cm = [0, 0, 0],
                     state_priority = 0,
                     m = m,
                     I_11 = I_long,
-                    I_22 = I_axis,
-                    I_33 = I_long,
+                    I_22 = I_long,
+                    I_33 = I_axis,
                     I_21 = 0,
                     I_31 = 0,
                     I_32 = 0)
@@ -671,15 +671,15 @@ with the wheel itself.
     end
     sts = @variables begin
         (x(t) = x0), [state_priority = 20, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 20, description = "y-position of the wheel axis"]
+        (z(t) = z0), [state_priority = 20, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [state_priority = 30, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
+        [state_priority = 30, description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 30, description = "Derivatives of angles"]
     end
     # sts = reduce(vcat, collect.(sts))
 
     equations = Equation[rollingWheel.x ~ x
-                         rollingWheel.y ~ y
+                         rollingWheel.z ~ z
                          collect(rollingWheel.angles) .~ collect(angles)
                          collect(rollingWheel.der_angles) .~ collect(der_angles)
                          connect(body.frame_a, frame_a)
