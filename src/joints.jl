@@ -500,7 +500,7 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0, y0 = radius, z0, sequence = [2, 3, 1])
+@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false)
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
@@ -565,7 +565,7 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
     Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
 
     equations = [
-                Ra ~ Rarot
+                connect_orientation(Ra, Rarot; iscut)   # Ra ~ Rarot
                 Ra.w ~ Rarot.w
 
                  # frame_a.R is computed from generalized coordinates
@@ -623,7 +623,7 @@ The rolling contact is considered being ideal, i.e. there is no
 slip between the wheel and the ground.
 The wheel can not take off but it can incline toward the ground.
 The frame `frame_a` is placed in the wheel center point and rotates
-with the wheel itself.
+with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0]` is required to attach the wheel to a wheel axis.
 
 # Arguments and parameters:
 - `name`: Name of the rolling wheel component
@@ -646,7 +646,7 @@ with the wheel itself.
 - `frame_a`: Frame for the wheel component
 - `rollingWheel`: Rolling wheel joint representing the wheel's contact with the road surface
 """
-@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, z0,
+@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
     @named begin
         frame_a = Frame()
