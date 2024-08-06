@@ -24,7 +24,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
                   isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
-    if !(eltype(n) <: Num)
+    if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     end
     @named frame_a = Frame()
@@ -102,8 +102,8 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false)
-    if !(eltype(n) <: Num)
+                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
+    if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Prismatic axis of motion must be a unit vector, got norm(n) = $(norm(n))")
     end
     @named frame_a = Frame()
@@ -114,6 +114,7 @@ The function returns an ODESystem representing the prismatic joint.
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+        render = render, [description = "render the joint in animations"]
     end
 
     @variables s(t)=s0 [
@@ -986,4 +987,55 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         connect(prismatic_y.frame_b, revolute.frame_a)
         connect(revolute.frame_b, frame_b)
     end
+end
+
+@mtkmodel Cylindrical begin
+    begin
+        n_def = [1, 0, 0] # Workaround for mtkmodel bug
+        cylinder_color_def = [1, 0, 1, 1]
+    end
+
+    @structural_parameters begin
+        # _state_priority = 2 # mtkmodel bug prevents this from being any form of parameter at all :/
+        cylinder_color = [1, 0, 1, 1]#, [description = "Color of cylinder"]
+    end
+
+    @parameters begin
+        n[1:3] = n_def, [description = "Cylinder axis resolved in frame_a (= same as in frame_b)"]
+        cylinder_diameter = 0.05, [description = "Diameter of cylinder"]
+        render = true, [description = "Enable rendering of the joint in animations"]
+    end
+    begin
+        n = collect(n)
+        cylinder_color = collect(cylinder_color)
+    end
+
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        prismatic = Prismatic(; n, state_priority=0, render = false)
+        revolute = Revolute(; n, state_priority=0, color = cylinder_color, radius = cylinder_diameter/2)
+    end
+
+    @variables begin
+        (s(t) = 0), [state_priority = 200, description = "Relative distance between frame_a and frame_b"]
+        (phi(t) = 0), [state_priority = 200, description = "Relative rotation angle from frame_a to frame_b"]
+        (v(t) = 0), [state_priority = 200, description = "First derivative of s (relative velocity)"]
+        (w(t) = 0), [state_priority = 200, description = "First derivative of angle phi (relative angular velocity)"]
+        (a(t) = 0), [description = "Second derivative of s (relative acceleration)"]
+        (wd(t) = 0), [description = "Second derivative of angle phi (relative angular acceleration)"]
+    end
+
+    @equations begin
+        phi ~ revolute.phi
+        w ~ D(phi)
+        wd ~ D(w)
+        s ~ prismatic.s
+        v ~ D(s)
+        a ~ D(v)
+        connect(frame_a, prismatic.frame_a)
+        connect(prismatic.frame_b, revolute.frame_a)
+        connect(revolute.frame_b, frame_b)
+    end
+
 end

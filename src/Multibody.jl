@@ -155,7 +155,7 @@ export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, B
 include("components.jl")
 
 export Revolute, Prismatic, Planar, Spherical, Universal,
-GearConstraint, RollingWheelJoint, RollingWheel, FreeMotion, RevolutePlanarLoopConstraint
+GearConstraint, RollingWheelJoint, RollingWheel, FreeMotion, RevolutePlanarLoopConstraint, Cylindrical
 include("joints.jl")
 
 export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR

@@ -1286,3 +1286,26 @@ sol = solve(prob, Rodas4())
 end
 
 ## =============================================================================
+# using Plots
+# Test cylindrical joint
+@mtkmodel CylinderTest begin
+    @components begin
+        world = W()
+        cyl = Cylindrical(n = [0, 1, 0])
+        spring = Spring(c = 1)
+        body = Body(state_priority=1)
+    end
+    @equations begin
+        connect(world.frame_b, cyl.frame_a, spring.frame_a)
+        connect(cyl.frame_b, spring.frame_b, body.frame_a)
+    end
+end
+@named model = CylinderTest()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.body.v_0[1] => 1
+    model.body.r_0[1] => 0.1
+], (0, 1))
+sol = solve(prob, Rodas4())
+plot(sol)
