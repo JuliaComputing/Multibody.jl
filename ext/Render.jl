@@ -224,9 +224,18 @@ function get_color(sys, sol, default, var_name = :color)
     end
 end
 
-function get_shape(sys, sol)::String
+function get_shapefile(sys, sol)::String
     try
         sf = sol(sol.t[1], idxs=collect(sys.shapefile))
+        decode(sf)
+    catch
+        ""
+    end
+end
+
+function get_shape(sys, sol)::String
+    try
+        sf = sol(sol.t[1], idxs=collect(sys.shape))
         decode(sf)
     catch
         ""
@@ -588,19 +597,55 @@ end
 
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
     color = get_color(sys, sol, :purple)
-    shapepath = get_shape(sys, sol)
+    shapepath = get_shapefile(sys, sol)
+    Tshape = reshape(sol(sol.t[1], idxs=sys.shape_transform), 4, 4)
+    scale = Vec3f(Float32(sol(sol.t[1], idxs=sys.shape_scale))*ones(Float32, 3))
     if isempty(shapepath)
-        radius = Float32(sol(sol.t[1], idxs=sys.radius))
         r_0a = get_fun(sol, collect(sys.frame_a.r_0))
         r_0b = get_fun(sol, collect(sys.frame_b.r_0))
-        thing = @lift begin
-            r1 = Point3f(r_0a($t))
-            r2 = Point3f(r_0b($t))
-            origin = r1
-            extremity = r2
-            Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+        shape = get_shape(sys, sol)
+        if shape == "cylinder"
+            radius = Float32(sol(sol.t[1], idxs=sys.radius))
+            thing = @lift begin
+                r1 = Point3f(r_0a($t))
+                r2 = Point3f(r_0b($t))
+                origin = r1
+                extremity = r2
+                Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+            end
+            mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=true)
+        elseif shape == "box"
+            Rfun = get_rot_fun(sol, sys.frame_a)
+
+            width = Float32(sol(sol.t[1], idxs=sys.radius*2))
+            height = width
+            r = sol(sol.t[1], idxs=collect(sys.r))
+            length = norm(r)
+            length_dir = normalize(r)
+
+            width_dir = [1,0,0]'length_dir > 0.9 ? [0,1,0] : [1,0,0]
+            height_dir = normalize(cross(length_dir, width_dir))
+            width_dir = normalize(cross(height_dir, length_dir))
+
+            r_0a = get_fun(sol, collect(sys.frame_a.r_0)) # Origin is translated by r_shape
+
+            R0 = [length_dir width_dir height_dir]
+            @assert isapprox(det(R0), 1.0, atol=1e-6)
+
+            origin = Vec3f(0, -width/2, -height/2)
+            extent = Vec3f(length, width, height) 
+            thing = Makie.Rect3f(origin, extent)
+            m = mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=true)
+            on(t) do t
+                r1 = Point3f(r_0a(t))
+                R = Rfun(t)
+                q = Rotations.QuatRotation(R*R0).q
+                Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
+                Makie.transform!(m, translation=r1, rotation=Q)
+            end
+        else
+            error("Shape $shape not supported")
         end
-        mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
     else
         T = get_frame_fun(sol, sys.frame_a)
         scale = Vec3f(Float32(sol(sol.t[1], idxs=sys.shape_scale))*ones(Float32, 3))

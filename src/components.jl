@@ -481,7 +481,9 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 
 See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1,
+    height = 0.1_norm(r), width = height, shape = "cylinder",
+    kwargs...)
     systems = @named begin
         translation = FixedTranslation(r = r, render=false)
         translation_cm = FixedTranslation(r = r_cm, render=false)
@@ -504,6 +506,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     ]
 
     shapecode = encode(shapefile)
+    shape = encode(shape)
     @parameters begin
         r[1:3]=r, [
             description = "Vector from frame_a to frame_b resolved in frame_a",
@@ -513,10 +516,13 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         shapefile[1:length(shapecode)] = shapecode
         shape_transform[1:16] = vec(shape_transform)
         shape_scale = shape_scale
+        width = width, [description = """Width of the body in animations (if shape = "box")"""]
+        height = height, [description = """Height of the body in animations (if shape = "box")"""]
+        shape[1:length(shape)] = shape
     end
 
 
-    pars = [r; radius; color; shapefile; shape_transform; shape_scale]
+    pars = [r; radius; color; shapefile; shape_transform; shape_scale; height; width; shape]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 

@@ -310,3 +310,134 @@ r_A = [r_A; 1] # Homogeneous coordinates
 get_frame(sol, model.lower_arm.frame_a, 12)*r_A
 ```
 the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.
+
+
+## Pendulum on cart
+
+```@example pendulum
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
+import ModelingToolkitStandardLibrary.Blocks
+using Plots
+W(args...; kwargs...) = Multibody.world
+gray = [0.5, 0.5, 0.5, 1]
+@mtkmodel Cartpole begin
+    @components begin
+        world = W()
+        cart = BodyShape(m = 1, r = [0.2, 0, 0], color=[0.2, 0.2, 0.2, 1], shape="box")
+        mounting_point = FixedTranslation(r = [0.1, 0, 0])
+        prismatic = Prismatic(n = [1, 0, 0], axisflange = true, color=gray, state_priority=100)
+        revolute = Revolute(n = [0, 0, 1], axisflange = false, state_priority=100)
+        pendulum = BodyCylinder(r = [0, 0.5, 0], diameter = 0.015, color=gray)
+        motor = TranslationalModelica.Force(use_support = true)
+        tip = Body(m = 0.05)
+    end
+    @variables begin
+        u(t) = 0
+        x(t)
+        v(t)
+        phi(t)
+        w(t)
+    end
+    @equations begin
+        connect(world.frame_b, prismatic.frame_a)
+        connect(prismatic.frame_b, cart.frame_a, mounting_point.frame_a)
+        connect(mounting_point.frame_b, revolute.frame_a)
+        connect(revolute.frame_b, pendulum.frame_a)
+        connect(pendulum.frame_b, tip.frame_a)
+        connect(motor.flange, prismatic.axis)
+        connect(prismatic.support, motor.support)
+        u ~ motor.f.u
+        x ~ prismatic.s
+        v ~ prismatic.v
+        phi ~ revolute.phi
+        w ~ revolute.w
+    end
+end
+@mtkmodel CartWithInput begin
+    @components begin
+        cart = Cartpole()
+        input = Blocks.Cosine(frequency=1, amplitude=1)
+    end
+    @equations begin
+        connect(input.output, :u, cart.motor.f)
+    end
+end
+@named model = CartWithInput()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.0, model.cart.revolute.phi => 0.1], (0, 10))
+sol = solve(prob, Tsit5())
+plot(sol, layout=4)
+```
+
+```@example pendulum
+import GLMakie
+Multibody.render(model, sol, filename = "cartpole.gif", traces=[model.cart.pendulum.frame_b])
+nothing # hide
+```
+![cartpole](cartpole.gif)
+
+### Adding feedback
+We can add feedback to the cartpole system by connecting the angle of the pendulum to the input of the cart. This is done by adding a [`Blocks.PID`](@ref) controller to the system and connecting the output of the controller to the input of the cart. The controller is then connected to the angle of the pendulum. The controller is set to have a proportional gain of 1, an integral gain of 0.1, and a derivative gain of 0.1. The controller is then connected to the input of the cart.
+
+```@example pendulum
+kx = 30
+kp = 50
+kv = 30
+kw = 10
+
+@mtkmodel CartWithFeedback begin
+    @components begin
+        cart = Cartpole()
+        L = Blocks.MatrixGain(K = -[kx kp kv kw])
+        # reference = Blocks.Step(start_time = 6, height=0.2)
+    end
+    @equations begin
+        L.input.u[1] ~ cart.x
+        L.input.u[2] ~ cart.phi
+        L.input.u[3] ~ cart.v
+        L.input.u[4] ~ cart.w
+        connect(L.output, cart.motor.f)
+    end
+end
+@named model = CartWithFeedback()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.01, model.cart.revolute.phi => 0.01], (0, 5))
+sol = solve(prob, Tsit5())
+plot(sol, idxs=[model.cart.prismatic.s, model.cart.revolute.phi], layout=2)
+```
+
+```@example pendulum
+Multibody.render(model, sol, filename = "inverted_cartpole.gif", x=1, z=1)
+nothing # hide
+```
+![inverted cartpole](inverted_cartpole.gif)
+
+```@example pendulum
+import ModelingToolkit: D_nounits as D
+using LinearAlgebra
+@named cart = Cartpole()
+cart = complete(cart)
+inputs = [cart.u]
+outputs = [cart.x, cart.v, cart.phi, cart.w]
+op = Dict([
+    cart.u => 0
+    cart.tip.r_0[3] => 1
+    vec(ori(cart.tip.frame_a).R .=> I(3))
+    cart.revolute.phi => 0
+    vec(D.(ori(cart.tip.frame_a).R) .=> 0)
+    cart.tip.v_0[3] => 0
+]
+)
+linearize(IRSystem(cart), inputs, outputs; op)
+```
+
+```@example pendulum
+@named cart = Cartpole()
+cart = complete(cart)
+inputs = [cart.u]
+outputs = [cart.x, cart.v, cart.phi, cart.w]
+structural_simplify(IRSystem(cart), ([cart.u], outputs))
+
+```
