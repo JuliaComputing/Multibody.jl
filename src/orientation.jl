@@ -145,12 +145,18 @@ end
 skew(s) = [0 -s[3] s[2]; s[3] 0 -s[1]; -s[2] s[1] 0]
 skewcoords(R::AbstractMatrix) = [R[3, 2]; R[1, 3]; R[2, 1]]
 
-function planar_rotation(axis, phi, der_angle)
+
+"""
+    planar_rotation(axis, phi, phid)
+
+Generate a rotation matrix for a rotation around the specified axis (axis-angle representation).
+"""
+function planar_rotation(axis, phi, phid)
     length(axis) == 3 || error("axis must be a 3-vector")
     axis = collect(axis)
     ee = collect(axis * axis')
     R = ee + (I(3) - ee) * cos(phi) - skew(axis) * sin(phi)
-    w = axis * der_angle
+    w = axis * phid
     RotationMatrix(R, w)
 end
 
@@ -279,7 +285,11 @@ to_mb(Q::Rotations.QuatRotation) = to_mb(vec(Q))
 
 
 ## Euler
+"""
+    axes_rotations(sequence, angles, der_angles; name = :R_ar)
 
+Generate a rotation matrix for a rotation around the specified axes (Euler/Cardan angles).
+"""
 function axes_rotations(sequence, angles, der_angles, name = :R_ar)
     R = axis_rotation(sequence[3], angles[3]) *
         axis_rotation(sequence[2], angles[2]) *
