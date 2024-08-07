@@ -177,3 +177,21 @@ nothing # hide
 ![quadrotor animation](quadrotor.gif)
 
 The green arrows in the animation indicate the force applied by the thrusters.
+
+```@example QUAD
+quad = RotorCraft(closed_loop=false, addload=false)
+quad = complete(quad)
+inputs = [quad.thruster1.u; quad.thruster2.u; quad.thruster3.u; quad.thruster4.u]
+outputs = [quad.y_alt, quad.y_roll, quad.y_pitch]
+
+op = [
+    vec(ori(quad.freemotion.Rrel_f).R .=> I(3));
+    vec(D.(ori(quad.freemotion.Rrel_f).R) .=> 0*I(3));
+    quad.world.g => 9.81;
+    inputs .=> 1; 
+] |> Dict
+ssys = structural_simplify(IRSystem(quad), (inputs, outputs))
+
+lr = linearize(IRSystem(quad), inputs, outputs; op)
+
+```
