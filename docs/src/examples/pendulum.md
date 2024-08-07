@@ -312,7 +312,15 @@ get_frame(sol, model.lower_arm.frame_a, 12)*r_A
 the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.
 
 
-## Pendulum on cart
+## Control-design example: Pendulum on cart
+We will now demonstrate a complete workflow including
+- Modeling
+- Linearizaiton
+- Control design
+
+We will continue the pendulum theme and design an inverted pendulum on cart. The cart is modeled as [`BodyShape`](@ref) with specified mass, and `shape = "box"` to render it as a box in animations. The cart is moving along the $x$-axis by means of a [`Prismatic`](@ref) joint, and the pendulum is attached to the cart by means of a [`Revolute`](@ref) joint. The pendulum is a [`BodyCylinder`](@ref) with a diameter of `0.015`, the mass and inertia properties are automatically computed using the geometrical dimensions and the density (which defaults to that of steel). A force is applied to the cart by means of a `TranslationalModelica.Force` component.
+
+We start by putting the model together and control it in open loop using a simple periodic input signal:
 
 ```@example pendulum
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
@@ -369,7 +377,7 @@ prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.0, model.cart.revolute.phi 
 sol = solve(prob, Tsit5())
 plot(sol, layout=4)
 ```
-
+As usual, we render the simulation in 3D to get a better feel for the system:
 ```@example pendulum
 import GLMakie
 Multibody.render(model, sol, filename = "cartpole.gif", traces=[model.cart.pendulum.frame_b])
@@ -378,34 +386,67 @@ nothing # hide
 ![cartpole](cartpole.gif)
 
 ### Adding feedback
-We can add feedback to the cartpole system by connecting the angle of the pendulum to the input of the cart. This is done by adding a [`Blocks.PID`](@ref) controller to the system and connecting the output of the controller to the input of the cart. The controller is then connected to the angle of the pendulum. The controller is set to have a proportional gain of 1, an integral gain of 0.1, and a derivative gain of 0.1. The controller is then connected to the input of the cart.
 
+We will attempt to stabilize the pendulum in the upright position by using feedback control. To design the contorller, we linearize the model in the upward equilibrium position and design an infinite-horizon LQR controller using ControlSystems.jl. We then connect the controller to the motor on the cart. See also [RobustAndOptimalControl.jl: Control design for a pendulum on a cart](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/cartpole/) for a similar example with more detail on the control design.
+
+### Linearization
+We start by linearizing the model in the upward equilibrium position using the function `ModelingToolkit.linearize`.
 ```@example pendulum
-kx = 30
-kp = 50
-kv = 30
-kw = 10
+import ModelingToolkit: D_nounits as D
+using LinearAlgebra
+@named cart = Cartpole()
+namespaced_outputs = [cart.x, cart.phi, cart.v, cart.w] # We create a vector of outputs before we call complete to make connecting the controller later easier.
+cart = complete(cart)
+inputs = [cart.u] # Input to the linearized system
+outputs = [cart.x, cart.phi, cart.v, cart.w] # These are the outputs of the linearized system
+op = Dict([ # Operating point to linearize in
+    cart.u => 0
+    cart.revolute.phi => 0 # Pendulum pointing upwards
+]
+)
+matrices, simplified_sys = linearize(IRSystem(cart), inputs, outputs; op)
+matrices
+```
+This gives us the matrices $A,B,C,D$ in a linearized statespace representation of the system. To make these easier to work with, we load the control packages and call `named_ss` instead of `linearize` to get a named statespace object instead:
+```@example pendulum
+using ControlSystemsMTK
+lsys = named_ss(IRSystem(cart), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
+```
+
+### LQR Control design
+With a linear statespace object in hand, we can proceed to design an LQR controller. Since the function `lqr` operates on the state vector, and we have access to the specified output vector, we make use of the system ``C`` matrix to reformulate the problem in terms of the outputs. This relies on the ``C`` matrix being full rank, which is the case here since our outputs include a complete state realization of the system.
+
+To make the simulation interesting, we make a change in the reference position of the cart after a few seconds. 
+```@example pendulum
+using ControlSystemsBase
+C = lsys.C
+Q = Diagonal([1, 1, 1, 1])
+R = Diagonal([0.1])
+Lmat = lqr(lsys, C'Q*C, R)*C # Compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
 
 @mtkmodel CartWithFeedback begin
     @components begin
         cart = Cartpole()
-        L = Blocks.MatrixGain(K = -[kx kp kv kw])
-        # reference = Blocks.Step(start_time = 6, height=0.2)
+        L = Blocks.MatrixGain(K = Lmat)
+        reference = Blocks.Step(start_time = 5, height=0.5)
+        control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
     end
     @equations begin
-        L.input.u[1] ~ cart.x
-        L.input.u[2] ~ cart.phi
-        L.input.u[3] ~ cart.v
-        L.input.u[4] ~ cart.w
-        connect(L.output, cart.motor.f)
+        L.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cart.x
+        L.input.u[2] ~ 0 - namespaced_outputs[2] # cart.phi
+        L.input.u[3] ~ 0 - namespaced_outputs[3] # cart.v
+        L.input.u[4] ~ 0 - namespaced_outputs[4] # cart.w
+        connect(L.output, control_saturation.input)
+        connect(control_saturation.output, cart.motor.f)
     end
 end
 @named model = CartWithFeedback()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.01, model.cart.revolute.phi => 0.01], (0, 5))
+prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.1, model.cart.revolute.phi => 0.35], (0, 10))
 sol = solve(prob, Tsit5())
-plot(sol, idxs=[model.cart.prismatic.s, model.cart.revolute.phi], layout=2)
+plot(sol, idxs=[model.cart.prismatic.s, model.cart.revolute.phi, model.cart.motor.f.u], layout=3)
+plot!(sol, idxs=model.reference.output.u, sp=1, l=(:black, :dash), legend=:bottomright)
 ```
 
 ```@example pendulum
@@ -414,30 +455,66 @@ nothing # hide
 ```
 ![inverted cartpole](inverted_cartpole.gif)
 
+
+### Swing up
+Below, we add also an energy-based swing-up controller. For more details this kind of swing-up controller, see [Part 7: Control of rotary pendulum using Julia: Swing up control (YouTube)](https://www.youtube.com/watch?v=RhF2NMCYoiw)
 ```@example pendulum
-import ModelingToolkit: D_nounits as D
-using LinearAlgebra
-@named cart = Cartpole()
-cart = complete(cart)
-inputs = [cart.u]
-outputs = [cart.x, cart.v, cart.phi, cart.w]
-op = Dict([
-    cart.u => 0
-    cart.tip.r_0[3] => 1
-    vec(ori(cart.tip.frame_a).R .=> I(3))
-    cart.revolute.phi => 0
-    vec(D.(ori(cart.tip.frame_a).R) .=> 0)
-    cart.tip.v_0[3] => 0
-]
-)
-linearize(IRSystem(cart), inputs, outputs; op)
+"Compute total energy, kinetic + potential, for a body rotating around the z-axis of the world"
+function energy(body, w)
+    g = world.g
+    m = body.m
+    d2 = body.r_cm[1]^2 + body.r_cm[2]^2 # Squared distance from 
+    I = body.I_33 + m*d2 # Parallel axis theorem
+    r_cm_worldframe = Multibody.resolve1(ori(body.frame_a), body.r_cm)[2] # Rotate the distance from frame_a to the center of mass to the world frame
+    1/2*I*w^2 + 2m*g*(body.frame_a.r_0[2] + r_cm_worldframe) # Assuming rotation around the z-axis
+end
+
+normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
+
+@mtkmodel CartWithSwingup begin
+    @components begin
+        cart = Cartpole()
+        L = Blocks.MatrixGain(K = Lmat)
+        control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude
+    end
+    @variables begin
+        phi(t)
+        w(t)
+        E(t), [description = "Total energy of the pendulum"]
+        u_swing(t), [description = "Swing-up control signal"]
+        switching_condition(t)::Bool, [description = "Switching condition that indicates when stabilizing controller is active"]
+    end
+    @parameters begin
+        Er = 3.825676486352941 # Total energy of the cart at the top equilibrium position
+    end
+    @equations begin
+        phi ~ normalize_angle(cart.phi)
+        w ~ cart.w
+        E ~ energy(cart.pendulum.body, w) + energy(cart.tip, w)
+        u_swing ~ 100*(E - Er)*sign(w*cos(phi-3.1415))
+
+        L.input.u[1] ~ 0 - namespaced_outputs[1] # - cart.x
+        L.input.u[2] ~ 0 - phi # cart.phi but normalized
+        L.input.u[3] ~ 0 - namespaced_outputs[3] # cart.v
+        L.input.u[4] ~ 0 - namespaced_outputs[4] # cart.w
+        switching_condition ~ abs(phi) < 0.4
+        control_saturation.input.u ~ ifelse(switching_condition, L.output.u, u_swing)
+        connect(control_saturation.output, cart.motor.f)
+    end
+end
+@named model = CartWithSwingup()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.0, model.cart.revolute.phi => 0.99pi], (0, 5))
+sol = solve(prob, Tsit5(), dt = 1e-2, adaptive=false)
+plot(sol, idxs=[model.cart.prismatic.s, model.cart.revolute.phi, model.cart.motor.f.u, model.E], layout=4)
+hline!([0, 2pi], sp=2, l=(:black, :dash), primary=false)
+plot!(sol, idxs=[model.switching_condition], sp=2)
 ```
 
-```@example pendulum
-@named cart = Cartpole()
-cart = complete(cart)
-inputs = [cart.u]
-outputs = [cart.x, cart.v, cart.phi, cart.w]
-structural_simplify(IRSystem(cart), ([cart.u], outputs))
 
+```@example pendulum
+Multibody.render(model, sol, filename = "swingup.gif", x=2, z=2)
+nothing # hide
 ```
+![inverted cartpole](swingup.gif)
