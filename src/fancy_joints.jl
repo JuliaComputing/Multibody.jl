@@ -377,7 +377,7 @@ end
 
 
 @component function RevoluteWithLengthConstraint(; name, n = Float64[0, 0, 1], axisflange = false,
-    positive_branch = true, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 1.0, phi_offset=0, phi_guess=0, length_constraint=1)
+    positive_branch = true, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 1.0, phi_offset=0, phi_guess=0, length_constraint=1, use_arrays = false)
     systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
@@ -401,11 +401,11 @@ end
         description = "Driving torque in direction of axis of rotation",
     ]
     @variables phi(t) [
-        # state_priority = state_priority,
+        state_priority = 1,
         description = "Relative rotation angle from frame_a to frame_b",
     ]
     @variables angle(t) [
-        # state_priority = -1,
+        state_priority = -1,
         description = "= phi + phi_offset (relative rotation angle between frame_a and frame_b)",
     ]
     @variables r_a(t)[1:3], [description = "Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint"]
@@ -443,9 +443,12 @@ end
         0 .~ collect(frame_a.f .+ resolve1(Rrel, frame_b.f))
         0 .~ collect(frame_a.tau .+ resolve1(Rrel, frame_b.tau))
 
-        # angle ~ compute_angle2(length_constraint, e_array, r_a_array, r_b_array, positive_branch)[1]
-        # angle ~ Symbolics.term(compute_angle2, length_constraint, e_array, r_a_array, r_b_array, positive_branch, type=Real)
-        angle ~ compute_angle(length_constraint, e, r_a, r_b, positive_branch)
+        if use_arrays
+            angle ~ compute_angle2(length_constraint, e_array, r_a_array, r_b_array, positive_branch)[1]
+            # angle ~ Symbolics.term(compute_angle2, length_constraint, e_array, r_a_array, r_b_array, positive_branch, type=Real)
+        else
+            angle ~ compute_angle2(length_constraint, e, r_a, r_b, positive_branch)[1]
+        end
     ]
 
     sys = ODESystem(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
@@ -502,6 +505,7 @@ The rest of this joint aggregation is defined by the following parameters:
     phi_offset = 0,
     phi_guess = 0,
     positive_branch,
+    use_arrays = false,
 )
     systems = @named begin
         frame_a = Frame()
@@ -550,6 +554,7 @@ The rest of this joint aggregation is defined by the following parameters:
         phi_offset,
         phi_guess,
         positive_branch,
+        use_arrays,
     )
     push!(more_systems, revolute)
 

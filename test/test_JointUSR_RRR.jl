@@ -16,7 +16,7 @@ W(args...; kwargs...) = Multibody.world
 @mtkmodel TestUSR begin
     @components begin
         world = W()
-        j1 = JointUSR(positive_branch=true)
+        j1 = JointUSR(positive_branch=true, use_arrays=false)
         fixed = FixedTranslation(r=[1,0,0])
         b1 = Body(isroot=false, neg_w=true)
         p1 = Prismatic(state_priority=100)
@@ -32,7 +32,7 @@ end
 @named model = TestUSR()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [model.b1.a_0[1] => 0, D(D(model.p1.s)) => 0], (0.0, 1.0))
+prob = ODEProblem(ssys, [], (0.0, 1.0))
 sol = solve(prob, FBDF(autodiff=true))
 
 
