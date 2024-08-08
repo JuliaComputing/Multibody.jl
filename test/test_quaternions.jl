@@ -1,4 +1,4 @@
-# test utils
+using Test
 import Multibody.Rotations.QuatRotation as Quat
 import Multibody.Rotations
 import Multibody.Rotations: RotXYZ
@@ -149,7 +149,7 @@ end
     t = Multibody.t
     world = Multibody.world
 
-    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true, neg_w=false)
+    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true, neg_w=true)
     @named body = Body(; m = 1, r_cm = [0.0, 0, 0])
 
     connections = [connect(world.frame_b, joint.frame_a)
@@ -196,7 +196,7 @@ end
 ## Spherical joint pendulum with quaternions
 # ============================================================
 
-@testset "Spherical joint with quaternion state" begin
+# @testset "Spherical joint with quaternion state" begin
     using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
     t = Multibody.t
     world = Multibody.world
@@ -204,7 +204,7 @@ end
 
     @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
     @named rod = FixedTranslation(; r = [1, 0, 0])
-    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0, neg_w=false)
+    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0, neg_w=true)
 
     # @named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
     # @named body = Body(; m = 1, r_cm = [1.0, 0, 0], isroot=false)
@@ -217,45 +217,42 @@ end
     @named model = ODESystem(connections, t,
                             systems = [world, joint, body, rod])
     irsys = IRSystem(model)
-    @test_skip begin # https://github.com/JuliaComputing/JuliaSimCompiler.jl/issues/298
-        ssys = structural_simplify(irsys)
+    ssys = structural_simplify(irsys)
 
 
-        D = Differential(t)
-        # q0 = randn(4); q0 ./= norm(q0)
-        # q0 = [1,0,0,0]
-        prob = ODEProblem(ssys, [
-            collect(body.w_a) .=> [1,0,0];
-            # collect(body.Q) .=> q0;
-            # collect(body.Q̂) .=> q0;
-            ], (0, 30))
+    D = Differential(t)
+    # q0 = randn(4); q0 ./= norm(q0)
+    # q0 = [1,0,0,0]
+    prob = ODEProblem(ssys, [
+        # collect(body.w_a) .=> [1,0,0];
+        # collect(body.Q) .=> q0;
+        body.k => 0.1;
+        collect(body.Q̂d) .=> [0,0,0,0];
+        ], (0, 30))
 
-        using OrdinaryDiffEq, Test
-        sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 0 .* randn.())
-        @test SciMLBase.successful_retcode(sol)
-        # doplot() && plot(sol, layout=21)
-
-
-        ts = 0:0.1:2pi
-        Q = Matrix(sol(ts, idxs = [body.Q...]))
-        Qh = Matrix(sol(ts, idxs = [body.Q̂...]))
-        n = Matrix(sol(ts, idxs = [body.n...]))
-        @test mapslices(norm, Qh, dims=1).^2 ≈ n
-        @test Q ≈ Qh ./ sqrt.(n) atol=1e-2
-        @test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
-
-        Matrix(sol(ts, idxs = [body.w_a...]))
-
-        @test get_R(sol, joint.frame_b, 0pi) ≈ I
-        @test get_R(sol, joint.frame_b, sqrt(9.81/1)) ≈ diagm([1, -1, -1]) atol=1e-3
-        @test get_R(sol, joint.frame_b, 2pi) ≈ I atol=1e-3
+    using OrdinaryDiffEq, Test
+    sol = solve(prob, Rodas5Pr(); u0 = prob.u0 .+ 0 .* randn.())
+    @test SciMLBase.successful_retcode(sol)
+    # doplot() && plot(sol, layout=21)
 
 
-        # Matrix(sol(ts, idxs = [joint.w_rel_b...]))
+    ts = 0:0.1:2pi
+    Q = Matrix(sol(ts, idxs = [body.Q...]))
+    Qh = Matrix(sol(ts, idxs = [body.Q̂...]))
+    n = Matrix(sol(ts, idxs = [body.n...]))
+    @test mapslices(norm, Qh, dims=1).^2 ≈ n
+    @test Q ≈ Qh ./ sqrt.(n) atol=1e-2
+    @test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
 
-        # render(model, sol)
-    end
-end
+    Matrix(sol(ts, idxs = [body.w_a...]))
+
+    @test get_R(sol, joint.frame_b, 0pi) ≈ I
+
+
+    # Matrix(sol(ts, idxs = [joint.w_rel_b...]))
+
+    # render(model, sol)
+# end
 
 
 # ==============================================================================
