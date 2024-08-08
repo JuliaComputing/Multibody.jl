@@ -377,7 +377,7 @@ end
 
 
 @component function RevoluteWithLengthConstraint(; name, n = Float64[0, 0, 1], axisflange = false,
-    positive_branch = true, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 1.0, phi_offset=0, phi_guess=0, length_constraint=1)
+    positive_branch = true, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 1.0, phi_offset=0, phi_guess=0, length_constraint=1, use_arrays = false)
     systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
@@ -401,11 +401,11 @@ end
         description = "Driving torque in direction of axis of rotation",
     ]
     @variables phi(t) [
-        # state_priority = state_priority,
+        state_priority = 1,
         description = "Relative rotation angle from frame_a to frame_b",
     ]
     @variables angle(t) [
-        # state_priority = -1,
+        state_priority = -1,
         description = "= phi + phi_offset (relative rotation angle between frame_a and frame_b)",
     ]
     @variables r_a(t)[1:3], [description = "Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint"]
@@ -443,9 +443,11 @@ end
         0 .~ collect(frame_a.f .+ resolve1(Rrel, frame_b.f))
         0 .~ collect(frame_a.tau .+ resolve1(Rrel, frame_b.tau))
 
-        # angle ~ compute_angle2(length_constraint, e_array, r_a_array, r_b_array, positive_branch)[1]
-        # angle ~ Symbolics.term(compute_angle2, length_constraint, e_array, r_a_array, r_b_array, positive_branch, type=Real)
-        angle ~ compute_angle(length_constraint, e, r_a, r_b, positive_branch)
+        if use_arrays
+            angle ~ compute_angle2(length_constraint, e_array, r_a_array, r_b_array, positive_branch)
+        else
+            angle ~ _compute_angle2(length_constraint, e, r_a, r_b, positive_branch)
+        end
     ]
 
     sys = ODESystem(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
@@ -502,6 +504,7 @@ The rest of this joint aggregation is defined by the following parameters:
     phi_offset = 0,
     phi_guess = 0,
     positive_branch,
+    use_arrays = false,
 )
     systems = @named begin
         frame_a = Frame()
@@ -550,6 +553,7 @@ The rest of this joint aggregation is defined by the following parameters:
         phi_offset,
         phi_guess,
         positive_branch,
+        use_arrays,
     )
     push!(more_systems, revolute)
 
@@ -734,7 +738,8 @@ function compute_angle(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::Abs
     atan(ksin1, kcos1)
 end
 
-function compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch)
+function _compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch)
+    @show e,r_a
     e_r_a = e'r_a
     e_r_b = e'r_b
     A = -2*(r_b'r_a - e_r_b'e_r_a)
@@ -742,18 +747,23 @@ function compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::Ab
     C = r_a'r_a + r_b'r_b - L^2 - 2*e_r_b'e_r_a
     k1 = A^2 + B^2
     k1a = k1 - C^2
-    k1a > 1e-10 || error("Singular position of loop (either no or two analytic solutions; the mechanism has lost one-degree-of freedom in this position). Try to use another joint-assembly component. In most cases it is best to let joints outside of the JointXXX component be revolute and _not_ prismatic joints. If this also leads to singular positions, it could be that this kinematic loop cannot be solved analytically. In this case you have to build up the loop with basic joints (_no_ aggregation JointXXX components) and rely on dynamic state selection, i.e., during simulation the states will be dynamically selected in such a way that in no position a degree of freedom is lost.")
+    #k1a > 1e-10 || error("Singular position of loop (either no or two analytic solutions; the mechanism has lost one-degree-of freedom in this position). Try to use another joint-assembly component. In most cases it is best to let joints outside of the JointXXX component be revolute and _not_ prismatic joints. If this also leads to singular positions, it could be that this kinematic loop cannot be solved analytically. In this case you have to build up the loop with basic joints (_no_ aggregation JointXXX components) and rely on dynamic state selection, i.e., during simulation the states will be dynamically selected in such a way that in no position a degree of freedom is lost.")
     k1b = max(k1a, 1.0e-12)
     k2 = sqrt(k1b)
     kcos1 = -A*C + B*k2*ifelse(positive_branch == true, 1, -1)
     ksin1 = -B*C + A*k2*ifelse(positive_branch == true, -1, 1)
-    [atan(ksin1, kcos1)]
+    atan(ksin1, kcos1)
 end
 
-@register_array_symbolic compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool) begin
-    size = (1, )
-    eltype = Float64
+function compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool)
+    _compute_angle2(L, e, r_a, r_b, positive_branch)
 end
+
+@register_symbolic compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool)
+#@register_array_symbolic compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool) begin
+#    size = (1, )
+#    eltype = Float64
+#end
 
 # @register_symbolic compute_angle(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool)::Real
 
