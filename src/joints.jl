@@ -1013,8 +1013,8 @@ end
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        prismatic = Prismatic(; n, state_priority=0, render = false)
-        revolute = Revolute(; n, state_priority=0, color = cylinder_color, radius = cylinder_diameter/2)
+        prismatic = Prismatic(; n, state_priority=1, render = false)
+        revolute = Revolute(; n, state_priority=1, color = cylinder_color, radius = cylinder_diameter/2)
     end
 
     @variables begin

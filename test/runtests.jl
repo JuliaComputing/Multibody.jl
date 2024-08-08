@@ -1307,8 +1307,10 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
-    model.body.v_0[1] => 1
-    model.body.r_0[1] => 0.1
+    model.cyl.revolute.w => 1
 ], (0, 1))
 sol = solve(prob, Rodas4())
-plot(sol)
+# plot(sol)
+@test sol[model.cyl.v][end] ≈ -9.81 atol=0.01
+@test sol[model.cyl.phi][end] ≈ 1 atol=0.01
+
