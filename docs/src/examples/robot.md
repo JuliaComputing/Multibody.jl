@@ -131,7 +131,8 @@ fkine(prob.u0, prob.p, 0)
     The function `fkine` above takes the full state of the robot model, as opposed to only the joint angles.
 
 ```@setup
-# ### Jacobian # Temporarily deactivated
+# Temporarily removed due to https://github.com/JuliaComputing/JuliaSimCompiler.jl/issues/366
+### Jacobian
 # We can compute the Jacobian ``J`` of the forward-kinematics function using the package ForwardDiff (this Jacobian is often referred to as the _analytical Jacobian_, which in the 6DOF case is different from the _geometrical Jacobian_ that is used in the relation ``v = J\dot{q}``). The Jacobian of the end-effector positional coordinates will be a 3×36 matrix, since we have 36-dimensional state of the robot after simplification. Since the end-effector coordinates do not depend on all the state variables, we may ask which variables it depends on by finding non-zero columns of ``J``
 # ```@example robot
 # using ModelingToolkit.ForwardDiff

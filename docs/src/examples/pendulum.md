@@ -363,17 +363,17 @@ gray = [0.5, 0.5, 0.5, 1]
 end
 @mtkmodel CartWithInput begin
     @components begin
-        cart = Cartpole()
+        cartpole = Cartpole()
         input = Blocks.Cosine(frequency=1, amplitude=1)
     end
     @equations begin
-        connect(input.output, :u, cart.motor.f)
+        connect(input.output, :u, cartpole.motor.f)
     end
 end
 @named model = CartWithInput()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.0, model.cart.revolute.phi => 0.1], (0, 10))
+prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.0, model.cartpole.revolute.phi => 0.1], (0, 10))
 sol = solve(prob, Tsit5())
 plot(sol, layout=4)
 ```
@@ -394,23 +394,22 @@ We start by linearizing the model in the upward equilibrium position using the f
 ```@example pendulum
 import ModelingToolkit: D_nounits as D
 using LinearAlgebra
-@named cart = Cartpole()
-namespaced_outputs = [cart.x, cart.phi, cart.v, cart.w] # We create a vector of outputs before we call complete to make connecting the controller later easier.
-cart = complete(cart)
-inputs = [cart.u] # Input to the linearized system
-outputs = [cart.x, cart.phi, cart.v, cart.w] # These are the outputs of the linearized system
+@named cp = Cartpole()
+cp = complete(cp)
+inputs = [cp.u] # Input to the linearized system
+outputs = [cp.x, cp.phi, cp.v, cp.w] # These are the outputs of the linearized system
 op = Dict([ # Operating point to linearize in
-    cart.u => 0
-    cart.revolute.phi => 0 # Pendulum pointing upwards
+    cp.u => 0
+    cp.revolute.phi => 0 # Pendulum pointing upwards
 ]
 )
-matrices, simplified_sys = linearize(IRSystem(cart), inputs, outputs; op)
+matrices, simplified_sys = linearize(IRSystem(cp), inputs, outputs; op)
 matrices
 ```
 This gives us the matrices $A,B,C,D$ in a linearized statespace representation of the system. To make these easier to work with, we load the control packages and call `named_ss` instead of `linearize` to get a named statespace object instead:
 ```@example pendulum
 using ControlSystemsMTK
-lsys = named_ss(IRSystem(cart), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
+lsys = named_ss(IRSystem(cp), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
 ```
 
 ### LQR Control design
@@ -426,26 +425,30 @@ Lmat = lqr(lsys, C'Q*C, R)*C # Compute LQR feedback gain. The multiplication by 
 
 @mtkmodel CartWithFeedback begin
     @components begin
-        cart = Cartpole()
+        cartpole = Cartpole()
         L = Blocks.MatrixGain(K = Lmat)
         reference = Blocks.Step(start_time = 5, height=0.5)
         control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
     end
+    begin
+        namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
+    end
     @equations begin
-        L.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cart.x
-        L.input.u[2] ~ 0 - namespaced_outputs[2] # cart.phi
-        L.input.u[3] ~ 0 - namespaced_outputs[3] # cart.v
-        L.input.u[4] ~ 0 - namespaced_outputs[4] # cart.w
+        L.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cartpole.x
+        L.input.u[2] ~ 0 - namespaced_outputs[2] # cartpole.phi
+        L.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v
+        L.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
         connect(L.output, control_saturation.input)
-        connect(control_saturation.output, cart.motor.f)
+        connect(control_saturation.output, cartpole.motor.f)
     end
 end
 @named model = CartWithFeedback()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.1, model.cart.revolute.phi => 0.35], (0, 10))
+prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 10))
 sol = solve(prob, Tsit5())
-plot(sol, idxs=[model.cart.prismatic.s, model.cart.revolute.phi, model.cart.motor.f.u], layout=3)
+cp = model.cartpole
+plot(sol, idxs=[cp.prismatic.s, cp.revolute.phi, cp.motor.f.u], layout=3)
 plot!(sol, idxs=model.reference.output.u, sp=1, l=(:black, :dash), legend=:bottomright)
 ```
 
@@ -473,7 +476,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 
 @mtkmodel CartWithSwingup begin
     @components begin
-        cart = Cartpole()
+        cartpole = Cartpole()
         L = Blocks.MatrixGain(K = Lmat)
         control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude
     end
@@ -485,29 +488,33 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
         switching_condition(t)::Bool, [description = "Switching condition that indicates when stabilizing controller is active"]
     end
     @parameters begin
-        Er = 3.825676486352941 # Total energy of the cart at the top equilibrium position
+        Er = 3.825676486352941 # Total energy of the cartpole at the top equilibrium position
+    end
+    begin
+        namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
     end
     @equations begin
-        phi ~ normalize_angle(cart.phi)
-        w ~ cart.w
-        E ~ energy(cart.pendulum.body, w) + energy(cart.tip, w)
+        phi ~ normalize_angle(cartpole.phi)
+        w ~ cartpole.w
+        E ~ energy(cartpole.pendulum.body, w) + energy(cartpole.tip, w)
         u_swing ~ 100*(E - Er)*sign(w*cos(phi-3.1415))
 
-        L.input.u[1] ~ 0 - namespaced_outputs[1] # - cart.x
-        L.input.u[2] ~ 0 - phi # cart.phi but normalized
-        L.input.u[3] ~ 0 - namespaced_outputs[3] # cart.v
-        L.input.u[4] ~ 0 - namespaced_outputs[4] # cart.w
+        L.input.u[1] ~ 0 - namespaced_outputs[1] # - cartpole.x
+        L.input.u[2] ~ 0 - phi # cartpole.phi but normalized
+        L.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v
+        L.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
         switching_condition ~ abs(phi) < 0.4
         control_saturation.input.u ~ ifelse(switching_condition, L.output.u, u_swing)
-        connect(control_saturation.output, cart.motor.f)
+        connect(control_saturation.output, cartpole.motor.f)
     end
 end
 @named model = CartWithSwingup()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-prob = ODEProblem(ssys, [model.cart.prismatic.s => 0.0, model.cart.revolute.phi => 0.99pi], (0, 5))
+cp = model.cartpole
+prob = ODEProblem(ssys, [cp.prismatic.s => 0.0, cp.revolute.phi => 0.99pi], (0, 5))
 sol = solve(prob, Tsit5(), dt = 1e-2, adaptive=false)
-plot(sol, idxs=[model.cart.prismatic.s, model.cart.revolute.phi, model.cart.motor.f.u, model.E], layout=4)
+plot(sol, idxs=[cp.prismatic.s, cp.revolute.phi, cp.motor.f.u, model.E], layout=4)
 hline!([0, 2pi], sp=2, l=(:black, :dash), primary=false)
 plot!(sol, idxs=[model.switching_condition], sp=2)
 ```

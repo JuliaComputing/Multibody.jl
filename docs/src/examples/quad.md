@@ -79,6 +79,9 @@ function RotorCraft(; closed_loop = true, addload=true)
         y_alt(t)
         y_roll(t)
         y_pitch(t)
+        v_alt(t)=0
+        v_roll(t)=0
+        v_pitch(t)=0
     end
 
     thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
@@ -88,6 +91,9 @@ function RotorCraft(; closed_loop = true, addload=true)
         y_alt ~ body.r_0[2]
         y_roll ~ body.phi[3]
         y_pitch ~ body.phi[1]
+        v_alt ~ D(body.r_0[2])
+        v_roll ~ D(body.phi[3])
+        v_pitch ~ D(body.phi[1])
         [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
         [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
     ]
@@ -150,7 +156,8 @@ end
 model = RotorCraft(closed_loop=true, addload=true)
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-
+display(unknowns(ssys))
+# u = unknowns(ssys)
 op = [
     model.body.v_0[1] => 0;
     collect(model.cable.joint_2.phi) .=> 0.03;
@@ -182,16 +189,23 @@ The green arrows in the animation indicate the force applied by the thrusters.
 quad = RotorCraft(closed_loop=false, addload=false)
 quad = complete(quad)
 inputs = [quad.thruster1.u; quad.thruster2.u; quad.thruster3.u; quad.thruster4.u]
-outputs = [quad.y_alt, quad.y_roll, quad.y_pitch]
+outputs = [quad.y_alt, quad.y_roll, quad.y_pitch, quad.v_alt, quad.v_roll, quad.v_pitch]
 
 op = [
-    vec(ori(quad.freemotion.Rrel_f).R .=> I(3));
-    vec(D.(ori(quad.freemotion.Rrel_f).R) .=> 0*I(3));
+    # vec(ori(quad.freemotion.Rrel_f).R .=> I(3));
+    # vec(D.(ori(quad.freemotion.Rrel_f).R) .=> 0*I(3));
+    quad.arm4.body.r_0[2] => 1e-3
+    quad.arm1.body.r_0[3] => 1e-3
+    quad.arm1.body.r_0[1] => 1e-3
     quad.world.g => 9.81;
     inputs .=> 1; 
 ] |> Dict
-ssys = structural_simplify(IRSystem(quad), (inputs, outputs))
+# ssys = structural_simplify(IRSystem(quad), (inputs, outputs))
 
-lr = linearize(IRSystem(quad), inputs, outputs; op)
-
+matrices, simplified_sys = linearize(IRSystem(quad), inputs, outputs; op)
+lsys = named_ss(IRSystem(quad), inputs, outputs; op)
+rsys = minreal(sminreal(lsys))
+C = rsys.C
+Q = Diagonal([1,1,1,1,1,1])
+L = lqr(rsys, C'Q*C, I(4))*C'
 ```
