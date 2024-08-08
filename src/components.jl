@@ -266,12 +266,11 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
     @variables a_0(t)[1:3] [guess = 0, 
-        state_priority = state_priority+isroot,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
     @variables w_a(t)[1:3]=w_a [guess = 0, 
-        state_priority = state_priority-1+2quat*state,
+        state_priority = isroot ? quat ? state_priority : -1 : 0,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3] [guess = 0, 

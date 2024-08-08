@@ -37,7 +37,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
     end
     @variables tau(t)=0 [
         connect = Flow,
-        state_priority = 2,
+        # state_priority = 2,
         description = "Driving torque in direction of axis of rotation",
     ]
     @variables phi(t)=phi0 [
@@ -126,7 +126,6 @@ The function returns an ODESystem representing the prismatic joint.
         description = "Relative velocity between frame_a and frame_b",
     ]
     @variables a(t)=0 [
-        state_priority = state_priority,
         description = "Relative acceleration between frame_a and frame_b",
     ]
     @variables f(t)=0 [
