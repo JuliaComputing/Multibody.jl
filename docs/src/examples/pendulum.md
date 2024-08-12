@@ -421,7 +421,7 @@ using ControlSystemsBase
 C = lsys.C
 Q = Diagonal([1, 1, 1, 1])
 R = Diagonal([0.1])
-Lmat = lqr(lsys, C'Q*C, R)*C # Compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
+Lmat = lqr(lsys, C'Q*C, R)/C # Compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
 
 @mtkmodel CartWithFeedback begin
     @components begin
