@@ -421,10 +421,13 @@ function RollingConstraintVerticalWheel(;
     e_n_0 = [0, 1, 0]
     rContact_0 = [0, -radius, 0]
 
+    # e_n_0 = [0, 0, 1]
+    # rContact_0 = [0, 0, -radius]
+
     f_wheel_0, e_lat_0, e_long_0, vContact_0, aux, v_0 = collect.((f_wheel_0, e_lat_0, e_long_0, vContact_0, aux, v_0))
 
     equations = Equation[
-        # Coordinate system at contact point (e_long_0, e_n_0, e_lat_0)
+        # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
         e_axis_0 .~ resolve1(ori(frame_a), [0, 0, 1])
         aux .~ cross(e_n_0, e_axis_0)
         e_long_0 .~ aux ./ _norm(aux)
@@ -598,25 +601,30 @@ function RollingWheelSetJoint(;
     theta2_0 = 0,
     der_theta1_0 = 0,
     der_theta2_0 = 0,
-    render = true
+    render = true,
+    color = [0, 1, 1, 0.1],
+    width_wheel = 0.15*radius,
 )
     pars = @parameters begin
         # radius = radius, [description = "Radius of one wheel"]
         # track = track, [description = "Distance between the two wheels (= axle track)"]
+        width_wheel = width_wheel, [description = "Width of one wheel"]
+        # color[1:4] = color, [description = "Color of the wheel set in animations"]
     end
+    
     systems = @named begin
         frame_middle = Frame()
         frame1 = Frame()
         frame2 = Frame()
         fixed = Fixed(; r = [0, radius, 0], render)
-        rod1 = FixedTranslation(; r = [0, 0, track / 2], render)
-        prismatic1 = Prismatic(; n = [1, 0, 0], render, state_priority=-1)
-        prismatic2 = Prismatic(; n = [0, 0, 1], render, state_priority=-1)
-        revolute = Revolute(; render)
-        rod2 = FixedTranslation(; r = [0, 0, -track / 2], render)
-        revolute1 = Revolute(; n = [0, 0, 1], axisflange = true, render)
-        revolute2 = Revolute(; n = [0, 0, 1], axisflange = true, render)
-        rolling1 = RollingConstraintVerticalWheel(; radius)
+        rod1 = FixedTranslation(; r = [0, 0, track / 2], render, color)
+        prismatic1 = Prismatic(; n = [1, 0, 0], render, state_priority=10, color=[0,1,1,0.1], radius=0.01)
+        prismatic2 = Prismatic(; n = [0, 0, 1], render, state_priority=10, color=[0,1,1,0.1], radius=0.01)
+        revolute = Revolute(; render, n = [0, 1, 0], color)
+        rod2 = FixedTranslation(; r = [0, 0, -track / 2], render, color)
+        revolute1 = Revolute(; n = [0, 0, 1], axisflange = true, render, state_priority=11, radius, length=width_wheel, color)
+        revolute2 = Revolute(; n = [0, 0, 1], axisflange = true, render, state_priority=11, radius, length=width_wheel, color)
+        rolling1 = RollingConstraintVerticalWheel(; radius, lateral_sliding_constraint = true)
         rolling2 = RollingConstraintVerticalWheel(; radius, lateral_sliding_constraint = false)
         axis1 = Rotational.Flange()
         axis2 = Rotational.Flange()
@@ -659,7 +667,8 @@ function RollingWheelSetJoint(;
         connect(frame_middle, mounting1D.frame_a)
         connect(mounting1D.flange_b, support)
     ]
-    ODESystem(equations, t; name, systems)
+    sys = ODESystem(equations, t; name=:nothing, systems)
+    add_params(sys, [width_wheel]; name)
 end
 
 
@@ -874,14 +883,14 @@ function RollingWheelSet(;
 )
     pars = @parameters begin
         # radius = radius, [description = "Radius of one wheel"]
+        width_wheel = width_wheel, [description = "Width of one wheel"]
         m_wheel = m_wheel, [description = "Mass of one wheel"]
         I_axis = I_axis, [description = "Inertia along one wheel axis"]
         I_long = I_long, [description = "Inertia perpendicular to one wheel axis"]
         # track = track, [description = "Distance between the two wheels (= axle track)"]
-        width_wheel = width_wheel, [description = "Width of one wheel"]
         hollow_fraction = hollow_fraction,
         [description = "For ring-like wheel visualization: wheel radius / inner hole radius; i.e. 1.0: completely hollow, 0.0: full disc"]
-        color[1:4] = color, [description = "Color of wheels"]
+        # color[1:4] = color, [description = "Color of wheels"]
     end
     systems = @named begin
         frame_middle = Frame()
@@ -891,15 +900,17 @@ function RollingWheelSet(;
                     m = m_wheel,
                     I_11 = I_long,
                     I_22 = I_long,
-                    I_33 = I_axis)
+                    I_33 = I_axis,
+                    render = false)
         body1 = Body(r_cm = [0, 0, 0],
                     m = m_wheel,
                     I_11 = I_long,
                     I_22 = I_long,
-                    I_33 = I_axis)
+                    I_33 = I_axis,
+                    render = false)
         axis1 = Rotational.Flange()
         axis2 = Rotational.Flange()
-        wheelSetJoint = RollingWheelSetJoint(; radius, track, state_priority, x0, z0, phi0, theta1_0, theta2_0, der_theta1_0, der_theta2_0, render)
+        wheelSetJoint = RollingWheelSetJoint(; radius, track, state_priority, x0, z0, phi0, theta1_0, theta2_0, der_theta1_0, der_theta2_0, render, width_wheel, color)
         support = Rotational.Flange()
     end
 
@@ -933,6 +944,6 @@ function RollingWheelSet(;
     ]
 
     sys = ODESystem(equations, t; name=:nothing, systems)
-    add_params(sys, [hollow_fraction; color; width_wheel]; name)
+    add_params(sys, [hollow_fraction; width_wheel]; name)
 
 end

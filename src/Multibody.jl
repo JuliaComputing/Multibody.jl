@@ -13,6 +13,22 @@ export Rotational, Translational
 export render, render!
 
 """
+Find parameters that occur both scalarized and not scalarized
+"""
+function find_arry_problems(model)
+    # foreach(println, sort(unknowns(IRSystem(model)), by=string))
+    xs = string.(unknowns(IRSystem(model)))
+    for x in xs
+        endswith(x, ']') && continue # Only look at non-array vars
+        l = ncodeunits(x)
+        inds = findall(y->startswith(y, x*"["), xs)
+        isempty(inds) && continue
+        println(x)
+        println(xs[inds])
+    end
+end
+
+"""
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
     path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false, loop=1)
 
@@ -163,7 +179,7 @@ include("joints.jl")
 export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR
 include("fancy_joints.jl")
 
-export RollingWheelJoint, RollingWheel, RollingWheelSet
+export RollingWheelJoint, RollingWheel, RollingWheelSet, RollingConstraintVerticalWheel
 include("wheels.jl")
 
 export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce, WorldTorque

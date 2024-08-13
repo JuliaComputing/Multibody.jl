@@ -254,6 +254,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               air_resistance = 0.0,
               color = [1,0,0,1],
               state_priority = 2,
+              render = true,
               quat=false,)
     if state
         # @warn "Make the body have state variables by using isroot=true rather than state=true"
@@ -291,6 +292,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     ]
     @parameters color[1:4] = color [description = "Color of the body in animations (RGBA)"]
     @parameters length_fraction=length_fraction, [description = "Fraction of the length of the body that is the cylinder from frame to COM in animations"]
+    @parameters render = render [description = "Render the component in animations"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
     @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
@@ -363,7 +365,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
     sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
-    add_params(sys, [radius; cylinder_radius; color; length_fraction]; name)
+    add_params(sys, [radius; cylinder_radius; color; length_fraction; render]; name)
 end
 
 

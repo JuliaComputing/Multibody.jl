@@ -239,6 +239,7 @@ end
 render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
 
 function render!(scene, ::typeof(Body), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     color = get_color(sys, sol, :purple)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
