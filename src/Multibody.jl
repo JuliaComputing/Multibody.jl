@@ -1,3 +1,5 @@
+# Find variables that are both array form and scalarized / collected
+# foreach(println, sort(unknowns(IRSystem(model)), by=string))
 module Multibody
 
 using LinearAlgebra
@@ -155,11 +157,14 @@ export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, B
 include("components.jl")
 
 export Revolute, Prismatic, Planar, Spherical, Universal,
-GearConstraint, RollingWheelJoint, RollingWheel, FreeMotion, RevolutePlanarLoopConstraint, Cylindrical
+GearConstraint, FreeMotion, RevolutePlanarLoopConstraint, Cylindrical
 include("joints.jl")
 
 export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR
 include("fancy_joints.jl")
+
+export RollingWheelJoint, RollingWheel, RollingWheelSet
+include("wheels.jl")
 
 export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce, WorldTorque
 include("forces.jl")

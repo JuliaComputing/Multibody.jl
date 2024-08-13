@@ -1,3 +1,4 @@
+using Test
 # ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
@@ -47,6 +48,7 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 
 
 ## Rolling wheel with axis ====================================================
+import ModelingToolkitStandardLibrary.Blocks
 @mtkmodel WheelWithAxis begin
     @components begin
         world = W()
@@ -78,4 +80,36 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [], (0, 4))
 sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
 @test_broken !all(iszero, sol.u)
+# first(Multibody.render(model, sol, 0, show_axis=true))
+
+## RollingWheelSet
+@mtkmodel WSTest begin
+    @components begin
+        sine1 = Blocks.Sine(frequency=1, amplitude=2)
+        sine2 = Blocks.Sine(frequency=1, amplitude=2, phase=pi/2)
+        torque1 = Rotational.Torque()
+        torque2 = Rotational.Torque()
+        wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5)
+        bar = FixedTranslation(r = [0.2, 0, 0])
+        body = Body(m=0.01)
+        world = W()
+    end
+    @equations begin
+        connect(sine1.output, torque1.tau)
+        connect(sine2.output, torque2.tau)
+        connect(torque1.flange, wheels.axis1)
+        connect(torque2.flange, wheels.axis2)
+        connect(wheels.frame_middle, bar.frame_a)
+        connect(bar.frame_b, body.frame_a)
+    end
+end
+
+@named model = WSTest()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.wheels.wheelSetJoint.prismatic1.v => 0
+], (0, 12))
+sol = solve(prob, Tsit5())
+@test SciMLBase.successful_retcode(sol)
 # first(Multibody.render(model, sol, 0, show_axis=true))
