@@ -10,6 +10,7 @@ using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
 using JuliaSimCompiler
+using Test
 
 t = Multibody.t
 D = Differential(t)

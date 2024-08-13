@@ -85,10 +85,10 @@ sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
 # ==============================================================================
 ## RollingWheelSet
 # ==============================================================================
-@mtkmodel WSTest begin
+@mtkmodel DrivingWheelSet begin
     @components begin
-        sine1 = Blocks.Sine(frequency=1, amplitude=2, smooth=true)
-        sine2 = Blocks.Sine(frequency=1, amplitude=2, phase=pi/2, smooth=true)
+        sine1 = Blocks.Sine(frequency=1, amplitude=2)
+        sine2 = Blocks.Sine(frequency=1, amplitude=2, phase=pi/2)
         torque1 = Rotational.Torque()
         torque2 = Rotational.Torque()
         wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5, state_priority=100)
@@ -106,7 +106,7 @@ sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
     end
 end
 
-@named model = WSTest()
+@named model = DrivingWheelSet()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 # display(unknowns(ssys))

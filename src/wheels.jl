@@ -239,130 +239,6 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
     compose(ODESystem(equations, t; name), frame_a, rollingWheel, body)
 end
 
-#=
-model RollingConstraintVerticalWheel
- "Rolling constraint for wheel that is always perpendicular to x-y plane"
- import Modelica.Mechanics.MultiBody.Frames;
-
-   Modelica.Mechanics.MultiBody.Interfaces.Frame_a frame_a
-   "Frame fixed in wheel center point. x-Axis: upwards, y-axis: along wheel axis"
-     annotation (Placement(transformation(extent={{-16,4},{16,36}}),
-         iconTransformation(extent={{-16,4},{16,36}})));
-
-   parameter SI.Radius radius "Wheel radius";
-
-   parameter Boolean lateralSlidingConstraint = true
-   "= true, if lateral sliding constraint taken into account, = false if lateral force = 0 (needed to avoid overconstraining if two ideal rolling wheels are connect on one axis)"
-                                                                                                       annotation(choices(checkBox=true),Evaluate=true);
-
-   // Contact force
-   SI.Force f_wheel_0[3]
-   "Contact force acting on wheel, resolved in world frame";
-   SI.Force f_lat "Contact force acting on wheel in lateral direction";
-   SI.Force f_long
-   "Contact force acting on wheel in longitudinal direction";
-protected
-    Real e_axis_0[3]
-   "Unit vector along wheel axis, resolved in world frame";
-    SI.Position rContact_0[3]
-   "Distance vector from wheel center to contact point, resolved in world frame";
-
-    // Coordinate system at contact point
-    Real e_n_0[3]
-   "Unit vector in normal direction of road at contact point, resolved in world frame";
-    Real e_lat_0[3]
-   "Unit vector in lateral direction of wheel at contact point, resolved in world frame";
-    Real e_long_0[3]
-   "Unit vector in longitudinal direction of wheel at contact point, resolved in world frame";
-
-    // Slip velocities
-    SI.Velocity v_0[3] "Velocity of wheel center, resolved in world frame";
-    SI.AngularVelocity w_0[3]
-   "Angular velocity of wheel, resolved in world frame";
-
-    SI.Velocity vContact_0[3]
-   "Velocity of wheel contact point, resolved in world frame";
-
-    // Utility vectors
-    Real aux[3];
-
-equation
-    // Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
-    e_n_0    = {0,0,1};
-    e_axis_0 = Frames.resolve1(frame_a.R, {0,1,0});
-    aux      = cross(e_n_0, e_axis_0);
-    e_long_0 = aux / Modelica.Math.Vectors.length(aux);
-    e_lat_0  = cross(e_long_0, e_n_0);
-
-    // Slip velocities
-    rContact_0 = {0,0,-radius};
-    v_0 = der(frame_a.r_0);
-    w_0 = Frames.angularVelocity1(frame_a.R);
-    vContact_0 = v_0 + cross(w_0, rContact_0);
-
-    // Two non-holonomic constraint equations on velocity level (ideal rolling, no slippage)
-    0 = vContact_0*e_long_0;
-    if lateralSlidingConstraint then
-       0 = vContact_0*e_lat_0;
-       f_wheel_0 = f_lat*e_lat_0 + f_long*e_long_0;
-    else
-       0 = f_lat;
-       f_wheel_0 = f_long*e_long_0;
-    end if;
-
-    // Force and torque balance at the wheel center
-    zeros(3) = frame_a.f + Frames.resolve2(frame_a.R, f_wheel_0);
-    zeros(3) = frame_a.t + Frames.resolve2(frame_a.R, cross(rContact_0, f_wheel_0));
-   annotation (Icon(coordinateSystem(preserveAspectRatio=true, extent={{-100,
-             -100},{100,100}}), graphics={
-         Rectangle(
-           extent={{-100,-60},{100,-80}},
-           fillColor={175,175,175},
-           fillPattern=FillPattern.Solid),
-         Text(
-           extent={{-148,-86},{152,-126}},
-           textColor={0,0,255},
-           textString="%name"),
-         Line(
-           points={{0,-60},{0,4}},
-           pattern=LinePattern.Dot),
-         Line(
-           visible=lateralSlidingConstraint,
-           points={{-98,-30},{-16,-30}}),
-         Polygon(
-           visible=lateralSlidingConstraint,
-           points={{-40,-16},{-40,-42},{-6,-30},{-40,-16}},
-           fillColor={255,255,255},
-           fillPattern=FillPattern.Solid)}), Documentation(info="<html>
-<p>
-Joint for a wheel rolling on the x-y plane of the world frame
-intended for an idealized wheelset.
-To meet this objective, the wheel always runs upright and enables no
-slip in the longitudinal direction of the wheel/ground contact.
-</p>
-<p>
-On the contrary, the wheel can optionally slip in the lateral direction
-which is reasonable for the wheelset where just one of the wheels
-should be laterally constrained.
-</p>
-<p>
-The frame frame_a is placed in the intersection of the wheel spin axis
-with the wheel middle plane and rotates with the wheel itself.
-A wheel body collecting the mass and inertia should be connected to
-this frame.
-</p>
-
-<h4>Note</h4>
-<p>
-To work properly, the gravity acceleration vector g of the world must point in the negative z-axis, i.e.
-</p>
-<blockquote><pre>
-<span style=\"font-family:'Courier New',courier; color:#0000ff;\">inner</span> <span style=\"font-family:'Courier New',courier; color:#ff0000;\">Modelica.Mechanics.MultiBody.World</span> world(n={0,0,-1});
-</pre></blockquote>
-</html>"));
-end RollingConstraintVerticalWheel;
-=#
-
 """
     RollingConstraintVerticalWheel(;
         name,
@@ -458,108 +334,6 @@ function RollingConstraintVerticalWheel(;
 end
 
 
-#=
-model RollingWheelSet
-"Joint (no mass, no inertia) that describes an ideal rolling wheel set (two ideal rolling wheels connected together by an axis)"
- Modelica.Mechanics.MultiBody.Interfaces.Frame_a frame_middle
-  "Frame fixed in middle of axis connecting both wheels (y-axis: along wheel axis, z-Axis: upwards)"
-  parameter Boolean animation=true
-  "= true, if animation of wheel set shall be enabled";
-
-  parameter SI.Radius radius "Radius of one wheel";
-  parameter SI.Distance track "Distance between the two wheels (= axle track)";
-
-  parameter StateSelect stateSelect = StateSelect.default
-  "Priority to use the generalized coordinates as states";
-
-  SI.Position x(start=0, stateSelect=stateSelect)
-  "x coordinate for center between wheels";
-  SI.Position y(start=0, stateSelect=stateSelect)
-  "y coordinate for center between wheels";
-  SI.Angle phi(start=0, stateSelect=stateSelect)
-  "Orientation angle of wheel axis along z-axis";
-  SI.Angle theta1(start=0, stateSelect=stateSelect)
-  "Angle of wheel 1";
-  SI.Angle theta2(start=0, stateSelect=stateSelect)
-  "Angle of wheel 2";
-  SI.AngularVelocity der_theta1(start=0, stateSelect=stateSelect)
-  "Derivative of theta 1";
-  SI.AngularVelocity der_theta2(start=0, stateSelect=stateSelect)
-  "Derivative of theta 2";
-
-  Modelica.Mechanics.MultiBody.Interfaces.Frame_a frame1
-  "Frame fixed in center point of left wheel (y-axis: along wheel axis, z-Axis: upwards)"
-  Modelica.Mechanics.MultiBody.Interfaces.Frame_b frame2
-  "Frame fixed in center point of right wheel (y-axis: along wheel axis, z-Axis: upwards)"
-  Modelica.Mechanics.MultiBody.Parts.Fixed fixed(
-    r={0,0,radius}, animation=animation) 
-  Modelica.Mechanics.MultiBody.Parts.FixedTranslation rod1(
-    r={0,track/2,0}, animation=animation)
-  Modelica.Mechanics.MultiBody.Joints.Prismatic prismatic1(animation=animation) 
-  Modelica.Mechanics.MultiBody.Joints.Prismatic prismatic2(n={0,1,0}, animation=animation)
-  Modelica.Mechanics.MultiBody.Joints.Revolute revolute(animation=animation)
-  Modelica.Mechanics.MultiBody.Parts.FixedTranslation rod2(
-    r={0,-track/2,0}, animation=animation)
-  Modelica.Mechanics.MultiBody.Joints.Revolute revolute1(
-    n={0,1,0},
-    useAxisFlange=true,
-    animation=animation)
-  Modelica.Mechanics.MultiBody.Joints.Revolute revolute2(
-    n={0,1,0},
-    useAxisFlange=true,
-    animation=animation)
-  Modelica.Mechanics.MultiBody.Joints.Internal.RollingConstraintVerticalWheel rolling1(radius=radius)
-  Modelica.Mechanics.MultiBody.Joints.Internal.RollingConstraintVerticalWheel rolling2(radius=radius, lateralSlidingConstraint=false) 
-  Modelica.Mechanics.Rotational.Interfaces.Flange_a axis1
-  "1-dim. rotational flange that drives the joint"
-  Modelica.Mechanics.Rotational.Interfaces.Flange_a axis2
-  "1-dim. rotational flange that drives the joint"
-  Modelica.Mechanics.MultiBody.Parts.Mounting1D mounting1D
-  Modelica.Mechanics.Rotational.Interfaces.Flange_b support
-  "Support of 1D axes"
-equation
-  prismatic1.s  = x;
-  prismatic2.s  = y;
-  revolute.phi  = phi;
-  revolute1.phi = theta1;
-  revolute2.phi = theta2;
-  der_theta1 = der(theta1);
-  der_theta2 = der(theta2);
-
-  connect(revolute.frame_b, frame_middle)
-  connect(rod1.frame_a, frame_middle)
-  connect(rod2.frame_a, frame_middle)
-  connect(rod1.frame_b, revolute1.frame_a)
-  connect(revolute1.frame_b, frame1)
-  connect(revolute2.frame_a, rod2.frame_b)
-  connect(revolute2.frame_b, frame2)
-  connect(prismatic1.frame_a, fixed.frame_b)
-  connect(prismatic1.frame_b, prismatic2.frame_a)
-  connect(prismatic2.frame_b, revolute.frame_a)
-  connect(rolling1.frame_a, revolute1.frame_b)
-  connect(rolling2.frame_a, revolute2.frame_b)
-  connect(revolute1.axis, axis1)
-  connect(revolute2.axis, axis2)
-  connect(frame_middle, mounting1D.frame_a) annotation (Line(
-  connect(mounting1D.flange_b, support) annotation (Line(
-  Documentation(info="<html>
-<p>
-An assembly joint for a wheelset rolling on the x-y plane of the world frame.
-The frames frame1 and frame2 are connected to rotating wheels; the frame_middle moves
-in a plane parallel to the x-y plane of the world and should be connected to the vehicle body.
-</p>
-
-<h4>Note</h4>
-<p>
-To work properly, the gravity acceleration vector g of the world must point in the negative z-axis, i.e.
-</p>
-<blockquote><pre>
-<span style=\"font-family:'Courier New',courier; color:#0000ff;\">inner</span> <span style=\"font-family:'Courier New',courier; color:#ff0000;\">Modelica.Mechanics.MultiBody.World</span> world(n={0,0,-1});
-</pre></blockquote>
-</html>"));
-end RollingWheelSet;
-=#
-
 """
     RollingWheelSetJoint(;
         name,
@@ -604,6 +378,7 @@ function RollingWheelSetJoint(;
     render = true,
     color = [0, 1, 1, 0.1],
     width_wheel = 0.15*radius,
+    iscut = false,
 )
     pars = @parameters begin
         # radius = radius, [description = "Radius of one wheel"]
@@ -671,162 +446,6 @@ function RollingWheelSetJoint(;
     add_params(sys, [width_wheel]; name)
 end
 
-
-#=
-model RollingWheelSet
-  "Ideal rolling wheel set consisting of two ideal rolling wheels connected together by an axis"
-  Modelica.Mechanics.MultiBody.Interfaces.Frame_a frame_middle
-    "Frame fixed in middle of axis connecting both wheels (y-axis: along wheel axis, z-axis: upwards)"
-
-  parameter Boolean animation=true
-    "= true, if animation of wheel set shall be enabled";
-
-  parameter SI.Radius R_wheel "Radius of one wheel";
-  parameter SI.Mass m_wheel "Mass of one wheel";
-  parameter SI.Inertia I_wheelAxis "Inertia along one wheel axis";
-  parameter SI.Inertia I_wheelLong "Inertia perpendicular to one wheel axis";
-  parameter SI.Distance track "Distance between the two wheels (= axle track)";
-  parameter StateSelect stateSelect=StateSelect.always
-    "Priority to use the generalized coordinates as states";
-
-  SI.Position x(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "x coordinate of center between wheels";
-  SI.Position y(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "y coordinate of center between wheels";
-  SI.Angle phi(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "Orientation angle of wheel axis along z-axis";
-  SI.Angle theta1(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "Angle of wheel 1";
-  SI.Angle theta2(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "Angle of wheel 2";
-  SI.AngularVelocity der_theta1(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "Derivative of theta 1";
-  SI.AngularVelocity der_theta2(
-    start=0,
-    fixed=true,
-    stateSelect=stateSelect) "Derivative of theta 2";
-
-  parameter SI.Distance width_wheel=0.01 "Width of one wheel"
-  parameter Real hollowFraction=0.8
-    "For ring-like wheel visualization: wheel radius / inner hole radius; i.e. 1.0: completely hollow, 0.0: full disc"
-  parameter Types.Color color={30,30,30} "Color of wheels"
-
-  Modelica.Mechanics.MultiBody.Interfaces.Frame_a frame1
-    "Frame fixed in center point of left wheel (y-axis: along wheel axis, z-axis: upwards)"
-  Modelica.Mechanics.MultiBody.Interfaces.Frame_b frame2
-    "Frame fixed in center point of right wheel (y-axis: along wheel axis, z-axis: upwards)"
-  Modelica.Mechanics.MultiBody.Parts.Body body2(
-    final r_CM={0,0,0},
-    final I_21=0,
-    final I_31=0,
-    final I_32=0,
-    animation=false,
-    final m=m_wheel,
-    final I_11=I_wheelLong,
-    final I_22=I_wheelAxis,
-    final I_33=I_wheelLong) 
-  Modelica.Mechanics.MultiBody.Visualizers.FixedShape shape2(
-    final animation=animation,
-    final lengthDirection={0,1,0},
-    final widthDirection={1,0,0},
-    final color=color,
-    final extra=hollowFraction,
-    final shapeType="pipe",
-    final r_shape={0,-width_wheel,0},
-    final length=2*width_wheel,
-    final width=2*R_wheel,
-    final height=2*R_wheel) 
-  Modelica.Mechanics.MultiBody.Parts.Body body1(
-    final r_CM={0,0,0},
-    final I_21=0,
-    final I_31=0,
-    final I_32=0,
-    animation=false,
-    final m=m_wheel,
-    final I_11=I_wheelLong,
-    final I_22=I_wheelAxis,
-    final I_33=I_wheelLong) 
-  Modelica.Mechanics.MultiBody.Visualizers.FixedShape shape1(
-    final animation=animation,
-    final lengthDirection={0,1,0},
-    final widthDirection={1,0,0},
-    final color=color,
-    final extra=hollowFraction,
-    final shapeType="pipe",
-    final r_shape={0,-width_wheel,0},
-    final length=2*width_wheel,
-    final width=2*R_wheel,
-    final height=2*R_wheel) 
-  Modelica.Mechanics.Rotational.Interfaces.Flange_a axis1
-    "1-dim. rotational flange that drives the left wheel"
-  Modelica.Mechanics.Rotational.Interfaces.Flange_a axis2
-    "1-dim. rotational flange that drives the right wheel"
-  Modelica.Mechanics.MultiBody.Joints.RollingWheelSet wheelSetJoint(
-    animation=false,
-    radius=R_wheel,
-    track=track,
-    stateSelect=StateSelect.default,
-    x(fixed=false),
-    y(fixed=false),
-    phi(fixed=false),
-    theta1(fixed=false),
-    theta2(fixed=false),
-    der_theta1(fixed=false),
-    der_theta2(fixed=false))
-  Modelica.Mechanics.Rotational.Interfaces.Flange_b support
-    "Support of 1D axes"
-equation
-  wheelSetJoint.x = x;
-  wheelSetJoint.y = y;
-  wheelSetJoint.phi = phi;
-  wheelSetJoint.theta1 = theta1;
-  wheelSetJoint.theta2 = theta2;
-  der_theta1 = der(theta1);
-  der_theta2 = der(theta2);
-
-  connect(body2.frame_a, frame2) 
-  connect(body1.frame_a, frame1) 
-  connect(shape1.frame_a, frame1) 
-  connect(shape2.frame_a, frame2) 
-  connect(wheelSetJoint.frame2, frame2) 
-  connect(wheelSetJoint.frame1, frame1) 
-  connect(wheelSetJoint.axis1, axis1)
-  connect(wheelSetJoint.axis2, axis2)
-  connect(wheelSetJoint.support, support)
-  connect(wheelSetJoint.frame_middle, frame_middle)
-    Documentation(info="<html>
-<p>
-Two wheels are connected by an axis and can rotate around this axis.
-The wheels are rolling on the x-y plane of the world frame.
-The coordinate system attached to the center of the wheel axis (frame_middle)
-is constrained so that it is always parallel to the x-y plane.
-If all generalized coordinates are zero, frame_middle is parallel
-to the world frame.
-</p>
-
-<h4>Note</h4>
-<p>
-To work properly, the gravity acceleration vector g of the world must point in the negative z-axis, i.e.
-</p>
-<blockquote><pre>
-<span style=\"font-family:'Courier New',courier; color:#0000ff;\">inner</span> <span style=\"font-family:'Courier New',courier; color:#ff0000;\">Modelica.Mechanics.MultiBody.World</span> world(n={0,0,-1});
-</pre></blockquote>
-</html>"));
-end RollingWheelSet;
-=#
-
 """
     RollingWheelSet(;
         name,
@@ -844,7 +463,6 @@ end RollingWheelSet;
         der_theta1_0 = 0,
         der_theta2_0 = 0,
         width_wheel = 0.01,
-        hollow_fraction = 0.8,
         color = [0.3, 0.3, 0.3, 1],
         render = true,
     )
@@ -880,6 +498,7 @@ function RollingWheelSet(;
     hollow_fraction = 0.8,
     color = [0.3, 0.3, 0.3, 1],
     render = true,
+    kwargs...
 )
     pars = @parameters begin
         # radius = radius, [description = "Radius of one wheel"]
@@ -888,8 +507,8 @@ function RollingWheelSet(;
         I_axis = I_axis, [description = "Inertia along one wheel axis"]
         I_long = I_long, [description = "Inertia perpendicular to one wheel axis"]
         # track = track, [description = "Distance between the two wheels (= axle track)"]
-        hollow_fraction = hollow_fraction,
-        [description = "For ring-like wheel visualization: wheel radius / inner hole radius; i.e. 1.0: completely hollow, 0.0: full disc"]
+        # hollow_fraction = hollow_fraction,
+        # [description = "For ring-like wheel visualization: wheel radius / inner hole radius; i.e. 1.0: completely hollow, 0.0: full disc"]
         # color[1:4] = color, [description = "Color of wheels"]
     end
     systems = @named begin
@@ -910,7 +529,7 @@ function RollingWheelSet(;
                     render = false)
         axis1 = Rotational.Flange()
         axis2 = Rotational.Flange()
-        wheelSetJoint = RollingWheelSetJoint(; radius, track, state_priority, x0, z0, phi0, theta1_0, theta2_0, der_theta1_0, der_theta2_0, render, width_wheel, color)
+        wheelSetJoint = RollingWheelSetJoint(; radius, track, state_priority, x0, z0, phi0, theta1_0, theta2_0, der_theta1_0, der_theta2_0, render, width_wheel, color, kwargs...)
         support = Rotational.Flange()
     end
 
