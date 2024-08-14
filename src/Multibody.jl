@@ -40,7 +40,7 @@ function benchmark_f(prob)
     if !isdefined(Main, :btime)
         @eval Main using BenchmarkTools
     end
-    Main.@btime $(prob.f)($dx, $x, $p, 0.0)
+    @eval Main @btime $(prob.f)($dx, $x, $p, 0.0)
 end
 
 """
