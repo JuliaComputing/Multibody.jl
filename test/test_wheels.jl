@@ -1,3 +1,4 @@
+using Test
 # ==============================================================================
 ## Rolling wheel ===============================================================
 # ==============================================================================
@@ -47,6 +48,7 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 
 
 ## Rolling wheel with axis ====================================================
+import ModelingToolkitStandardLibrary.Blocks
 @mtkmodel WheelWithAxis begin
     @components begin
         world = W()
@@ -78,4 +80,48 @@ ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [], (0, 4))
 sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
 @test_broken !all(iszero, sol.u)
+# first(Multibody.render(model, sol, 0, show_axis=true))
+
+# ==============================================================================
+## RollingWheelSet
+# ==============================================================================
+@mtkmodel DrivingWheelSet begin
+    @components begin
+        sine1 = Blocks.Sine(frequency=1, amplitude=2)
+        sine2 = Blocks.Sine(frequency=1, amplitude=2, phase=pi/2)
+        torque1 = Rotational.Torque()
+        torque2 = Rotational.Torque()
+        wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5, state_priority=100)
+        bar = FixedTranslation(r = [0.2, 0, 0])
+        body = Body(m=0.01, state_priority=1)
+        world = W()
+    end
+    @equations begin
+        connect(sine1.output, torque1.tau)
+        connect(sine2.output, torque2.tau)
+        connect(torque1.flange, wheels.axis1)
+        connect(torque2.flange, wheels.axis2)
+        connect(wheels.frame_middle, bar.frame_a)
+        connect(bar.frame_b, body.frame_a)
+    end
+end
+
+@named model = DrivingWheelSet()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+# display(unknowns(ssys))
+prob = ODEProblem(ssys, [
+    model.wheels.wheelSetJoint.prismatic1.s => 0.1
+    model.wheels.wheelSetJoint.prismatic2.s => 0.1
+], (0, 3))
+sol = solve(prob, Tsit5())
+@test SciMLBase.successful_retcode(sol)
+
+@test sol(0:0.1:1, idxs=[model.wheels.x, model.wheels.z]) ≈ [
+    0.1  0.0611068  -0.0658862  -0.270161  -0.519216  -0.741042  -0.834663   -0.820189   -0.821855  -0.862654  -0.888457
+    0.1  0.101768    0.122277    0.169771   0.193664   0.120891  -0.0183936  -0.0968069  -0.100183  -0.102072  -0.10982
+] atol=1e-3
+
+# plot(sol)
+# plot(sol, idxs=[model.wheels.x, model.wheels.z])
 # first(Multibody.render(model, sol, 0, show_axis=true))

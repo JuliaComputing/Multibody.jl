@@ -239,6 +239,7 @@ end
 render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
 
 function render!(scene, ::typeof(Body), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     color = get_color(sys, sol, :purple)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
@@ -616,7 +617,12 @@ function render!(scene, ::typeof(Multibody.WorldForce), sys, sol, t)
 end
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
-    count(ModelingToolkit.isframe, sys.systems) == 2 || return false
+    frameinds = findall(ModelingToolkit.isframe, collect(sys.systems))
+    length(frameinds) == 2 || return false
+
+    nameof(sys.systems[frameinds[1]]) ∈ (:frame_a, :frame_b) || return false
+    nameof(sys.systems[frameinds[2]]) ∈ (:frame_a, :frame_b) || return false
+
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     color = get_color(sys, sol, :green)

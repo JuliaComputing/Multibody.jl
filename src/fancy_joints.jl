@@ -278,7 +278,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         eRod_a(t)[1:3], [description="Unit vector in direction of rRod_a, resolved in frame_a (needed for analytic loop handling)"]
         rRod_0(t)[1:3] = rRod_ia, [description="Position vector from frame_a to frame_b resolved in world frame"]
         rRod_a(t)[1:3] = rRod_ia, [description="Position vector from frame_a to frame_b resolved in frame_a"]
-        (constraintResidue(t) = 0), [description="Constraint equation of joint in residue form: Either length constraint (= default) or equation to compute rod force (for analytic solution of loops in combination with Internal.RevoluteWithLengthConstraint/PrismaticWithLengthConstraint)"]
+        (constraintResidue(t) = 0), [description="Constraint equation of joint in residue form: Either length constraint (= default) or equation to compute rod force (for analytic solution of loops in combination with RevoluteWithLengthConstraint)"]
         f_b_a(t)[1:3], [description="frame_b.f resolved in frame_a"]
         f_ia_a(t)[1:3], [description="frame_ia.f resolved in frame_a"]
         t_ia_a(t)[1:3], [description="frame_ia.t resolved in frame_a"]
