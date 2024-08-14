@@ -408,6 +408,8 @@ end
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
     color = get_color(sys, sol, :purple)
     shapepath = get_shape(sys, sol)
+    Tshape = reshape(sol(sol.t[1], idxs=sys.shape_transform), 4, 4)
+    scale = Vec3f(Float32(sol(sol.t[1], idxs=sys.shape_scale))*ones(Float32, 3))
     if isempty(shapepath)
         radius = Float32(sol(sol.t[1], idxs=sys.radius))
         r_0a = get_fun(sol, collect(sys.frame_a.r_0))
@@ -428,11 +430,11 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
         m = mesh!(scene, shapemesh; color, specular = Vec3f(1.5))
 
         @views on(t) do t
-            Ta = T(t)
+            Ta = T(t)*Tshape
             r1 = Point3f(Ta[1:3, 4])
             q = Rotations.QuatRotation(Ta[1:3, 1:3]).q
             Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
-            Makie.transform!(m, translation=r1, rotation=Q)
+            Makie.transform!(m; translation=r1, rotation=Q, scale)
         end
     end
 

@@ -380,7 +380,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 
 See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1, kwargs...)
     systems = @named begin
         translation = FixedTranslation(r = r)
         body = Body(; r_cm, r_0, kwargs...)
@@ -408,10 +408,12 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations"]
         shapefile[1:length(shapecode)] = shapecode
+        shape_transform[1:16] = vec(shape_transform)
+        shape_scale = shape_scale
     end
 
 
-    pars = [r; radius; color; shapefile]
+    pars = [r; radius; color; shapefile; shape_transform; shape_scale]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
