@@ -48,7 +48,7 @@ sol = solve(prob, Tsit5())
 
 ```@example WHEEL
 import GLMakie
-Multibody.render(model, sol; filename = "worldwheel.gif")
+Multibody.render(worldwheel, sol; filename = "worldwheel.gif")
 nothing # hide
 ```
 

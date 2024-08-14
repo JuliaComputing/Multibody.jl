@@ -563,6 +563,6 @@ function RollingWheelSet(;
     ]
 
     sys = ODESystem(equations, t; name=:nothing, systems)
-    add_params(sys, [hollow_fraction; width_wheel]; name)
+    add_params(sys, [width_wheel]; name)
 
 end
