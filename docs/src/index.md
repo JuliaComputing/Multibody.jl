@@ -116,8 +116,8 @@ The following animations give a quick overview of simple mechanisms that can be 
     <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/spring_damper_system/">
         <img src="https://help.juliahub.com/multibody/dev/examples/springdamper.gif" alt="springdamper">
     </a>
-    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/spherical_pendulum/">
-        <img src="https://help.juliahub.com/multibody/dev/examples/spherical.gif" alt="spherical">
+    <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/wheel/">
+        <img src="https://help.juliahub.com/multibody/dev/examples/wheelset.gif" alt="wheels">
     </a>
     <a class="grid-item" href="https://help.juliahub.com/multibody/dev/examples/three_springs/">
         <img src="https://help.juliahub.com/multibody/dev/examples/three_springs.gif" alt="three_springs">
