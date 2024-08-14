@@ -347,13 +347,18 @@ end
         theta2_0 = 0,
         der_theta1_0 = 0,
         der_theta2_0 = 0,
-        render = true
+        render = true,
+        iscut = false,
     )
+
 Joint (no mass, no inertia) that describes an ideal rolling wheel set (two ideal rolling wheels connected together by an axis)
 
 An assembly joint for a wheelset rolling on the x-z plane of the world frame. The frames `frame1` and `frame2` are connected to rotating wheels; the `frame_middle` moves in a plane parallel to the x-z plane of the world and should be connected to the vehicle body.
 
 To work properly, the gravity acceleration vector g of the world must point in the negative y-axis (default)
+
+# Arguments and parameters:
+- `iscut`: if more than one wheel set is connected to the same rigid body, `iscut` must be set to true for all but one set. This avoids overconstraining the system by replacing the planar joint giving the set coordinates by an unconstrained FreeMotion joint.
 
 # Connectors:
 - `frame_middle`: Frame fixed in middle of axis connecting both wheels (z-axis: along wheel axis, y-axis: upwards)
@@ -393,9 +398,6 @@ function RollingWheelSetJoint(;
         frame2 = Frame()
         fixed = Fixed(; r = [0, radius, 0], render)
         rod1 = FixedTranslation(; r = [0, 0, track / 2], render, color)
-        prismatic1 = Prismatic(; n = [1, 0, 0], render, state_priority=10, color=[0,1,1,0.1], radius=0.01)
-        prismatic2 = Prismatic(; n = [0, 0, 1], render, state_priority=10, color=[0,1,1,0.1], radius=0.01)
-        revolute = Revolute(; render, n = [0, 1, 0], color)
         rod2 = FixedTranslation(; r = [0, 0, -track / 2], render, color)
         revolute1 = Revolute(; n = [0, 0, 1], axisflange = true, render, state_priority=11, radius, length=width_wheel, color)
         revolute2 = Revolute(; n = [0, 0, 1], axisflange = true, render, state_priority=11, radius, length=width_wheel, color)
@@ -405,6 +407,17 @@ function RollingWheelSetJoint(;
         axis2 = Rotational.Flange()
         mounting1D = Mounting1D()
         support = Rotational.Flange()
+    end
+    if iscut
+        @named freemotion = FreeMotion(iscut=false, isroot=true, state=false)
+        push!(systems, freemotion)
+    else
+        more = @named begin
+            revolute = Revolute(; render, n = [0, 1, 0], color)
+            prismatic1 = Prismatic(; n = [1, 0, 0], render, state_priority=10, color=[0,1,1,0.1], radius=0.01)
+            prismatic2 = Prismatic(; n = [0, 0, 1], render, state_priority=10, color=[0,1,1,0.1], radius=0.01)
+        end
+        append!(systems, more)
     end
 
     sts = @variables begin
@@ -417,24 +430,37 @@ function RollingWheelSetJoint(;
         (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority]
     end
     equations = Equation[
-        prismatic1.s ~ x
-        prismatic2.s ~ z
-        revolute.phi ~ phi
+        if iscut
+            [
+                connect(freemotion.frame_a, fixed.frame_b)
+                connect(freemotion.frame_b, frame_middle)
+                freemotion.r_rel_a[1] ~ x
+                freemotion.r_rel_a[3] ~ z
+                # freemotion.phi[2] ~ phi
+                phi ~ 0
+            ]
+        else    
+            [prismatic1.s ~ x
+            prismatic2.s ~ z
+            revolute.phi ~ phi
+            connect(revolute.frame_b, frame_middle)
+            connect(prismatic1.frame_a, fixed.frame_b)
+            connect(prismatic1.frame_b, prismatic2.frame_a)
+            connect(prismatic2.frame_b, revolute.frame_a)]
+        end
+
         revolute1.phi ~ theta1
         revolute2.phi ~ theta2
         der_theta1 ~ D(theta1)
         der_theta2 ~ D(theta2)
 
-        connect(revolute.frame_b, frame_middle)
         connect(rod1.frame_a, frame_middle)
         connect(rod2.frame_a, frame_middle)
         connect(rod1.frame_b, revolute1.frame_a)
         connect(revolute1.frame_b, frame1)
         connect(revolute2.frame_a, rod2.frame_b)
         connect(revolute2.frame_b, frame2)
-        connect(prismatic1.frame_a, fixed.frame_b)
-        connect(prismatic1.frame_b, prismatic2.frame_a)
-        connect(prismatic2.frame_b, revolute.frame_a)
+       
         connect(rolling1.frame_a, revolute1.frame_b)
         connect(rolling2.frame_a, revolute2.frame_b)
         connect(revolute1.axis, axis1)
@@ -465,11 +491,15 @@ end
         width_wheel = 0.01,
         color = [0.3, 0.3, 0.3, 1],
         render = true,
+        iscut = false,
     )
 
 Ideal rolling wheel set consisting of two ideal rolling wheels connected together by an axis
 
 Two wheels are connected by an axis and can rotate around this axis. The wheels are rolling on the x-z plane of the world frame. The coordinate system attached to the center of the wheel axis (`frame_middle`) is constrained so that it is always parallel to the x-z plane. If all generalized coordinates are zero, `frame_middle` is parallel to the world frame.
+
+# Arguments and parameters:
+- `iscut`: if more than one wheel set is connected to the same rigid body, `iscut` must be set to true for all but one set. This avoids overconstraining the system by replacing the planar joint giving the set coordinates by an unconstrained FreeMotion joint.
 
 # Connectors
 - `frame_middle`: Frame fixed in middle of axis connecting both wheels (z-axis: along wheel axis, y-axis: upwards)
