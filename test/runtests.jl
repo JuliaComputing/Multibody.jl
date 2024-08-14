@@ -1323,3 +1323,9 @@ sol = solve(prob, Rodas4())
 @test sol[model.cyl.v][end] ≈ -9.81 atol=0.01
 @test sol[model.cyl.phi][end] ≈ 1 atol=0.01
 
+## =============================================================================
+
+@testset "JointUSR_RRR" begin
+    @info "Testing JointUSR_RRR"
+    include("test_JointUSR_RRR.jl")
+end

@@ -519,7 +519,7 @@ The rest of this joint aggregation is defined by the following parameters:
     end
 
     @parameters begin
-        n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint fixed and resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod 1)"]
+        # n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint fixed and resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod 1)"]
         # n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
         rRod1_ia[1:3] = rRod1_ia, [description = "Vector from origin of frame_a to spherical joint, resolved in frame_ia"]
         # rRod2_ib[1:3] = rRod2_ib, [description = "Vector from origin of frame_ib to spherical joint, resolved in frame_ib"]
@@ -648,15 +648,15 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
     rRod2_ib = [-1,0,0],
     phi_offset = 0, 
     phi_guess = 0,
-
+    positive_branch = true,
 )
 
     @parameters begin
-        n_a[1:3] = n_a, [description = "Axes of revolute joints resolved in frame_a (all axes are parallel to each other)"]
-        n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
+        # n_a[1:3] = n_a, [description = "Axes of revolute joints resolved in frame_a (all axes are parallel to each other)"]
+        # n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
         rRod1_ia[1:3] = rRod1_ia, [description = "Vector from origin of frame_a to revolute joint in the middle, resolved in frame_ia"]
-        rRod2_ib[1:3] = rRod2_ib, [description = "Vector from origin of frame_ib to revolute joint in the middle, resolved in frame_ib"]
-        phi_offset = phi_offset, [description = "Relative angle offset of revolute joint at frame_b (angle = phi(t) + from_deg(phi_offset))"]
+        # rRod2_ib[1:3] = rRod2_ib, [description = "Vector from origin of frame_ib to revolute joint in the middle, resolved in frame_ib"]
+        # phi_offset = phi_offset, [description = "Relative angle offset of revolute joint at frame_b (angle = phi(t) + from_deg(phi_offset))"]
         phi_guess = phi_guess, [description = "Select the configuration such that at initial time |phi(t0) - from_deg(phi_guess)| is minimal"]
 
     end
@@ -675,6 +675,7 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
             phi_guess,
             rRod2_ib,
             rRod1_ia,
+            positive_branch
         )
     end
 
