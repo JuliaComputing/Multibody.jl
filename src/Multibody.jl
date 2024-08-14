@@ -29,6 +29,21 @@ function find_arry_problems(model)
 end
 
 """
+    benchmark_f(prob)
+    
+Benchmark the invocation of the function `prob.f` on the initial condition `prob.u0`
+"""
+function benchmark_f(prob)
+    x = prob.u0
+    dx = similar(x)
+    p = prob.p
+    if !isdefined(Main, :btime)
+        @eval Main using BenchmarkTools
+    end
+    Main.@btime $(prob.f)($dx, $x, $p, 0.0)
+end
+
+"""
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
     path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false, loop=1)
 
