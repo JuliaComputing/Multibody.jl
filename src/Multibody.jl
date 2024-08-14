@@ -179,7 +179,7 @@ include("joints.jl")
 export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR
 include("fancy_joints.jl")
 
-export RollingWheelJoint, RollingWheel, RollingWheelSet, RollingConstraintVerticalWheel
+export RollingWheelJoint, RollingWheel, RollingWheelSet, RollingWheelSetJoint, RollingConstraintVerticalWheel
 include("wheels.jl")
 
 export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce, WorldTorque
