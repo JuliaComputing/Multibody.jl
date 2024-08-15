@@ -76,7 +76,9 @@ import GLMakie
 Multibody.render(model, sol; z = -5, filename = "simple_swing.gif") # Use "simple_swing.mp4" for a video file
 nothing # hide
 ```
+
 ![animation](simple_swing.gif)
+
 This makes for a rather interesting-looking springy pendulum!
 
 

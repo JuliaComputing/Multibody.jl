@@ -167,6 +167,7 @@ prob = ODEProblem(ssys, [], (0, 6))
 sol = solve(prob, Tsit5())
 
 render(model, sol, framerate=30, filename="car.gif", x=6, z=6, y=5)
+nothing # hide
 ```
 
 ![car animation](car.gif)

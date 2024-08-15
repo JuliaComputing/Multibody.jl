@@ -169,8 +169,8 @@ connections = [connect(j2.frame_b, b2.frame_a)
 
 @named fourbar_analytic = ODESystem(connections, t, systems = [world; systems])
 fourbar_analytic = complete(fourbar_analytic)
-ssys = structural_simplify(IRSystem(fourbar_analytic))
-prob = ODEProblem(ssys, [], (0.0, 1.4399)) 
+ssys_analytic = structural_simplify(IRSystem(fourbar_analytic))
+prob = ODEProblem(ssys_analytic, [], (0.0, 1.4399)) 
 sol2 = solve(prob, FBDF(autodiff=true)) # about 4x faster than the simulation above
 plot!(sol2, idxs=[j2.s]) # Plot the same coordinate as above
 ```
@@ -183,3 +183,20 @@ nothing # hide
 ```
 
 ![animation](fourbar_analytic.gif)
+
+While the version with a cut joint were solving for 
+```@example kinloop
+length(unknowns(ssys))
+```
+variables, the version with the joint assembly solved for only
+```@example kinloop
+length(unknowns(ssys_analytic))
+```
+variables.
+
+We can also inspect the mass matrices of the two systems to see how many nonlinear algebraic equations the solver has to deal with
+```@example kinloop
+using LinearAlgebra
+diag(ssys.mass_matrix), diag(ssys_analytic.mass_matrix)
+```
+A 1 on the diagonal indicates a differential equation, while a 0 indicates an algebraic equation. The cut-joint version has 6 nonlinear algebraic equations, while the joint assembly version has only 1. Both of them have 2 differential equations (position and velocity), corresponding to the 1 degree of freedom in the mechanism. Nonlinear algebraic equations are more expensive to solve than differential equations.
