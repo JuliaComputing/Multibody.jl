@@ -207,11 +207,14 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
 end
 
 """
-    Body(; name, m = 1, r_cm, isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3), state_priority = 2, quat=false)
+    Body(; name, m = 1, r_cm, isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = zeros(3), state_priority = 2, quat = false, sparse_I = false)
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
 This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref).
+
+# Performance optimization
+- `sparse_I`: If `true`, the zero elements of the inerita matrix are considered "structurally zero", and this fact is used to optimize performance. When this option is enabled, the elements of the inertia matrix that were zero when the component was created cannot changed without reinstantiating the component. This performance optimization may be useful, e.g., when the inertia matrix is known to be diagonal.
 
 # Parameters
 - `m`: Mass
@@ -220,7 +223,6 @@ This component has a single frame, `frame_a`. To represent bodies with more than
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
 - `phi0`: Initial orientation, only applicable if `isroot = true` and `quat = false`
 - `phid0`: Initial angular velocity
-
 
 # Variables
 - `r_0`: Position vector from origin of world frame to origin of `frame_a`
@@ -239,6 +241,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               I_21 = 0,
               I_31 = 0,
               I_32 = 0,
+              sparse_I = false,
               isroot = false,
               state = false,
               sequence = [1,2,3],
@@ -295,6 +298,10 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     @parameters render = render [description = "Render the component in animations"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
+    if sparse_I
+        Isparsity = sparse(.!isequal.(0, [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]))
+    end
+
     @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
     @parameters I_22=I_22 [description = "Element (2,2) of inertia tensor"]
     @parameters I_33=I_33 [description = "Element (3,3) of inertia tensor"]
@@ -303,6 +310,9 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     @parameters I_32=I_32 [description = "Element (3,2) of inertia tensor"]
 
     I = [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]
+    if sparse_I
+        I = I.*Isparsity
+    end
 
     r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
 
@@ -691,7 +701,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w, sparse_I=true)
     end
 
     @equations begin
@@ -821,7 +831,7 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sparse_I = true)
     end
 
     @equations begin

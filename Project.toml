@@ -13,6 +13,7 @@ MeshIO = "7269a6da-0436-5bbc-96c2-40638cbb6118"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ModelingToolkitStandardLibrary = "16a59e39-deab-5bd0-87e4-056b12336739"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
@@ -31,6 +32,7 @@ MeshIO = "0.4"
 ModelingToolkit = "9"
 ModelingToolkitStandardLibrary = "2.7.2"
 Rotations = "1.4"
+SparseArrays = "1"
 StaticArrays = "1"
 julia = "1"
 
