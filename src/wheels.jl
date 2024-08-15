@@ -359,11 +359,13 @@ To work properly, the gravity acceleration vector g of the world must point in t
 
 # Arguments and parameters:
 - `iscut`: if more than one wheel set is connected to the same rigid body, `iscut` must be set to true for all but one set. This avoids overconstraining the system by replacing the planar joint giving the set coordinates by an unconstrained FreeMotion joint.
+- `radius`: Radius of one wheel
+- `track`: Distance between the two wheels (= axle track)
 
 # Connectors:
 - `frame_middle`: Frame fixed in middle of axis connecting both wheels (z-axis: along wheel axis, y-axis: upwards)
-- `frame1`: Frame fixed in center point of left wheel (z-axis: along wheel axis, y-axis: upwards)
-- `frame2`: Frame fixed in center point of right wheel (z-axis: along wheel axis, y-axis: upwards)
+- `frame1`: Frame fixed in center point of left wheel, rotating with the wheel (z-axis: along wheel axis, y-axis: upwards when wheel angle is zero)
+- `frame2`: Frame fixed in center point of right wheel, rotating with the wheel (z-axis: along wheel axis, y-axis: upwards when wheel angle is zero)
 - `axis1`: 1-dim. Rotational flange that drives the joint
 - `axis2`: 1-dim. Rotational flange that drives the joint
 - `support`: Support of 1-dim axes
@@ -500,14 +502,21 @@ Two wheels are connected by an axis and can rotate around this axis. The wheels 
 
 # Arguments and parameters:
 - `iscut`: if more than one wheel set is connected to the same rigid body, `iscut` must be set to true for all but one set. This avoids overconstraining the system by replacing the planar joint giving the set coordinates by an unconstrained FreeMotion joint.
+- `radius`: Radius of one wheel
+- `m_wheel`: Mass of one wheel
+- `I_axis`: Moment of inertia of one wheel around its rotation axis
+- `I_long`: Moment of inertia of one wheel perpendicular to its rotation axis
+- `track`: Distance between the two wheels (= axle track)
 
 # Connectors
 - `frame_middle`: Frame fixed in middle of axis connecting both wheels (z-axis: along wheel axis, y-axis: upwards)
-- `frame1`: Frame fixed in center point of left wheel (z-axis: along wheel axis, y-axis: upwards)
-- `frame2`: Frame fixed in center point of right wheel (z-axis: along wheel axis, y-axis: upwards)
+- `frame1`: Frame fixed in center point of left wheel, rotating with the wheel (z-axis: along wheel axis, y-axis: upwards when wheel angle is zero)
+- `frame2`: Frame fixed in center point of right wheel, rotating with the wheel (z-axis: along wheel axis, y-axis: upwards when wheel angle is zero)
 - `axis1`: 1-dim. Rotational flange that drives the left wheel
 - `axis2`: 1-dim. Rotational flange that drives the right wheel
 - `support`: Support of 1D axes
+
+To connect driving torques or friction to rotation of the wheels, connect between `axis1` and `support`, and `axis2` and `support` respectively. To connect the wheel set to, e.g., a body, connect the `frame_middle` to the body frame.
 """
 function RollingWheelSet(;
     name,
