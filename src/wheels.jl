@@ -550,12 +550,14 @@ function RollingWheelSet(;
                     I_11 = I_long,
                     I_22 = I_long,
                     I_33 = I_axis,
+                    sparse_I = true,
                     render = false)
         body1 = Body(r_cm = [0, 0, 0],
                     m = m_wheel,
                     I_11 = I_long,
                     I_22 = I_long,
                     I_33 = I_axis,
+                    sparse_I = true,
                     render = false)
         axis1 = Rotational.Flange()
         axis2 = Rotational.Flange()

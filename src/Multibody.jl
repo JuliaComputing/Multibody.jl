@@ -7,6 +7,7 @@ using ModelingToolkit
 using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
+using SparseArrays
 using StaticArrays
 export Rotational, Translational
 
