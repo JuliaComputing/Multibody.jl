@@ -52,14 +52,17 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false)
-    @parameters begin radius = radius, [description = "Radius of the wheel"] end
+@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, color = [1, 0, 0, 1], state_priority = 15)
+    @parameters begin
+        radius = radius, [description = "Radius of the wheel"]
+        color[1:4] = color, [description = "Color of the wheel in animations"]
+    end
     @variables begin
-        (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
+        (x(t) = x0), [state_priority = state_priority, description = "x-position of the wheel axis"]
         (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 15, description = "z-position of the wheel axis"]
+        (z(t) = z0), [state_priority = state_priority, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [state_priority = 5, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
+        [state_priority = state_priority, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
         (r_road_0(t)[1:3] = zeros(3)),
         [
@@ -162,7 +165,8 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
                  zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                  zeros(3) .~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
-    compose(ODESystem(equations, t; name), frame_a)
+    sys = compose(ODESystem(equations, t; name=:nothing), frame_a)
+    add_params(sys, [color;]; name)
 end
 
 """
@@ -211,7 +215,8 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
                     I_33 = I_axis,
                     I_21 = 0,
                     I_31 = 0,
-                    I_32 = 0)
+                    I_32 = 0,
+                    render = false)
     end
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
