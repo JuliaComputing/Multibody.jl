@@ -153,6 +153,14 @@ The following animations give a quick overview of simple mechanisms that can be 
 ```
 
 
+## Installation
+To install this library, first follow the [installation instructions for JuliaSimCompiler](https://juliacomputing.github.io/JuliaSimCompiler.jl/stable/#Installing-and-Using-JuliaSimCompiler). In particular, you need to [add the JuliaHub Registry](https://help.juliahub.com/juliasim/dev/gettingstarted/juliahubregistry/). 
+
+After the registry is added and JuliaSimCompiler is installed, you may install this package using
+```julia
+import Pkg
+Pkg.add("Multibody")
+```
 
 
 ## Notable differences from Modelica
