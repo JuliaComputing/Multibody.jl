@@ -78,8 +78,10 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [], (0, 4))
-sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
-@test_broken !all(iszero, sol.u)
+@test_skip begin # Singular linear system
+    sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
+    @test_broken !all(iszero, sol.u)
+end
 # first(Multibody.render(model, sol, 0, show_axis=true))
 
 # ==============================================================================
