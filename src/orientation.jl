@@ -247,13 +247,6 @@ function residue(R1, R2)
     # ]
 end
 
-function connect_loop(F1, F2)
-    F1.metadata[:loop_opening] = true
-    # connect(F1, F2)
-    # orientation_constraint(ori(F1)'ori(F2)) .~ 0
-    residue(F1, F2) .~ 0
-end
-
 ## Quaternions
 
 
