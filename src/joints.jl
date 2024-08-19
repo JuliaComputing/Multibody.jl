@@ -557,14 +557,15 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         # Free motion joint does not have state
         if w_rel_a_fixed || z_rel_a_fixed
             append!(eqs,
-                    w_rel_b .~ angular_velocity2(frame_b) - resolve2(frame_b.
-                                        R, angular_velocity1(frame_a)))
+                    w_rel_b .~ angular_velocity2(ori(frame_b)) - resolve2(ori(frame_b), angular_velocity1(ori(frame_a))))
         end
     end
     if state && !isroot
         compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
-    else
+    elseif state
         compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, )
+    else
+        compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
 end
 
