@@ -21,9 +21,9 @@ this frame.
 
 # Arguments and parameters:
 
-name: Name of the rolling wheel joint component
-radius: Radius of the wheel
-angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
+- `radius`: Radius of the wheel
+- `angles`: Angles to rotate world-frame into frame_a around y-, z-, x-axis
+- `surface`: By default, the wheel is rolling on a flat xz plane. A function `surface = (x, z)->y` may be provided to define a road surface. The function should return the height of the road at `(x, z)`.
 
 # Variables:
 - `x`: x-position of the wheel axis
@@ -52,7 +52,7 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false)
+@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing)
     @parameters begin radius = radius, [description = "Radius of the wheel"] end
     @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
@@ -116,7 +116,25 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
 
     Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
 
+    equations = if surface === nothing
+        [ # Road description
+            r_road_0 .~ [s, 0, w]
+            e_n_0 .~ [0, 1, 0]
+            e_s_0 .~ [1, 0, 0]
+        ]
+     else
+        sy = surface(s, w)
+        e_w_0 = _normalize([0, expand_derivatives(Differential(w)(sy)), 1])
+        # @show sy, expand_derivatives(Differential(s)(sy)), expand_derivatives(Differential(w)(sy))
+        [
+            r_road_0 .~ [s, sy, w]
+            e_s_0 .~ _normalize([1, expand_derivatives(Differential(s)(sy)), 0])
+            e_n_0 .~ _normalize(cross(e_w_0, e_s_0))
+        ]
+     end
+
     equations = [
+                equations;
                 connect_orientation(Ra, Rarot; iscut)   # Ra ~ Rarot
                 Ra.w ~ Rarot.w
 
@@ -124,10 +142,6 @@ angles: Angles to rotate world-frame into frame_a around y-, z-, x-axis
                  collect(frame_a.r_0) .~ [x, y, z]
                  der_angles .~ D.(angles)
 
-                 # Road description
-                 r_road_0 .~ [s, 0, w]
-                 e_n_0 .~ [0, 1, 0]
-                 e_s_0 .~ [1, 0, 0]
 
                  # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
                  e_axis_0 .~ resolve1(Ra, [0, 0, 1])
