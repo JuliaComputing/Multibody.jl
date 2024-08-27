@@ -24,7 +24,7 @@ Render = ["Makie"]
 
 [compat]
 CoordinateTransformations = "0.6"
-DataInterpolations = "5"
+DataInterpolations = "5, 6"
 FileIO = "1"
 JuliaSimCompiler = "0.1.12"
 LinearAlgebra = "1.6"
