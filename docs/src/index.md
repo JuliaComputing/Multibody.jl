@@ -193,7 +193,7 @@ Some joints offer the option to add 1-dimensional components to them by providin
 
 ```@autodocs
 Modules = [Multibody]
-Pages   = ["joints.jl"]
+Pages   = ["joints.jl", "fancy_joints.jl"]
 ```
 
 ## Components
@@ -205,11 +205,9 @@ A mass with a shape can be modeled using a [`BodyShape`](@ref). The primary diff
 A rod without a mass (just a translation), is modeled using [`FixedTranslation`](@ref).
 
 
-
-
 ```@autodocs
 Modules = [Multibody]
-Pages   = ["components.jl"]
+Pages   = ["components.jl", "wheels.jl"]
 ```
 
 ## Forces
