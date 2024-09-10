@@ -33,7 +33,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         (phi(t) = 0.0), [state_priority=10]
         (ω(t) = 0.0), [state_priority=10]
         α(t)
-        j(t)
+        tau(t)
     end
 
     pars = @parameters begin
@@ -53,8 +53,8 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         frame_a.fx + frame_b.fx ~ 0,
         frame_a.fy + frame_b.fy ~ 0,
         # balance torques
-        frame_a.j + frame_b.j ~ 0,
-        frame_a.j ~ j
+        frame_a.tau + frame_b.tau ~ 0,
+        frame_a.tau ~ tau
     ]
 
     if use_flange
@@ -67,7 +67,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         push!(eqs, connect(fixed.flange, support))
     else
         # actutation torque
-        push!(eqs, j ~ 0)
+        push!(eqs, tau ~ 0)
     end
 
 
@@ -143,7 +143,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         frame_a.phi ~ frame_b.phi,
         frame_a.fx + frame_b.fx ~ 0,
         frame_a.fy + frame_b.fy ~ 0,
-        frame_a.j + frame_b.j + r0[1] * frame_b.fy - r0[2] * frame_b.fx ~ 0,
+        frame_a.tau + frame_b.tau + r0[1] * frame_b.fy - r0[2] * frame_b.fx ~ 0,
         e0[1] * frame_a.fx + e0[2] * frame_a.fy ~ f
     ]
 

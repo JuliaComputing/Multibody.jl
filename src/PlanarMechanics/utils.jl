@@ -4,7 +4,7 @@
     phi(t), [state_priority=2, description = "rotation angle (counterclockwise)"]
     fx(t), [connect = Flow, description = "force in the x direction"]
     fy(t), [connect = Flow, description = "force in the y direction"]
-    j(t), [connect = Flow, description = "torque (clockwise)"]
+    tau(t), [connect = Flow, description = "torque (clockwise)"]
 end
 Base.@doc """
     Frame(;name)
@@ -17,8 +17,13 @@ Coordinate system (2-dim.) fixed to the component with one cut-force and cut-tor
     - `phi`: [rad] rotation angle (counterclockwise)
     - `fx`: [N] force in the x direction
     - `fy`: [N] force in the y direction
-    - `j`: [N.m] torque (clockwise)
+    - `tau`: [N.m] torque (clockwise)
 """ Frame
+
+function ori_2d(frame)
+    phi = frame.phi
+    return [cos(phi) -sin(phi); sin(phi) cos(phi)]
+end
 
 # extends Frame with just styling
 # https://github.com/dzimmer/PlanarMechanics/blob/master/PlanarMechanics/Interfaces/Frame_resolve.mo

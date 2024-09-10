@@ -40,7 +40,7 @@ Body component with mass and inertia
 
 # Parameters:
 - `m`: [kg] mass of the body
-- `j`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
+- `I`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
 - `r`: [m, m] Translational position x,y-position
 - `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.807
 - `radius`: [m] Radius of the body in animations
@@ -71,13 +71,13 @@ Body component with mass and inertia
     end
 
     vars = @variables begin
-        f(t)[1:2]
-        r(t)[1:2] = r
-        v(t)[1:2]
-        a(t)[1:2]
-        phi(t) = phi
-        ω(t)
-        α(t)
+        f(t)[1:2], [description = "Force"]
+        (r(t)[1:2] = r), [description = "x,y position"]
+        v(t)[1:2], [description = "x,y velocity"]
+        a(t)[1:2], [description = "x,y acceleration"]
+        (phi(t) = phi), [description = "Rotation angle"]
+        ω(t), [description = "Angular velocity"]
+        α(t), [description = "Angular acceleration"]
     end
 
     eqs = [
@@ -92,7 +92,7 @@ Body component with mass and inertia
         # newton's law
         f .~ [frame.fx, frame.fy]
         f + [0, m*gy] .~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
-        I * α ~ frame.j
+        I * α ~ frame.tau
     ]
 
     return compose(ODESystem(eqs, t, vars, pars; name),
@@ -183,7 +183,7 @@ A fixed translation between two components (rigid rod)
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
-        frame_a.j + frame_b.j + r0' * [frame_b.fy, -frame_b.fx] ~ 0
+        frame_a.tau + frame_b.tau + r0' * [frame_b.fy, -frame_b.fx] ~ 0
     end
 end
 
@@ -248,8 +248,8 @@ Linear 2D translational spring
 
     @equations begin
         phi_rel ~ frame_b.phi - frame_a.phi
-        frame_a.j ~ 0
-        frame_b.j ~ 0
+        frame_a.tau ~ 0
+        frame_b.tau ~ 0
         s_relx ~ frame_b.x - frame_a.x
         s_rely ~ frame_b.y - frame_a.y
         f_x ~ c_x * (s_relx - s_relx0)
@@ -313,10 +313,10 @@ Linear (velocity dependent) damper
         d0y ~ ifelse(l < s_small, r0[2], r0[2] / l)
         frame_a.fx ~ d0x * f
         frame_a.fy ~ d0y * f
-        frame_a.j ~ 0
+        frame_a.tau ~ 0
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
-        frame_a.j + frame_b.j ~ 0
+        frame_a.tau + frame_b.tau ~ 0
 
         # lossPower ~ -f * v
     end
@@ -382,7 +382,7 @@ Linear 2D translational spring damper model
         phi_rel(t) = 0
         f_x(t)
         f_y(t)
-        j(t)
+        tau(t)
     end
 
     begin
@@ -399,9 +399,9 @@ Linear 2D translational spring damper model
         v_rely ~ D(s_rely)
         ω_rel ~ D(phi_rel)
 
-        j ~ c_phi * (phi_rel - phi_rel0) + d_phi * ω_rel
-        frame_a.j ~ -j
-        frame_b.j ~ j
+        tau ~ c_phi * (phi_rel - phi_rel0) + d_phi * ω_rel
+        frame_a.tau ~ -tau
+        frame_b.tau ~ tau
         f_x ~ c_x * (s_relx - s_relx0) + d_x * v_relx
         f_y ~ c_y * (s_rely - s_rely0) + d_y * v_rely
         frame_a.fx ~ -f_x

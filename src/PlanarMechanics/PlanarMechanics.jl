@@ -6,13 +6,14 @@ module PlanarMechanics
 
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
+import ModelingToolkitStandardLibrary.Blocks
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ModelingToolkit
 using ...Blocks: RealInput, RealOutput
 import ...@symcheck
 import ..Multibody
 
-export Frame, FrameResolve, PartialTwoFrames, ZeroPosition
+export Frame, FrameResolve, PartialTwoFrames, ZeroPosition, ori_2d
 include("utils.jl")
 
 export Fixed, Body, FixedTranslation, Spring, Damper, SpringDamper

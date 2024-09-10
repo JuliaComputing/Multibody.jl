@@ -50,10 +50,10 @@ Partial absolute sensor models for sensors defined by equations (frame_resolve m
         # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/PartialAbsoluteBaseSensor.mo#L20-L21
         frame_a.fx ~ 0
         frame_a.fy ~ 0
-        frame_a.j ~ 0
+        frame_a.tau ~ 0
         frame_resolve.fx ~ 0
         frame_resolve.fy ~ 0
-        frame_resolve.j ~ 0
+        frame_resolve.tau ~ 0
     end
 end
 
@@ -79,13 +79,13 @@ Partial relative sensor models for sensors defined by equations (frame_resolve m
 
         frame_a.fx ~ 0
         frame_a.fy ~ 0
-        frame_a.j ~ 0
+        frame_a.tau ~ 0
         frame_b.fx ~ 0
         frame_b.fy ~ 0
-        frame_b.j ~ 0
+        frame_b.tau ~ 0
         frame_resolve.fx ~ 0
         frame_resolve.fy ~ 0
-        frame_resolve.j ~ 0
+        frame_resolve.tau ~ 0
     end
 end
 
@@ -140,7 +140,7 @@ Measure absolute position and orientation (same as Sensors.AbsolutePosition, but
         phi.u ~ r[3],
         frame_a.fx ~ 0,
         frame_a.fy ~ 0,
-        frame_a.j ~ 0
+        frame_a.tau ~ 0
     ]
 
     return compose(ODESystem(eqs, t, [], []; name = name),
@@ -249,10 +249,10 @@ Measure relative position and orientation between the origins of two frame conne
         rel_phi.u ~ r[3],
         frame_a.fx ~ 0,
         frame_a.fy ~ 0,
-        frame_a.j ~ 0,
+        frame_a.tau ~ 0,
         frame_b.fx ~ 0,
         frame_b.fy ~ 0,
-        frame_b.j ~ 0
+        frame_b.tau ~ 0
     ]
 
     return compose(ODESystem(eqs, t, [], []; name = name),
@@ -330,10 +330,10 @@ end
         # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/BasicTransformAbsoluteVector.mo#L42-L43
         frame_a.fx ~ 0,
         frame_a.fy ~ 0,
-        frame_a.j ~ 0,
+        frame_a.tau ~ 0,
         frame_resolve.fx ~ 0,
         frame_resolve.fy ~ 0,
-        frame_resolve.j ~ 0
+        frame_resolve.tau ~ 0
     ]
 
     r_temp = Vector{Float64}(undef, 3)

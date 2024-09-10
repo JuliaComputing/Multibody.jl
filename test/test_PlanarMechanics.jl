@@ -2,6 +2,7 @@
 # using Plots
 using ModelingToolkit, OrdinaryDiffEq, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
+import ModelingToolkitStandardLibrary.Blocks
 import Multibody.PlanarMechanics as Pl
 using JuliaSimCompiler
 
