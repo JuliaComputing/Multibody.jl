@@ -63,7 +63,7 @@ Body component with mass and inertia
 
 https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/Body.mo
 """
-@component function Body(; name, m, I, rx = 0, ry = 0, phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
+@component function Body(; name, m, I, r = zeros(2), phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
     @named frame = Frame()
     pars = @parameters begin
         m = m
@@ -76,7 +76,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 
     vars = @variables begin
         f(t)[1:2]
-        r(t)[1:2] = [rx, ry]
+        r(t)[1:2] = r
         v(t)[1:2]
         a(t)[1:2]
         phi(t) = phi
