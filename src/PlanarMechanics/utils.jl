@@ -1,23 +1,37 @@
-@connector Frame begin
-    x(t), [description = "x position"]
-    y(t), [description = "y position"]
-    phi(t), [state_priority=2, description = "rotation angle (counterclockwise)"]
-    fx(t), [connect = Flow, description = "force in the x direction"]
-    fy(t), [connect = Flow, description = "force in the y direction"]
-    tau(t), [connect = Flow, description = "torque (clockwise)"]
+@connector function Frame(; name, render=false, length=1.0, radius=0.1)
+    vars = @variables begin
+        x(t), [description = "x position"]
+        y(t), [description = "y position"]
+        phi(t), [state_priority=2, description = "rotation angle (counterclockwise)"]
+        fx(t), [connect = Flow, description = "force in the x direction"]
+        fy(t), [connect = Flow, description = "force in the y direction"]
+        tau(t), [connect = Flow, description = "torque (clockwise)"]
+    end
+    pars = @parameters begin
+        render = render, [description = "Render the joint in animations"]
+        length = length, [description = "Length of each axis in animations"]
+        radius = radius, [description = "Radius of each axis in animations"]
+    end
+
+    ODESystem(Equation[], t, vars, pars; name, metadata = Dict(:frame_2d => true))
 end
 Base.@doc """
     Frame(;name)
 
 Coordinate system (2-dim.) fixed to the component with one cut-force and cut-torque
 
-# States:
-    - `x`: [m] x position
-    - `y`: [m] y position
-    - `phi`: [rad] rotation angle (counterclockwise)
-    - `fx`: [N] force in the x direction
-    - `fy`: [N] force in the y direction
-    - `tau`: [N.m] torque (clockwise)
+# Variables:
+- `x`: [m] x position
+- `y`: [m] y position
+- `phi`: [rad] rotation angle (counterclockwise)
+- `fx`: [N] force in the x direction
+- `fy`: [N] force in the y direction
+- `tau`: [N.m] torque (clockwise)
+
+# Parameters:
+- `render`: [Bool] Render the joint in animations
+- `length`: [m] Length of each axis in animations
+- `radius`: [m] Radius of each axis in animations
 """ Frame
 
 function ori_2d(frame)

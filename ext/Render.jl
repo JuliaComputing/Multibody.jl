@@ -719,7 +719,7 @@ function render!(scene, ::typeof(P.Body), sys, sol, t)
     sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     color = get_color(sys, sol, :purple)
     r_cm = get_fun(sol, collect(sys.r))
-    framefun = get_frame_fun_2d(sol, sys.frame)
+    framefun = get_frame_fun_2d(sol, sys.frame_a)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
     thing = @lift begin # Sphere
         # Ta = framefun($t)
@@ -811,6 +811,35 @@ function render!(scene, ::Union{typeof(P.Spring), typeof(P.SpringDamper)}, sys, 
         spring_mesh(r1,r2; n_wind, radius, N)
     end
     plot!(scene, thing; color)
+    true
+end
+
+function render!(scene, ::Union{typeof(P.Wheel), typeof(P.SlipBasedWheelJoint)}, sys, sol, t)
+    
+    r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    rotfun = get_rot_fun_2d(sol, sys.frame_a)
+    color = get_color(sys, sol, :red)
+
+    # TODO: add some form of assumetry to indicate that the wheel is rotating
+
+    radius = try
+        sol(sol.t[1], idxs=sys.radius)
+    catch
+        0.05f0
+    end |> Float32
+    thing = @lift begin
+        # radius = sol($t, idxs=sys.radius)
+        O = [r_0($t)..., 0]
+        # T_w_a = framefun($t)
+        R_w_a = rotfun($t)
+        n_a = [0,1] # Wheel rotates around y axis
+        n_w = [R_w_a*n_a; 0] # Rotate to the world frame
+        width = radius/10
+        p1 = Point3f(O + width*n_w)
+        p2 = Point3f(O - width*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
 end
 

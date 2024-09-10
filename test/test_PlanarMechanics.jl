@@ -385,11 +385,116 @@ end
             damper,
             prismatic
         ])
-    @test_skip begin
-        sys = structural_simplify(IRSystem(model)) # Yingbo: fails with JSCompiler
-        unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-        prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5), [])
-        sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
-        @test SciMLBase.successful_retcode(sol)
+    sys = structural_simplify(IRSystem(model)) # Yingbo: fails with JSCompiler
+    unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
+    prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5), [])
+    sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+    @test SciMLBase.successful_retcode(sol)
+end
+
+##
+
+
+@testset "SimpleWheel" begin
+    @info "Testing SimpleWheel"
+    gray = [0.1, 0.1, 0.1, 1]
+    @mtkmodel TestWheel begin
+        @components begin
+            body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
+            revolute = Pl.Revolute()
+            wheel1 = Pl.SimpleWheel(color=gray)
+            wheel2 = Pl.SimpleWheel(color=gray, μ=.1)
+            input = Blocks.Constant(k=1)
+        end
+        @equations begin
+            connect(body.frame_a, revolute.frame_a)
+            connect(revolute.frame_b, wheel1.frame_a)
+            connect(input.output, wheel1.thrust)
+            revolute.phi ~ deg2rad(60)
+            wheel2.thrust.u ~ 0
+
+            connect(wheel2.frame_a, body.frame_b)
+        end
     end
+    @named model = TestWheel()
+    model = complete(model)
+    ssys = structural_simplify((model))
+    defs = Dict(unknowns(ssys) .=> 0)
+    prob = ODEProblem(ssys, defs, (0.0, 10.0))
+    sol = solve(prob, Rodas5P(), initializealg = BrownFullBasicInit())
+    @test SciMLBase.successful_retcode(sol)
+end
+
+
+# import GLMakie, Multibody
+# Multibody.render(model, sol, show_axis=true, x=1, y=1, z=5, traces=[model.wheel1.frame, model.wheel2.frame])
+
+
+# plot(sol, idxs=[
+#     model.revolute.phi,
+#     model.revolute.frame_a.phi,
+#     model.revolute.frame_b.phi,
+#     model.wheel1.θ,
+#     model.wheel1.frame.phi
+# ])
+
+##
+
+
+
+import ModelingToolkitStandardLibrary.Mechanical.Rotational
+
+@testset "SlipBasedWheel" begin
+    @info "Testing SlipBasedWheel"
+
+    @mtkmodel TestSlipBasedWheel begin
+        @components begin
+            slipBasedWheelJoint = Pl.SlipBasedWheelJoint(
+                radius = 0.3,
+                r = [1,0],
+                mu_A = 0.8,
+                mu_S = 0.4,
+                N = 100,
+                sAdhesion = 0.04,
+                sSlide = 0.12,
+                vAdhesion_min = 0.05,
+                vSlide_min = 0.15,
+                # w_roll = 10
+            )
+            prismatic = Pl.Prismatic(r = [0,1], s = 1, v = 0)
+            revolute = Pl.Revolute(phi = 0, w = 0)
+            fixed = Pl.Fixed()
+            engineTorque = Rotational.ConstantTorque(tau_constant = 2)
+            body = Pl.Body(m = 10, I = 1, gy=0)
+            inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
+            constant = Blocks.Constant(k = 0)
+        end
+        @equations begin
+            connect(prismatic.frame_a, revolute.frame_b)
+            connect(revolute.frame_a, fixed.frame)
+            connect(engineTorque.flange, inertia.flange_a)
+            connect(body.frame_a, prismatic.frame_b)
+            connect(slipBasedWheelJoint.frame_a, prismatic.frame_b)
+            connect(slipBasedWheelJoint.flange_a, inertia.flange_b)
+            connect(constant.output, slipBasedWheelJoint.dynamicLoad)
+        end
+    end
+
+    @named model = TestSlipBasedWheel()
+    model = complete(model)
+    ssys = structural_simplify(IRSystem(model))
+    display(unknowns(ssys))
+    defs = ModelingToolkit.defaults(model)
+    prob = ODEProblem(ssys, [
+        model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
+        model.revolute.frame_b.phi => 0,
+        D(model.revolute.frame_b.phi) => 0,
+        D(model.prismatic.r0[2]) => 0,
+    ], (0.0, 20.0))
+    sol = solve(prob, Rodas5Pr(autodiff=true)) # Since the friction model is not differentiable everywhere
+
+    @test sol(15, idxs=[model.slipBasedWheelJoint.f_lat, model.slipBasedWheelJoint.f_long]) ≈ [80, -5] rtol=0.01
+    @test sol(20, idxs=[model.slipBasedWheelJoint.f_lat, model.slipBasedWheelJoint.f_long]) ≈ [80, -4.95] rtol=0.01
+    # plot(sol, idxs=[model.slipBasedWheelJoint.f_lat, model.slipBasedWheelJoint.f_long])
+    # plot(sol, idxs=[model.revolute.w, model.prismatic.s])
 end
