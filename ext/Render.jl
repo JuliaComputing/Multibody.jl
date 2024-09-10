@@ -751,6 +751,23 @@ function render!(scene, ::Union{typeof(P.FixedTranslation), typeof(P.BodyShape)}
     true
 end
 
+function render!(scene, ::typeof(P.Prismatic), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    r_0a = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    r_0b = get_fun(sol, [sys.frame_b.x, sys.frame_b.y])
+    color = get_color(sys, sol, :purple)
+    thing = @lift begin
+        r1 = Point3f(r_0a($t)..., 0)
+        r2 = Point3f(r_0b($t)..., 0)
+        origin = r1#(r1+r2) ./ 2
+        extremity = r2#-r1 # Double pendulum is a good test for this
+        radius = Float32(sol($t, idxs=sys.radius))
+        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    true
+end
+
 function render!(scene, ::typeof(P.Revolute), sys, sol, t)
     sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
