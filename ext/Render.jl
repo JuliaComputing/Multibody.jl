@@ -147,8 +147,14 @@ function render(model, sol,
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
-            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
-            points = get_trans(sol, frame, tvec) |> Matrix
+            (frame.metadata !== nothing) || error("Only frames can be traced in animations.")
+            if get(frame.metadata, :frame, false)
+                points = get_trans(sol, frame, tvec) |> Matrix
+            elseif get(frame.metadata, :frame_2d, false)
+                points = get_trans_2d(sol, frame, tvec) |> Matrix
+            else
+                error("Got fishy frame metadata")
+            end
             Makie.lines!(scene, points)
         end
     end
@@ -199,8 +205,14 @@ function render(model, sol, time::Real;
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
-            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
-            points = get_trans(sol, frame, tvec) |> Matrix
+            (frame.metadata !== nothing) || error("Only frames can be traced in animations.")
+            if get(frame.metadata, :frame, false)
+                points = get_trans(sol, frame, tvec) |> Matrix
+            elseif get(frame.metadata, :frame_2d, false)
+                points = get_trans_2d(sol, frame, tvec) |> Matrix
+            else
+                error("Got fishy frame metadata")
+            end
             Makie.lines!(scene, points)
         end
     end
@@ -699,6 +711,9 @@ function get_frame_fun_2d(sol, frame)
         [R(t) tr(t); 0 0 1]
     end
 end
+
+get_trans_2d(sol, frame, t) = SVector{2}(sol(t, idxs = [frame.x, frame.y]))
+get_trans_2d(sol, frame, t::AbstractArray) = sol(t, idxs = [frame.x, frame.y])
 
 function render!(scene, ::typeof(P.Body), sys, sol, t)
     sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
