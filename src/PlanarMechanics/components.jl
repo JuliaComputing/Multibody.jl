@@ -414,6 +414,27 @@ Linear 2D translational spring damper model
 end
 
 
+"""
+    SimpleWheel(; name, radius = 0.3, color = [1, 0, 0, 1], μ = 1e9)
+
+Simple wheel model with viscous lateral friction and a driving torque
+
+# Connectors:
+- `frame_a` (Frame) Coordinate system fixed to the component with one cut-force and cut-torque
+- `thrust` (RealInput) Input for the longitudinal force applied to the wheel
+
+# Parameters:
+- `μ`: [Ns/m] Viscous friction coefficient
+- `radius`: [m] Radius of the wheel
+- `color`: Color of the wheel in animations
+
+# Variables:
+- `θ`: [rad] Wheel angle
+- `Vx`: [m/s] Longitudinal velocity (resolved in local frame)
+- `Vy`: [m/s] Lateral velocity (resolved in local frame)
+- `Fy`: [N] Lateral friction force
+- `Fx`: [N] Applied longitudinal wheel force
+"""
 @mtkmodel SimpleWheel begin
     @structural_parameters begin
         friction_model = :viscous
@@ -503,7 +524,43 @@ end
 @register_symbolic limit_S_triple(x_max::Real, x_sat::Real, y_max::Real, y_sat::Real, x::Real)
 @register_symbolic limit_S_form(x_min::Real, x_max::Real, y_min::Real, y_max::Real, x::Real)
 
+"""
+    SlipBasedWheelJoint(;
+        name,
+        r = [1, 0],
+        N,
+        vAdhesion_min,
+        vSlide_min,
+        sAdhesion,
+        sSlide,
+        mu_A,
+        mu_S,
+        render = true,
+        color = [0.1, 0.1, 0.1, 1],
+        z = 0,
+        diameter = 0.1,
+        width = diameter * 0.6,
+        radius = 0.1,
+        w_roll = nothing,
+    )
 
+Slip-based wheel joint
+
+The ideal wheel joint models the behavior of a wheel rolling on a x,y-plane whose contact patch has slip-dependent friction characteristics. This is an approximation for wheels with a rim and a rubber tire.
+
+The force depends with friction characteristics on the slip. The slip is split into two components:
+
+- lateral slip: the lateral velocity divided by the rolling velocity.
+- longitudinal slip: the longitudinal slip velocity divided by the rolling velocity.
+
+For low rolling velocity this definition become ill-conditioned. Hence a dry-friction model is used for low rolling velocities. For zero rolling velocity, the intitialization might fail if automatic differentiation is used. Either start with a non-zero (but tiny) rolling velocity or pass `autodiff=false` to the solver.
+
+The radius of the wheel can be specified by the parameter `radius`. The driving direction (for `phi = 0`) can be specified by the parameter `r`. The normal load is set by `N`.
+
+The wheel contains a 2D connector `frame_a` for the steering on the plane. The rolling motion of the wheel can be actuated by the 1D connector `flange_a`.
+
+In addition there is an input `dynamicLoad` for a dynamic component of the normal load.
+"""
 @component function SlipBasedWheelJoint(;
     name,
     r = [1, 0],

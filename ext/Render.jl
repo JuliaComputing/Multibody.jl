@@ -814,7 +814,7 @@ function render!(scene, ::Union{typeof(P.Spring), typeof(P.SpringDamper)}, sys, 
     true
 end
 
-function render!(scene, ::Union{typeof(P.Wheel), typeof(P.SlipBasedWheelJoint)}, sys, sol, t)
+function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJoint)}, sys, sol, t)
     
     r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
     rotfun = get_rot_fun_2d(sol, sys.frame_a)
