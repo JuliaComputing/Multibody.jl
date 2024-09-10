@@ -52,14 +52,14 @@ Body component with mass and inertia
   - `v`: [m/s, m/s] x,y velocity
   - `a`: [m/s², m/s²] x,y acceleration
   - `phi`: [rad] rotation angle (counterclockwise)
-  - `ω`: [rad/s] angular velocity
+  - `w`: [rad/s] angular velocity
   - `α`: [rad/s²] angular acceleration
 
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
 @component function Body(; name, m, I, r = zeros(2), phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
-    @named frame = Frame()
+    @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
         I = I, [description = "Inertia of the body with respect to the origin of frame_a along the z-axis of frame_a"]
@@ -76,27 +76,27 @@ Body component with mass and inertia
         v(t)[1:2], [description = "x,y velocity"]
         a(t)[1:2], [description = "x,y acceleration"]
         (phi(t) = phi), [description = "Rotation angle"]
-        ω(t), [description = "Angular velocity"]
+        w(t), [description = "Angular velocity"]
         α(t), [description = "Angular acceleration"]
     end
 
     eqs = [
         # velocity is the time derivative of position
-        r .~ [frame.x, frame.y]
+        r .~ [frame_a.x, frame_a.y]
         v .~ D.(r)
-        phi ~ frame.phi
-        ω .~ D.(phi)
+        phi ~ frame_a.phi
+        w .~ D.(phi)
         # acceleration is the time derivative of velocity
         a .~ D.(v)
-        α .~ D.(ω)
+        α .~ D.(w)
         # newton's law
-        f .~ [frame.fx, frame.fy]
+        f .~ [frame_a.fx, frame_a.fy]
         f + [0, m*gy] .~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
-        I * α ~ frame.tau
+        I * α ~ frame_a.tau
     ]
 
     return compose(ODESystem(eqs, t, vars, pars; name),
-        frame)
+        frame_a)
 end
 
 """
@@ -133,7 +133,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @equations begin
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
-        connect(translation_cm.frame_b, body.frame)
+        connect(translation_cm.frame_b, body.frame_a)
     end
 end
 

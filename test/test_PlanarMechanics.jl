@@ -43,7 +43,7 @@ end
     connections = [
         connect(ceiling.frame, revolute.frame_a),
         connect(revolute.frame_b, rod.frame_a),
-        connect(rod.frame_b, body.frame)
+        connect(rod.frame_b, body.frame_a)
     ]
 
     @named model = ODESystem(connections,
@@ -91,21 +91,21 @@ end
 
 @testset "Prismatic" begin
     # just testing instantiation
-    @test_nowarn @named prismatic = Pl.Prismatic(x = 1.0, y = 0.0)
+    @test_nowarn @named prismatic = Pl.Prismatic(r = [1.0, 0.0])
 end
 
 @testset "AbsoluteAccCentrifugal" begin
     # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanicsTest/Sensors.mo#L221-L332
     m = 1
     I = 0.1
-    ω = 10
+    w = 10
     resolve_in_frame = :world
 
     # components
     @named body = Pl.Body(; m, I, gy = 0.0)
     @named fixed_translation = Pl.FixedTranslation(; r = [10, 0])
     @named fixed = Pl.Fixed()
-    @named revolute = Pl.Revolute()#constant_ω = ω)
+    @named revolute = Pl.Revolute()#constant_w = w)
 
     # sensors
     @named abs_v_sensor = Pl.AbsoluteVelocity(; resolve_in_frame)
@@ -113,9 +113,9 @@ end
     eqs = [
         connect(fixed.frame, revolute.frame_a),
         connect(revolute.frame_b, fixed_translation.frame_a),
-        connect(fixed_translation.frame_b, body.frame),
-        # Pl.connect_sensor(body.frame, abs_v_sensor.frame_a)... # QUESTION: why?
-        connect(body.frame, abs_v_sensor.frame_a)
+        connect(fixed_translation.frame_b, body.frame_a),
+        Pl.connect_sensor(body.frame_a, abs_v_sensor.frame_a)... # QUESTION: why?
+        # connect(body.frame_a, abs_v_sensor.frame_a)
     ]
 
     @named model = ODESystem(eqs,
@@ -132,21 +132,21 @@ end
     model = complete(model)
     @test_skip begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
         ssys = structural_simplify(IRSystem(model))
-        prob = ODEProblem(ssys, [model.body.ω => ω], tspan)
+        prob = ODEProblem(ssys, [model.body.w => w], tspan)
         sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
 
         # phi 
-        @test sol[body.phi][end] ≈ tspan[end] * ω
-        @test all(sol[body.ω] .≈ ω)
+        @test sol[body.phi][end] ≈ tspan[end] * w
+        @test all(sol[body.w] .≈ w)
 
-        test_points = [i / ω for i in 0:0.1:10]
+        test_points = [i / w for i in 0:0.1:10]
 
         # instantaneous linear velocity
-        v_signal(t) = -ω^2 * sin.(ω .* t)
+        v_signal(t) = -w^2 * sin.(w .* t)
         @test all(v_signal.(test_points) .≈ sol.(test_points; idxs = abs_v_sensor.v_x.u))
 
         # instantaneous linear acceleration
-        a_signal(t) = -ω^3 * cos.(ω .* t)
+        a_signal(t) = -w^3 * cos.(w .* t)
         @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.ax))
     end
 end
@@ -171,39 +171,39 @@ end
     @named rel_a_sensor2 = Pl.RelativeAcceleration(; resolve_in_frame)
 
     connections = [
-        Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
-        Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,
-        Pl.connect_sensor(body1.frame, abs_a_sensor.frame_a)...,
-        Pl.connect_sensor(body1.frame, rel_pos_sensor1.frame_a)...,
+        Pl.connect_sensor(body1.frame_a, abs_pos_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame_a, abs_v_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame_a, abs_a_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame_a, rel_pos_sensor1.frame_a)...,
         Pl.connect_sensor(base.frame, rel_pos_sensor1.frame_b)...,
-        Pl.connect_sensor(body1.frame, rel_pos_sensor2.frame_a)...,
-        Pl.connect_sensor(body2.frame, rel_pos_sensor2.frame_b)...,
+        Pl.connect_sensor(body1.frame_a, rel_pos_sensor2.frame_a)...,
+        Pl.connect_sensor(body2.frame_a, rel_pos_sensor2.frame_b)...,
         Pl.connect_sensor(base.frame, rel_v_sensor1.frame_a)...,
-        Pl.connect_sensor(body1.frame, rel_v_sensor1.frame_b)...,
-        Pl.connect_sensor(body1.frame, rel_v_sensor2.frame_a)...,
-        Pl.connect_sensor(body2.frame, rel_v_sensor2.frame_b)...,
-        Pl.connect_sensor(body1.frame, rel_a_sensor1.frame_a)...,
+        Pl.connect_sensor(body1.frame_a, rel_v_sensor1.frame_b)...,
+        Pl.connect_sensor(body1.frame_a, rel_v_sensor2.frame_a)...,
+        Pl.connect_sensor(body2.frame_a, rel_v_sensor2.frame_b)...,
+        Pl.connect_sensor(body1.frame_a, rel_a_sensor1.frame_a)...,
         Pl.connect_sensor(base.frame, rel_a_sensor1.frame_b)...,
-        Pl.connect_sensor(body1.frame, rel_a_sensor2.frame_a)...,
-        Pl.connect_sensor(body2.frame, rel_a_sensor2.frame_b)...
+        Pl.connect_sensor(body1.frame_a, rel_a_sensor2.frame_a)...,
+        Pl.connect_sensor(body2.frame_a, rel_a_sensor2.frame_b)...
     ]
 
     # connections = [
-    #     connect(body1.frame, abs_pos_sensor.frame_a),
-    #     connect(body1.frame, abs_v_sensor.frame_a),
-    #     connect(body1.frame, abs_a_sensor.frame_a),
-    #     connect(body1.frame, rel_pos_sensor1.frame_a),
+    #     connect(body1.frame_a, abs_pos_sensor.frame_a),
+    #     connect(body1.frame_a, abs_v_sensor.frame_a),
+    #     connect(body1.frame_a, abs_a_sensor.frame_a),
+    #     connect(body1.frame_a, rel_pos_sensor1.frame_a),
     #     connect(base.frame, rel_pos_sensor1.frame_b),
-    #     connect(body1.frame, rel_pos_sensor2.frame_a),
-    #     connect(body2.frame, rel_pos_sensor2.frame_b),
+    #     connect(body1.frame_a, rel_pos_sensor2.frame_a),
+    #     connect(body2.frame_a, rel_pos_sensor2.frame_b),
     #     connect(base.frame, rel_v_sensor1.frame_a),
-    #     connect(body1.frame, rel_v_sensor1.frame_b),
-    #     connect(body1.frame, rel_v_sensor2.frame_a),
-    #     connect(body2.frame, rel_v_sensor2.frame_b),
-    #     connect(body1.frame, rel_a_sensor1.frame_a),
+    #     connect(body1.frame_a, rel_v_sensor1.frame_b),
+    #     connect(body1.frame_a, rel_v_sensor2.frame_a),
+    #     connect(body2.frame_a, rel_v_sensor2.frame_b),
+    #     connect(body1.frame_a, rel_a_sensor1.frame_a),
     #     connect(base.frame, rel_a_sensor1.frame_b),
-    #     connect(body1.frame, rel_a_sensor2.frame_a),
-    #     connect(body2.frame, rel_a_sensor2.frame_b),
+    #     connect(body1.frame_a, rel_a_sensor2.frame_a),
+    #     connect(body2.frame_a, rel_a_sensor2.frame_b),
     # ]
 
     @named model = ODESystem(connections,
@@ -281,8 +281,8 @@ end
     @named revolute2 = Pl.Revolute()
 
     connections = [
-        connect(fixed_translation.frame_b, body.frame),
-        connect(fixed_translation1.frame_b, body1.frame),
+        connect(fixed_translation.frame_b, body.frame_a),
+        connect(fixed_translation1.frame_b, body1.frame_a),
         connect(fixed.frame, revolute1.frame_a),
         connect(revolute1.frame_b, fixed_translation.frame_a),
         # connect(abs_a_sensor.frame_resolve, abs_a_sensor.frame_a),
@@ -294,7 +294,7 @@ end
         # connect(rel_a_sensor.frame_b, body1.frame_a),
         # connect(rel_v_sensor.frame_b, body1.frame_a),
         # connect(rel_v_sensor.frame_b, body1.frame_a),
-        Pl.connect_sensor(body1.frame, abs_a_sensor.frame_a)...        # Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,        # Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame_a, abs_a_sensor.frame_a)...        # Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,        # Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
     ]
 
     @named model = ODESystem(connections,
@@ -338,7 +338,7 @@ end
     connections = [
         connect(fixed.frame, fixed_translation.frame_a),
         connect(fixed_translation.frame_b, spring_damper.frame_a),
-        connect(spring_damper.frame_b, body.frame)
+        connect(spring_damper.frame_b, body.frame_a)
     ]
     @named model = ODESystem(connections,
         t,
@@ -363,11 +363,11 @@ end
     @named fixed = Pl.Fixed()
     @named spring = Pl.Spring(; c_y = 10, s_rely0 = -0.5, c_x = 1, c_phi = 1e5)
     @named damper = Pl.Damper(d = 1)
-    @named prismatic = Pl.Prismatic(; x = 0, y = 1)
+    @named prismatic = Pl.Prismatic(; r=[0, 1])
 
     connections = [
         connect(fixed.frame, spring.frame_a),
-        connect(spring.frame_b, body.frame),
+        connect(spring.frame_b, body.frame_a),
         connect(damper.frame_a, spring.frame_a),
         connect(damper.frame_b, spring.frame_b),
         connect(spring.frame_a, prismatic.frame_a),
