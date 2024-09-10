@@ -302,7 +302,7 @@ end
         c_x = 5,
         d_x = 1,
         c_phi = 0)
-    @named body = Planar.Body(; I = 0.1, m = 0.5, rx = 1, ry = 1)
+    @named body = Planar.Body(; I = 0.1, m = 0.5, rx = 1, ry = 1, color=[0,1,0,1])
     @named fixed = Planar.Fixed()
     @named fixed_translation = Planar.FixedTranslation(; r = [-1, 0])
 

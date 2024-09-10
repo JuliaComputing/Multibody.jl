@@ -10,6 +10,7 @@ using ModelingToolkit: t_nounits as t, D_nounits as D
 using ModelingToolkit
 using ...Blocks: RealInput, RealOutput
 import ...@symcheck
+import ..Multibody
 
 export Frame, FrameResolve, PartialTwoFrames, ZeroPosition
 include("utils.jl")

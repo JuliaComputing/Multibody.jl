@@ -63,12 +63,15 @@ Body component with mass and inertia
 
 https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/Body.mo
 """
-@component function Body(; name, m, I, rx = 0, ry = 0, phi = 0, gy = -9.807)
+@component function Body(; name, m, I, rx = 0, ry = 0, phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
     @named frame = Frame()
     pars = @parameters begin
         m = m
         I = I
         gy = gy
+        radius = radius, [description = "Radius of the body in animations"]
+        render = render, [description = "Render the body in animations"]
+        color[1:4] = color, [description = "Color of the body in animations"]
     end
 
     vars = @variables begin
@@ -96,7 +99,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         I * α ~ frame.j
     ]
 
-    return compose(ODESystem(eqs, t; name),
+    return compose(ODESystem(eqs, t, vars, pars; name),
         frame)
 end
 
@@ -125,6 +128,8 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         [
             description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"
         ]
+        radius = 0.1, [description = "Radius of the rod in animations"]
+        render = true, [description = "Render the rod in animations"]
     end
     begin
         r = collect(r)
@@ -185,6 +190,11 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         [
             description = "Prevent zero-division if distance between frame_a and frame_b is zero"
         ]
+        num_windings = 6, [description = "Number of windings of the coil when rendered"]
+        color[1:4] = [0, 0.0, 1, 1], [description = "Color of the spring in animations"]
+        render = true, [description = "Render the spring in animations"]
+        radius = 0.1, [description = "Radius of spring when rendered"]
+        N = 200, [description = "Number of points in mesh when rendered"]
     end
 
     @variables begin
@@ -325,6 +335,11 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         [
             description = "Prevent zero-division if distance between frame_a and frame_b is zero"
         ]
+        num_windings = 6, [description = "Number of windings of the coil when rendered"]
+        color[1:4] = [0, 0.0, 1, 1], [description = "Color of the spring in animations"]
+        render = true, [description = "Render the spring in animations"]
+        radius = 0.1, [description = "Radius of spring when rendered"]
+        N = 200, [description = "Number of points in mesh when rendered"]
     end
 
     @variables begin
