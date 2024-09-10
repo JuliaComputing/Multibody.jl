@@ -1,3 +1,4 @@
+purple = Multibody.purple
 """
     Fixed(; name, r = (0.0, 0.0), phi = 0.0)
 
@@ -13,7 +14,6 @@ Frame fixed in the planar world frame at a given position and orientation
 
   - `frame: 2-dim. Coordinate system
 
-https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/Fixed.mo
 """
 @mtkmodel Fixed begin
     @parameters begin
@@ -34,44 +34,40 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 end
 
 """
-    Body(; name, m, j, r, g = nothing)
+    Body(; name, m=1, I=0.1, r=0, gy=-9.807, radius=0.1, render=true, color=Multibody.purple)
 
 Body component with mass and inertia
 
 # Parameters:
+- `m`: [kg] mass of the body
+- `j`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
+- `r`: [m, m] Translational position x,y-position
+- `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.807
+- `radius`: [m] Radius of the body in animations
+- `render`: [Bool] Render the body in animations
+- `color`: [Array{Float64,1}] Color of the body in animations
 
-  - `m`: [kg] mass of the body
-  - `j`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
-  - `r`: [m, m] (optional) Translational position x,y-position
-  - `gy`: [m/s²] (optional) gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.807
-
-# States:
-
-  - `rx`: [m] x position
-  - `ry`: [m] y position
-  - `vx`: [m/s] x velocity
-  - `vy`: [m/s] y velocity
-  - `ax`: [m/s²] x acceleration
-  - `ay`: [m/s²] y acceleration
+# Variables:
+  - `r`: [m, m] x,y position
+  - `v`: [m/s, m/s] x,y velocity
+  - `a`: [m/s², m/s²] x,y acceleration
   - `phi`: [rad] rotation angle (counterclockwise)
   - `ω`: [rad/s] angular velocity
   - `α`: [rad/s²] angular acceleration
 
 # Connectors:
-
   - `frame`: 2-dim. Coordinate system
-
-https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/Body.mo
 """
 @component function Body(; name, m, I, r = zeros(2), phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
     @named frame = Frame()
     pars = @parameters begin
-        m = m
-        I = I
-        gy = gy
+        m = m, [description = "Mass of the body"]
+        I = I, [description = "Inertia of the body with respect to the origin of frame_a along the z-axis of frame_a"]
+        gy = gy, [description = "Gravity field acting on the mass in the y-direction, positive value acts in the positive direction"]
         radius = radius, [description = "Radius of the body in animations"]
         render = render, [description = "Render the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations"]
+        z = 0, [description = "Fixed z-position"]
     end
 
     vars = @variables begin
@@ -95,7 +91,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         α .~ D.(ω)
         # newton's law
         f .~ [frame.fx, frame.fy]
-        f .~ m*a + m*[0, -gy]#ifelse(gy !== nothing, fy / m + gy, fy / m),
+        f + [0, m*gy] .~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
         I * α ~ frame.j
     ]
 
@@ -104,21 +100,59 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 end
 
 """
+    BodyShape(; name, r = [1,0], r_cm = 0.5*r, gy = -9.807)
+
+The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames and a vector `r` that describes the translation between them, while the body has a single frame only.
+
+# Parameters
+- `r`: (Structural) Vector from `frame_a` to `frame_b` resolved in `frame_a`
+- `r_cm`: (Structural) Vector from `frame_a` to the center of mass resolved in `frame_a`
+"""
+@mtkmodel BodyShape begin
+    @structural_parameters begin
+        r = [1,0]
+        r_cm = 0.5*r
+        gy = -9.807
+    end
+    @parameters begin
+        # r[1:2] = [1,0], [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
+        # r_cm[1:2] = 0.5*r, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
+        m = 1, [description = "mass of the body"]
+        I = 0.1, [description = "inertia of the body with respect to the center of mass"]
+        radius = 0.1, [description = "Radius of the body in animations"]
+        render = true, [description = "Render the body in animations"]
+        (color[1:4] = purple), [description = "Color of the body in animations"]
+    end
+    @components begin
+        translation = FixedTranslation(; r)
+        translation_cm = FixedTranslation(; r=r_cm)
+        body = Body(; r=r_cm, I, m, gy)
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+    @equations begin
+        connect(frame_a, translation.frame_a, translation_cm.frame_a)
+        connect(frame_b, translation.frame_b)
+        connect(translation_cm.frame_b, body.frame)
+    end
+end
+
+"""
     FixedTranslation(; name, r::AbstractArray, l)
 
 A fixed translation between two components (rigid rod)
 
 # Parameters:
-
-  - `rx`: [m] Fixed x-length of the rod resolved w.r.t to body frame_a at phi = 0
-  - `ry`: [m] Fixed y-length of the rod resolved w.r.t to body frame_a at phi = 0
+- `rx`: [m] Fixed x-length of the rod resolved w.r.t to body frame_a at phi = 0
+- `ry`: [m] Fixed y-length of the rod resolved w.r.t to body frame_a at phi = 0
+- `radius`: [m] Radius of the rod in animations
+- `render`: [Bool] Render the rod in animations
 
 # Connectors:
-    
-    - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-    - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
-https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/FixedTranslation.mo
+- `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+
 """
 @mtkmodel FixedTranslation begin
     @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
@@ -159,22 +193,23 @@ end
 Linear 2D translational spring
 
 # Parameters:
-
-    - `c_x`: [N/m] Spring constant in x dir
-    - `c_y`: [N/m] Spring constant in y dir
-    - `c_phi`: [N.m/rad] Spring constant in phi dir
-    - `s_relx0`: [m] Unstretched spring length
-    - `s_rely0`: [m] Unstretched spring length
-    - `phi_rel0`: [rad] Unstretched spring angle
-    - `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
-
+- `c_x`: [N/m] Spring constant in x dir
+- `c_y`: [N/m] Spring constant in y dir
+- `c_phi`: [N.m/rad] Spring constant in phi dir
+- `s_relx0`: [m] Unstretched spring length
+- `s_rely0`: [m] Unstretched spring length
+- `phi_rel0`: [rad] Unstretched spring angle
+- `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
+- `num_windings`: [Int] Number of windings of the coil when rendered
+- `color = [0,0,1,1]` Color of the spring in animations
+- `render = true` Render the spring in animations
+- `radius = 0.1` Radius of spring when rendered
+- `N = 200` Number of points in mesh when rendered
 
 # Connectors:
+- `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
-    - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-    - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-
-https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/Spring.mo
 """
 @mtkmodel Spring begin
     @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
@@ -232,18 +267,13 @@ end
 Linear (velocity dependent) damper
 
 # Parameters:
-
-    - `d`: [N.s/m] Damoing constant 
-    - `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
+- `d`: [N.s/m] Damping constant 
+- `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
 
 
 # Connectors:
-
-    - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-    - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-
-
-https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/Damper.mo
+- `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
 @mtkmodel Damper begin
     @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
@@ -298,25 +328,26 @@ end
 Linear 2D translational spring damper model
 
 # Parameters:
-
-    - `c_x`: [N/m] Spring constant in x dir
-    - `c_y`: [N/m] Spring constant in y dir
-    - `c_phi`: [N.m/rad] Spring constant in phi dir
-    - `d_x`: [N.s/m] Damping constant in x dir
-    - `d_y`: [N.s/m] Damping constant in y dir
-    - `d_phi`: [N.m.s/rad] Damping constant in phi dir
-    - `s_relx0`: [m] Unstretched spring length
-    - `s_rely0`: [m] Unstretched spring length
-    - `phi_rel0`: [rad] Unstretched spring angle
-    - `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
-
+- `c_x`: [N/m] Spring constant in x dir
+- `c_y`: [N/m] Spring constant in y dir
+- `c_phi`: [N.m/rad] Spring constant in phi dir
+- `d_x`: [N.s/m] Damping constant in x dir
+- `d_y`: [N.s/m] Damping constant in y dir
+- `d_phi`: [N.m.s/rad] Damping constant in phi dir
+- `s_relx0`: [m] Unstretched spring length
+- `s_rely0`: [m] Unstretched spring length
+- `phi_rel0`: [rad] Unstretched spring angle
+- `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
+- `num_windings`: [Int] Number of windings of the coil when rendered
+- `color = [0,0,1,1]` Color of the spring in animations
+- `render = true` Render the spring in animations
+- `radius = 0.1` Radius of spring when rendered
+- `N = 200` Number of points in mesh when rendered
 
 # Connectors:
+- `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
-    - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-    - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-
-https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Parts/SpringDamper.mo
 """
 @mtkmodel SpringDamper begin
     @extend frame_a, frame_b = partial_frames = PartialTwoFrames()

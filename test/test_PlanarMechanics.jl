@@ -47,9 +47,8 @@ end
 
     @named model = ODESystem(connections,
         t,
-        [],
-        [],
         systems = [body, revolute, rod, ceiling])
+    model = complete(model)
     ssys = structural_simplify(IRSystem(model))
 
     @test length(unknowns(ssys)) == 2
@@ -58,6 +57,35 @@ end
 
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
+    @test sol(1, idxs=model.rod.frame_a.phi) ≈ -2.881383661312169 atol=1e-2
+    @test sol(2, idxs=model.rod.frame_a.phi) ≈ -1 atol=1e-2
+end
+
+@testset "Pendulum with body shape" begin
+    # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/Pendulum.mo
+    @named ceiling = Pl.Fixed()
+    @named rod = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1)
+    @named revolute = Pl.Revolute()
+
+    connections = [
+        connect(ceiling.frame, revolute.frame_a),
+        connect(revolute.frame_b, rod.frame_a),
+    ]
+
+    @named model = ODESystem(connections,
+        t,
+        systems = [revolute, rod, ceiling])
+    model = complete(model)
+    ssys = structural_simplify(IRSystem(model))
+
+    @test length(unknowns(ssys)) == 2
+    unset_vars = setdiff(unknowns(ssys), keys(ModelingToolkit.defaults(ssys)))
+    prob = ODEProblem(ssys, unset_vars .=> 0.0, tspan)
+
+    sol = solve(prob, Rodas5P())
+    @test SciMLBase.successful_retcode(sol)
+    @test sol(1, idxs=model.rod.frame_a.phi) ≈ -pi atol=1e-2
+    @test sol(2, idxs=model.rod.frame_a.phi) ≈ 0 atol=1e-2
 end
 
 @testset "Prismatic" begin
@@ -302,7 +330,7 @@ end
         c_x = 5,
         d_x = 1,
         c_phi = 0)
-    @named body = Pl.Body(; I = 0.1, m = 0.5, rx = 1, ry = 1, color=[0,1,0,1])
+    @named body = Pl.Body(; I = 0.1, m = 0.5, r = [1,1], color=[0,1,0,1])
     @named fixed = Pl.Fixed()
     @named fixed_translation = Pl.FixedTranslation(; r = [-1, 0])
 

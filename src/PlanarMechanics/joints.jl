@@ -24,7 +24,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 """
 @component function Revolute(;
         name,
-        use_flange = false)
+        use_flange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0])
     @named partial_frames = PartialTwoFrames()
     @unpack frame_a, frame_b = partial_frames
     systems = [frame_a, frame_b]
@@ -34,6 +34,12 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         (ω(t) = 0.0), [state_priority=10]
         α(t)
         j(t)
+    end
+
+    pars = @parameters begin
+        render = render, [description = "Render the joint in animations"]
+        radius = radius, [description = "Radius of the body in animations"]
+        color[1:4] = color, [description = "Color of the body in animations"]
     end
 
     eqs = [
@@ -64,7 +70,6 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         push!(eqs, j ~ 0)
     end
 
-    pars = []
 
     return compose(ODESystem(eqs, t, vars, pars; name = name),
         systems...)
