@@ -40,7 +40,7 @@ Body component with mass and inertia
 
 # Parameters:
 - `m`: [kg] mass of the body
-- `j`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
+- `I`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
 - `r`: [m, m] Translational position x,y-position
 - `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.807
 - `radius`: [m] Radius of the body in animations
@@ -52,14 +52,14 @@ Body component with mass and inertia
   - `v`: [m/s, m/s] x,y velocity
   - `a`: [m/s², m/s²] x,y acceleration
   - `phi`: [rad] rotation angle (counterclockwise)
-  - `ω`: [rad/s] angular velocity
+  - `w`: [rad/s] angular velocity
   - `α`: [rad/s²] angular acceleration
 
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
 @component function Body(; name, m, I, r = zeros(2), phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
-    @named frame = Frame()
+    @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
         I = I, [description = "Inertia of the body with respect to the origin of frame_a along the z-axis of frame_a"]
@@ -71,32 +71,32 @@ Body component with mass and inertia
     end
 
     vars = @variables begin
-        f(t)[1:2]
-        r(t)[1:2] = r
-        v(t)[1:2]
-        a(t)[1:2]
-        phi(t) = phi
-        ω(t)
-        α(t)
+        f(t)[1:2], [description = "Force"]
+        (r(t)[1:2] = r), [description = "x,y position"]
+        v(t)[1:2], [description = "x,y velocity"]
+        a(t)[1:2], [description = "x,y acceleration"]
+        (phi(t) = phi), [description = "Rotation angle"]
+        w(t), [description = "Angular velocity"]
+        α(t), [description = "Angular acceleration"]
     end
 
     eqs = [
         # velocity is the time derivative of position
-        r .~ [frame.x, frame.y]
+        r .~ [frame_a.x, frame_a.y]
         v .~ D.(r)
-        phi ~ frame.phi
-        ω .~ D.(phi)
+        phi ~ frame_a.phi
+        w .~ D.(phi)
         # acceleration is the time derivative of velocity
         a .~ D.(v)
-        α .~ D.(ω)
+        α .~ D.(w)
         # newton's law
-        f .~ [frame.fx, frame.fy]
+        f .~ [frame_a.fx, frame_a.fy]
         f + [0, m*gy] .~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
-        I * α ~ frame.j
+        I * α ~ frame_a.tau
     ]
 
     return compose(ODESystem(eqs, t, vars, pars; name),
-        frame)
+        frame_a)
 end
 
 """
@@ -133,7 +133,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @equations begin
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
-        connect(translation_cm.frame_b, body.frame)
+        connect(translation_cm.frame_b, body.frame_a)
     end
 end
 
@@ -183,7 +183,7 @@ A fixed translation between two components (rigid rod)
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
-        frame_a.j + frame_b.j + r0' * [frame_b.fy, -frame_b.fx] ~ 0
+        frame_a.tau + frame_b.tau + r0' * [frame_b.fy, -frame_b.fx] ~ 0
     end
 end
 
@@ -248,8 +248,8 @@ Linear 2D translational spring
 
     @equations begin
         phi_rel ~ frame_b.phi - frame_a.phi
-        frame_a.j ~ 0
-        frame_b.j ~ 0
+        frame_a.tau ~ 0
+        frame_b.tau ~ 0
         s_relx ~ frame_b.x - frame_a.x
         s_rely ~ frame_b.y - frame_a.y
         f_x ~ c_x * (s_relx - s_relx0)
@@ -313,10 +313,10 @@ Linear (velocity dependent) damper
         d0y ~ ifelse(l < s_small, r0[2], r0[2] / l)
         frame_a.fx ~ d0x * f
         frame_a.fy ~ d0y * f
-        frame_a.j ~ 0
+        frame_a.tau ~ 0
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
-        frame_a.j + frame_b.j ~ 0
+        frame_a.tau + frame_b.tau ~ 0
 
         # lossPower ~ -f * v
     end
@@ -376,13 +376,13 @@ Linear 2D translational spring damper model
     @variables begin
         v_relx(t)
         v_rely(t)
-        ω_rel(t) = 0
+        w_rel(t) = 0
         s_relx(t)
         s_rely(t)
         phi_rel(t) = 0
         f_x(t)
         f_y(t)
-        j(t)
+        tau(t)
     end
 
     begin
@@ -397,11 +397,11 @@ Linear 2D translational spring damper model
         phi_rel ~ frame_b.phi - frame_a.phi
         v_relx ~ D(s_relx)
         v_rely ~ D(s_rely)
-        ω_rel ~ D(phi_rel)
+        w_rel ~ D(phi_rel)
 
-        j ~ c_phi * (phi_rel - phi_rel0) + d_phi * ω_rel
-        frame_a.j ~ -j
-        frame_b.j ~ j
+        tau ~ c_phi * (phi_rel - phi_rel0) + d_phi * w_rel
+        frame_a.tau ~ -tau
+        frame_b.tau ~ tau
         f_x ~ c_x * (s_relx - s_relx0) + d_x * v_relx
         f_y ~ c_y * (s_rely - s_rely0) + d_y * v_rely
         frame_a.fx ~ -f_x
@@ -411,4 +411,247 @@ Linear 2D translational spring damper model
 
         # lossPower ~ d_x * v_relx * v_relx + d_y * v_rely * v_rely
     end
+end
+
+
+"""
+    SimpleWheel(; name, radius = 0.3, color = [1, 0, 0, 1], μ = 1e9)
+
+Simple wheel model with viscous lateral friction and a driving torque
+
+# Connectors:
+- `frame_a` (Frame) Coordinate system fixed to the component with one cut-force and cut-torque
+- `thrust` (RealInput) Input for the longitudinal force applied to the wheel
+
+# Parameters:
+- `μ`: [Ns/m] Viscous friction coefficient
+- `radius`: [m] Radius of the wheel
+- `color`: Color of the wheel in animations
+
+# Variables:
+- `θ`: [rad] Wheel angle
+- `Vx`: [m/s] Longitudinal velocity (resolved in local frame)
+- `Vy`: [m/s] Lateral velocity (resolved in local frame)
+- `Fy`: [N] Lateral friction force
+- `Fx`: [N] Applied longitudinal wheel force
+"""
+@mtkmodel SimpleWheel begin
+    @structural_parameters begin
+        friction_model = :viscous
+    end
+    @parameters begin
+        (radius = 0.3), [description = "Radius of the wheel"]
+        (color[1:4] = [1, 0, 0, 1]), [description = "Color of the wheel in animations"]
+        μ = 1e9, [description = "Viscous friction coefficient"]
+        # Fy0 = 1e4, [description = "Lateral friction force at zero longitudinal force"]
+        # μx = Fy0, [description = "Maximum longitudinal friction force"]
+    end
+    @variables begin
+        θ(t), [guess=0, description="wheel angle"] # wheel angle
+        Vx(t), [guess=0, description="longitudinal velocity (resolved in local frame)"]
+        Vy(t)=0, [description="lateral velocity (resolved in local frame)"]
+        Fy(t), [guess=0, description="lateral friction force"]
+        Fx(t), [guess=0, description="applied longitudinal wheel force"]
+    end
+    @components begin
+        frame_a = Frame()
+        thrust = Blocks.RealInput()
+    end
+    begin
+        R_W_F = ori_2d(frame_a) # rotation matrix, local to global
+        veqs = R_W_F'*[D(frame_a.x), D(frame_a.y)] #~ [Vx, Vy]
+        feqs = R_W_F'*[frame_a.fx, frame_a.fy] #~ [Fx, Fy]
+    end
+
+    
+    @equations begin
+        θ ~ frame_a.phi
+        
+        # road friction
+        Fx ~ thrust.u
+        # if friction_model == :viscous
+            Fy ~ μ*Vy
+        # elseif friction_model == :ellipse
+            # Fy ~ Fy0*sqrt(1 - (Fx/μ)^2)*Vy
+        # end
+        veqs[1] ~ Vx
+        veqs[2] ~ Vy
+        feqs[1] ~ Fx
+        feqs[2] ~ Fy
+
+        # R'*[D(frame.x), D(frame.y)] ~ [Vx, Vy]
+        # R'*[frame.fx, frame.fy] ~ [Fx, Fy]
+
+        frame_a.tau ~ 0 # Assume that wheel does not transmit any torque
+    end
+end
+
+"""
+    limit_S_triple(x_max, x_sat, y_max, y_sat, x)
+
+Returns a point-symmetric Triple S-Function
+
+A point symmetric interpolation between points `(0, 0), (x_max, y_max) and (x_sat, y_sat)`, provided `x_max < x_sat`. The approximation is done in such a way that the 1st function's derivative is zero at points `(x_max, y_max)` and `(x_sat, y_sat)`. Thus, the 1st function's derivative is continuous for all `x`. The higher derivatives are discontinuous at these points.
+"""
+function limit_S_triple(x_max, x_sat, y_max, y_sat, x)
+    if x > x_max
+        return limit_S_form(x_max, x_sat, y_max, y_sat, x)
+    elseif x < -x_max
+        return limit_S_form(-x_max, -x_sat, -y_max, -y_sat, x)
+    else
+        return limit_S_form(-x_max, x_max, -y_max, y_max, x)
+    end
+end
+
+
+"""
+    limit_S_form(x_min, x_max, y_min, y_max, x)
+
+Returns a S-shaped transition
+
+A smooth transition between points `(x_min, y_min)` and `(x_max, y_max)`. The transition is done in such a way that the 1st function's derivative is continuous for all `x`. The higher derivatives are discontinuous at input points.
+"""
+function limit_S_form(x_min, x_max, y_min, y_max, x)
+    x2 = x - x_max/2 - x_min/2
+    x2 = x2*2/(x_max-x_min)
+    y = clamp(-0.5*x2^3 + 1.5*x2, -1, 1)
+    y = y*(y_max-y_min)/2
+    y = y + y_max/2 + y_min/2
+    return y
+end
+
+
+@register_symbolic limit_S_triple(x_max::Real, x_sat::Real, y_max::Real, y_sat::Real, x::Real)
+@register_symbolic limit_S_form(x_min::Real, x_max::Real, y_min::Real, y_max::Real, x::Real)
+
+"""
+    SlipBasedWheelJoint(;
+        name,
+        r = [1, 0],
+        N,
+        vAdhesion_min,
+        vSlide_min,
+        sAdhesion,
+        sSlide,
+        mu_A,
+        mu_S,
+        render = true,
+        color = [0.1, 0.1, 0.1, 1],
+        z = 0,
+        diameter = 0.1,
+        width = diameter * 0.6,
+        radius = 0.1,
+        w_roll = nothing,
+    )
+
+Slip-based wheel joint
+
+The ideal wheel joint models the behavior of a wheel rolling on a x,y-plane whose contact patch has slip-dependent friction characteristics. This is an approximation for wheels with a rim and a rubber tire.
+
+The force depends with friction characteristics on the slip. The slip is split into two components:
+
+- lateral slip: the lateral velocity divided by the rolling velocity.
+- longitudinal slip: the longitudinal slip velocity divided by the rolling velocity.
+
+For low rolling velocity this definition become ill-conditioned. Hence a dry-friction model is used for low rolling velocities. For zero rolling velocity, the intitialization might fail if automatic differentiation is used. Either start with a non-zero (but tiny) rolling velocity or pass `autodiff=false` to the solver.
+
+The radius of the wheel can be specified by the parameter `radius`. The driving direction (for `phi = 0`) can be specified by the parameter `r`. The normal load is set by `N`.
+
+The wheel contains a 2D connector `frame_a` for the steering on the plane. The rolling motion of the wheel can be actuated by the 1D connector `flange_a`.
+
+In addition there is an input `dynamicLoad` for a dynamic component of the normal load.
+"""
+@component function SlipBasedWheelJoint(;
+    name,
+    r = [1, 0],
+    N,
+    vAdhesion_min,
+    vSlide_min,
+    sAdhesion,
+    sSlide,
+    mu_A,
+    mu_S,
+    render = true,
+    color = [0.1, 0.1, 0.1, 1],
+    z = 0,
+    diameter = 0.1,
+    width = diameter * 0.6,
+    radius = 0.1,
+    w_roll = nothing,
+)
+    systems = @named begin
+        frame_a = Frame()
+        flange_a = Rotational.Flange()
+        dynamicLoad = Blocks.RealInput()
+    end
+    pars = @parameters begin
+        r[1:2] = r, [description = "Driving direction of the wheel at angle phi = 0"]
+        N = N, [description = "Base normal load"]
+        vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
+        vSlide_min = vSlide_min, [description = "Minimum sliding velocity"]
+        sAdhesion = sAdhesion, [description = "Adhesion slippage"]
+        sSlide = sSlide, [description = "Sliding slippage"]
+        mu_A = mu_A, [description = "Friction coefficient at adhesion"]
+        mu_S = mu_S, [description = "Friction coefficient at sliding"]
+        render = render, [description = "Render the wheel in animations"]
+        color[1:4] = color, [description = "Color of the wheel in animations"]
+        z = 0, [description = "Position z of the body"]
+        diameter = diameter, [description = "Diameter of the rims"]
+        width = width, [description = "Width of the wheel"]
+        radius = radius, [description = "Radius of the wheel"]
+    end
+    r = collect(r)
+    l = Multibody._norm(r)
+    e = Multibody._normalize(r) # Unit vector in direction of r
+
+    vars = @variables begin
+        e0(t)[1:2], [description="Unit vector in direction of r resolved w.r.t. inertial frame"]
+        phi_roll(t), [guess=0, description="wheel angle"] # wheel angle
+        (w_roll(t)=w_roll), [guess=0, description="Roll velocity of wheel"]
+        v(t)[1:2], [description="velocity"]
+        v_lat(t), [guess=0, description="Driving in lateral direction"]
+        v_long(t), [guess=0, description="Velocity in longitudinal direction"]
+        v_slip_long(t), [guess=0, description="Slip velocity in longitudinal direction"]
+        v_slip_lat(t), [guess=0, description="Slip velocity in lateral direction"]
+        v_slip(t), [description="Slip velocity"]
+        f(t), [description="Longitudinal force"]
+        f_lat(t), [description="Longitudinal force"]
+        f_long(t), [description="Longitudinal force"]
+        fN(t), [description="Base normal load"]
+        vAdhesion(t), [description="Adhesion velocity"]
+        vSlide(t), [description="Sliding velocity"]
+    end
+    e0 = collect(e0)
+    v = collect(v)
+    vars = [
+        e0; phi_roll; w_roll; v; v_lat; v_long; v_slip_long; v_slip_lat; v_slip; f; f_lat; f_long; fN; vAdhesion; vSlide
+    ]
+
+    R = ori_2d(frame_a)
+
+    equations = [
+        e0 .~ R * e
+        v .~ D.([frame_a.x, frame_a.y])
+
+        phi_roll ~ flange_a.phi
+        w_roll ~ D(phi_roll)
+        v_long ~ v' * e0
+        v_lat ~ -v[1] * e0[2] + v[2] * e0[1]
+        v_slip_lat ~ v_lat - 0
+        v_slip_long ~ v_long - radius * w_roll
+        v_slip ~ sqrt(v_slip_long^2 + v_slip_lat^2) + 0.0001
+        -f_long * radius ~ flange_a.tau
+        frame_a.tau ~ 0
+        vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
+        vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
+        fN ~ max(0, N + dynamicLoad.u)
+        f ~ fN * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip)
+        f_long ~ f * v_slip_long / v_slip
+        f_lat ~ f * v_slip_lat / v_slip
+        f_long ~ [frame_a.fx, frame_a.fy]'e0
+        f_lat ~ [frame_a.fy, -frame_a.fx]'e0
+    ]
+
+    return ODESystem(equations, t, vars, pars; name, systems)
+    
 end

@@ -1,9 +1,9 @@
 """
-    Revolute(; name, phi = 0.0, tau = 0.0, use_flange = false)
+    Revolute(; name, phi = 0.0, tau = 0.0, axisflange = false)
 A revolute joint
 
 # parameters
-  - `use_flange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
+  - `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
   - `phi`: [rad] Initial angular position for the flange
   - `tau`: [N.m] Initial Cut torque in the flange
 
@@ -16,24 +16,24 @@ A revolute joint
 # Connectors
   - `frame_a` [Frame](@ref)
   - `frame_b` [Frame](@ref)
-  - `fixed` [Fixed](@ref) if `use_flange == false`
-  - `flange_a` [Flange](@ref) if `use_flange == true`
-  - `support` [Support](@ref) if `use_flange == true`
+  - `fixed` [Fixed](@ref) if `axisflange == false`
+  - `flange_a` [Flange](@ref) if `axisflange == true`
+  - `support` [Support](@ref) if `axisflange == true`
 
 https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Joints/Revolute.mo
 """
 @component function Revolute(;
         name,
-        use_flange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0])
+        axisflange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0], phi=0, w=0)
     @named partial_frames = PartialTwoFrames()
     @unpack frame_a, frame_b = partial_frames
     systems = [frame_a, frame_b]
 
     vars = @variables begin
-        (phi(t) = 0.0), [state_priority=10]
-        (ω(t) = 0.0), [state_priority=10]
+        (phi(t) = phi), [state_priority=10]
+        (w(t) = w), [state_priority=10]
         α(t)
-        j(t)
+        tau(t)
     end
 
     pars = @parameters begin
@@ -43,8 +43,8 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
     end
 
     eqs = [
-        ω ~ D(phi),
-        α ~ D(ω),
+        w ~ D(phi),
+        α ~ D(w),
         # rigidly connect positions
         frame_a.x ~ frame_b.x,
         frame_a.y ~ frame_b.y,
@@ -53,11 +53,11 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         frame_a.fx + frame_b.fx ~ 0,
         frame_a.fy + frame_b.fy ~ 0,
         # balance torques
-        frame_a.j + frame_b.j ~ 0,
-        frame_a.j ~ j
+        frame_a.tau + frame_b.tau ~ 0,
+        frame_a.tau ~ tau
     ]
 
-    if use_flange
+    if axisflange
         @named fixed = Rotational.Fixed()
         push!(systems, fixed)
         @named flange_a = Rotational.Flange(; phi, tau)
@@ -67,7 +67,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         push!(eqs, connect(fixed.flange, support))
     else
         # actutation torque
-        push!(eqs, j ~ 0)
+        push!(eqs, tau ~ 0)
     end
 
 
@@ -76,17 +76,16 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 end
 
 """
-    Prismatic(; name, rx, ry, f, s = 0, use_flange = false)
+    Prismatic(; name, f, s = 0, axisflange = false)
 A prismatic joint
 
-# parameters
-  - `x`: [m] x-direction of the rod wrt. body system at phi=0
-  - `y`: [m] y-direction of the rod wrt. body system at phi=0
+# Parameters
+  - `r`: [m, m] x,y-direction of the rod wrt. body system at phi=0
   - `constant_f`: [N] Constant force in direction of elongation
   - `constant_s`: [m] Constant elongation of the joint"
-  - `use_flange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
+  - `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
 
-# states
+# Variables
   - `s(t)`: [m] Elongation of the joint
   - `v(t)`: [m/s] Velocity of elongation
   - `a(t)`: [m/s²] Acceleration of elongation
@@ -95,67 +94,77 @@ A prismatic joint
 # Connectors
   - `frame_a` [Frame](@ref)
   - `frame_b` [Frame](@ref)
-  - `fixed` [Fixed](@ref) if `use_flange == false`
-  - `flange_a` [Flange](@ref) if `use_flange == true`
-  - `support` [Support](@ref) if `use_flange == true`
+  - `fixed` [Fixed](@ref) if `axisflange == false`
+  - `flange_a` [Flange](@ref) if `axisflange == true`
+  - `support` [Support](@ref) if `axisflange == true`
 
 https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Joints/Prismatic.mo
 """
 @component function Prismatic(;
         name,
-        x,
-        y,
+        r = [0,0],
+        s = 0,
+        v = 0,
         constant_f = 0,
         constant_s = 0,
-        use_flange = false)
+        axisflange = false,
+        render = true,
+        radius = 0.1,
+        color = [0,0.8,1,1],
+    )
     @named partial_frames = PartialTwoFrames()
+    systems = @named begin
+        fixed = TranslationalModelica.Support()
+    end
     @unpack frame_a, frame_b = partial_frames
-    @named fixed = TranslationalModelica.Support()
-    systems = [frame_a, frame_b, fixed]
 
-    if use_flange
-        @named flange_a = TranslationalModelica.Flange(; f = constant_f, constant_s)
-        push!(systems, flange_a)
-        @named support = TranslationalModelica.Support()
-        push!(systems, support)
+    if axisflange
+        more_systems = @named begin
+            flange_a = TranslationalModelica.Flange(; f = constant_f, constant_s)
+            support = TranslationalModelica.Support()
+        end
+        systems = [systems, more_systems]
+    end
+
+    pars = @parameters begin
+        (r[1:2] = r), [description="Direction of the rod wrt. body system at phi=0"]
+        render = render, [description="Render the joint in animations"]
+        radius = radius, [description="Radius of the body in animations"]
+        color[1:4] = color, [description="Color of the body in animations"]
     end
 
     vars = @variables begin
-        s(t) = 0.0
-        v(t) = 0.0
-        a(t) = 0.0
-        f(t) = 0.0
+        (s(t) = s), [state_priority = 2, description="Joint coordinate"]
+        (v(t) = v), [state_priority = 2]
+        a(t)
+        f(t)
+        e0(t)[1:2]
+        (r0(t)[1:2]=r), [description="Translation vector of the prismatic rod resolved w.r.t. inertial frame"]
     end
 
-    R = [cos(frame_a.phi) -sin(frame_a.phi);
-         sin(frame_a.phi) cos(frame_a.phi)]
-    e0 = R * [x, y]
-    r0 = e0 * s
-
+    e = Multibody._normalize(r)
+    R = ori_2d(frame_a)
+    
     eqs = [
-        # ifelse(constant_s === nothing, s ~ s, s ~ constant_s),
-        ifelse(constant_f === nothing, f ~ f, f ~ constant_f),
-        v ~ D(s),
-        a ~ D(v),
+        e0 .~ R * e
+        r0 .~ e0 * s
+        v ~ D(s)
+        a ~ D(v)
         # rigidly connect positions
-        frame_a.x + r0[1] ~ frame_b.x,
-        frame_a.y + r0[2] ~ frame_b.y,
-        frame_a.phi ~ frame_b.phi,
-        frame_a.fx + frame_b.fx ~ 0,
-        frame_a.fy + frame_b.fy ~ 0,
-        frame_a.j + frame_b.j + r0[1] * frame_b.fy - r0[2] * frame_b.fx ~ 0,
+        frame_a.x + r0[1] ~ frame_b.x
+        frame_a.y + r0[2] ~ frame_b.y
+        frame_a.phi ~ frame_b.phi
+        frame_a.fx + frame_b.fx ~ 0
+        frame_a.fy + frame_b.fy ~ 0
+        frame_a.tau + frame_b.tau + r0[1] * frame_b.fy - r0[2] * frame_b.fx ~ 0
         e0[1] * frame_a.fx + e0[2] * frame_a.fy ~ f
     ]
 
-    if use_flange
+    if axisflange
         push!(eqs, connect(fixed.flange, support))
     else
         # actutation torque
-        push!(eqs, constant_f ~ 0)
+        push!(eqs, f ~ 0)
     end
-
-    pars = []
-
-    return compose(ODESystem(eqs, t, vars, pars; name = name),
-        systems...)
+    return extend(ODESystem(eqs, t, vars, pars; name, systems), partial_frames)
 end
