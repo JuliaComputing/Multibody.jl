@@ -1,9 +1,9 @@
 """
-    Revolute(; name, phi = 0.0, tau = 0.0, use_flange = false)
+    Revolute(; name, phi = 0.0, tau = 0.0, axisflange = false)
 A revolute joint
 
 # parameters
-  - `use_flange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
+  - `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
   - `phi`: [rad] Initial angular position for the flange
   - `tau`: [N.m] Initial Cut torque in the flange
 
@@ -16,22 +16,22 @@ A revolute joint
 # Connectors
   - `frame_a` [Frame](@ref)
   - `frame_b` [Frame](@ref)
-  - `fixed` [Fixed](@ref) if `use_flange == false`
-  - `flange_a` [Flange](@ref) if `use_flange == true`
-  - `support` [Support](@ref) if `use_flange == true`
+  - `fixed` [Fixed](@ref) if `axisflange == false`
+  - `flange_a` [Flange](@ref) if `axisflange == true`
+  - `support` [Support](@ref) if `axisflange == true`
 
 https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Joints/Revolute.mo
 """
 @component function Revolute(;
         name,
-        use_flange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0])
+        axisflange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0], phi=0, w=0)
     @named partial_frames = PartialTwoFrames()
     @unpack frame_a, frame_b = partial_frames
     systems = [frame_a, frame_b]
 
     vars = @variables begin
-        (phi(t) = 0.0), [state_priority=10]
-        (ω(t) = 0.0), [state_priority=10]
+        (phi(t) = phi), [state_priority=10]
+        (w(t) = w), [state_priority=10]
         α(t)
         tau(t)
     end
@@ -43,8 +43,8 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
     end
 
     eqs = [
-        ω ~ D(phi),
-        α ~ D(ω),
+        w ~ D(phi),
+        α ~ D(w),
         # rigidly connect positions
         frame_a.x ~ frame_b.x,
         frame_a.y ~ frame_b.y,
@@ -57,7 +57,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         frame_a.tau ~ tau
     ]
 
-    if use_flange
+    if axisflange
         @named fixed = Rotational.Fixed()
         push!(systems, fixed)
         @named flange_a = Rotational.Flange(; phi, tau)
