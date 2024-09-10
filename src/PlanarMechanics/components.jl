@@ -72,14 +72,10 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
     end
 
     vars = @variables begin
-        fx(t)
-        fy(t)
-        rx(t) = rx
-        ry(t) = ry
-        vx(t)
-        vy(t)
-        ax(t)
-        ay(t)
+        f(t)[1:2]
+        r(t)[1:2] = [rx, ry]
+        v(t)[1:2]
+        a(t)[1:2]
         phi(t) = phi
         ω(t)
         α(t)
@@ -87,21 +83,16 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 
     eqs = [
         # velocity is the time derivative of position
-        rx ~ frame.x,
-        ry ~ frame.y,
-        vx ~ D(rx),
-        vy ~ D(ry),
-        phi ~ frame.phi,
-        ω ~ D(phi),
+        r .~ [frame.x, frame.y]
+        v .~ D.(r)
+        phi ~ frame.phi
+        ω .~ D.(phi)
         # acceleration is the time derivative of velocity
-        ax ~ D(vx),
-        ay ~ D(vy),
-        α ~ D(ω),
+        a .~ D.(v)
+        α .~ D.(ω)
         # newton's law
-        fx ~ frame.fx,
-        fy ~ frame.fy,
-        ax ~ fx / m,
-        ay ~ fy / m + gy,#ifelse(gy !== nothing, fy / m + gy, fy / m),
+        f .~ [frame.fx, frame.fy]
+        f .~ m*a + m*[0, -gy]#ifelse(gy !== nothing, fy / m + gy, fy / m),
         I * α ~ frame.j
     ]
 
@@ -130,20 +121,19 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
     @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
 
     @parameters begin
-        rx = 0,
+        r[1:2] = [1.0, 0],
         [
-            description = "Fixed x-length of the rod resolved w.r.t to body frame_a at phi = 0"
+            description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"
         ]
-        ry = 0,
-        [
-            description = "Fixed y-length of the rod resolved w.r.t to body frame_a at phi = 0"
-        ]
+    end
+    begin
+        r = collect(r)
     end
 
     begin
         R = [cos(frame_a.phi) -sin(frame_a.phi);
              sin(frame_a.phi) cos(frame_a.phi)]
-        r0 = R * [rx, ry]
+        r0 = R * r
     end
 
     @equations begin
