@@ -210,5 +210,7 @@ include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
 
 
+export PlanarMechanics
+include("PlanarMechanics/PlanarMechanics.jl")
 
 end

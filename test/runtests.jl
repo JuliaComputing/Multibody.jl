@@ -51,6 +51,11 @@ end
     include("test_worldforces.jl")
 end
 
+@testset "PlanarMechanics" begin
+    @info "Testing PlanarMechanics"
+    include("test_PlanarMechanics.jl")
+end
+
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
