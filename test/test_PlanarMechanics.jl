@@ -2,7 +2,7 @@
 # using Plots
 using ModelingToolkit, OrdinaryDiffEq, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
-import Multibody.PlanarMechanics as Planar
+import Multibody.PlanarMechanics as Pl
 using JuliaSimCompiler
 
 tspan = (0.0, 3.0)
@@ -12,7 +12,7 @@ g = -9.807
     # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/FreeBody.mo
     m = 2
     I = 1
-    @named body = Planar.Body(; m, I)
+    @named body = Pl.Body(; m, I)
     @named model = ODESystem(Equation[],
         t,
         [],
@@ -34,10 +34,10 @@ end
 
 @testset "Pendulum" begin
     # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/Pendulum.mo
-    @named ceiling = Planar.Fixed()
-    @named rod = Planar.FixedTranslation(r = [1.0, 0.0])
-    @named body = Planar.Body(m = 1, I = 0.1)
-    @named revolute = Planar.Revolute()
+    @named ceiling = Pl.Fixed()
+    @named rod = Pl.FixedTranslation(r = [1.0, 0.0])
+    @named body = Pl.Body(m = 1, I = 0.1)
+    @named revolute = Pl.Revolute()
 
     connections = [
         connect(ceiling.frame, revolute.frame_a),
@@ -62,7 +62,7 @@ end
 
 @testset "Prismatic" begin
     # just testing instantiation
-    @test_nowarn @named prismatic = Planar.Prismatic(x = 1.0, y = 0.0)
+    @test_nowarn @named prismatic = Pl.Prismatic(x = 1.0, y = 0.0)
 end
 
 @testset "AbsoluteAccCentrifugal" begin
@@ -73,19 +73,19 @@ end
     resolve_in_frame = :world
 
     # components
-    @named body = Planar.Body(; m, I, gy = 0.0)
-    @named fixed_translation = Planar.FixedTranslation(; r = [10, 0])
-    @named fixed = Planar.Fixed()
-    @named revolute = Planar.Revolute()#constant_ω = ω)
+    @named body = Pl.Body(; m, I, gy = 0.0)
+    @named fixed_translation = Pl.FixedTranslation(; r = [10, 0])
+    @named fixed = Pl.Fixed()
+    @named revolute = Pl.Revolute()#constant_ω = ω)
 
     # sensors
-    @named abs_v_sensor = Planar.AbsoluteVelocity(; resolve_in_frame)
+    @named abs_v_sensor = Pl.AbsoluteVelocity(; resolve_in_frame)
 
     eqs = [
         connect(fixed.frame, revolute.frame_a),
         connect(revolute.frame_b, fixed_translation.frame_a),
         connect(fixed_translation.frame_b, body.frame),
-        # Planar.connect_sensor(body.frame, abs_v_sensor.frame_a)... # QUESTION: why?
+        # Pl.connect_sensor(body.frame, abs_v_sensor.frame_a)... # QUESTION: why?
         connect(body.frame, abs_v_sensor.frame_a)
     ]
 
@@ -127,36 +127,36 @@ end
     I = 1
     resolve_in_frame = :world
 
-    @named body1 = Planar.Body(; m, I)
-    @named body2 = Planar.Body(; m, I)
-    @named base = Planar.Fixed()
+    @named body1 = Pl.Body(; m, I)
+    @named body2 = Pl.Body(; m, I)
+    @named base = Pl.Fixed()
 
-    @named abs_pos_sensor = Planar.AbsolutePosition(; resolve_in_frame)
-    @named abs_v_sensor = Planar.AbsoluteVelocity(; resolve_in_frame)
-    @named abs_a_sensor = Planar.AbsoluteAcceleration(; resolve_in_frame)
-    @named rel_pos_sensor1 = Planar.RelativePosition(; resolve_in_frame)
-    @named rel_pos_sensor2 = Planar.RelativePosition(; resolve_in_frame)
-    @named rel_v_sensor1 = Planar.RelativeVelocity(; resolve_in_frame)
-    @named rel_v_sensor2 = Planar.RelativeVelocity(; resolve_in_frame)
-    @named rel_a_sensor1 = Planar.RelativeAcceleration(; resolve_in_frame)
-    @named rel_a_sensor2 = Planar.RelativeAcceleration(; resolve_in_frame)
+    @named abs_pos_sensor = Pl.AbsolutePosition(; resolve_in_frame)
+    @named abs_v_sensor = Pl.AbsoluteVelocity(; resolve_in_frame)
+    @named abs_a_sensor = Pl.AbsoluteAcceleration(; resolve_in_frame)
+    @named rel_pos_sensor1 = Pl.RelativePosition(; resolve_in_frame)
+    @named rel_pos_sensor2 = Pl.RelativePosition(; resolve_in_frame)
+    @named rel_v_sensor1 = Pl.RelativeVelocity(; resolve_in_frame)
+    @named rel_v_sensor2 = Pl.RelativeVelocity(; resolve_in_frame)
+    @named rel_a_sensor1 = Pl.RelativeAcceleration(; resolve_in_frame)
+    @named rel_a_sensor2 = Pl.RelativeAcceleration(; resolve_in_frame)
 
     connections = [
-        Planar.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
-        Planar.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,
-        Planar.connect_sensor(body1.frame, abs_a_sensor.frame_a)...,
-        Planar.connect_sensor(body1.frame, rel_pos_sensor1.frame_a)...,
-        Planar.connect_sensor(base.frame, rel_pos_sensor1.frame_b)...,
-        Planar.connect_sensor(body1.frame, rel_pos_sensor2.frame_a)...,
-        Planar.connect_sensor(body2.frame, rel_pos_sensor2.frame_b)...,
-        Planar.connect_sensor(base.frame, rel_v_sensor1.frame_a)...,
-        Planar.connect_sensor(body1.frame, rel_v_sensor1.frame_b)...,
-        Planar.connect_sensor(body1.frame, rel_v_sensor2.frame_a)...,
-        Planar.connect_sensor(body2.frame, rel_v_sensor2.frame_b)...,
-        Planar.connect_sensor(body1.frame, rel_a_sensor1.frame_a)...,
-        Planar.connect_sensor(base.frame, rel_a_sensor1.frame_b)...,
-        Planar.connect_sensor(body1.frame, rel_a_sensor2.frame_a)...,
-        Planar.connect_sensor(body2.frame, rel_a_sensor2.frame_b)...
+        Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame, abs_a_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame, rel_pos_sensor1.frame_a)...,
+        Pl.connect_sensor(base.frame, rel_pos_sensor1.frame_b)...,
+        Pl.connect_sensor(body1.frame, rel_pos_sensor2.frame_a)...,
+        Pl.connect_sensor(body2.frame, rel_pos_sensor2.frame_b)...,
+        Pl.connect_sensor(base.frame, rel_v_sensor1.frame_a)...,
+        Pl.connect_sensor(body1.frame, rel_v_sensor1.frame_b)...,
+        Pl.connect_sensor(body1.frame, rel_v_sensor2.frame_a)...,
+        Pl.connect_sensor(body2.frame, rel_v_sensor2.frame_b)...,
+        Pl.connect_sensor(body1.frame, rel_a_sensor1.frame_a)...,
+        Pl.connect_sensor(base.frame, rel_a_sensor1.frame_b)...,
+        Pl.connect_sensor(body1.frame, rel_a_sensor2.frame_a)...,
+        Pl.connect_sensor(body2.frame, rel_a_sensor2.frame_b)...
     ]
 
     # connections = [
@@ -237,19 +237,19 @@ end
 
 @testset "Measure Demo" begin
     # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/MeasureDemo.mo
-    @named body = Planar.Body(; m = 1, I = 0.1)
-    @named fixed_translation = Planar.FixedTranslation(;)
-    @named fixed = Planar.Fixed()
-    @named body1 = Planar.Body(; m = 0.4, I = 0.02)
-    @named fixed_translation1 = Planar.FixedTranslation(; r = [0.4, 0])
-    @named abs_pos_sensor = Planar.AbsolutePosition(; resolve_in_frame = :world)
-    @named rel_pos_sensor = Planar.RelativePosition(; resolve_in_frame = :world)
-    @named revolute1 = Planar.Revolute()
-    @named abs_v_sensor = Planar.AbsoluteVelocity(; resolve_in_frame = :frame_a)
-    @named rel_v_sensor = Planar.RelativeVelocity(; resolve_in_frame = :frame_b)
-    @named abs_a_sensor = Planar.AbsoluteAcceleration(; resolve_in_frame = :world)
-    @named rel_a_sensor = Planar.RelativeAcceleration(; resolve_in_frame = :frame_b)
-    @named revolute2 = Planar.Revolute()
+    @named body = Pl.Body(; m = 1, I = 0.1)
+    @named fixed_translation = Pl.FixedTranslation(;)
+    @named fixed = Pl.Fixed()
+    @named body1 = Pl.Body(; m = 0.4, I = 0.02)
+    @named fixed_translation1 = Pl.FixedTranslation(; r = [0.4, 0])
+    @named abs_pos_sensor = Pl.AbsolutePosition(; resolve_in_frame = :world)
+    @named rel_pos_sensor = Pl.RelativePosition(; resolve_in_frame = :world)
+    @named revolute1 = Pl.Revolute()
+    @named abs_v_sensor = Pl.AbsoluteVelocity(; resolve_in_frame = :frame_a)
+    @named rel_v_sensor = Pl.RelativeVelocity(; resolve_in_frame = :frame_b)
+    @named abs_a_sensor = Pl.AbsoluteAcceleration(; resolve_in_frame = :world)
+    @named rel_a_sensor = Pl.RelativeAcceleration(; resolve_in_frame = :frame_b)
+    @named revolute2 = Pl.Revolute()
 
     connections = [
         connect(fixed_translation.frame_b, body.frame),
@@ -259,13 +259,13 @@ end
         # connect(abs_a_sensor.frame_resolve, abs_a_sensor.frame_a),
         connect(revolute2.frame_b, fixed_translation1.frame_a),
         connect(revolute2.frame_a, fixed_translation.frame_b),
-        # Planar.connect_sensor(fixed_translation.frame_b, rel_a_sensor.frame_a)...,
+        # Pl.connect_sensor(fixed_translation.frame_b, rel_a_sensor.frame_a)...,
         # connect(fixed_translation.frame_b, rel_v_sensor.frame_a),
         # connect(fixed_translation.frame_b, rel_v_sensor.frame_a),
         # connect(rel_a_sensor.frame_b, body1.frame_a),
         # connect(rel_v_sensor.frame_b, body1.frame_a),
         # connect(rel_v_sensor.frame_b, body1.frame_a),
-        Planar.connect_sensor(body1.frame, abs_a_sensor.frame_a)...        # Planar.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,        # Planar.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
+        Pl.connect_sensor(body1.frame, abs_a_sensor.frame_a)...        # Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,        # Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
     ]
 
     @named model = ODESystem(connections,
@@ -293,7 +293,7 @@ end
 
 @testset "SpringDamper" begin
     # https://github.com/dzimmer/PlanarMechanics/blob/master/PlanarMechanics/Examples/SpringDamperDemo.mo
-    @named spring_damper = Planar.SpringDamper(;
+    @named spring_damper = Pl.SpringDamper(;
         s_relx0 = 0,
         d_y = 1,
         s_rely0 = 0,
@@ -302,9 +302,9 @@ end
         c_x = 5,
         d_x = 1,
         c_phi = 0)
-    @named body = Planar.Body(; I = 0.1, m = 0.5, rx = 1, ry = 1, color=[0,1,0,1])
-    @named fixed = Planar.Fixed()
-    @named fixed_translation = Planar.FixedTranslation(; r = [-1, 0])
+    @named body = Pl.Body(; I = 0.1, m = 0.5, rx = 1, ry = 1, color=[0,1,0,1])
+    @named fixed = Pl.Fixed()
+    @named fixed_translation = Pl.FixedTranslation(; r = [-1, 0])
 
     connections = [
         connect(fixed.frame, fixed_translation.frame_a),
@@ -330,11 +330,11 @@ end
 
 @testset "Spring and damper demo" begin
     # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/SpringDemo.mo
-    @named body = Planar.Body(; m = 0.5, I = 0.1)
-    @named fixed = Planar.Fixed()
-    @named spring = Planar.Spring(; c_y = 10, s_rely0 = -0.5, c_x = 1, c_phi = 1e5)
-    @named damper = Planar.Damper(d = 1)
-    @named prismatic = Planar.Prismatic(; x = 0, y = 1)
+    @named body = Pl.Body(; m = 0.5, I = 0.1)
+    @named fixed = Pl.Fixed()
+    @named spring = Pl.Spring(; c_y = 10, s_rely0 = -0.5, c_x = 1, c_phi = 1e5)
+    @named damper = Pl.Damper(d = 1)
+    @named prismatic = Pl.Prismatic(; x = 0, y = 1)
 
     connections = [
         connect(fixed.frame, spring.frame_a),
