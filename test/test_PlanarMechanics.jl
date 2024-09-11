@@ -466,7 +466,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             revolute = Pl.Revolute(phi = 0, w = 0)
             fixed = Pl.Fixed()
             engineTorque = Rotational.ConstantTorque(tau_constant = 2)
-            body = Pl.Body(m = 10, I = 1, gy=0)
+            body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
             inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
             constant = Blocks.Constant(k = 0)
         end
@@ -672,13 +672,15 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
     guesses = ModelingToolkit.missing_variable_defaults(model)
     ps = parameters(model)
-    initsys = generate_initializesystem(ssys)
-    u0 = merge(Dict(guesses), ModelingToolkit.defaults(model))
-    initprob = NonlinearLeastSquaresProblem(initsys, u0, [ps; t => 0.0])
+    fulldefs = defaults(model)
+    defs = Dict(filter(p->!ModelingToolkit.isparameter(p[1]), collect(ModelingToolkit.defaults(model))))
+    u0 = merge(Dict(guesses), defs)
+    initsys = generate_initializesystem(ssys; guesses=u0)
+    initprob = NonlinearLeastSquaresProblem(initsys, u0, [[p => fulldefs[p] for p in ps]; t => 0.0])
     u0sol = solve(initprob)
 
 
-    prob = ODEProblem(ssys, unknowns(ssys) .=> u0sol[unknowns(ssys)], (0.0, 5.0))
+    prob = ODEProblem(ssys, unknowns(ssys) .=> u0sol[unknowns(ssys)]*0.7, (0.0, 5.0))
     sol = solve(prob, Rodas5P(), initializealg = ShampineCollocationInit())
     @test SciMLBase.successful_retcode(sol)
 end

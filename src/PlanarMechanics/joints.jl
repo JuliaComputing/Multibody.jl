@@ -24,7 +24,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 """
 @component function Revolute(;
         name,
-        axisflange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0], phi=0, w=0,
+        axisflange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0], phi=nothing, w=nothing,
         iscut = false,
         state_priority = 10)
     @named partial_frames = PartialTwoFrames()
@@ -112,8 +112,8 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 @component function Prismatic(;
         name,
         r = [0,0],
-        s = 0,
-        v = 0,
+        s = nothing,
+        v = nothing,
         axisflange = false,
         render = true,
         radius = 0.1,
