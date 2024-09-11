@@ -403,14 +403,14 @@ end
             body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
             revolute = Pl.Revolute()
             wheel1 = Pl.SimpleWheel(color=gray)
-            wheel2 = Pl.SimpleWheel(color=gray, μ=.1)
+            wheel2 = Pl.SimpleWheel(color=gray, μ=.5)
             input = Blocks.Constant(k=1)
         end
         @equations begin
             connect(body.frame_a, revolute.frame_a)
             connect(revolute.frame_b, wheel1.frame_a)
             connect(input.output, wheel1.thrust)
-            revolute.phi ~ deg2rad(60)
+            revolute.phi ~ deg2rad(50)sin(2pi*0.2*t)
             wheel2.thrust.u ~ 0
 
             connect(wheel2.frame_a, body.frame_b)
@@ -423,6 +423,7 @@ end
     prob = ODEProblem(ssys, defs, (0.0, 10.0))
     sol = solve(prob, Rodas5P(), initializealg = BrownFullBasicInit())
     @test SciMLBase.successful_retcode(sol)
+    # Multibody.render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
 end
 
 

@@ -107,6 +107,15 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 # Parameters
 - `r`: (Structural) Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - `r_cm`: (Structural) Vector from `frame_a` to the center of mass resolved in `frame_a`
+
+# Subsystems
+- `translation`: [FixedTranslation](@ref) Fixed translation between `frame_a` and `frame_b`
+- `translation_cm`: [FixedTranslation](@ref) Fixed translation between `frame_a` and the center of mass
+- `body`: [Body](@ref) Body component placed at center of mass. This component holds the inertial properties
+
+# Connectors
+- `frame_a`
+- `frame_b`
 """
 @mtkmodel BodyShape begin
     @structural_parameters begin
