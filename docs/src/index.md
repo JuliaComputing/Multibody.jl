@@ -170,6 +170,10 @@ Pkg.add("Multibody")
 - In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using the function [`ori`](@ref).
 - Quaternions in Multibody.jl follow the order ``[s, i, j, k]``, i.e., scalar/real part first.
 
+## 2D and 3D modeling
+Multibody.jl offers components for modeling in both 2D and 3D. 2D modeling, often referred to as planar mechanics, is a subset of 3D modeling where the motion is constrained to a plane, the x,y plane. Planar mechanics is sometimes referred to as 3 degrees of freedom (DOF) modeling, referring to the 2 translational DOF and one rotational DOF that the plane offers. Most components in Multibody.jl are aimed at 3D modeling (sometimes referred to as 6 DOF modeling), but components for 2D modeling exist in the submodule `Multibody.PlanarMechanics`.
+
+The components from [`ModelingToolkitStandardLibrary.Mechanical`](https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/API/mechanical/) are 1D, i.e., a single degree of freedom only. These components can be used in both 2D and 3D modeling together with Multibody components that have support for attaching 1D components, such as joints supporting the `axisflange` keyword.
 
 
 ## Index
