@@ -235,7 +235,7 @@ This example demonstrates use of the [`PlanarMechanics.SlipBasedWheelJoint`](@re
         revolute = Pl.Revolute(phi = 0, w = 0)
         fixed = Pl.Fixed()
         engineTorque = Rotational.ConstantTorque(tau_constant = 2)
-        body = Pl.Body(m = 10, I = 1, gy=0)
+        body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
         inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
         constant = Blocks.Constant(k = 0)
     end
