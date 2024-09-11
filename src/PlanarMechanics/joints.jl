@@ -25,6 +25,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
 @component function Revolute(;
         name,
         axisflange = false, render = true, radius = 0.1, color = [1.0, 0.0, 0.0, 1.0], phi=0, w=0,
+        iscut = false,
         state_priority = 10)
     @named partial_frames = PartialTwoFrames()
     @unpack frame_a, frame_b = partial_frames
@@ -33,7 +34,7 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
     vars = @variables begin
         (phi(t) = phi), [state_priority=state_priority]
         (w(t) = w), [state_priority=state_priority]
-        α(t)
+        α(t), [state_priority=state_priority]
         tau(t)
     end
 
@@ -49,7 +50,6 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         # rigidly connect positions
         frame_a.x ~ frame_b.x,
         frame_a.y ~ frame_b.y,
-        frame_a.phi + phi ~ frame_b.phi,
         # balance forces
         frame_a.fx + frame_b.fx ~ 0,
         frame_a.fy + frame_b.fy ~ 0,
@@ -57,6 +57,9 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         frame_a.tau + frame_b.tau ~ 0,
         frame_a.tau ~ tau
     ]
+    if !iscut
+        push!(eqs, frame_a.phi + phi ~ frame_b.phi)
+    end
 
     if axisflange
         @named fixed = Rotational.Fixed()
@@ -85,10 +88,11 @@ end
 A prismatic joint
 
 # Parameters
-  - `r`: [m, m] x,y-direction of the rod wrt. body system at phi=0
-  - `constant_f`: [N] Constant force in direction of elongation
-  - `constant_s`: [m] Constant elongation of the joint"
-  - `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
+- `r`: [m, m] x,y-direction of the rod wrt. body system at phi=0
+- `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
+- `render`: Render the joint in animations
+- `radius`: Radius of the body in animations
+- `color`: Color of the body in animations
 
 # Variables
   - `s(t)`: [m] Elongation of the joint
@@ -110,25 +114,26 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         r = [0,0],
         s = 0,
         v = 0,
-        constant_f = 0,
-        constant_s = 0,
         axisflange = false,
         render = true,
         radius = 0.1,
         color = [0,0.8,1,1],
+        state_priority = 2,
+        iscut = false,
     )
     @named partial_frames = PartialTwoFrames()
+    @unpack frame_a, frame_b = partial_frames
+
     systems = @named begin
         fixed = TranslationalModelica.Support()
     end
-    @unpack frame_a, frame_b = partial_frames
 
     if axisflange
         more_systems = @named begin
-            flange_a = TranslationalModelica.Flange(; f = constant_f, constant_s)
-            support = TranslationalModelica.Support()
+            flange_a = TranslationalModelica.Flange()
+            support = TranslationalModelica.Flange()
         end
-        systems = [systems, more_systems]
+        systems = [systems; more_systems]
     end
 
     pars = @parameters begin
@@ -139,8 +144,8 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
     end
 
     vars = @variables begin
-        (s(t) = s), [state_priority = 2, description="Joint coordinate"]
-        (v(t) = v), [state_priority = 2]
+        (s(t) = s), [state_priority = state_priority, description="Joint coordinate"]
+        (v(t) = v), [state_priority = state_priority]
         a(t)
         f(t)
         e0(t)[1:2]
@@ -158,15 +163,21 @@ https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b70839146
         # rigidly connect positions
         frame_a.x + r0[1] ~ frame_b.x
         frame_a.y + r0[2] ~ frame_b.y
-        frame_a.phi ~ frame_b.phi
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
         frame_a.tau + frame_b.tau + r0[1] * frame_b.fy - r0[2] * frame_b.fx ~ 0
         e0[1] * frame_a.fx + e0[2] * frame_a.fy ~ f
     ]
+    if !iscut
+        push!(eqs, frame_a.phi ~ frame_b.phi)
+    end
 
     if axisflange
-        push!(eqs, connect(fixed.flange, support))
+        append!(eqs, [
+            connect(fixed, support)
+            flange_a.s ~ s
+            flange_a.f ~ f
+            ])
     else
         # actutation torque
         push!(eqs, f ~ 0)
