@@ -179,8 +179,8 @@ Pkg.add("Multibody")
 
 ## Frames
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["frames.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["frames.jl", "PlanarMechanics/utils.jl"]
 ```
 
 ## Joints
@@ -192,8 +192,8 @@ A [`Spherical`](@ref) joints restricts all translational degrees of freedom, but
 Some joints offer the option to add 1-dimensional components to them by providing the keyword `axisflange = true`. This allows us to add, e.g., springs, dampers, sensors, and actuators to the joint.
 
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["joints.jl", "fancy_joints.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["joints.jl", "fancy_joints.jl", "PlanarMechanics/joints.jl"]
 ```
 
 ## Components
@@ -206,8 +206,8 @@ A rod without a mass (just a translation), is modeled using [`FixedTranslation`]
 
 
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["components.jl", "wheels.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["components.jl", "wheels.jl", "PlanarMechanics/components.jl"]
 ```
 
 ## Forces
@@ -220,13 +220,13 @@ Pages   = ["forces.jl"]
 A sensor is an object that translates quantities in the mechanical domain into causal signals which can interact with causal components from [ModelingToolkitStandardLibrary.Blocks](https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/API/blocks/), such as control systems etc.
 
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["sensors.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["sensors.jl", "PlanarMechanics/sensors.jl"]
 ```
 
 ## Orientation utilities
 ```@autodocs
-Modules = [Multibody]
+Modules = [Multibody, Multibody.PlanarMechanics]
 Pages   = ["orientation.jl"]
 ```
 
