@@ -2,23 +2,23 @@
     Revolute(; name, phi = 0.0, tau = 0.0, axisflange = false)
 A revolute joint
 
-# parameters
-  - `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
-  - `phi`: [rad] Initial angular position for the flange
-  - `tau`: [N.m] Initial Cut torque in the flange
+# Parameters:
+- `axisflange=false`: If `true`, a force flange is enabled, otherwise implicitly grounded"
+- `phi`: [rad] Initial angular position for the flange
+- `tau`: [Nm] Initial Cut torque in the flange
 
-# states
-  - `phi(t)`: [rad] angular position
-  - `ω(t)`: [rad/s] angular velocity
-  - `α(t)`: [rad/s²] angular acceleration
-  - `j(t)`: [N.m] torque
+# Variables:
+- `phi(t)`: [rad] angular position
+- `w(t)`: [rad/s] angular velocity
+- `α(t)`: [rad/s²] angular acceleration
+- `tau(t)`: [Nm] torque
 
 # Connectors
-  - `frame_a` [Frame](@ref)
-  - `frame_b` [Frame](@ref)
-  - `fixed` [Fixed](@ref) if `axisflange == false`
-  - `flange_a` [Flange](@ref) if `axisflange == true`
-  - `support` [Support](@ref) if `axisflange == true`
+- `frame_a` [Frame](@ref)
+- `frame_b` [Frame](@ref)
+- `fixed` [Fixed](@ref) if `axisflange == false`
+- `flange_a` [Flange](@ref) if `axisflange == true`
+- `support` [Support](@ref) if `axisflange == true`
 
 https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Joints/Revolute.mo
 """

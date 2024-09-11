@@ -16,7 +16,7 @@ import ..Multibody
 export Frame, FrameResolve, PartialTwoFrames, ZeroPosition, ori_2d
 include("utils.jl")
 
-export Fixed, Body, FixedTranslation, Spring, Damper, SpringDamper
+export Fixed, Body, BodyShape, FixedTranslation, Spring, Damper, SpringDamper
 export SlipBasedWheelJoint, SimpleWheel
 include("components.jl")
 

@@ -10,6 +10,8 @@ The wheel-related components available are
 - [`RollingWheelSet`](@ref): a set of two wheels connected by an axis. One of the wheels cannot slip, while the other one slips as required to allow the wheel set to turn (no differential is modeled). No wheel can leave the ground.
 - [`RollingWheelSetJoint`](@ref): A lower-level component used in `RollingWheelSet` to model the kinematics of the wheel set, without inertial or mass properties.
 - [`RollingConstraintVerticalWheel`](@ref): A low-level constraint that is used to enforce a perfectly rolling wheel that is always vertical, i.e., it can only roll forward and not fall down.
+- [`PlanarMechanics.SimpleWheel`](@ref): A 2D wheel component with a simple, linear lateral slip model.
+- [`PlanarMechanics.SlipBasedWheelJoint`](@ref): A more advanced 2D wheel component with slip-dependent friction characteristics.
 
 All wheel components are limited to rolling on the ``xz`` plane, i.e., the gravity direction must be the default `[0, -1, 0]`.
 
@@ -171,3 +173,96 @@ nothing # hide
 ```
 
 ![car animation](car.gif)
+
+## Simple planar wheel
+This example demonstrates how we can model a simple single-track vehicle with planar (2D or 3DOF) components. 
+
+We will use the component [`PlanarMechanics.SimpleWheel`](@ref), together with a [`PlanarMechanics.Revolute`](@ref) joint to connect the front wheel to the [`PlanarMechanics.BodyShape`](@ref) representing the vehicle body. The revolute joint is used for steering.
+
+```@example WHEEL
+import Multibody.PlanarMechanics as Pl
+
+@mtkmodel TestWheel begin
+    @components begin
+        body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
+        revolute = Pl.Revolute()
+        wheel1 = Pl.SimpleWheel(color=tire_black)
+        wheel2 = Pl.SimpleWheel(color=tire_black, μ=.5)
+        thrust_input1 = Blocks.Constant(k=1)
+        thrust_input2 = Blocks.Constant(k=0)
+    end
+    @equations begin
+        connect(body.frame_a, revolute.frame_a)
+        connect(revolute.frame_b, wheel1.frame_a)
+        connect(thrust_input1.output, wheel1.thrust)
+        connect(thrust_input2.output, wheel2.thrust)
+        revolute.phi ~ deg2rad(50)*sin(2pi*0.2*t)
+
+        connect(wheel2.frame_a, body.frame_b)
+    end
+end
+@named model = TestWheel()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+defs = Dict(unknowns(ssys) .=> 0)
+prob = ODEProblem(ssys, defs, (0.0, 10.0))
+sol = solve(prob, Rodas5P())
+@test SciMLBase.successful_retcode(sol)
+render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
+```
+
+![drifting animation](drifting.gif)
+
+## Slip-based planar wheel
+This example demonstrates use of the [`PlanarMechanics.SlipBasedWheelJoint`](@ref) component, which is a more advanced 2D wheel component with slip-dependent friction characteristics. The wheel is being driven by a constant torque, and is connected through a [`PlanarMechanics.Prismatic`](@ref) joint to a [`PlanarMechanics.Revolute`](@ref) joint. This forces the wheel to move in a circular arc around the revolute pivot point, and spiral outwards due to slip. A [`PlanarMechanics.Body](@ref) attached to the end of the prismatic joint is used to add inertial properties.
+
+```@example WHEEL
+@mtkmodel TestSlipBasedWheel begin
+    @components begin
+        slipBasedWheelJoint = Pl.SlipBasedWheelJoint(
+            radius = 0.3,
+            r = [1,0],              # Driving direction at angle phi = 0
+            mu_A = 0.8,             # Friction coefficient at adhesion
+            mu_S = 0.4,             # Friction coefficient at sliding
+            N = 100,                # Base normal load
+            sAdhesion = 0.04,       # Adhesion slippage
+            sSlide = 0.12,          # Sliding slippage
+            vAdhesion_min = 0.05,   # Minimum adhesion velocity
+            vSlide_min = 0.15,      # Minimum sliding velocity
+            color = tire_black,
+        )
+        prismatic = Pl.Prismatic(r = [0,1], s = 1, v = 0)
+        revolute = Pl.Revolute(phi = 0, w = 0)
+        fixed = Pl.Fixed()
+        engineTorque = Rotational.ConstantTorque(tau_constant = 2)
+        body = Pl.Body(m = 10, I = 1, gy=0)
+        inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
+        constant = Blocks.Constant(k = 0)
+    end
+    @equations begin
+        connect(fixed.frame, revolute.frame_a)
+        connect(revolute.frame_b, prismatic.frame_a)
+        connect(prismatic.frame_b, body.frame_a)
+        connect(prismatic.frame_b, slipBasedWheelJoint.frame_a)
+        connect(slipBasedWheelJoint.flange_a, inertia.flange_b)
+        connect(constant.output, slipBasedWheelJoint.dynamicLoad)
+        connect(engineTorque.flange, inertia.flange_a)
+    end
+end
+
+@named model = TestSlipBasedWheel()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+display(unknowns(ssys))
+defs = ModelingToolkit.defaults(model)
+prob = ODEProblem(ssys, [
+    model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
+    model.revolute.frame_b.phi => 0,
+    D(model.revolute.frame_b.phi) => 0,
+    D(model.prismatic.r0[2]) => 0,
+], (0.0, 15.0))
+sol = solve(prob, Rodas5Pr())
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif")
+```
+
+![slipwheel animation](slipwheel.gif)
