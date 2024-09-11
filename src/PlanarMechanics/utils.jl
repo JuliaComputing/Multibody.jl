@@ -1,8 +1,8 @@
 @connector function Frame(; name, render=false, length=1.0, radius=0.1)
     vars = @variables begin
-        x(t), [description = "x position"]
-        y(t), [description = "y position"]
-        phi(t), [state_priority=2, description = "rotation angle (counterclockwise)"]
+        x(t), [state_priority = -1, description = "x position"]
+        y(t), [state_priority = -1, description = "y position"]
+        phi(t), [state_priority = 0, description = "rotation angle (counterclockwise)"]
         fx(t), [connect = Flow, description = "force in the x direction"]
         fy(t), [connect = Flow, description = "force in the y direction"]
         tau(t), [connect = Flow, description = "torque (clockwise)"]

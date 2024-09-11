@@ -58,7 +58,7 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = zeros(2), phi = 0, gy = -9.807, radius=0.1, render=true, color=Multibody.purple)
+@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = 0, w=nothing, gy = -9.807, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
     @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
@@ -72,11 +72,11 @@ Body component with mass and inertia
 
     vars = @variables begin
         f(t)[1:2], [description = "Force"]
-        (r(t)[1:2] = r), [description = "x,y position"]
-        v(t)[1:2], [description = "x,y velocity"]
+        (r(t)[1:2] = r), [state_priority=state_priority, description = "x,y position"]
+        (v(t)[1:2] = v), [state_priority=state_priority, description = "x,y velocity"]
         a(t)[1:2], [description = "x,y acceleration"]
-        (phi(t) = phi), [description = "Rotation angle"]
-        w(t), [description = "Angular velocity"]
+        (phi(t) = phi), [state_priority=state_priority, description = "Rotation angle"]
+        (w(t) = w), [state_priority=state_priority, description = "Angular velocity"]
         α(t), [description = "Angular acceleration"]
     end
 
@@ -177,14 +177,20 @@ A fixed translation between two components (rigid rod)
     begin
         r = collect(r)
     end
+    @variables begin
+        phi(t), [state_priority=1, description = "Angle"]
+        w(t), [state_priority=1, description = "Angular velocity"]
+    end
 
     begin
-        R = [cos(frame_a.phi) -sin(frame_a.phi);
-             sin(frame_a.phi) cos(frame_a.phi)]
+        R = [cos(phi) -sin(phi);
+             sin(phi) cos(phi)]
         r0 = R * r
     end
 
     @equations begin
+        phi ~ frame_a.phi
+        w ~ D(phi)
         # rigidly connect positions
         frame_a.x + r0[1] ~ frame_b.x
         frame_a.y + r0[2] ~ frame_b.y
@@ -586,6 +592,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
     diameter = 0.1,
     width = diameter * 0.6,
     radius = 0.1,
+    phi_roll = nothing,
     w_roll = nothing,
 )
     systems = @named begin
@@ -615,7 +622,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
 
     vars = @variables begin
         e0(t)[1:2], [description="Unit vector in direction of r resolved w.r.t. inertial frame"]
-        phi_roll(t), [guess=0, description="wheel angle"] # wheel angle
+        (phi_roll(t) = phi_roll), [guess=0, description="wheel angle"] # wheel angle
         (w_roll(t)=w_roll), [guess=0, description="Roll velocity of wheel"]
         v(t)[1:2], [description="velocity"]
         v_lat(t), [guess=0, description="Driving in lateral direction"]
@@ -663,4 +670,67 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
 
     return ODESystem(equations, t, vars, pars; name, systems)
     
+end
+
+
+
+"""
+    IdealPlanetary(; name, ratio = 2)
+
+The IdealPlanetary gear box is an ideal gear without inertia, elasticity, damping or backlash consisting of an inner sun wheel, an outer ring wheel and a planet wheel located between sun and ring wheel. The bearing of the planet wheel shaft is fixed in the planet carrier. The component can be connected to other elements at the sun, ring and/or carrier flanges. It is not possible to connect to the planet wheel. If inertia shall not be neglected, the sun, ring and carrier inertias can be easily added by attaching inertias (= model Inertia) to the corresponding connectors. The inertias of the planet wheels are always neglected.
+
+The ideal planetary gearbox is uniquely defined by the ratio of the number of ring teeth ``z_r`` with respect to the number of sun teeth ``z_s``. For example, if there are 100 ring teeth and 50 sun teeth then ratio = ``z_r/z_s = 2``. The number of planet teeth ``z_p`` has to fulfill the following relationship:
+```math
+z_p = (z_r - z_s) / 2
+```
+Therefore, in the above example ``z_p = 25`` is required.
+
+According to the overall convention, the positive direction of all vectors, especially the absolute angular velocities and cut-torques in the flanges, are along the axis vector displayed in the icon.
+
+# Parameters:
+- `ratio`: Number of ring teeth/sun teeth
+
+# Connectors:
+- `sun` (Rotational.Flange) Sun wheel
+- `carrier` (Rotational.Flange) Planet carrier
+- `ring` (Rotational.Flange) Ring wheel
+"""
+@mtkmodel IdealPlanetary begin
+    @parameters begin
+        ratio = 2, [description="Number of ring_teeth/sun_teeth"]
+    end
+    @components begin
+        sun = Rotational.Flange()
+        carrier = Rotational.Flange()
+        ring = Rotational.Flange()
+    end
+    @equations begin
+        (1 + ratio)*carrier.phi ~ sun.phi + ratio*ring.phi
+        ring.tau ~ ratio*sun.tau
+        carrier.tau ~ -(1 + ratio)*sun.tau
+    end
+end
+
+"""
+    DifferentialGear(; name)
+
+A 1D-rotational component that is a variant of a planetary gear and can be used to distribute the torque equally among the wheels on one axis.
+
+# Connectors:
+- `flange_b` (Rotational.Flange) Flange for the input torque
+- `flange_left` (Rotational.Flange) Flange for the left output torque
+- `flange_right` (Rotational.Flange) Flange for the right output torque
+"""
+@mtkmodel DifferentialGear begin
+    @components begin
+        ideal_planetary = IdealPlanetary(ratio=-2)
+        flange_b = Rotational.Flange()
+        flange_left = Rotational.Flange()
+        flange_right = Rotational.Flange()
+    end
+    @equations begin
+        connect(flange_b, ideal_planetary.ring) 
+        connect(ideal_planetary.carrier, flange_right) 
+        connect(ideal_planetary.sun, flange_left)
+    end
 end

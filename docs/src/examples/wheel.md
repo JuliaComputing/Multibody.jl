@@ -258,6 +258,7 @@ defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
     model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
     model.revolute.frame_b.phi => 0,
+    model.body.w => 0,
     D(model.revolute.frame_b.phi) => 0,
     D(model.prismatic.r0[2]) => 0,
 ], (0.0, 15.0))
@@ -266,3 +267,120 @@ render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJ
 ```
 
 ![slipwheel animation](slipwheel.gif)
+
+
+## Planar two-track model
+A more elaborate example with 4 wheels.
+```@example WHEEL
+@mtkmodel TwoTrackWithDifferentialGear begin
+    @components begin
+        body = Pl.Body(m = 100, I = 1, gy = 0)
+        body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0)
+        body2 = Pl.Body(m = 100, I = 1, gy = 0)
+        wheelJoint1 = Pl.SlipBasedWheelJoint(
+            radius = 0.25,
+            r = [0, 1],
+            mu_A = 1,
+            mu_S = 0.7,
+            N = 1000,
+            sAdhesion = 0.04,
+            sSlide = 0.12,
+            vAdhesion_min = 0.05,
+            vSlide_min = 0.15,
+            phi_roll = 0)
+        wheelJoint2 = Pl.SlipBasedWheelJoint(
+            radius = 0.25,
+            r = [0, 1],
+            mu_A = 1,
+            mu_S = 0.7,
+            N = 1500,
+            sAdhesion = 0.04,
+            sSlide = 0.12,
+            vAdhesion_min = 0.05,
+            vSlide_min = 0.15,
+            phi_roll = 0)
+        wheelJoint3 = Pl.SlipBasedWheelJoint(
+            radius = 0.25,
+            r = [0, 1],
+            mu_A = 1,
+            mu_S = 0.7,
+            N = 1500,
+            sAdhesion = 0.04,
+            sSlide = 0.12,
+            vAdhesion_min = 0.05,
+            vSlide_min = 0.15,
+            phi_roll = 0)
+        wheelJoint4 = Pl.SlipBasedWheelJoint(
+            radius = 0.25,
+            r = [0, 1],
+            mu_A = 1,
+            mu_S = 0.7,
+            N = 1000,
+            sAdhesion = 0.04,
+            sSlide = 0.12,
+            vAdhesion_min = 0.05,
+            vSlide_min = 0.15,
+            phi_roll = 0)
+        differentialGear = Pl.DifferentialGear()
+        pulse = Blocks.Square(frequency = 1/2, offset = 0, start_time = 1, amplitude = -2)
+        torque = Rotational.Torque()
+        constantTorque1 = Rotational.ConstantTorque(tau_constant = 25)
+        inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
+        inertia1 = Rotational.Inertia(J = 1, phi = 0, w = 0)
+        inertia2 = Rotational.Inertia(J = 1, phi = 0, w = 0)
+        inertia3 = Rotational.Inertia(J = 1, phi = 0, w = 0)
+        fixedTranslation1 = Pl.FixedTranslation(r = [0, 2])
+        fixedTranslation2 = Pl.FixedTranslation(r = [0.75, 0])
+        fixedTranslation3 = Pl.FixedTranslation(r = [-0.75, 0])
+        fixedTranslation4 = Pl.FixedTranslation(r = [0.75, 0])
+        fixedTranslation5 = Pl.FixedTranslation(r = [-0.75, 0])
+        leftTrail = Pl.FixedTranslation(r = [0, -0.05])
+        rightTrail = Pl.FixedTranslation(r = [0, -0.05])
+        revolute = Pl.Revolute(axisflange=true)
+        revolute2 = Pl.Revolute(axisflange=true, phi = -0.43633231299858, w = 0)
+        dynamic_load = Blocks.Constant(k=0)
+    end
+
+
+    @equations begin
+        connect(wheelJoint2.flange_a, inertia1.flange_b)
+        connect(inertia.flange_b, wheelJoint1.flange_a)
+        connect(fixedTranslation2.frame_b, fixedTranslation1.frame_a)
+        connect(fixedTranslation2.frame_a, wheelJoint2.frame_a)
+        connect(fixedTranslation3.frame_b, fixedTranslation1.frame_a)
+        connect(wheelJoint3.frame_a, fixedTranslation3.frame_a)
+        connect(inertia2.flange_b, wheelJoint3.flange_a)
+        connect(body1.frame_a, fixedTranslation1.frame_a)
+        connect(fixedTranslation1.frame_b, fixedTranslation4.frame_b)
+        connect(fixedTranslation1.frame_b, fixedTranslation5.frame_b)
+        connect(inertia3.flange_b, wheelJoint4.flange_a)
+        connect(pulse.output, torque.tau)
+        connect(differentialGear.flange_right, wheelJoint3.flange_a)
+        connect(differentialGear.flange_left, wheelJoint2.flange_a)
+        connect(constantTorque1.flange, differentialGear.flange_b)
+        connect(body.frame_a, leftTrail.frame_b)
+        connect(leftTrail.frame_b, wheelJoint1.frame_a)
+        connect(body2.frame_a, rightTrail.frame_b)
+        connect(wheelJoint4.frame_a, rightTrail.frame_b)
+        connect(leftTrail.frame_a, revolute2.frame_a)
+        connect(revolute2.frame_b, fixedTranslation4.frame_a)
+        connect(torque.flange, revolute.flange_a, revolute2.flange_a)
+        connect(revolute.frame_a, rightTrail.frame_a)
+        connect(revolute.frame_b, fixedTranslation5.frame_a)
+        connect(dynamic_load.output, wheelJoint1.dynamicLoad, wheelJoint2.dynamicLoad, wheelJoint3.dynamicLoad, wheelJoint4.dynamicLoad)
+    end
+end
+
+@named model = TwoTrackWithDifferentialGear()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+defs = merge(
+    Dict(unknowns(ssys) .=> 0),
+    ModelingToolkit.defaults(model),
+    Dict(model.body.w => 0),
+)
+prob = ODEProblem(ssys, defs, (0.0, 5.0))
+sol = solve(prob, Rodas5P(autodiff=false))
+@test SciMLBase.successful_retcode(sol)
+Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif")
+```

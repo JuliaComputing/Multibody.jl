@@ -827,12 +827,20 @@ function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJo
     catch
         0.05f0
     end |> Float32
+    z = try
+        sol(sol.t[1], idxs=sys.z)
+    catch
+        0.0
+    end |> Float32
+    r = try
+        sol(sol.t[1], idxs=collect(sys.r))
+    catch
+        [1, 0]
+    end .|> Float32
+    n_a = perp(normalize(r)) # Rotation axis
     thing = @lift begin
-        # radius = sol($t, idxs=sys.radius)
-        O = [r_0($t)..., 0]
-        # T_w_a = framefun($t)
+        O = [r_0($t)..., z]
         R_w_a = rotfun($t)
-        n_a = [0,1] # Wheel rotates around y axis
         n_w = [R_w_a*n_a; 0] # Rotate to the world frame
         width = radius/10
         p1 = Point3f(O + width*n_w)
@@ -841,6 +849,14 @@ function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJo
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
+end
+
+function perp(r)
+    if r[1] == 0
+        return [1, 0]
+    else
+        return [-r[2], r[1]]
+    end
 end
 
 end
