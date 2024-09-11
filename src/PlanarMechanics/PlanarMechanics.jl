@@ -17,7 +17,7 @@ export Frame, FrameResolve, PartialTwoFrames, ZeroPosition, ori_2d
 include("utils.jl")
 
 export Fixed, Body, BodyShape, FixedTranslation, Spring, Damper, SpringDamper
-export SlipBasedWheelJoint, SimpleWheel
+export SlipBasedWheelJoint, SimpleWheel, IdealPlanetary, DifferentialGear
 include("components.jl")
 
 export Revolute, Prismatic
