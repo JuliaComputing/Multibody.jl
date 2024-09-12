@@ -10,7 +10,6 @@ Partial absolute sensor model for sensors defined by components
         frame_a = Frame()
     end
     # TODO: assert the number of connections
-    # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/PartialAbsoluteSensor.mo#L11
 end
 
 """
@@ -28,7 +27,6 @@ Partial relative sensor model for sensors defined by components
         frame_b = Frame()
     end
     # TODO: assert the number of connections
-    # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/PartialRelativeSensor.mo#L12-L13
 end
 
 """
@@ -47,7 +45,7 @@ Partial absolute sensor models for sensors defined by equations (frame_resolve m
 
     @equations begin
         # TODO: assert the number of connections
-        # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/PartialAbsoluteBaseSensor.mo#L20-L21
+
         frame_a.fx ~ 0
         frame_a.fy ~ 0
         frame_a.tau ~ 0
@@ -75,7 +73,7 @@ Partial relative sensor models for sensors defined by equations (frame_resolve m
 
     @equations begin
         # TODO: assert the number of connections
-        # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/PartialRelativeBaseSensor.mo#L19-L21
+
 
         frame_a.fx ~ 0
         frame_a.fy ~ 0
@@ -327,7 +325,7 @@ end
     systems = [frame_a, frame_b, frame_resolve, x_in, y_in, phi_in, x_out, y_out, phi_out]
     eqs = [
         # TODO: assert the number of connections
-        # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanics/Sensors/Internal/BasicTransformAbsoluteVector.mo#L42-L43
+
         frame_a.fx ~ 0,
         frame_a.fy ~ 0,
         frame_a.tau ~ 0,
