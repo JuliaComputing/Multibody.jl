@@ -466,7 +466,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             revolute = Pl.Revolute(phi = 0, w = 0)
             fixed = Pl.Fixed()
             engineTorque = Rotational.ConstantTorque(tau_constant = 2)
-            body = Pl.Body(m = 10, I = 1, gy=0)
+            body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
             inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
             constant = Blocks.Constant(k = 0)
         end
@@ -618,3 +618,70 @@ sol = solve(prob, Rodas5P(autodiff=false))
 # plot(sol)
 
 end
+
+
+# ============================================================================== 
+## Planar Kinematic loop
+# ==============================================================================
+
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
+# NOTE: waiting for release of ModelingToolkitStandardLibrary that includes https://github.com/SciML/ModelingToolkitStandardLibrary.jl/pull/327
+# @testset "Planar Kinematic loop" begin
+#     @info "Testing Planar Kinematic loop"
+
+#     @mtkmodel PlanarKinematicLoop begin
+#         @parameters begin
+#             radius = 0.02
+#         end
+#         @components begin
+#             fixed = Pl.Fixed()
+#             fixed1D = Translational.Fixed(s0=0)
+#             fixedTranslation1 = Pl.FixedTranslation(; r = [0, -0.5], radius)
+#             fixedTranslation2 = Pl.FixedTranslation(; r = [0, -0.5], radius)
+#             fixedTranslation3 = Pl.FixedTranslation(; r = [0, -0.6], radius)
+#             revolute1 = Pl.Revolute(; phi = asin(0.4/0.5/2), state_priority=100, radius)
+#             revolute3 = Pl.Revolute(; phi = -asin(0.4/0.5/2), radius)
+#             revolute2 = Pl.Revolute(; radius)
+#             revolute4 = Pl.Revolute(; phi = -0.69813170079773, w = 0, state_priority=100, radius)
+#             prismatic1 = Pl.Prismatic(r = [1, 0], s = 0.4, v = 0, axisflange=true, state_priority=10)
+#             springDamper1D = Translational.SpringDamper(c = 20, d = 4, s_rel0 = 0.4)
+#             body = Pl.Body(m = 1, I = 0.1, state_priority=10)
+#         end
+
+#         @equations begin
+#             connect(fixedTranslation1.frame_a, revolute1.frame_b)
+#             connect(fixedTranslation2.frame_a, revolute3.frame_b)
+#             connect(revolute2.frame_a, fixedTranslation1.frame_b)
+#             connect(revolute2.frame_b, fixedTranslation2.frame_b)
+#             connect(fixedTranslation3.frame_a, revolute4.frame_b)
+#             connect(revolute1.frame_a, fixed.frame)
+#             connect(fixed1D.flange, springDamper1D.flange_a)
+#             connect(revolute4.frame_a, fixedTranslation1.frame_b)
+#             connect(body.frame_a, fixedTranslation3.frame_b)
+#             connect(prismatic1.frame_a, fixed.frame)
+#             connect(springDamper1D.flange_b, prismatic1.flange_a)
+#             connect(prismatic1.frame_b, revolute3.frame_a)
+#         end
+#     end
+
+#     @named model = PlanarKinematicLoop()
+#     model = complete(model)
+#     ssys = structural_simplify(IRSystem(model))
+#     @test length(unknowns(ssys)) <= 6 # ideally 4
+#     display(sort(unknowns(ssys), by=string))
+
+
+#     guesses = ModelingToolkit.missing_variable_defaults(model)
+#     ps = parameters(model)
+#     fulldefs = defaults(model)
+#     defs = Dict(filter(p->!ModelingToolkit.isparameter(p[1]), collect(ModelingToolkit.defaults(model))))
+#     u0 = merge(Dict(guesses), defs)
+#     initsys = generate_initializesystem(ssys; guesses=u0)
+#     initprob = NonlinearLeastSquaresProblem(initsys, u0, [[p => fulldefs[p] for p in ps]; t => 0.0])
+#     u0sol = solve(initprob)
+
+
+#     prob = ODEProblem(ssys, unknowns(ssys) .=> u0sol[unknowns(ssys)]*0.7, (0.0, 5.0))
+#     sol = solve(prob, Rodas5P(), initializealg = ShampineCollocationInit())
+#     @test SciMLBase.successful_retcode(sol)
+# end
