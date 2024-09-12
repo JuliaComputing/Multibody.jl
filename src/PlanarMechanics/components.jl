@@ -13,7 +13,7 @@ Frame fixed in the planar world frame at a given position and orientation
 """
 @mtkmodel Fixed begin
     @parameters begin
-        r[1:2], [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
+        (r[1:2] = [0, 0]), [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
         phi = 0, [description = "Fixed angle"]
     end
 
