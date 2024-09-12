@@ -1,24 +1,21 @@
 purple = Multibody.purple
 """
-    Fixed(; name, r = (0.0, 0.0), phi = 0.0)
+    Fixed(; name, r = [0.0, 0.0], phi = 0.0)
 
 Frame fixed in the planar world frame at a given position and orientation
 
 # Parameters:
-
-  - `x`: [m] Fixed absolute x-position, resolved in planarWorld frame
-  - `y`: [m] Fixed absolute y-position, resolved in planarWorld frame
-  - `phi`: [rad] Fixed angle
+- `x`: [m] Fixed absolute x-position, resolved in planarWorld frame
+- `y`: [m] Fixed absolute y-position, resolved in planarWorld frame
+- `phi`: [rad] Fixed angle
 
 # Connectors:
-
-  - `frame: 2-dim. Coordinate system
+- `frame: 2-dim. Coordinate system
 
 """
 @mtkmodel Fixed begin
     @parameters begin
-        x = 0, [description = "Fixed absolute x-position, resolved in planarWorld frame"]
-        y = 0, [description = "Fixed absolute y-position, resolved in planarWorld frame"]
+        r[1:2], [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
         phi = 0, [description = "Fixed angle"]
     end
 
@@ -27,8 +24,8 @@ Frame fixed in the planar world frame at a given position and orientation
     end
 
     @equations begin
-        frame.x ~ x
-        frame.y ~ y
+        frame.x ~ r[1]
+        frame.y ~ r[2]
         frame.phi ~ phi
     end
 end

@@ -393,7 +393,7 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = joint.s)
 end
 # ==============================================================================
-## Spring damper system from https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Elementary.html#Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem
+## Spring damper system from Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem
 # ==============================================================================
 
 @testset "Spring damper system" begin
