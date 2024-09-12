@@ -173,7 +173,7 @@ render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[
         revolute = Pl.Revolute(phi = 0, w = 0)
         fixed = Pl.Fixed()
         engineTorque = Rotational.ConstantTorque(tau_constant = 2)
-        body = Pl.Body(m = 10, I = 1, gy=0)
+        body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
         inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
         constant = Blocks.Constant(k = 0)
     end
@@ -201,14 +201,11 @@ prob = ODEProblem(ssys, [
     D(model.prismatic.r0[2]) =&gt; 0,
 ], (0.0, 15.0))
 sol = solve(prob, Rodas5Pr())
-render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename=&quot;slipwheel.gif&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;slipwheel.gif&quot;, LScene(), Scene (600px, 450px):
-  0 Plots
-  1 Child Scene:
-    └ Scene (600px, 450px))</code></pre><p><img src="../slipwheel.gif" alt="slipwheel animation"/></p><h2 id="Planar-two-track-model"><a class="docs-heading-anchor" href="#Planar-two-track-model">Planar two-track model</a><a id="Planar-two-track-model-1"></a><a class="docs-heading-anchor-permalink" href="#Planar-two-track-model" title="Permalink"></a></h2><p>A more elaborate example with 4 wheels.</p><pre><code class="language-julia hljs">@mtkmodel TwoTrackWithDifferentialGear begin
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename=&quot;slipwheel.gif&quot;)</code></pre><p><img src="../slipwheel.gif" alt="slipwheel animation"/></p><h2 id="Planar-two-track-model"><a class="docs-heading-anchor" href="#Planar-two-track-model">Planar two-track model</a><a id="Planar-two-track-model-1"></a><a class="docs-heading-anchor-permalink" href="#Planar-two-track-model" title="Permalink"></a></h2><p>A more elaborate example with 4 wheels.</p><pre><code class="language-julia hljs">@mtkmodel TwoTrackWithDifferentialGear begin
     @components begin
         body = Pl.Body(m = 100, I = 1, gy = 0)
-        body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0)
-        body2 = Pl.Body(m = 100, I = 1, gy = 0)
+        body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0,)
+        body2 = Pl.Body(m = 100, I = 1, gy = 0,)
         wheelJoint1 = Pl.SlipBasedWheelJoint(
             radius = 0.25,
             r = [0, 1],
@@ -314,7 +311,4 @@ defs = merge(
 prob = ODEProblem(ssys, defs, (0.0, 5.0))
 sol = solve(prob, Rodas5P(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename=&quot;twotrack.gif&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;twotrack.gif&quot;, LScene(), Scene (600px, 450px):
-  0 Plots
-  1 Child Scene:
-    └ Scene (600px, 450px))</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gyroscopic_effects/">« Gyroscopic effects</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 12 September 2024 04:38">Thursday 12 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename=&quot;twotrack.gif&quot;)</code></pre><p><img src="../twotrack.gif" alt="twotrack animation"/> ```</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gyroscopic_effects/">« Gyroscopic effects</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 12 September 2024 04:38">Thursday 12 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
