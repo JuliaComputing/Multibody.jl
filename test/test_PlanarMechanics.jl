@@ -10,7 +10,6 @@ tspan = (0.0, 3.0)
 g = -9.807
 
 @testset "Free body" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/FreeBody.mo
     m = 2
     I = 1
     @named body = Pl.Body(; m, I)
@@ -34,14 +33,13 @@ g = -9.807
 end
 
 @testset "Pendulum" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/Pendulum.mo
     @named ceiling = Pl.Fixed()
     @named rod = Pl.FixedTranslation(r = [1.0, 0.0])
     @named body = Pl.Body(m = 1, I = 0.1)
     @named revolute = Pl.Revolute()
 
     connections = [
-        connect(ceiling.frame, revolute.frame_a),
+        connect(ceiling.frame_b, revolute.frame_a),
         connect(revolute.frame_b, rod.frame_a),
         connect(rod.frame_b, body.frame_a)
     ]
@@ -63,13 +61,12 @@ end
 end
 
 @testset "Pendulum with body shape" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/Pendulum.mo
     @named ceiling = Pl.Fixed()
     @named rod = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1)
     @named revolute = Pl.Revolute()
 
     connections = [
-        connect(ceiling.frame, revolute.frame_a),
+        connect(ceiling.frame_b, revolute.frame_a),
         connect(revolute.frame_b, rod.frame_a),
     ]
 
@@ -95,7 +92,6 @@ end
 end
 
 @testset "AbsoluteAccCentrifugal" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/443b007bcc1522bb172f13012e2d7a8ecc3f7a9b/PlanarMechanicsTest/Sensors.mo#L221-L332
     m = 1
     I = 0.1
     w = 10
@@ -111,7 +107,7 @@ end
     @named abs_v_sensor = Pl.AbsoluteVelocity(; resolve_in_frame)
 
     eqs = [
-        connect(fixed.frame, revolute.frame_a),
+        connect(fixed.frame_b, revolute.frame_a),
         connect(revolute.frame_b, fixed_translation.frame_a),
         connect(fixed_translation.frame_b, body.frame_a),
         Pl.connect_sensor(body.frame_a, abs_v_sensor.frame_a)... # QUESTION: why?
@@ -175,15 +171,15 @@ end
         Pl.connect_sensor(body1.frame_a, abs_v_sensor.frame_a)...,
         Pl.connect_sensor(body1.frame_a, abs_a_sensor.frame_a)...,
         Pl.connect_sensor(body1.frame_a, rel_pos_sensor1.frame_a)...,
-        Pl.connect_sensor(base.frame, rel_pos_sensor1.frame_b)...,
+        Pl.connect_sensor(base.frame_b, rel_pos_sensor1.frame_b)...,
         Pl.connect_sensor(body1.frame_a, rel_pos_sensor2.frame_a)...,
         Pl.connect_sensor(body2.frame_a, rel_pos_sensor2.frame_b)...,
-        Pl.connect_sensor(base.frame, rel_v_sensor1.frame_a)...,
+        Pl.connect_sensor(base.frame_b, rel_v_sensor1.frame_a)...,
         Pl.connect_sensor(body1.frame_a, rel_v_sensor1.frame_b)...,
         Pl.connect_sensor(body1.frame_a, rel_v_sensor2.frame_a)...,
         Pl.connect_sensor(body2.frame_a, rel_v_sensor2.frame_b)...,
         Pl.connect_sensor(body1.frame_a, rel_a_sensor1.frame_a)...,
-        Pl.connect_sensor(base.frame, rel_a_sensor1.frame_b)...,
+        Pl.connect_sensor(base.frame_b, rel_a_sensor1.frame_b)...,
         Pl.connect_sensor(body1.frame_a, rel_a_sensor2.frame_a)...,
         Pl.connect_sensor(body2.frame_a, rel_a_sensor2.frame_b)...
     ]
@@ -193,15 +189,15 @@ end
     #     connect(body1.frame_a, abs_v_sensor.frame_a),
     #     connect(body1.frame_a, abs_a_sensor.frame_a),
     #     connect(body1.frame_a, rel_pos_sensor1.frame_a),
-    #     connect(base.frame, rel_pos_sensor1.frame_b),
+    #     connect(base.frame_b, rel_pos_sensor1.frame_b),
     #     connect(body1.frame_a, rel_pos_sensor2.frame_a),
     #     connect(body2.frame_a, rel_pos_sensor2.frame_b),
-    #     connect(base.frame, rel_v_sensor1.frame_a),
+    #     connect(base.frame_b, rel_v_sensor1.frame_a),
     #     connect(body1.frame_a, rel_v_sensor1.frame_b),
     #     connect(body1.frame_a, rel_v_sensor2.frame_a),
     #     connect(body2.frame_a, rel_v_sensor2.frame_b),
     #     connect(body1.frame_a, rel_a_sensor1.frame_a),
-    #     connect(base.frame, rel_a_sensor1.frame_b),
+    #     connect(base.frame_b, rel_a_sensor1.frame_b),
     #     connect(body1.frame_a, rel_a_sensor2.frame_a),
     #     connect(body2.frame_a, rel_a_sensor2.frame_b),
     # ]
@@ -265,7 +261,6 @@ end
 end
 
 @testset "Measure Demo" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/MeasureDemo.mo
     @named body = Pl.Body(; m = 1, I = 0.1)
     @named fixed_translation = Pl.FixedTranslation(;)
     @named fixed = Pl.Fixed()
@@ -283,7 +278,7 @@ end
     connections = [
         connect(fixed_translation.frame_b, body.frame_a),
         connect(fixed_translation1.frame_b, body1.frame_a),
-        connect(fixed.frame, revolute1.frame_a),
+        connect(fixed.frame_b, revolute1.frame_a),
         connect(revolute1.frame_b, fixed_translation.frame_a),
         # connect(abs_a_sensor.frame_resolve, abs_a_sensor.frame_a),
         connect(revolute2.frame_b, fixed_translation1.frame_a),
@@ -321,7 +316,6 @@ end
 end
 
 @testset "SpringDamper" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/master/PlanarMechanics/Examples/SpringDamperDemo.mo
     @named spring_damper = Pl.SpringDamper(;
         s_relx0 = 0,
         d_y = 1,
@@ -336,7 +330,7 @@ end
     @named fixed_translation = Pl.FixedTranslation(; r = [-1, 0])
 
     connections = [
-        connect(fixed.frame, fixed_translation.frame_a),
+        connect(fixed.frame_b, fixed_translation.frame_a),
         connect(fixed_translation.frame_b, spring_damper.frame_a),
         connect(spring_damper.frame_b, body.frame_a)
     ]
@@ -358,7 +352,6 @@ end
 end
 
 @testset "Spring and damper demo" begin
-    # https://github.com/dzimmer/PlanarMechanics/blob/743462f58858a808202be93b708391461cbe2523/PlanarMechanics/Examples/SpringDemo.mo
     @named body = Pl.Body(; m = 0.5, I = 0.1)
     @named fixed = Pl.Fixed()
     @named spring = Pl.Spring(; c_y = 10, s_rely0 = -0.5, c_x = 1, c_phi = 1e5)
@@ -366,7 +359,7 @@ end
     @named prismatic = Pl.Prismatic(; r=[0, 1])
 
     connections = [
-        connect(fixed.frame, spring.frame_a),
+        connect(fixed.frame_b, spring.frame_a),
         connect(spring.frame_b, body.frame_a),
         connect(damper.frame_a, spring.frame_a),
         connect(damper.frame_b, spring.frame_b),
@@ -428,7 +421,7 @@ end
 
 
 # import GLMakie, Multibody
-# Multibody.render(model, sol, show_axis=true, x=1, y=1, z=5, traces=[model.wheel1.frame, model.wheel2.frame])
+# Multibody.render(model, sol, show_axis=true, x=1, y=1, z=5, traces=[model.wheel1.frame_a, model.wheel2.frame_a])
 
 
 # plot(sol, idxs=[
@@ -466,13 +459,13 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             revolute = Pl.Revolute(phi = 0, w = 0)
             fixed = Pl.Fixed()
             engineTorque = Rotational.ConstantTorque(tau_constant = 2)
-            body = Pl.Body(m = 10, I = 1, gy=0)
+            body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
             inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
             constant = Blocks.Constant(k = 0)
         end
         @equations begin
             connect(prismatic.frame_a, revolute.frame_b)
-            connect(revolute.frame_a, fixed.frame)
+            connect(revolute.frame_a, fixed.frame_b)
             connect(engineTorque.flange, inertia.flange_a)
             connect(body.frame_a, prismatic.frame_b)
             connect(slipBasedWheelJoint.frame_a, prismatic.frame_b)
