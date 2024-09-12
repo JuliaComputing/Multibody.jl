@@ -58,7 +58,7 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = 0, w=nothing, gy = -9.807, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
+@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.807, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
     @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
@@ -626,13 +626,18 @@ The force depends with friction characteristics on the slip. The slip is split i
 - lateral slip: the lateral velocity divided by the rolling velocity.
 - longitudinal slip: the longitudinal slip velocity divided by the rolling velocity.
 
-For low rolling velocity this definition become ill-conditioned. Hence a dry-friction model is used for low rolling velocities. For zero rolling velocity, the intitialization might fail if automatic differentiation is used. Either start with a non-zero (but tiny) rolling velocity or pass `autodiff=false` to the solver.
+For low rolling velocity this definition become ill-conditioned. Hence a dry-friction model is used for low rolling velocities. For **zero rolling velocity**, the intitialization might fail if automatic differentiation is used. Either start with a non-zero (but tiny) rolling velocity or pass `autodiff=false` to the solver.
 
 The radius of the wheel can be specified by the parameter `radius`. The driving direction (for `phi = 0`) can be specified by the parameter `r`. The normal load is set by `N`.
 
 The wheel contains a 2D connector `frame_a` for the steering on the plane. The rolling motion of the wheel can be actuated by the 1D connector `flange_a`.
 
 In addition there is an input `dynamicLoad` for a dynamic component of the normal load.
+
+# Connectors:
+- `frame_a` (Frame) Coordinate system fixed to the component with one cut-force and cut-torque
+- `flange_a` (Rotational.Flange) Flange for the rolling motion
+- `dynamicLoad` (Blocks.RealInput) Input for the dynamic component of the normal load (must be connected)
 """
 @component function SlipBasedWheelJoint(;
     name,

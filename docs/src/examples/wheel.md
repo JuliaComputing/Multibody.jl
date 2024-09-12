@@ -235,7 +235,7 @@ This example demonstrates use of the [`PlanarMechanics.SlipBasedWheelJoint`](@re
         revolute = Pl.Revolute(phi = 0, w = 0)
         fixed = Pl.Fixed()
         engineTorque = Rotational.ConstantTorque(tau_constant = 2)
-        body = Pl.Body(m = 10, I = 1, gy=0)
+        body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
         inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
         constant = Blocks.Constant(k = 0)
     end
@@ -264,6 +264,7 @@ prob = ODEProblem(ssys, [
 ], (0.0, 15.0))
 sol = solve(prob, Rodas5Pr())
 render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif")
+nothing # hide
 ```
 
 ![slipwheel animation](slipwheel.gif)
@@ -275,8 +276,8 @@ A more elaborate example with 4 wheels.
 @mtkmodel TwoTrackWithDifferentialGear begin
     @components begin
         body = Pl.Body(m = 100, I = 1, gy = 0)
-        body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0)
-        body2 = Pl.Body(m = 100, I = 1, gy = 0)
+        body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0,)
+        body2 = Pl.Body(m = 100, I = 1, gy = 0,)
         wheelJoint1 = Pl.SlipBasedWheelJoint(
             radius = 0.25,
             r = [0, 1],
@@ -383,4 +384,8 @@ prob = ODEProblem(ssys, defs, (0.0, 5.0))
 sol = solve(prob, Rodas5P(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif")
+nothing # hide
+```
+
+![twotrack animation](twotrack.gif)
 ```
