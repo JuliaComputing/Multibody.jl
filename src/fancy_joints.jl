@@ -213,7 +213,7 @@ This joint aggregation has no mass and no inertia and introduces the constraint 
 
 Note, there is a singularity when axis 1 and the connecting rod are parallel to each other. Therefore, if possible `n1_a` should be selected in such a way that it is perpendicular to `rRod_ia` in the initial configuration (i.e., the distance to the singularity is as large as possible).
 
-An additional `frame_ia` is present. It is fixed in the connecting rod at the origin of `frame_a`. The placement of `frame_ia` on the rod is implicitly defined by the universal joint (frame_a and `frame_ia` coincide when the angles of the two revolute joints of the universal joint are zero) and by parameter vector `rRod_ia`, the position vector from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_ia`.
+An additional `frame_ia` is present. It is fixed in the connecting rod at the origin of `frame_a`. The placement of `frame_ia` on the rod is implicitly defined by the universal joint (`frame_a` and `frame_ia` coincide when the angles of the two revolute joints of the universal joint are zero) and by parameter vector `rRod_ia`, the position vector from the origin of `frame_a` to the origin of `frame_b`, resolved in `frame_ia`.
 
 This joint aggregation can be used in cases where in reality a rod with spherical joints at end are present. Such a system has an additional degree of freedom to rotate the rod along its axis. In practice this rotation is usually of no interest and is mathematically removed by replacing one of the spherical joints by a universal joint. Still, in most cases the [`SphericalSpherical`](@ref) joint aggregation can be used instead of the UniversalSpherical joint since the rod is animated and its mass properties are approximated by a point mass in the middle of the rod. The [`SphericalSpherical`](@ref) joint has the advantage that it does not have a singular configuration.
 
@@ -486,9 +486,9 @@ The rest of this joint aggregation is defined by the following parameters:
 
 - `positive_branch`: The positive branch of the revolute joint is selected (cf. elbow up vs. elbow down).
 - The position of the spherical joint with respect to the universal joint is defined by vector `rRod1_ia`. This vector is directed from `frame_a` to the spherical joint and is resolved in `frame_ia` (it is most simple to select `frame_ia` such that it is parallel to `frame_a` in the reference or initial configuration).
-- The position of the spherical joint with respect to the revolute joint is defined by vector rRod2_ib. This vector is directed from the inner frame of the revolute joint (`frame_ib` or revolute.`frame_a`) to the spherical joint and is resolved in `frame_ib` (note, that `frame_ib` and `frame_b` are parallel to each other).
+- The position of the spherical joint with respect to the revolute joint is defined by vector `rRod2_ib`. This vector is directed from the inner frame of the revolute joint (`frame_ib` or `revolute.frame_a`) to the spherical joint and is resolved in `frame_ib` (note, that `frame_ib` and `frame_b` are parallel to each other).
 - The axis of rotation of the revolute joint is defined by axis vector `n_b`. It is fixed and resolved in `frame_b`.
-- When specifying this joint aggregation with the definitions above, two different configurations are possible. Via parameter `phi_guess` a guess value for revolute.phi(t0) at the initial time t0 is given. The configuration is selected that is closest to `phi_guess` (`|revolute.phi - phi_guess|` is minimal).
+- When specifying this joint aggregation with the definitions above, two different configurations are possible. Via parameter `phi_guess` a guess value for `revolute.phi(t0)` at the initial time `t0` is given. The configuration is selected that is closest to `phi_guess` (`|revolute.phi - phi_guess|` is minimal).
 
 # Connectors
 - `frame_a`: Frame for the universal joint
