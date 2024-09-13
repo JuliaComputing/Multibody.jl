@@ -8,11 +8,23 @@ using ModelingToolkit
 using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
+import ModelingToolkitStandardLibrary.Blocks
 using SparseArrays
 using StaticArrays
 export Rotational, Translational
 
 export render, render!
+
+function collect_all(pars)
+    pc = map(pars) do p
+        if p isa AbstractArray || !(p isa SymbolicUtils.BasicSymbolic{<:Real})
+            collect(p)
+        else
+            p
+        end
+    end
+    reduce(vcat, pc)
+end
 
 """
 Find parameters that occur both scalarized and not scalarized
@@ -46,6 +58,7 @@ function benchmark_f(prob)
 end
 
 """
+    scene       = render(model, prob)
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
     path        = render(model, sol, timevec = range(sol.t[1], sol.t[end], step = 1 / framerate); framerate = 30, timescale=1, display=false, loop=1)
 
@@ -53,7 +66,8 @@ Create a 3D animation of a multibody system
 
 # Arguments:
 - `model`: The _unsimplified_ multibody model, i.e., this is the model _before_ any call to `structural_simplify`.
-- `sol`: The `ODESolution` produced by simulating the system using `solve`
+- `prob`: If an `ODEProblem` is passed, a static rendering of the system at the initial condition is generated.
+- `sol`: If an `ODESolution` produced by simulating the system using `solve` is passed, an animation or dynamic rendering of the system is generated.
 - `t`: If a single number `t` is provided, the mechanism at this time is rendered and a scene is returned together with the time as an `Observable`. Modify `time[] = new_time` to change the rendering.
 - `timevec`: If a vector of times is provided, an animation is created and the path to the file on disk is returned.
 - `framerate`: Number of frames per second.
