@@ -240,7 +240,7 @@ This example demonstrates use of the [`PlanarMechanics.SlipBasedWheelJoint`](@re
         constant = Blocks.Constant(k = 0)
     end
     @equations begin
-        connect(fixed.frame, revolute.frame_a)
+        connect(fixed.frame_b, revolute.frame_a)
         connect(revolute.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, body.frame_a)
         connect(prismatic.frame_b, slipBasedWheelJoint.frame_a)
