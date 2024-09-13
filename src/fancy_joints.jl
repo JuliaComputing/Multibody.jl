@@ -1,3 +1,5 @@
+import ModelingToolkitStandardLibrary.Blocks
+collect_all(pars) = reduce(vcat, [p isa AbstractArray ? collect(p) : p for p in pars])
 
 """
     SphericalSpherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false, r_0 = [0,0,0], color = [1, 1, 0, 1], m = 0, radius = 0.1, kinematic_constraint=true)
@@ -219,6 +221,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
 - `n1_a` Axis 1 of universal joint resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod)
 - `rRod_ia` Vector from origin of frame_a to origin of frame_b, resolved in `frame_ia` (if computeRodLength=true, rRod_ia is only an axis vector along the connecting rod)
 - `kinematic_constraint = true` Set to false if no constraint shall be defined, due to analytically solving a kinematic loop
+- `constraint_residue` If set to `:external`, an equation in the parent system is expected to define this variable, e.g., `rod.constraint_residue ~ rod.f_rod - f_rod` where `rod` is the name of the UniversalSpherical joint. If unspecified, the length constraint `rRod_0'rRod_0 - rodLength'rodLength` is used
 
 # Connectors
 - `frame_a`: Frame for the universal joint
@@ -243,12 +246,14 @@ This joint aggregation can be used in cases where in reality a rod with spherica
                     rod_width = 0.1,
                     rod_height = 0.1,
                     rod_color = [0, 0.1, 1, 0.9],
+                    constraint_residue = nothing,
                     cylinder_length = 0.1,
                     cylinder_diameter = 0.1,
                     cylinder_color = [1, 0.2, 0, 1], 
                     kinematic_constraint = true,
 )
 
+    residue = constraint_residue
     systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
@@ -266,11 +271,13 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         cylinder_color[1:4] = cylinder_color, [description = "Color of cylinders representing the two universal joint axes (RGBA)"]
         n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod)"]
         rRod_ia[1:3] = rRod_ia, [description = "Vector from origin of frame_a to origin of frame_b, resolved in frame_ia (if computeRodLength=true, rRod_ia is only an axis vector along the connecting rod)"]
+        rodLength = _norm(rRod_ia), [description="Length of rod (distance between origin of frame_a and origin of frame_b)"]
     end
+
+    pars = collect_all(pars)
 
     vars = @variables begin
         f_rod(t), [description="Constraint force in direction of the rod (positive on frame_a, when directed from frame_a to frame_b)"]
-        # rodLength(t), [description="Length of rod (distance between origin of frame_a and origin of frame_b)"]
         # eRod_ia(t)[1:3], [description="Unit vector from origin of frame_a to origin of frame_b, resolved in frame_ia"]
         # e2_ia(t)[1:3], [description="Unit vector in direction of axis 2 of universal joint, resolved in frame_ia (orthogonal to n1_a and eRod_ia; note: frame_ia is parallel to frame_a when the universal joint angles are zero)"]
         # e3_ia(t)[1:3], [description="Unit vector perpendicular to eRod_ia and e2_ia, resolved in frame_ia"]
@@ -278,7 +285,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         eRod_a(t)[1:3], [description="Unit vector in direction of rRod_a, resolved in frame_a (needed for analytic loop handling)"]
         rRod_0(t)[1:3] = rRod_ia, [description="Position vector from frame_a to frame_b resolved in world frame"]
         rRod_a(t)[1:3] = rRod_ia, [description="Position vector from frame_a to frame_b resolved in frame_a"]
-        (constraintResidue(t) = 0), [description="Constraint equation of joint in residue form: Either length constraint (= default) or equation to compute rod force (for analytic solution of loops in combination with RevoluteWithLengthConstraint)"]
+        (constraint_residue(t) = 0), [description="Constraint equation of joint in residue form: Either length constraint (= default) or equation to compute rod force (for analytic solution of loops in combination with Internal.RevoluteWithLengthConstraint/PrismaticWithLengthConstraint)"]
         f_b_a(t)[1:3], [description="frame_b.f resolved in frame_a"]
         f_ia_a(t)[1:3], [description="frame_ia.f resolved in frame_a"]
         t_ia_a(t)[1:3], [description="frame_ia.t resolved in frame_a"]
@@ -299,7 +306,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
     eRod_ia = normalize(rRod_ia)
     e2_ia = cross(n1_a, eRod_ia)
     e3_ia = cross(eRod_ia, e2_ia)
-    rodLength = _norm(rRod_ia)
+    # rodLength = _norm(rRod_ia)
 
     eRod_ia,e2_ia,e3_ia,f_b_a1,eRod_a,rRod_0,rRod_a,f_b_a,f_ia_a,t_ia_a,n2_a,e2_a,e3_a,der_rRod_a_L,w_rel_ia1 = collect.((eRod_ia,e2_ia,e3_ia,f_b_a1,eRod_a,rRod_0,rRod_a,f_b_a,f_ia_a,t_ia_a,n2_a,e2_a,e3_a,der_rRod_a_L,w_rel_ia1))
 
@@ -324,8 +331,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
 
         rRod_a .~ resolve2(Ra, rRod_0)
 
-        constraintResidue ~ rRod_0'rRod_0 - rodLength'rodLength
-        constraintResidue ~ 0
+        constraint_residue ~ 0
 
         eRod_a .~ rRod_a/rodLength
         n2_a .~ cross(n1_a, eRod_a)
@@ -358,7 +364,411 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         0 .~ collect(frame_a.tau) + t_ia_a + cross(rRod_a, f_b_a)
     ]
 
+    if residue === nothing
+        push!(eqs, constraint_residue ~ rRod_0'rRod_0 - rodLength'rodLength)
+    else
+        # See implementation of JointUSR for how to use the constraint_residue=:external
+        residue === :external || error("Unknown value for constraint_residue, expected nothing or :external")
+    end
+
     sys = ODESystem(eqs, t; name=:nothing, systems)
     add_params(sys, pars; name)
 end
 
+
+@component function RevoluteWithLengthConstraint(; name, n = Float64[0, 0, 1], axisflange = false,
+    positive_branch = true, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 1.0, phi_offset=0, phi_guess=0, length_constraint=1, use_arrays = false)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        axis = Rotational.Flange()
+        bearing = Rotational.Flange()
+        position_a = RealInput(nin=3) # Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint
+        position_b = RealInput(nin=3)
+    end
+    @parameters e[1:3] = _normalize(n) [description = "normalized axis of rotation"]
+    e = collect(e)
+    # @parameters n[1:3]=n [description = "axis of rotation"] # Can't have this as parameter since e = _normalize(n) does not work :/
+    @parameters phi_offset = phi_offset, [description = "offset of the joint in animations"]
+    @parameters length_constraint = length_constraint, [description = "Fixed length of length constraint"]
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        length = length, [description = "length of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+    end
+    @variables tau(t)=0 [
+        connect = Flow,
+        description = "Driving torque in direction of axis of rotation",
+    ]
+    @variables phi(t) [
+        state_priority = 1,
+        description = "Relative rotation angle from frame_a to frame_b",
+    ]
+    @variables angle(t) [
+        state_priority = -1,
+        description = "= phi + phi_offset (relative rotation angle between frame_a and frame_b)",
+    ]
+    @variables r_a(t)[1:3], [description = "Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint"]
+    @variables r_b(t)[1:3], [description = "Position vector from frame_b to frame_b side of length constraint, resolved in frame_b of revolute joint"]
+
+    n, r_a, r_b = collect.((n, r_a, r_b))
+
+    # vars = [tau; phi; angle; r_a; r_b]
+    # pars = [collect(e); phi_offset; length_constraint]
+
+    # @parameters positive_branch::Bool=false
+    # NOTE: final parameters in modelica can be implemented by parameter_dependencies = [final_parameter => expression with other parameters]
+
+    Rrel = planar_rotation(e, angle, D(angle))
+    Rb = absolute_rotation(ori(frame_a), Rrel)
+
+    IR = JuliaSimCompiler
+    e_array = IR.make_array((3,), e...)
+    r_a_array = IR.make_array((3,), r_a...)
+    r_b_array = IR.make_array((3,), r_b...)
+
+    eqs = [
+        collect(r_a) .~ collect(position_a.u)
+        collect(r_b) .~ collect(position_b.u)
+
+        axis.tau ~ tau
+        axis.phi ~ phi
+        bearing.phi ~ 0
+        angle ~ phi + phi_offset
+        collect(frame_b.r_0) .~ collect(frame_a.r_0)
+
+        ori(frame_b) ~ Rb
+        # ori(frame_b).w .~ Rb.w
+
+        0 .~ collect(frame_a.f .+ resolve1(Rrel, frame_b.f))
+        0 .~ collect(frame_a.tau .+ resolve1(Rrel, frame_b.tau))
+
+        if use_arrays
+            angle ~ compute_angle2(length_constraint, e_array, r_a_array, r_b_array, positive_branch)[1]
+            # angle ~ Symbolics.term(compute_angle2, length_constraint, e_array, r_a_array, r_b_array, positive_branch, type=Real)
+        else
+            # angle ~ Symbolics.term(compute_angle, length_constraint, e..., r_a..., r_b..., positive_branch, type=Real)
+            angle ~ compute_angle(length_constraint, e, r_a, r_b, positive_branch)
+        end
+    ]
+
+    sys = ODESystem(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
+    
+    add_params(sys, pars; name)
+end
+
+
+"""
+    JointUSR(;
+        name,
+        n1_a = [0, 0, 1],
+        n_b = [0, 0, 1],
+        rRod1_ia = [1, 0, 0],
+        rRod1_ib = [-1, 0, 0],
+        phi_offset = 0,
+        phi_guess = 0,
+    )
+
+This component consists of a universal joint at `frame_a`, a revolute joint at `frame_b` and a spherical joint which is connected via rod1 to the universal and via rod2 to the revolute joint.
+
+This joint aggregation has no mass and no inertia and introduces neither constraints nor potential state variables. It should be used in kinematic loops whenever possible since the non-linear system of equations introduced by this joint aggregation is solved analytically (i.e., a solution is always computed, if a unique solution exists).
+
+The universal joint is defined in the following way:
+
+- The rotation axis of revolute joint 1 is along parameter vector `n1_a` which is fixed in `frame_a`.
+- The rotation axis of revolute joint 2 is perpendicular to axis 1 and to the line connecting the universal and the spherical joint (= rod 1).
+
+The definition of axis 2 of the universal joint is performed according to the most often occurring case for the sake of simplicity. Otherwise, the treatment is much more complicated and the number of operations is considerably higher, if axis 2 is not orthogonal to axis 1 and to the connecting rod.
+
+Note, there is a singularity when axis 1 and the connecting rod are parallel to each other. Therefore, if possible `n1_a` should be selected in such a way that it is perpendicular to rRod1_ia in the initial configuration (i.e., the distance to the singularity is as large as possible).
+
+The rest of this joint aggregation is defined by the following parameters:
+
+- `positive_branch`: The positive branch of the revolute joint is selected (cf. elbow up vs. elbow down).
+- The position of the spherical joint with respect to the universal joint is defined by vector `rRod1_ia`. This vector is directed from `frame_a` to the spherical joint and is resolved in `frame_ia` (it is most simple to select `frame_ia` such that it is parallel to `frame_a` in the reference or initial configuration).
+- The position of the spherical joint with respect to the revolute joint is defined by vector rRod2_ib. This vector is directed from the inner frame of the revolute joint (`frame_ib` or revolute.`frame_a`) to the spherical joint and is resolved in `frame_ib` (note, that `frame_ib` and `frame_b` are parallel to each other).
+- The axis of rotation of the revolute joint is defined by axis vector `n_b`. It is fixed and resolved in `frame_b`.
+- When specifying this joint aggregation with the definitions above, two different configurations are possible. Via parameter `phi_guess` a guess value for revolute.phi(t0) at the initial time t0 is given. The configuration is selected that is closest to `phi_guess` (`|revolute.phi - phi_guess|` is minimal).
+
+# Connectors
+- `frame_a`: Frame for the universal joint
+- `frame_b`: Frame for the revolute joint
+- An additional `frame_ia` is present. It is fixed in the rod connecting the universal and the spherical joint at the origin of `frame_a`. The placement of `frame_ia` on the rod is implicitly defined by the universal joint (`frame_a` and `frame_ia` coincide when the angles of the two revolute joints of the universal joint are zero) and by parameter vector rRod1_ia, the position vector from the origin of `frame_a` to the spherical joint, resolved in `frame_ia`.
+- An additional `frame_ib` is present. It is fixed in the rod connecting the revolute and the spherical joint at the side of the revolute joint that is connected to this rod (`= rod2.frame_a = revolute.frame_a`).
+- An additional `frame_im` is present. It is fixed in the rod connecting the revolute and the spherical joint at the side of the spherical joint that is connected to this rod (`= rod2.frame_b`). It is always parallel to `frame_ib`.
+"""
+@component function JointUSR(;
+    name,
+    n1_a = [0, 0, 1],
+    n_b = [0, 0, 1],
+    rRod1_ia = [1, 0, 0],
+    rRod2_ib = [-1, 0, 0],
+    phi_offset = 0,
+    phi_guess = 0,
+    positive_branch,
+    use_arrays = false,
+)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        frame_ia = Frame()
+        frame_ib = Frame()
+        frame_im = Frame()
+        axis = Rotational.Flange()
+        bearing = Rotational.Flange()
+    end
+
+    @parameters begin
+        # n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint fixed and resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod 1)"]
+        # n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
+        rRod1_ia[1:3] = rRod1_ia, [description = "Vector from origin of frame_a to spherical joint, resolved in frame_ia"]
+        # rRod2_ib[1:3] = rRod2_ib, [description = "Vector from origin of frame_ib to spherical joint, resolved in frame_ib"]
+        # phi_offset = phi_offset, [description = "Relative angle offset of revolute joint (angle = phi(t) + from_deg(phi_offset))"]
+        phi_guess = phi_guess, [description = "Select the configuration such that at initial time |phi(t0) - from_deg(phi_guess)| is minimal"]
+    end
+
+    n1_a, n_b, rRod1_ia, rRod2_ib = collect.((n1_a, n_b, rRod1_ia, rRod2_ib))
+
+
+    @variables begin
+        aux(t), [description = "Denominator used to compute force in rod connecting universal and spherical joint"]
+        f_rod(t), [description = "Constraint force in direction of the rod (positive, if rod is pressed)"]
+    end
+
+    more_systems = @named begin
+        rod1 = UniversalSpherical(
+            n1_a = n1_a,
+            rRod_ia = rRod1_ia,
+            kinematic_constraint = false,
+            constraint_residue = :external
+        )
+        rod2 = FixedTranslation(
+            r = rRod2_ib,
+        )
+        position_b = Constant3(k = rRod2_ib)
+        relative_position = RelativePosition(resolve_frame = :frame_a)
+    end
+
+    @named revolute = RevoluteWithLengthConstraint(;
+        n = n_b,
+        length_constraint = rod1.rodLength,
+        phi_offset,
+        phi_guess,
+        positive_branch,
+        use_arrays,
+    )
+    push!(more_systems, revolute)
+
+    re = collect(revolute.e)
+    eqs = [
+        aux ~ cross(re, rRod2_ib)'resolve_relative(rod1.eRod_a, ori(rod1.frame_a), ori(rod1.frame_b))
+        f_rod ~ (
+            -revolute.tau - re'*collect(frame_ib.tau + frame_im.tau + 
+                cross(rRod2_ib, frame_im.f) -
+                cross(rRod2_ib, resolve_relative(rod1.f_b_a1, ori(rod1.frame_a), ori(rod1.frame_b)))
+            )
+        )/max(abs(aux), 1e-10)
+
+        rod1.constraint_residue ~ rod1.f_rod - f_rod # Externally provided residue
+        connect(revolute.frame_b, rod2.frame_a)
+        connect(rod2.frame_b, rod1.frame_b)
+        connect(revolute.frame_a, frame_b)
+        connect(rod2.frame_a, frame_ib)
+        connect(rod1.frame_a, frame_a)
+        connect(relative_position.frame_b, frame_a)
+        connect(relative_position.frame_a, frame_b)
+        connect(position_b.output, revolute.position_b)
+        connect(rod2.frame_b, frame_im)
+        connect(rod1.frame_ia, frame_ia)
+        connect(revolute.axis, axis)
+        connect(relative_position.r_rel, revolute.position_a)
+        connect(revolute.bearing, bearing)
+    ]
+    ODESystem(eqs, t; name, systems=[systems; more_systems])
+
+end
+
+@mtkmodel Constant3 begin
+    @components begin
+        output = Blocks.RealOutput(nout=3)
+    end
+    @parameters begin
+        k[1:3] = zeros(3), [description = "Constant output value of block"]
+    end
+    @equations begin
+        output.u[1] ~ k[1]
+        output.u[2] ~ k[2]
+        output.u[3] ~ k[3]
+    end
+end
+
+"""
+    JointRRR(;
+        name,
+        n_a = [0,0,1],
+        n_b = [0,0,1],
+        rRod1_ia = [1,0,0],
+        rRod2_ib = [-1,0,0],
+        phi_offset = 0, 
+        phi_guess = 0,
+
+    )   
+
+This component consists of 3 revolute joints with parallel axes of rotation that are connected together by two rods.
+
+This joint aggregation introduces neither constraints nor state variables and should therefore be used in kinematic loops whenever possible to avoid non-linear systems of equations. It is only meaningful to use this component in planar loops. Basically, the position and orientation of the 3 revolute joints as well as of `frame_ia`, `frame_ib`, and `frame_im` are calculated by solving analytically a non-linear equation, given the position and orientation at `frame_a` and at `frame_b`.
+
+Connector `frame_a` is the "left" side of the first revolute joint whereas `frame_ia` is the "right side of this revolute joint, fixed in rod 1. Connector `frame_b` is the "right" side of the third revolute joint whereas `frame_ib` is the "left" side of this revolute joint, fixed in rod 2. Finally, connector `frame_im` is the connector at the "right" side of the revolute joint in the middle, fixed in rod 2.
+
+The easiest way to define the parameters of this joint is by moving the MultiBody system in a reference configuration where all frames of all components are parallel to each other (alternatively, at least `frame_a`, `frame_ia`, `frame_im`, `frame_ib`, `frame_b` of the JointRRR joint should be parallel to each other when defining an instance of this component).
+
+Basically, the JointRRR model internally consists of a universal-spherical-revolute joint aggregation (= JointUSR). In a planar loop this will behave as if 3 revolute joints with parallel axes are connected by rigid rods.
+
+# Arguments
+- `n_a` Axis of revolute joints resolved in `frame_a` (all axes are parallel to each other)
+- `n_b` Axis of revolute joint fixed and resolved in `frame_b`
+- `rRod1_ia` Vector from origin of `frame_a` to revolute joint in the middle, resolved in `frame_ia`
+- `rRod2_ib` Vector from origin of `frame_ib` to revolute joint in the middle, resolved in `frame_ib`
+- `phi_offset` Relative angle offset of revolute joint at `frame_b` `(angle = phi(t) + phi_offset)`
+
+# Connectors
+- `frame_a`: Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_b`: Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_ia`: Coordinate system at origin of `frame_a` fixed at connecting rod of left and middle revolute joint
+- `frame_ib`: Coordinate system at origin of `frame_ib` fixed at connecting rod of middle and right revolute joint
+- `frame_im`: Coordinate system at origin of revolute joint in the middle fixed at connecting rod of middle and right revolute joint
+- `axis`: 1-dim. rotational flange that drives the right revolute joint at `frame_b`
+- `bearing`: 1-dim. rotational flange of the drive bearing of the right revolute joint at `frame_b`
+"""
+@component function JointRRR(;
+    name,
+    n_a = [0,0,1],
+    n_b = [0,0,1],
+    rRod1_ia = [1,0,0],
+    rRod2_ib = [-1,0,0],
+    phi_offset = 0, 
+    phi_guess = 0,
+    positive_branch = true,
+)
+
+    @parameters begin
+        # n_a[1:3] = n_a, [description = "Axes of revolute joints resolved in frame_a (all axes are parallel to each other)"]
+        # n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
+        rRod1_ia[1:3] = rRod1_ia, [description = "Vector from origin of frame_a to revolute joint in the middle, resolved in frame_ia"]
+        # rRod2_ib[1:3] = rRod2_ib, [description = "Vector from origin of frame_ib to revolute joint in the middle, resolved in frame_ib"]
+        # phi_offset = phi_offset, [description = "Relative angle offset of revolute joint at frame_b (angle = phi(t) + from_deg(phi_offset))"]
+        phi_guess = phi_guess, [description = "Select the configuration such that at initial time |phi(t0) - from_deg(phi_guess)| is minimal"]
+
+    end
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        frame_ia = Frame()
+        frame_ib = Frame()
+        frame_im = Frame()
+        axis = Rotational.Flange()
+        bearing = Rotational.Flange()
+        jointUSR = JointUSR(;
+            n1_a = n_a,
+            n_b = n_b,
+            phi_offset,
+            phi_guess,
+            rRod2_ib,
+            rRod1_ia,
+            positive_branch
+        )
+    end
+
+    # e_a = _normalize(n_a)
+    # e_ia = jointUSR.e2_ia
+    # e_b = jointUSR.revolute.e
+
+    eqs = [
+        connect(jointUSR.frame_a, frame_a)
+        connect(jointUSR.frame_b, frame_b)
+        connect(jointUSR.frame_ia, frame_ia)
+        connect(jointUSR.frame_im, frame_im)
+        connect(jointUSR.frame_ib, frame_ib)
+        connect(jointUSR.axis, axis)
+        connect(jointUSR.bearing, bearing)
+    ]
+
+    ODESystem(eqs, t; name, systems)
+end
+
+
+function select_branch(L::Real, e::AbstractVector, angle_guess::Real, r_a::AbstractVector, r_b::AbstractVector)
+    e_r_a = e'r_a
+    e_r_b = e'r_b
+    A = -2*(r_b'r_a - e_r_b'e_r_a)
+    B = 2*r_b'cross(e, r_a)
+    C = r_a'r_a + r_b'r_b - L^2 - 2*e_r_b'e_r_a
+    k1 = A^2 + B^2
+    k1a = k1 - C^2
+    k1a > 1e-10 || error("Singular position of loop (either no or two analytic solutions; the mechanism has lost one-degree-of freedom in this position). Try to use another joint-assembly component. In most cases it is best to let joints outside of the JointXXX component be revolute and _not_ prismatic joints. If this also leads to singular positions, it could be that this kinematic loop cannot be solved analytically. In this case you have to build up the loop with basic joints (_no_ aggregation JointXXX components) and rely on dynamic state selection, i.e., during simulation the states will be dynamically selected in such a way that in no position a degree of freedom is lost.")
+    k1b = max(k1a, 1.0e-12)
+    k2 = sqrt(k1b)
+    kcos1 = -A*C + B*k2
+    ksin1 = -B*C - A*k2
+    angle1 = atan(ksin1, kcos1)
+    kcos2 = -A*C - B*k2
+    ksin2 = -B*C + A*k2
+    angle2 = atan(ksin2, kcos2)
+    positive_branch = abs(angle1 - angle_guess) <= abs(angle2 - angle_guess)
+    [positive_branch]
+end
+
+@register_array_symbolic select_branch(L::Real, e::AbstractVector, angle_guess::Real, r_a::AbstractVector, r_b::AbstractVector) begin
+    size = (1, )
+    eltype = Bool
+end
+
+function compute_angle(L::Real, e, r_a, r_b, positive_branch)
+    e_r_a = e'r_a
+    e_r_b = e'r_b
+    A = -2*(r_b'r_a - e_r_b'e_r_a)
+    B = 2*r_b'cross(e, r_a)
+    C = r_a'r_a + r_b'r_b - L^2 - 2*e_r_b'e_r_a
+    k1 = A^2 + B^2
+    k1a = k1 - C^2
+    if k1a isa AbstractFloat
+        # k1a > 1e-10 || error("Singular position of loop (either no or two analytic solutions; the mechanism has lost one-degree-of freedom in this position). Try to use another joint-assembly component. In most cases it is best to let joints outside of the JointXXX component be revolute and _not_ prismatic joints. If this also leads to singular positions, it could be that this kinematic loop cannot be solved analytically. In this case you have to build up the loop with basic joints (_no_ aggregation JointXXX components) and rely on dynamic state selection, i.e., during simulation the states will be dynamically selected in such a way that in no position a degree of freedom is lost.")
+    end
+    k1b = max(k1a, 1.0e-12)
+    k2 = sqrt(k1b)
+    kcos1 = -A*C + B*k2*ifelse(positive_branch == true, 1, -1)
+    ksin1 = -B*C + A*k2*ifelse(positive_branch == true, -1, 1)
+    atan(ksin1, kcos1)
+end
+
+function compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch)
+    e_r_a = e'r_a
+    e_r_b = e'r_b
+    A = -2*(r_b'r_a - e_r_b'e_r_a)
+    B = 2*r_b'cross(e, r_a)
+    C = r_a'r_a + r_b'r_b - L^2 - 2*e_r_b'e_r_a
+    k1 = A^2 + B^2
+    k1a = k1 - C^2
+    # k1a > 1e-10 || error("Singular position of loop (either no or two analytic solutions; the mechanism has lost one-degree-of freedom in this position). Try to use another joint-assembly component. In most cases it is best to let joints outside of the JointXXX component be revolute and _not_ prismatic joints. If this also leads to singular positions, it could be that this kinematic loop cannot be solved analytically. In this case you have to build up the loop with basic joints (_no_ aggregation JointXXX components) and rely on dynamic state selection, i.e., during simulation the states will be dynamically selected in such a way that in no position a degree of freedom is lost.")
+    k1b = max(k1a, 1.0e-12)
+    k2 = sqrt(k1b)
+    kcos1 = -A*C + B*k2*ifelse(positive_branch == true, 1, -1)
+    ksin1 = -B*C + A*k2*ifelse(positive_branch == true, -1, 1)
+    [atan(ksin1, kcos1)]
+end
+
+@register_array_symbolic compute_angle2(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool) begin
+    size = (1, )
+    eltype = Float64
+end
+
+# @register_symbolic compute_angle(L::Real, e::AbstractVector, r_a::AbstractVector, r_b::AbstractVector, positive_branch::Bool)::Real
+
+# @register_symbolic compute_angle(L::Num, e1::Num, e1::Num, e2::Num, r_a1::Num, r_a2::Num, r_a3::Num, r_b1::Num, r_b2::Num, r_b3::Num, positive_branch)
+
+function compute_angle(L::Real, e1::Real, e2::Real, e3::Real, r_a1::Real, r_a2::Real, r_a3::Real, r_b1::Real, r_b2::Real, r_b3::Real, positive_branch)
+    e = SA[e1, e2, e3]
+    r_a = SA[r_a1, r_a2, r_a3]
+    r_b = SA[r_b1, r_b2, r_b3]
+    compute_angle(L, e, r_a, r_b, positive_branch)
+end

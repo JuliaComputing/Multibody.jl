@@ -124,7 +124,7 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
 @component function FixedTranslation(; name, r, radius=0.02f0, color = purple, render = true)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r[1:3]=r [
+    @parameters r[1:3]=collect(r) [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
     r = collect(r)

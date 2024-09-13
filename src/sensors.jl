@@ -7,10 +7,46 @@ function PartialRelativeBaseSensor(; name)
     equations = [frame_a.f .~ zeros(3) |> collect
                  frame_a.tau .~ zeros(3) |> collect
                  frame_b.f .~ zeros(3) |> collect
-                 frame_b.tau .~ zeros(3) |> collect
-                 frame_resolve.f .~ zeros(3) |> collect
-                 frame_resolve.tau .~ zeros(3) |> collect]
+                 frame_b.tau .~ zeros(3) |> collect]
     compose(ODESystem(equations, t; name), frame_a, frame_b)
+end
+
+function BasicRelativePosition(; name, resolve_frame)
+    @named prb = PartialRelativeBaseSensor()
+    @unpack frame_a, frame_b = prb
+    systems = @named begin
+        r_rel = RealOutput(nout = 3)
+    end
+
+    d = collect(frame_b.r_0 - frame_a.r_0)
+    eqs = if resolve_frame === :frame_a
+        collect(r_rel.u) .~ resolve2(ori(frame_a), d)
+    elseif resolve_frame === :frame_b
+        collect(r_rel.u) .~ resolve2(ori(frame_b), d)
+    elseif resolve_frame === :world
+        collect(r_rel.u) .~ d
+    else
+        error("resolve_frame must be :world, :frame_a or :frame_b, you provided $resolve_frame, which makes me sad.")
+    end
+
+    extend(compose(ODESystem(eqs, t; name), r_rel), prb)
+end
+
+function RelativePosition(; name, resolve_frame = :frame_a)
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        relativePosition = BasicRelativePosition(; resolve_frame)
+        r_rel = RealOutput(nout = 3)
+    end
+
+    eqs = [
+        connect(relativePosition.frame_a, frame_a)
+        connect(relativePosition.frame_b, frame_b)
+        connect(relativePosition.r_rel, r_rel)
+    ]
+    compose(ODESystem(eqs, t; name), frame_a, frame_b, r_rel, relativePosition)
 end
 
 function PartialAbsoluteSensor(; name, n_out)
@@ -80,17 +116,6 @@ function CutForce(; name, resolve_frame = :frame_a)
         error("resolve_frame must be :world or :frame_a")
     end
     extend(compose(ODESystem(eqs, t; name), force), pcfbs)
-end
-
-function RelativePosition(; name, resolve_frame = :frame_a)
-    @named begin prs = PartialRelativeBaseSensor(; name) end
-
-    @unpack frame_a, frame_b = prs
-
-    equations = [frame_a.r_0 .~ frame_b.r_0 |> collect
-                 ori(frame_a) ~ ori(frame_b)
-                 zeros(3) .~ frame_a.r_0 - frame_b.r_0 |> collect]
-    extend(compose(ODESystem(equations, t; name), frame_a, frame_b), prs)
 end
 
 function RelativeAngles(; name, sequence = [1, 2, 3])

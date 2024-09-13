@@ -1175,6 +1175,7 @@ prob = ODEProblem(ssys, [
 
 ], (0, 1))
 sol1 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
+@test SciMLBase.successful_retcode(sol1)
 
 ## quat in joint
 @named joint = Multibody.Spherical(isroot=true, state=true, quat=true, neg_w=true)
@@ -1195,6 +1196,7 @@ prob = ODEProblem(ssys, [
 
 ], (0, 1))
 sol2 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
+@test SciMLBase.successful_retcode(sol2)
 
 ## euler
 @named joint = Multibody.Spherical(isroot=true, state=true, quat=false, neg_w=true)
@@ -1259,10 +1261,11 @@ sol = solve(prob, Rodas4())
     @components begin
         world = W()
         ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false, sphere_diameter=0.3)
-        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true, neg_w=true)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
         s = Spherical()
         trans = FixedTranslation(r = [1,0,1])
-        body2 = Body(; m = 1, isroot = false, r_cm=[0.1, 0, 0], neg_w=true)
+        body2 = Body(; m = 1, r_cm=[0.1, 0, 0])
+        # rp = Multibody.RelativePosition(resolve_frame=:world)
     end
     @equations begin
         connect(world.frame_b, ss.frame_a, trans.frame_a)
@@ -1270,6 +1273,8 @@ sol = solve(prob, Rodas4())
         connect(ss2.frame_b, s.frame_a)
         connect(s.frame_b, trans.frame_b)
         connect(ss.frame_ia, body2.frame_a)
+        # connect(world.frame_b, rp.frame_a)
+        # connect(rp.frame_b, ss2.body.frame_a)
     end
 end
 
@@ -1278,10 +1283,12 @@ model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     model.ss2.body.phi[1] => 0.1;
+    model.ss2.body.phi[3] => 0.1;
     model.ss2.body.phid[3] => 0.0;
 ], (0, 1.37))
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
+@test_skip sol[collect(model.rp.r_rel.u)] == sol[collect(model.ss.frame_b.r_0)] # This test is commented out, adding the sensor makes the problem singular and I can't seem to find a set of state priorities that make it solve
 # plot(sol)
 
 ## =============================================================================
@@ -1319,3 +1326,9 @@ sol = solve(prob, Rodas4())
 @test sol[model.cyl.v][end] ≈ -9.81 atol=0.01
 @test sol[model.cyl.phi][end] ≈ 1 atol=0.01
 
+## =============================================================================
+
+@testset "JointUSR_RRR" begin
+    @info "Testing JointUSR_RRR"
+    include("test_JointUSR_RRR.jl")
+end
