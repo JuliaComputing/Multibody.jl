@@ -227,11 +227,10 @@ inputs = [quad.thruster1.u; quad.thruster2.u; quad.thruster3.u; quad.thruster4.u
 outputs = [quad.y_alt, quad.y_roll, quad.y_pitch, quad.y_yaw, quad.y_forward, quad.y_sideways, quad.v_alt, quad.v_roll, quad.v_pitch, quad.v_yaw, quad.v_forward, quad.v_sideways, quad.yIe_alt]
 
 op = [
-    quad.arm4.body.r_0[2] => 1e-3
-    quad.arm1.body.r_0[3] => 1e-3
-    quad.arm1.body.r_0[1] => 1e-3
-    quad.world.g => 9.81;
-    inputs .=> 1; 
+    quad.arm4.body.r_0[2] => 1e-32
+    quad.arm2.body.v_0[2] => 1e-32 # To avoid singularity in linearization
+    quad.world.g => 9.81
+    inputs .=> 1;
 ] |> Dict
 
 lsys = named_ss(IRSystem(quad), inputs, outputs; op)
@@ -277,7 +276,6 @@ prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
-
 ```
 
 ```@example QUAD
