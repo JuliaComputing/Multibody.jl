@@ -1,5 +1,4 @@
 import ModelingToolkitStandardLibrary.Blocks
-collect_all(pars) = reduce(vcat, [p isa AbstractArray ? collect(p) : p for p in pars])
 
 """
     SphericalSpherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false, r_0 = [0,0,0], color = [1, 1, 0, 1], m = 0, radius = 0.1, kinematic_constraint=true)
@@ -576,6 +575,8 @@ The rest of this joint aggregation is defined by the following parameters:
     positive_branch,
     use_arrays = false,
     render = true,
+    rod_color = purple,
+    rod_radius = 0.1,
 )
     systems = @named begin
         frame_a = Frame()
@@ -611,7 +612,12 @@ The rest of this joint aggregation is defined by the following parameters:
             rRod_ia = rRod1_ia,
             kinematic_constraint = false,
             constraint_residue = :external,
-            rod_color,
+            sphere_color = [0,0,0,0],
+            rod_color = rod_color,
+            cylinder_color = rod_color,
+            cylinder_diameter = 2*rod_radius,
+            rod_width = 2*rod_radius,
+            rod_height = 2*rod_radius,
             render,
         )
         rod2 = FixedTranslation(;
@@ -724,6 +730,7 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
     phi_offset = 0, 
     phi_guess = 0,
     positive_branch = true,
+    kwargs...
 )
 
     @parameters begin
@@ -750,7 +757,8 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
             phi_guess,
             rRod2_ib,
             rRod1_ia,
-            positive_branch
+            positive_branch,
+            kwargs...
         )
     end
 

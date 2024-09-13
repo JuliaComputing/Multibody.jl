@@ -15,6 +15,9 @@ export Rotational, Translational
 
 export render, render!
 
+"""
+A helper function that calls `collect` on all parameters in a vector of parameters in a smart way
+"""
 function collect_all(pars)
     pc = map(pars) do p
         if p isa AbstractArray || !(p isa SymbolicUtils.BasicSymbolic{<:Real})
