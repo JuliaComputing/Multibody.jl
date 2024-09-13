@@ -207,7 +207,7 @@ export Revolute, Prismatic, Planar, Spherical, Universal,
 GearConstraint, FreeMotion, RevolutePlanarLoopConstraint, Cylindrical
 include("joints.jl")
 
-export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR
+export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR, PrismaticConstraint
 include("fancy_joints.jl")
 
 export RollingWheelJoint, RollingWheel, SlipWheelJoint, SlippingWheel, RollingWheelSet, RollingWheelSetJoint, RollingConstraintVerticalWheel

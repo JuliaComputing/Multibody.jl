@@ -201,6 +201,70 @@ In complex multibody systems with closed loops this may help to simplify the sys
 end
 
 """
+    PrismaticConstraint(; name, color, radius = 0.05, x_locked = true, y_locked = true, z_locked = true, render = true)
+
+This model does not use explicit variables e.g. state variables in order to describe the relative motion of `frame_b` with respect to `frame_a`, but defines kinematic constraints between the `frame_a` and `frame_b`. The forces and torques at both frames are then evaluated in such a way that the constraints are satisfied. Sometimes this type of formulation is called an implicit joint in literature.
+
+As a consequence of the formulation, the relative kinematics between `frame_a` and `frame_b` cannot be initialized.
+
+In complex multibody systems with closed loops this may help to simplify the system of non-linear equations. Compare the simplification result using the classical joint formulation and this alternative formulation to check which one is more efficient for the particular system under consideration.
+
+In systems without closed loops the use of this implicit joint does not make sense or may even be disadvantageous.
+
+# Parameters
+- `color`: Color of the joint in animations (RGBA)
+- `radius`: Radius of the joint in animations
+- `x_locked`: Set to false if the translational motion in x-direction shall be free
+- `y_locked`: Set to false if the translational motion in y-direction shall be free
+- `z_locked`: Set to false if the translational motion in z-direction shall be free
+- `render`: Whether or not the joint is rendered in animations
+"""
+@component function PrismaticConstraint(; name, color = [1, 1, 0, 1], radius = 0.05, x_locked = true, y_locked = true, z_locked = true, render = true)
+    @named begin
+        ptf = PartialTwoFrames()
+    end
+    pars = @parameters begin
+        radius = radius, [description = "radius of the joint in animations"]
+        color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+        render = render, [description = "Set to false if the joint shall not be rendered"]
+    end
+    @unpack frame_a, frame_b = ptf
+    @variables (r_rel_a(t)[1:3] = zeros(3)), [description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a"]
+
+    Rrel = relative_rotation(frame_a, frame_b)
+
+    eqs = [
+        if x_locked
+            r_rel_a[1] ~ 0
+        else
+            frame_a.f[1] ~ 0
+        end
+
+        if y_locked
+            r_rel_a[2] ~ 0
+        else
+            frame_a.f[2] ~ 0
+        end
+
+        if z_locked
+            r_rel_a[3] ~ 0
+        else
+            frame_a.f[3] ~ 0
+        end
+        r_rel_a .~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0)
+        zeros(3) .~ collect(frame_a.tau) .+ resolve1(Rrel, frame_b.tau) .+ cross(r_rel_a, resolve1(Rrel, frame_b.f))
+        zeros(3) .~ resolve1(Rrel, frame_b.f) + collect(frame_a.f)
+        # orientation_constraint(ori(frame_a), ori(frame_b)) .~ 0
+        residue(ori(frame_a), ori(frame_b)) .~ 0
+    ]
+
+    Main.eqs = eqs
+
+    sys = extend(ODESystem(eqs, t, collect(r_rel_a), pars; name), ptf)
+end
+
+
+"""
     UniversalSpherical(; name, n1_a, rRod_ia, sphere_diameter = 0.1, sphere_color, rod_width = 0.1, rod_height = 0.1, rod_color, cylinder_length = 0.1, cylinder_diameter = 0.1, cylinder_color, kinematic_constraint = true)
 
 Universal - spherical joint aggregation (1 constraint, no potential states)
