@@ -287,21 +287,25 @@ nothing # hide
 The observant reader may have noticed that we linearized the quadrotor without the cable-suspended load applied, but we simulated the closed-loop system with the load. Thankfully, the LQR controller is robust enough to stabilize the system despite this large model error. Before being satisfied with the controller, we should perform robustness analysis. Below, we compute sensitivity functions at the plant output and input and plot their sigma plots, as well as simultaneous diskmargins at the plant output and input.
 
 ```@example QUAD
-linop = merge(op, Dict(collect(model.system_outputs.u) .=> 0))
+linop = merge(op, Dict([
+    collect(model.system_outputs.u) .=> 0
+    collect(model.arm4.body.r_0) .=> 1e-32
+    collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
+    ]))
 S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 S = minreal(S, 1e-6)
-@assert isstable(S)
+isstable(S) || @error "Sensitivity function S is not stable"
 T = get_named_comp_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 T = minreal(T, 1e-6)
-@assert isstable(T)
+isstable(T) || @error "Sensitivity function T is not stable"
 LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
 
 Si = get_named_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
 Si = minreal(Si, 1e-6)
-@assert isstable(Si)
+isstable(Si) || @error "Sensitivity function Si is not stable"
 Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
 Ti = minreal(Ti, 1e-6)
-@assert isstable(Ti)
+isstable(Ti) || @error "Sensitivity function Ti is not stable"
 LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
 
 CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop system from measurement noise to control signal
