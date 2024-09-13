@@ -294,9 +294,7 @@ Measure relative position and orientation between the origins of two frame conne
         @named fr = FrameResolve()
         push!(systems, fr)
         push!(eqs, connect(pos.frame_resolve, fr))
-    end
-
-    if resolve_in_frame != :frame_resolve
+    else
         @named zero_position = ZeroPosition()
         push!(systems, zero_position)
         push!(eqs, connect(zero_position.frame_resolve, pos.frame_resolve))
