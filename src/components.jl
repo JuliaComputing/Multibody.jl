@@ -414,9 +414,9 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 
     shapecode = encode(shapefile)
     @parameters begin
-        r[1:3]=r, [
-            description = "Vector from frame_a to frame_b resolved in frame_a",
-        ]
+        # r[1:3]=r, [
+        #     description = "Vector from frame_a to frame_b resolved in frame_a",
+        # ]
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations"]
         shapefile[1:length(shapecode)] = shapecode
@@ -425,7 +425,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     end
 
 
-    pars = [r; radius; color; shapefile; shape_transform; shape_scale]
+    pars = [radius; color; shapefile; shape_transform; shape_scale]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
