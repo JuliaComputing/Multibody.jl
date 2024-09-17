@@ -28,6 +28,9 @@ The display of the world frame can be turned off by setting `world.render => fal
 The path that a frame traces out during simulation can be visualized by passing a vector of frames to the `render` function using the `traces` keyword, e.g., `render(..., traces=[frame1, frame2])`.
 See the Furuta-pendulum demonstration [Going 3D](@ref) for an example of this.
 
+## Camera controls
+The camera controls are inherited from Makie, [see their documentation for more information](https://docs.makie.org/stable/explanations/cameras#3D-Camera). Of particular interest may be the keyboard shortcuts `x, y, z`, by holding one of these keys and dragging the mouse, the camera will rotate around the corresponding axis.
+
 
 ## Rendering API
 

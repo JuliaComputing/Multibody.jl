@@ -544,6 +544,8 @@ The rest of this joint aggregation is defined by the following parameters:
         )
         rod2 = FixedTranslation(
             r = rRod2_ib,
+            color = rod_color,
+            radius = rod_radius,
         )
         position_b = Constant3(k = rRod2_ib)
         relative_position = RelativePosition(resolve_frame = :frame_a)
