@@ -15,8 +15,9 @@ using CairoMakie
 
 After that, the [`render`](@ref) function is the main entry point to create 3D renderings. This function has the following methods:
 
-- `render(model, solution)`: this method creates an animation corresponding to the mechanisms evolution in a simulation trajectory.
-- `scene, time = render(model, solution, t::Real)`: this method opens an interactive window with the mechanism in the configuration corresponding to the time `t`. Display `scene` to display the interactive window, and change the time by either dragging the slider in the window, or write to the observable `time[] = new_time`.
+- `render(model, prob::ODEProblem)`: this method creates an _interactive_ figure corresponding to the mechanisms configuration at the specified initial condition.
+- `render(model, solution)`: this method creates an _animation_ corresponding to the mechanisms evolution in a simulation trajectory.
+- `scene, time = render(model, solution, t::Real)`: this method opens an _interactive_ window with the mechanism in the configuration corresponding to the time `t`. Display `scene` to display the interactive window, and change the time by either dragging the slider in the window, or write to the observable `time[] = new_time`.
 
 ## Colors
 Many components allows the user to select with which color it is rendered. This choice is made by providing a 4-element array with color values in the order (RGBA), where each value is between 0 and 1. The last value is the alpha channel which determines the opacity, i.e., 1 is opaque and 0 is invisible.
@@ -29,7 +30,7 @@ The path that a frame traces out during simulation can be visualized by passing 
 See the Furuta-pendulum demonstration [Going 3D](@ref) for an example of this.
 
 ## Camera controls
-The camera controls are inherited from Makie, [see their documentation for more information](https://docs.makie.org/stable/explanations/cameras#3D-Camera). Of particular interest may be the keyboard shortcuts `x, y, z`, by holding one of these keys and dragging the mouse, the camera will rotate around the corresponding axis.
+The camera controls are inherited from Makie, [see their documentation for more information](https://docs.makie.org/stable/explanations/cameras#3D-Camera). Of particular interest may be the keyboard shortcuts `x, y, z`, by holding one of these keys and dragging the mouse, the camera will rotate around the corresponding axis. Use keyword argument `show_axis = true` to function `render` or pass parameter `world.render => true` to `ODEProblem` to display plot axes and/or world axes in the plot.
 
 
 ## Rendering API
