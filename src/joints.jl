@@ -581,7 +581,7 @@ Joint where `frame_b` rotates around axis `n` which is fixed in `frame_a` and wh
 
 If a planar loop is present, e.g., consisting of 4 revolute joints where the joint axes are all parallel to each other, then there is no unique mathematical solution if all revolute joints are modelled with [`Revolute`](@ref) and the symbolic algorithms will fail. The reason is that, e.g., the cut-forces in the revolute joints perpendicular to the planar loop are not uniquely defined when 3-dim. descriptions of revolute joints are used. In this case, one revolute joint in the loop has to be replaced by model `RevolutePlanarLoopConstraint`. The effect is that from the 5 constraints of a 3-dim. revolute joint, 3 constraints are removed and replaced by appropriate known variables (e.g., the force in the direction of the axis of rotation is treated as known with value equal to zero; for standard revolute joints, this force is an unknown quantity).
 """
-@component function RevolutePlanarLoopConstraint(; name, n = Float64[0, 0, 1], radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0])
+@component function RevolutePlanarLoopConstraint(; name, n = Float64[0, 0, 1], radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], render=true)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -603,6 +603,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         radius = radius, [description = "Radius of revolute cylinder in animations"]
         length = length, [description = "Length of revolute cylinder in animations"]
         color[1:4] = color, [description = "Color of revolute cylinder in animations"]
+        render = render, [description = "Render the joint in animations"]
     end
 
     nnx_a = ifelse(abs(n[1]) > 0.1, [0,1,0], ifelse(abs(n[2]) > 0.1, [0,0,1], [1,0,0])) 
