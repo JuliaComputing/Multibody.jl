@@ -159,6 +159,8 @@ tspan = (0.0, 5.0)
 prob = ODEProblem(m, [
     # ModelingToolkit.missing_variable_defaults(m);
     # D(cm.axis2.gear.bearingFriction.w) => 0
+    cm.axis2.motor.flange_motor.phi => deg2rad(20) *  0,
+    D(cm.axis2.motor.flange_motor.phi) => 0,
     cm.axis2.motor.Jmotor.phi => deg2rad(20) *  0,
     cm.axis2.gear.gear.phi_b => 0,
     D(cm.axis2.gear.gear.phi_b) => 0,
