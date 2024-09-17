@@ -507,7 +507,9 @@ x_sat = 0.5
 y_max = 1.4
 y_sat = 1.2
 
-julia> plot(x->Multibody.PlanarMechanics.limit_S_triple(x_max, x_sat, y_max, y_sat, x), -1, 1, legend=false)
+plot(x->Multibody.PlanarMechanics.limit_S_triple(x_max, x_sat, y_max, y_sat, x), -1, 1)
+vline!([x_max x_sat], label=["x_max" "x_sat"])
+
             ┌────────────────────────────────────────┐ 
     1.48385 │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⢀⡔⠢⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│ 
             │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⡜⠀⠀⠀⠈⠉⠒⠒⠒⠒⠒⠒⠒⠒⠒⠒⠂⠀│ 
@@ -633,6 +635,10 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
 - `frame_a` (Frame) Coordinate system fixed to the component with one cut-force and cut-torque
 - `flange_a` (Rotational.Flange) Flange for the rolling motion
 - `dynamicLoad` (Blocks.RealInput) Input for the dynamic component of the normal load (must be connected)
+
+# Terminology: 
+- _Adhesion_ refers to the peak of the traction curve, where the slip is such that the maximum amount of traction is generated.
+- _Sliding velocity_ refers to the velocity at which the traction curve saturates and stays constant with increased slip velocity.
 """
 @component function SlipBasedWheelJoint(;
     name,
@@ -683,13 +689,13 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
         (phi_roll(t) = phi_roll), [guess=0, description="wheel angle"] # wheel angle
         (w_roll(t)=w_roll), [guess=0, description="Roll velocity of wheel"]
         v(t)[1:2], [description="velocity"]
-        v_lat(t), [guess=0, description="Driving in lateral direction"]
+        v_lat(t), [guess=0, description="Velocity in lateral direction"]
         v_long(t), [guess=0, description="Velocity in longitudinal direction"]
         v_slip_long(t), [guess=0, description="Slip velocity in longitudinal direction"]
         v_slip_lat(t), [guess=0, description="Slip velocity in lateral direction"]
-        v_slip(t), [description="Slip velocity"]
-        f(t), [description="Longitudinal force"]
-        f_lat(t), [description="Longitudinal force"]
+        v_slip(t), [description="Slip velocity, norm of component slip velocities"]
+        f(t), [description="Total traction force"]
+        f_lat(t), [description="Lateral force"]
         f_long(t), [description="Longitudinal force"]
         fN(t), [description="Base normal load"]
         vAdhesion(t), [description="Adhesion velocity"]
@@ -719,7 +725,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
         vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
         vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
         fN ~ max(0, N + dynamicLoad.u)
-        f ~ fN * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip)
+        f ~ fN * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip) # limit_S_triple(x_max, x_sat, y_max, y_sat, x)
         f_long ~ f * v_slip_long / v_slip
         f_lat ~ f * v_slip_lat / v_slip
         f_long ~ [frame_a.fx, frame_a.fy]'e0
