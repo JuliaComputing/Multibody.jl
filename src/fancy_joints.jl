@@ -251,6 +251,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
                     cylinder_diameter = 0.1,
                     cylinder_color = [1, 0.2, 0, 1], 
                     kinematic_constraint = true,
+                    render = true,
 )
 
     residue = constraint_residue
@@ -272,6 +273,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod)"]
         rRod_ia[1:3] = rRod_ia, [description = "Vector from origin of frame_a to origin of frame_b, resolved in frame_ia (if computeRodLength=true, rRod_ia is only an axis vector along the connecting rod)"]
         rodLength = _norm(rRod_ia), [description="Length of rod (distance between origin of frame_a and origin of frame_b)"]
+        render = render, [description="Whether or not to render the joint in animations"]
     end
 
     pars = collect_all(pars)
@@ -503,10 +505,13 @@ The rest of this joint aggregation is defined by the following parameters:
     n_b = [0, 0, 1],
     rRod1_ia = [1, 0, 0],
     rRod2_ib = [-1, 0, 0],
+    rod_color = [0.3, 0.3, 0.3, 1],
+    rod_radius = 0.05,
     phi_offset = 0,
     phi_guess = 0,
     positive_branch,
     use_arrays = false,
+    render = true,
 )
     systems = @named begin
         frame_a = Frame()
@@ -525,6 +530,7 @@ The rest of this joint aggregation is defined by the following parameters:
         # rRod2_ib[1:3] = rRod2_ib, [description = "Vector from origin of frame_ib to spherical joint, resolved in frame_ib"]
         # phi_offset = phi_offset, [description = "Relative angle offset of revolute joint (angle = phi(t) + from_deg(phi_offset))"]
         phi_guess = phi_guess, [description = "Select the configuration such that at initial time |phi(t0) - from_deg(phi_guess)| is minimal"]
+        # render = render, [description = "Whether or not to render the joint in animations"]
     end
 
     n1_a, n_b, rRod1_ia, rRod2_ib = collect.((n1_a, n_b, rRod1_ia, rRod2_ib))
@@ -536,16 +542,19 @@ The rest of this joint aggregation is defined by the following parameters:
     end
 
     more_systems = @named begin
-        rod1 = UniversalSpherical(
-            n1_a = n1_a,
+        rod1 = UniversalSpherical(;
+            n1_a,
             rRod_ia = rRod1_ia,
             kinematic_constraint = false,
-            constraint_residue = :external
+            constraint_residue = :external,
+            rod_color,
+            render,
         )
-        rod2 = FixedTranslation(
+        rod2 = FixedTranslation(;
             r = rRod2_ib,
             color = rod_color,
             radius = rod_radius,
+            render,
         )
         position_b = Constant3(k = rRod2_ib)
         relative_position = RelativePosition(resolve_frame = :frame_a)
