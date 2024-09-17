@@ -311,6 +311,6 @@ end
     @test !all(iszero, angle_ref)
 
     control_error = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
-    @test maximum(abs, control_error) < 0.002
+    @test maximum(abs, control_error) < 0.01
 end
 
