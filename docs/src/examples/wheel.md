@@ -126,9 +126,9 @@ tire_black = [0.1, 0.1, 0.1, 1]
 @mtkmodel Car begin
     @structural_parameters begin
         l=4
+        m=108
     end
     @parameters begin
-        m=108
         I=10
         g=0
     end
@@ -145,7 +145,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
         steering_joint = Revolute(n = [0,1,0], axisflange=true, state_priority=100)
         prefer_straight_ahead = Rotational.SpringDamper(d=10, c=10)
 
-        body = BodyShape(;m, r = [l, 0, 0], I_22 = I, radius=0.3)
+        body = BodyShape(; m, r = [l, 0, 0], I_22 = I, radius=0.3)
     end
     @equations begin
         connect(sine1.output, torque1.tau)
