@@ -5,8 +5,8 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
         world = W()
         shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, axisflange = true, phi0=0.1)
-        upper_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0, 0.6], radius=0.04)
-        lower_arm = BodyShape(; m = 0.1, isroot = false, r = [0, 0.6, 0], radius=0.04)
+        upper_arm = BodyShape(; m = 1, isroot = false, r = [0, 0, 0.6], radius=0.04)
+        lower_arm = BodyShape(; m = 1, isroot = false, r = [0, 0.6, 0], radius=0.04)
         tip = Body(; m = 0.3, isroot = false)
 
         damper1 = Rotational.Damper(d = 0.07)
