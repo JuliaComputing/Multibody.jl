@@ -356,6 +356,7 @@ function render!(scene, ::typeof(Frame), sys, sol, t)
 end
 
 function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     n = get_fun(sol, collect(sys.n))
     color = get_color(sys, sol, :red)
@@ -387,6 +388,7 @@ end
 render!(scene, ::typeof(Universal), sys, sol, t) = false # To recurse down to rendering the revolute joints
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     vars = get_fun(sol, collect(sys.frame_a.r_0))
     color = get_color(sys, sol, :yellow)
     radius = sol(sol.t[1], idxs=sys.radius)
@@ -414,7 +416,7 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
     true
 end
 
@@ -434,7 +436,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
             extremity = r2
             Makie.GeometryBasics.Cylinder(origin, extremity, radius)
         end
-        mesh!(scene, thing; color, specular = Vec3f(1.5))
+        mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
     else
         T = get_frame_fun(sol, sys.frame_a)
 

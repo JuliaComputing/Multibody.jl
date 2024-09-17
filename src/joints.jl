@@ -175,6 +175,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 # Rendering options
 - `radius = 0.1`: Radius of the joint in animations
 - `color = [1,1,0,1]`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
+- `render = true`: Render the joint in animations
 """
 @component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
@@ -185,6 +186,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    color = [1, 1, 0, 1],
                    radius = 0.1,
                    quat = false,
+                   render = true,
                    )
 
     dnum = d
@@ -197,6 +199,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
         d = d
+        render = render, [description = "render the joint in animations"]
     end
     @unpack frame_a, frame_b = ptf
     # @parameters begin # Currently not using parameters due to these appearing in if statements
@@ -682,17 +685,18 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
 - `boxheight`: Height of the prismatic joint boxes
 - `boxcolor`: (structural) Color of the prismatic joint boxes
 - `radius`: (structural) Radius of the revolute cylinder
+- `render`: Enable rendering of the joint in animations
 """
 @mtkmodel Planar begin
     @structural_parameters begin
         state_priority = 1#, [description = "Priority used to choose whether the joint state variables are selected"]
         n
         n_x
-    end
-    begin
+        radius = 0.05
         cylindercolor = [1, 0, 1, 1]
         boxcolor = [0, 0, 1, 1]
-        radius = 0.05
+    end
+    begin
     end
     @parameters begin
         # (n[1:3]), [description = "Axis orthogonal to unconstrained plane, resolved in frame_a (= same as in frame_b)"]
@@ -703,6 +707,7 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
         boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
         # boxcolor[1:4] = boxcolordefault, [description = "Color of prismatic joint boxes"]
+        render = true, [description = "Enable rendering of the joint in animations"]
     end
     begin
         n = collect(n)
@@ -718,8 +723,8 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor)
-        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor)
+        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor, radius)
+        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor, radius)
         revolute = Revolute(; state_priority=2.1, n, isroot=false, color=cylindercolor, radius)
     end
     @variables begin
