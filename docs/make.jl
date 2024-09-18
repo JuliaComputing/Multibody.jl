@@ -39,6 +39,7 @@ makedocs(;
                  "Bodies in space" => "examples/space.md",
                  "Gyroscopic effects" => "examples/gyroscopic_effects.md",
                  "Wheels" => "examples/wheel.md",
+                 "Suspension systems" => "examples/suspension.md",
                  "Quadrotor with cable-suspended load" => "examples/quad.md",
              ],
              "Rotations and orientation" => "rotations.md",
