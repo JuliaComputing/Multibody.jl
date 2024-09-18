@@ -39,38 +39,36 @@ function parse_color(xml_link, default)
     parse_vector(Float64, color_elem, "rgba", "1 0 0 1")
 end
 
-function parse_inertia_mat(::Type{T}, xml_inertia::XMLElement) where {T}
-    ixx = parse_scalar(T, xml_inertia, "ixx", "0")
-    ixy = parse_scalar(T, xml_inertia, "ixy", "0")
-    ixz = parse_scalar(T, xml_inertia, "ixz", "0")
-    iyy = parse_scalar(T, xml_inertia, "iyy", "0")
-    iyz = parse_scalar(T, xml_inertia, "iyz", "0")
-    izz = parse_scalar(T, xml_inertia, "izz", "0")
+function parse_inertia_mat(xml_inertia::XMLElement)
+    ixx = parse_scalar(Float64, xml_inertia, "ixx", "0")
+    ixy = parse_scalar(Float64, xml_inertia, "ixy", "0")
+    ixz = parse_scalar(Float64, xml_inertia, "ixz", "0")
+    iyy = parse_scalar(Float64, xml_inertia, "iyy", "0")
+    iyz = parse_scalar(Float64, xml_inertia, "iyz", "0")
+    izz = parse_scalar(Float64, xml_inertia, "izz", "0")
     [ixx ixy ixz; ixy iyy iyz; ixz iyz izz]
 end
 
-function parse_pose(::Type{T}, xml_pose::Nothing) where {T}
-    rot = one(RotMatrix3{T})
+function parse_pose(xml_pose::Nothing)
+    rot = one(RotMatrix3{Float64})
     trans = zeros(3)
     rot, trans
 end
 
-function parse_pose(::Type{T}, xml_pose::XMLElement) where {T}
-    rpy = parse_vector(T, xml_pose, "rpy", "0 0 0")
+function parse_pose(xml_pose::XMLElement)
+    rpy = parse_vector(Float64, xml_pose, "rpy", "0 0 0")
     rot = RotMatrix(RotZYX(rpy[3], rpy[2], rpy[1]))
-    trans = parse_vector(T, xml_pose, "xyz", "0 0 0")
+    trans = parse_vector(Float64, xml_pose, "xyz", "0 0 0")
     rot, trans
 end
 
-function parse_joint_type(::Type{T}, xml_joint::XMLElement, name) where {T}
+function parse_joint(xml_joint::XMLElement)
+    name = getname(xml_joint)
     urdf_joint_type = attribute(xml_joint, "type")
-    joint_type = joint_types[urdf_joint_type]
-    # TODO: add Damper from <dynamics damping="0.1" />
-    # TODO: add color information
     connections = ""
     if urdf_joint_type == "revolute" || urdf_joint_type == "continuous"
-        axis = parse_vector(T, find_element(xml_joint, "axis"), "xyz", "1 0 0")
-        damping = parse_scalar(T, find_element(xml_joint, "dynamics"), "damping", "0")
+        axis = parse_vector(Float64, find_element(xml_joint, "axis"), "xyz", "1 0 0")
+        damping = parse_scalar(Float64, find_element(xml_joint, "dynamics"), "damping", "0")
         if damping == "0"
             components = "$name = Revolute(; n=$axis)"
         else
@@ -92,7 +90,7 @@ function parse_joint_type(::Type{T}, xml_joint::XMLElement, name) where {T}
     elseif urdf_joint_type == "fixed"
         components = "$name = NullJoint()" # Null joint
     elseif urdf_joint_type == "planar"
-        urdf_axis = parse_vector(T, find_element(xml_joint, "axis"), "xyz", "1 0 0")
+        urdf_axis = parse_vector(Float64, find_element(xml_joint, "axis"), "xyz", "1 0 0")
         # The URDF spec says that a planar joint allows motion in a
         # plane perpendicular to the axis.
         R = Rotations.rotation_between([0, 0, 1], urdf_axis)
@@ -104,44 +102,57 @@ function parse_joint_type(::Type{T}, xml_joint::XMLElement, name) where {T}
     components, connections
 end
 
-function parse_joint(::Type{T}, xml_joint::XMLElement) where {T}
-    name = attribute(xml_joint, "name")
-    parse_joint_type(T, xml_joint, name)
-    # position_bounds, velocity_bounds, effort_bounds = parse_joint_bounds(joint_type, xml_joint)
-end
 
-function parse_inertia(::Type{T}, xml_inertial::XMLElement) where {T}
-    moment = parse_inertia_mat(T, find_element(xml_inertial, "inertia"))
-    mass = parse_scalar(T, find_element(xml_inertial, "mass"), "value", "0")
+function parse_inertia(xml_inertial::XMLElement)
+    moment = parse_inertia_mat(find_element(xml_inertial, "inertia"))
+    mass = parse_scalar(Float64, find_element(xml_inertial, "mass"), "value", "0")
     # TODO: handle transformation of inertia
     mass, moment
 end
 
-function parse_body(::Type{T}, xml_link::XMLElement) where {T}
-    xml_inertial = find_element(xml_link, "inertial")
-    mass,inertia = xml_inertial == nothing ? (0,0*I(3)) : parse_inertia(T, xml_inertial)
-    linkname = attribute(xml_link, "name")
-    R, r = parse_pose(T, find_element(xml_link, "visual", "origin"))
+getname(xml_link::XMLElement) = attribute(xml_link, "name")
 
-    @show color = parse_color(xml_link, "1 0 0 1")
+function parse_body(graph, xml_link::XMLElement)
+    xml_inertial = find_element(xml_link, "inertial")
+    mass,inertia = xml_inertial == nothing ? (0,0*I(3)) : parse_inertia(xml_inertial)
+    linkname = getname(xml_link)
+
+    # Find link transformation by finding the any joint attached to the end of the link.
+    # The transformation of the link is stored as the origin of the joint
+
+    # Find all outgoing edges from this vertex
+    connected_linknames = MetaGraphsNext.neighbor_labels(graph, linkname) |> collect
+    length(connected_linknames) > 2 && error("Too many outgoing links from $linkname, this is not yet handled")
+
+    joint = graph[linkname, connected_linknames[end]]
+    R, r = parse_pose(find_element(joint, "origin"))
+
+    # R, r = parse_pose(find_element(xml_link, "visual", "origin"))
+
+
+    color = parse_color(xml_link, "1 0 0 1")
     cylinder = find_element(xml_link, "visual", "geometry", "cylinder")
     radius = if cylinder === nothing
         0.1
     else
-        parse_scalar(T, cylinder, "radius", "0.1")
+        parse_scalar(Float64, cylinder, "radius", "0.1")
     end
     if R != I
         @warn "Ignoring rotation of link $linkname"
     end
-    "$(Symbol(linkname)) = BodyShape(r=$(r), m=$(mass), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius))"
+    "$(Symbol(linkname)) = BodyShape(r=$(r), m=$(mass), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
 end
 
+"""
 
+Example usage:
+```
+parse_urdf(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf"), extras=true, out="/tmp/urdf_import.jl")
+```
+"""
 function parse_urdf(filename::AbstractString; extras=false, out=nothing)
     gravity = 9.81
     floating::Bool = false
-    joint_types = default_urdf_joint_types()
-    root_joint_type = joint_types[floating ? "floating" : "fixed"](name=:root)
 
     xdoc = parse_file(filename)
     xroot = LightXML.root(xdoc)
@@ -149,9 +160,6 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
 
     xml_links = get_elements_by_tagname(xroot, "link")
     xml_joints = get_elements_by_tagname(xroot, "joint")
-    poses = map(xml_joints) do xml_joint
-        pose = parse_pose(Float64, find_element(xml_joint, "origin"))
-    end
 
     # create graph structure of XML elements
     graph = MetaGraph(Graph(), label_type=String, vertex_data_type=eltype(xml_links), edge_data_type=eltype(xml_joints))
@@ -167,14 +175,17 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
         graph[parent, child] = xml_joint
     end
 
+
+    # Parse all joints and possible extra connections due to axisflanges
     joints_extraconnections = map(xml_joints) do l
-        parse_joint(Float64, l, joint_types)
+        parse_joint(l)
     end
     joints = first.(joints_extraconnections)
     extra_connections = filter(!isempty, last.(joints_extraconnections))
 
+    # Parse all bodies
     bodies = map(xml_links) do l
-        parse_body(Float64, l)
+        parse_body(graph, l)
     end
 
     connections = map(edges(graph)) do e
@@ -219,14 +230,12 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
         plot(sol)
         """
     end
+
+    s = @eval Main (using JuliaFormatter; JuliaFormatter.format_text($s, align_assignment=true, align_struct_field=true, align_conditional=true, align_pair_arrow=true))
+
     out === nothing && return s
-
     write(out, s)
-
-    @eval Main (using JuliaFormatter; JuliaFormatter.format_file($out, align_assignment=true, align_struct_field=true, align_conditional=true, align_pair_arrow=true))
-
     s
-
 end
 
 function outer_model(f, io, name="URDFModel")
