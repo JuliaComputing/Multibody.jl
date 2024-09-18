@@ -1,7 +1,7 @@
 using LightXML
 using StaticArrays
 using Rotations
-using LinearAlgebra: ×, I
+using LinearAlgebra: ×, I, norm, normalize
 using Graphs
 using MetaGraphsNext
 
@@ -25,7 +25,7 @@ function parse_scalar(::Type{T}, e::XMLElement, name::String) where {T}
     parse(T, attribute(e, name))
 end
 
-function parse_scalar(::Type{T}, e::XMLElement, name::String, default::String) where {T}
+function parse_scalar(::Type{T}, e, name::String, default::String) where {T}
     parse(T, e == nothing ? default : attribute(e, name))
 end
 
@@ -63,17 +63,20 @@ function parse_pose(xml_pose::XMLElement)
 end
 
 function parse_joint(xml_joint::XMLElement)
-    name = getname(xml_joint)
     urdf_joint_type = attribute(xml_joint, "type")
+    name = getname(xml_joint)
+
+    R, r = parse_pose(find_element(xml_joint, "origin"))
+
     connections = ""
     if urdf_joint_type == "revolute" || urdf_joint_type == "continuous"
         axis = parse_vector(Float64, find_element(xml_joint, "axis"), "xyz", "1 0 0")
         damping = parse_scalar(Float64, find_element(xml_joint, "dynamics"), "damping", "0")
-        if damping == "0"
-            components = "$name = Revolute(; n=$axis)"
+        if iszero(damping)
+            components = "$name = URDFRevolute(; r=$r, R=$R, n=$axis)"
         else
             components = """
-            $name = Revolute(; n=$axis, axisflange=true)
+            $name = URDFRevolute(; r=$r, R=$R, n=$axis, axisflange=true)
             $(name)_damper = Rotational.Damper(; d=$damping)
             """
             connections = """
@@ -88,7 +91,16 @@ function parse_joint(xml_joint::XMLElement)
         components = "$name = FreeMotion()"
         connections = "connect(world.frame_b, $name.frame_a)"
     elseif urdf_joint_type == "fixed"
-        components = "$name = NullJoint()" # Null joint
+        if norm(r) == 0 && R == I
+            components = "$name = NullJoint()" # Null joint
+        elseif R == I(3)
+            components = "$name = FixedTranslation(; r=$r)"
+        else
+            components = "$name = FixedTranslation(; r=$r)"
+            @warn "Ignoring rotation of joint $name"
+            # R = RotMatrix3(R)
+            # components = "$name = FixedRotation(; r=$r, n = $(rotation_axis(R)), angle = $(rotation_angle(R)))"
+        end
     elseif urdf_joint_type == "planar"
         urdf_axis = parse_vector(Float64, find_element(xml_joint, "axis"), "xyz", "1 0 0")
         # The URDF spec says that a planar joint allows motion in a
@@ -106,41 +118,49 @@ end
 function parse_inertia(xml_inertial::XMLElement)
     moment = parse_inertia_mat(find_element(xml_inertial, "inertia"))
     mass = parse_scalar(Float64, find_element(xml_inertial, "mass"), "value", "0")
+    r_cm = parse_vector(Float64, find_element(xml_inertial, "origin"), "xyz", "0 0 0")
     # TODO: handle transformation of inertia
-    mass, moment
+    mass, moment, r_cm
 end
 
 getname(xml_link::XMLElement) = attribute(xml_link, "name")
 
+function parse_geometry(xml_link::XMLElement)
+    xml_geometry = find_element(xml_link, "visual", "geometry")
+    if xml_geometry === nothing
+        return 0.1, 1
+    elseif (cylinder = find_element(xml_geometry, "cylinder")) !== nothing
+        radius = parse_scalar(Float64, cylinder, "radius", "0.1")
+        length = parse_scalar(Float64, cylinder, "length", "1")
+    elseif (box = find_element(xml_geometry, "box")) !== nothing
+        size = parse_vector(Float64, box, "size", "1 1 1")
+        radius = maximum(size)/2
+        length = maximum(size)
+    end
+    
+    return radius, length
+end
+
 function parse_body(graph, xml_link::XMLElement)
     xml_inertial = find_element(xml_link, "inertial")
-    mass,inertia = xml_inertial == nothing ? (0,0*I(3)) : parse_inertia(xml_inertial)
+    mass,inertia,r_cm = xml_inertial == nothing ? (0,0*I(3),zeros(3)) : parse_inertia(xml_inertial)
     linkname = getname(xml_link)
 
-    # Find link transformation by finding the any joint attached to the end of the link.
-    # The transformation of the link is stored as the origin of the joint
-
-    # Find all outgoing edges from this vertex
-    connected_linknames = MetaGraphsNext.neighbor_labels(graph, linkname) |> collect
-    length(connected_linknames) > 2 && error("Too many outgoing links from $linkname, this is not yet handled")
-
-    joint = graph[linkname, connected_linknames[end]]
-    R, r = parse_pose(find_element(joint, "origin"))
-
-    # R, r = parse_pose(find_element(xml_link, "visual", "origin"))
-
-
+    R, r = parse_pose(find_element(xml_link, "visual", "origin"))
     color = parse_color(xml_link, "1 0 0 1")
-    cylinder = find_element(xml_link, "visual", "geometry", "cylinder")
-    radius = if cylinder === nothing
-        0.1
-    else
-        parse_scalar(Float64, cylinder, "radius", "0.1")
-    end
+    radius, length = parse_geometry(xml_link)
     if R != I
         @warn "Ignoring rotation of link $linkname"
     end
-    "$(Symbol(linkname)) = BodyShape(r=$(r), m=$(mass), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
+    if norm(r) == 0
+        "$(Symbol(linkname)) = Body(; m=$(mass), r_cm=$(r_cm), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
+
+    else
+        r = normalize(r)*length
+        "$(Symbol(linkname)) = BodyShape(; r=$(r), m=$(mass), r_cm=$(r_cm), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
+
+    end
+
 end
 
 """
@@ -162,7 +182,7 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
     xml_joints = get_elements_by_tagname(xroot, "joint")
 
     # create graph structure of XML elements
-    graph = MetaGraph(Graph(), label_type=String, vertex_data_type=eltype(xml_links), edge_data_type=eltype(xml_joints))
+    graph = MetaGraph(DiGraph(), label_type=String, vertex_data_type=eltype(xml_links), edge_data_type=eltype(xml_joints))
     for (i,vertex) in enumerate(xml_links)
         # add_vertex!(graph)
         graph[attribute(vertex, "name")] = vertex
@@ -188,20 +208,25 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
         parse_body(graph, l)
     end
 
+    roots = [v for v in vertices(graph) if indegree(graph, v) == 0]
+
     connections = map(edges(graph)) do e
         src_link = label_for(graph, e.src)
         dst_link = label_for(graph, e.dst)
         joint = attribute(graph[src_link, dst_link], "name")
-        """
-        connect($(src_link).frame_b, $(joint).frame_a)
-        connect($(joint).frame_b, $(dst_link).frame_a)
-        """
+        """connect($(src_link).frame_a, $(joint).frame_a)
+        connect($(joint).frame_b, $(dst_link).frame_a)"""
 
+    end
+
+    for root in roots
+        pushfirst!(connections, "connect(world.frame_b, $(getname(xml_links[root])).frame_a)")
     end
 
     s = if extras
         """
         using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
+        import ModelingToolkit: t_nounits as t, D_nounits as D
         W(args...; kwargs...) = Multibody.world
         """
     else 
@@ -228,6 +253,9 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
         prob = ODEProblem(ssys, [], (0.0, 10.0))
         sol = solve(prob, FBDF())
         plot(sol)
+
+        import GLMakie
+        first(Multibody.render(model, sol, 0, show_axis=true))
         """
     end
 
@@ -246,3 +274,47 @@ end
 
 # filename = "/home/fredrikb/.julia/dev/Multibody/test/doublependulum.urdf"
 
+@component function URDFRevolute(; name, r, R, axisflange = false, kwargs...)
+    if R == I(3) && r == zeros(3)
+        return j
+    end
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        rev = Revolute(; axisflange, kwargs...)
+    end
+
+
+    if R == I(3)
+        @named trans = FixedTranslation(; r, render=false)
+    else
+        R = RotMatrix{3}(R)
+        n = rotation_axis(R)
+        angle = rotation_angle(R)
+        @named trans = FixedRotation(; r, n, angle, render=false)
+    end
+    push!(systems, trans)
+    connections = [
+        connect(frame_a, trans.frame_a)
+        connect(trans.frame_b, rev.frame_a)
+        connect(rev.frame_b, frame_b)
+    ]   
+    if axisflange
+        more_systems = @named begin
+            axis = Rotational.Flange()
+            support = Rotational.Flange()
+        end
+        systems = [systems; more_systems]
+        connections = [
+            connections
+            connect(axis, rev.axis)
+            connect(support, rev.support)
+        ]
+    end
+    ODESystem(connections, t; systems, name)
+
+
+end
+
+Multibody.render!(scene, ::typeof(URDFRevolute), sys, sol, t) = false
