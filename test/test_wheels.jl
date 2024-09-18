@@ -26,14 +26,14 @@ defs = Dict([
     worldwheel.wheel.body.r_0[1] => 0.2;
     worldwheel.wheel.body.r_0[2] => 0.3;
     worldwheel.wheel.body.r_0[3] => 0.2;
-    # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
+    # collect(D.(cwheel.wheel.angles)) .=> [0, 5, 1]
 ])
 
 ssys = structural_simplify(IRSystem(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 4))
 length(filter(x->occursin("world₊n", string(x)), parameters(worldwheel))) == 3
 # @test prob[collect(worldwheel.world.n)] == [0,0,-1]
-@test prob[collect(worldwheel.wheel.der_angles)] == prob[collect(worldwheel.wheel.rollingWheel.der_angles)]
+@test prob[collect(worldwheel.wheel.wheeljoint.der_angles)] == prob[collect(worldwheel.wheel.wheeljoint.der_angles)]
 
 sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol)
@@ -78,8 +78,8 @@ defs = Dict([
     worldwheel.wheel.body.r_0[1] => 0.2;
     worldwheel.wheel.body.r_0[2] => 0.3;
     worldwheel.wheel.body.r_0[3] => 0.2;
-    collect(worldwheel.wheel.rollingWheel.der_angles) .=> [0, 5, 1];
-    # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
+    collect(worldwheel.wheel.wheeljoint.der_angles) .=> [0, 5, 1];
+    # collect(D.(cwheel.wheel.angles)) .=> [0, 5, 1]
 ])
 
 ssys = structural_simplify(IRSystem(worldwheel))
@@ -97,7 +97,7 @@ defs = Dict([
     worldwheel.wheel.body.r_0[1] => 0.0;
     worldwheel.wheel.body.r_0[2] => 0.3/sqrt(2);
     worldwheel.wheel.body.r_0[3] => 0.0;
-    collect(worldwheel.wheel.rollingWheel.der_angles) .=> [0, 0, 0];
+    collect(worldwheel.wheel.wheeljoint.der_angles) .=> [0, 0, 0];
 ])
 
 ssys = structural_simplify(IRSystem(worldwheel))
@@ -107,7 +107,7 @@ sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
 tv = 0:0.5:4
 @test sol(tv, idxs=worldwheel.wheel.body.r_0[1]) ≈ sol(tv, idxs=worldwheel.wheel.body.r_0[2]) .- 0.3*sqrt(2) rtol=1e-6 # The sqrt(2) is to account for the shifted contact point at a 45 degree plane
 
-dd = diff(sol(tv, idxs=worldwheel.wheel.rollingWheel.der_angles[2]).u) # angular acceleration
+dd = diff(sol(tv, idxs=worldwheel.wheel.wheeljoint.der_angles[2]).u) # angular acceleration
 @test norm(dd .- dd[1]) < 1e-10 # constant acceleration
 @test abs(dd[1]) < 9.81
 @test abs(dd[1]) > 5
