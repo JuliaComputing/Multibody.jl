@@ -69,6 +69,60 @@ nothing # hide
 
 ![wheel animation](worldwheel.gif)
 
+### Add slip
+The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling.
+```@example WHEEL
+@mtkmodel SlipWheelInWorld begin
+    @components begin
+        world = W()
+        wheel = SlippingWheel(
+            radius = 0.3,
+            m = 2,
+            I_axis = 0.06,
+            I_long = 0.12,
+            x0 = 0.2,
+            z0 = 0.2,
+            der_angles = [0, 25, 0.1],
+
+            mu_A = 0.95,             # Friction coefficient at adhesion
+            mu_S = 0.5,             # Friction coefficient at sliding
+            sAdhesion = 0.04,       # Adhesion slippage
+            sSlide = 0.12,          # Sliding slippage
+            vAdhesion_min = 0.05,   # Minimum adhesion velocity
+            vSlide_min = 0.15,      # Minimum sliding velocity
+        )
+    end
+end
+
+@named worldwheel = SlipWheelInWorld()
+worldwheel = complete(worldwheel)
+
+defs = Dict([
+    worldwheel.wheel.body.r_0[1] => 0.2;
+    worldwheel.wheel.body.r_0[2] => 0.3;
+    worldwheel.wheel.body.r_0[3] => 0.2;
+    worldwheel.wheel.frame_a.render => true;
+    worldwheel.wheel.frame_a.length => 0.4;
+    worldwheel.wheel.frame_a.radius => 0.01;
+])
+
+ssys = structural_simplify(IRSystem(worldwheel))
+prob = ODEProblem(ssys, defs, (0, 3))
+sol = solve(prob, Tsit5())
+@test SciMLBase.successful_retcode(sol)
+```
+
+```@example WHEEL
+Multibody.render(worldwheel, sol; filename = "slipping_worldwheel.gif", x=4, z=2, time_scale=3)
+nothing # hide
+```
+
+![slipping wheel animation](slipping_worldwheel.gif)
+
+Notice how the wheel starts out with zero linear velocity but large rotational velocity, causing it to initially slip before picking up speed and gaining traction.
+
+In this animation, we render also the connector frame of the wheel to make it easier to see that the wheel is spinning.
+
 ## Wheel set
 A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common axis through their axis of rotation. 
 ```@example WHEEL
@@ -217,6 +271,21 @@ render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[
 This example demonstrates use of the [`PlanarMechanics.SlipBasedWheelJoint`](@ref) component, which is a more advanced 2D wheel component with slip-dependent friction characteristics. The wheel is being driven by a constant torque, and is connected through a [`PlanarMechanics.Prismatic`](@ref) joint to a [`PlanarMechanics.Revolute`](@ref) joint. This forces the wheel to move in a circular arc around the revolute pivot point, and spiral outwards due to slip. A [`PlanarMechanics.Body](@ref) attached to the end of the prismatic joint is used to add inertial properties.
 
 ```@example WHEEL
+using Multibody
+using ModelingToolkit
+import ModelingToolkitStandardLibrary.Mechanical.Rotational
+import ModelingToolkitStandardLibrary.Blocks
+import Multibody.PlanarMechanics as Pl
+using Plots
+using OrdinaryDiffEq
+using LinearAlgebra
+using JuliaSimCompiler
+using Test
+
+t = Multibody.t
+D = Differential(t)
+tire_black = [0.1, 0.1, 0.1, 1]
+
 @mtkmodel TestSlipBasedWheel begin
     @components begin
         slipBasedWheelJoint = Pl.SlipBasedWheelJoint(
