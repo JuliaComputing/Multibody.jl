@@ -43,6 +43,7 @@ makedocs(;
              ],
              "Rotations and orientation" => "rotations.md",
              "3D rendering" => "rendering.md",
+             "URDF import" => "urdf.md",
          ])
 
 deploydocs(;

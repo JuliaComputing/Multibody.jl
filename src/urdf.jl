@@ -4,6 +4,49 @@ using Rotations
 using LinearAlgebra: ×, I, norm, normalize
 using Graphs
 using MetaGraphsNext
+using JuliaFormatter
+
+# TODO: move to main module
+@component function URDFRevolute(; name, r, R, axisflange = false, kwargs...)
+    if R == I(3) && r == zeros(3)
+        return j
+    end
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        rev = Revolute(; axisflange, kwargs...)
+    end
+    if R == I(3)
+        @named trans = FixedTranslation(; r, render=false)
+    else
+        R = RotMatrix{3}(R)
+        n = rotation_axis(R)
+        angle = rotation_angle(R)
+        @named trans = FixedRotation(; r, n, angle, render=false)
+    end
+    push!(systems, trans)
+    connections = [
+        connect(frame_a, trans.frame_a)
+        connect(trans.frame_b, rev.frame_a)
+        connect(rev.frame_b, frame_b)
+    ]   
+    if axisflange
+        more_systems = @named begin
+            axis = Rotational.Flange()
+            support = Rotational.Flange()
+        end
+        systems = [systems; more_systems]
+        connections = [
+            connections
+            connect(axis, rev.axis)
+            connect(support, rev.support)
+        ]
+    end
+    ODESystem(connections, t; systems, name)
+end
+
+Multibody.render!(scene, ::typeof(URDFRevolute), sys, sol, t) = false
 
 @mtkmodel NullJoint begin
     @components begin
@@ -167,10 +210,10 @@ end
 
 Example usage:
 ```
-parse_urdf(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf"), extras=true, out="/tmp/urdf_import.jl")
+urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf"), extras=true, out="/tmp/urdf_import.jl")
 ```
 """
-function parse_urdf(filename::AbstractString; extras=false, out=nothing)
+function urdf2multibody(filename::AbstractString; extras=false, out=nothing)
     gravity = 9.81
     floating::Bool = false
 
@@ -252,14 +295,14 @@ function parse_urdf(filename::AbstractString; extras=false, out=nothing)
         ssys = structural_simplify(IRSystem(model))
         prob = ODEProblem(ssys, [], (0.0, 10.0))
         sol = solve(prob, FBDF())
-        plot(sol)
+        plot(sol) |> display
 
         import GLMakie
         first(Multibody.render(model, sol, 0, show_axis=true))
         """
     end
 
-    s = @eval Main (using JuliaFormatter; JuliaFormatter.format_text($s, align_assignment=true, align_struct_field=true, align_conditional=true, align_pair_arrow=true))
+    s = JuliaFormatter.format_text($s, align_assignment=true, align_struct_field=true, align_conditional=true, align_pair_arrow=true)
 
     out === nothing && return s
     write(out, s)
@@ -274,47 +317,3 @@ end
 
 # filename = "/home/fredrikb/.julia/dev/Multibody/test/doublependulum.urdf"
 
-@component function URDFRevolute(; name, r, R, axisflange = false, kwargs...)
-    if R == I(3) && r == zeros(3)
-        return j
-    end
-
-    systems = @named begin
-        frame_a = Frame()
-        frame_b = Frame()
-        rev = Revolute(; axisflange, kwargs...)
-    end
-
-
-    if R == I(3)
-        @named trans = FixedTranslation(; r, render=false)
-    else
-        R = RotMatrix{3}(R)
-        n = rotation_axis(R)
-        angle = rotation_angle(R)
-        @named trans = FixedRotation(; r, n, angle, render=false)
-    end
-    push!(systems, trans)
-    connections = [
-        connect(frame_a, trans.frame_a)
-        connect(trans.frame_b, rev.frame_a)
-        connect(rev.frame_b, frame_b)
-    ]   
-    if axisflange
-        more_systems = @named begin
-            axis = Rotational.Flange()
-            support = Rotational.Flange()
-        end
-        systems = [systems; more_systems]
-        connections = [
-            connections
-            connect(axis, rev.axis)
-            connect(support, rev.support)
-        ]
-    end
-    ODESystem(connections, t; systems, name)
-
-
-end
-
-Multibody.render!(scene, ::typeof(URDFRevolute), sys, sol, t) = false
