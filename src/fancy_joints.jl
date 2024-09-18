@@ -568,15 +568,13 @@ The rest of this joint aggregation is defined by the following parameters:
     n_b = [0, 0, 1],
     rRod1_ia = [1, 0, 0],
     rRod2_ib = [-1, 0, 0],
-    rod_color = [0.3, 0.3, 0.3, 1],
+    rod_color = purple,
     rod_radius = 0.05,
     phi_offset = 0,
     phi_guess = 0,
     positive_branch,
     use_arrays = false,
     render = true,
-    rod_color = purple,
-    rod_radius = 0.1,
 )
     systems = @named begin
         frame_a = Frame()
