@@ -57,6 +57,11 @@ function (sol::FakeSol)(t; idxs=nothing)
     elseif idxs isa Real
         recursive_extract(sol, idxs)
     else
+        # ret = zeros(length(idxs))
+        # Threads.@threads for i in 1:length(idxs)
+        #     ret[i] = recursive_extract(sol, idxs[i])
+        # end
+        # ret
         [recursive_extract(sol, i) for i in idxs]
     end
 end
