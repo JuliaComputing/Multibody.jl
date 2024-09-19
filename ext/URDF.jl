@@ -124,7 +124,12 @@ function parse_inertia(xml_inertial::XMLElement)
     moment = parse_inertia_mat(find_element(xml_inertial, "inertia"))
     mass = parse_scalar(Float64, find_element(xml_inertial, "mass"), "value", "0")
     r_cm = parse_vector(Float64, find_element(xml_inertial, "origin"), "xyz", "0 0 0")
-    # TODO: handle transformation of inertia
+    rpy = parse_vector(Float64, find_element(xml_inertial, "origin"), "rpy", "0 0 0")
+    if !iszero(rpy)
+        R = RotMatrix(RotXYZ(rpy[1], rpy[2], rpy[3]))
+        moment = R * moment * R'
+        # TODO: Double-check and test inertia transform, rotation convention RotXYZ? Transformation RIR' or R'IR?
+    end
     mass, moment, r_cm
 end
 
