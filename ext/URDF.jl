@@ -172,7 +172,7 @@ function parse_body(graph, xml_link::XMLElement)
     if R != I
         @warn "Ignoring rotation of link $linkname"
     end
-    if norm(r) == 0 || type === :sphere
+    if type === :sphere
         radius = geometry.radius
         "$(Symbol(linkname)) = Body(; m=$(mass), r_cm=$(r_cm), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
     elseif type === :cylinder
@@ -184,10 +184,11 @@ function parse_body(graph, xml_link::XMLElement)
         length = size[1]
         width = size[2]
         height = size[3]
-        "$(Symbol(linkname)) = BodyBox(; r=$(r), m=$(mass), r_cm=$(r_cm), body.I_11 = $(inertia[1,1]), body.I_22 = $(inertia[2,2]), body.I_33 = $(inertia[3,3]), body.I_21 = $(inertia[2,1]), body.I_31 = $(inertia[3,1]), body.I_32 = $(inertia[3,2]), color=$(color), length=$(length), width=$(width), height=$(height), sparse_I=true)"
-
+        if iszero(r)
+            r = [1, 0, 0]
+        end
+        "$(Symbol(linkname)) = BodyBox(; r=$(r), body.m=$(mass), body.r_cm=$(r_cm), body.I_11 = $(inertia[1,1]), body.I_22 = $(inertia[2,2]), body.I_33 = $(inertia[3,3]), body.I_21 = $(inertia[2,1]), body.I_31 = $(inertia[3,1]), body.I_32 = $(inertia[3,2]), color=$(color), length=$(length), width=$(width), height=$(height))"
     end
-
 end
 
 default_modelname(filename) = uppercasefirst(splitext(basename(filename))[1])

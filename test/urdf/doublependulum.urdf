@@ -49,7 +49,7 @@
   <joint name="shoulder" type="continuous">
     <parent link="base_link" />
     <child link="upper_link" />
-    <origin xyz="0 .15 0" />
+    <origin xyz=".15 0 0" />
     <axis xyz="1 0 0" />
     <dynamics damping="0.1" />
   </joint>
@@ -57,7 +57,7 @@
   <joint name="elbow" type="continuous">
     <parent link="upper_link" />
     <child link="lower_link" />
-    <origin xyz="0 .1 -1" />
+    <origin xyz=".1 0 -1" />
     <axis xyz="1 0 0" />
     <dynamics damping="0.1" />
   </joint>
