@@ -696,8 +696,8 @@ function rot_from_line(d)
     RotMatrix{3}([x y d])
 end
 
-Multibody.render!(scene, ::typeof(URDFRevolute), sys, sol, t) = false
-Multibody.render!(scene, ::typeof(URDFPrismatic), sys, sol, t) = false
+Multibody.render!(scene, ::typeof(Multibody.URDFRevolute), sys, sol, t) = false
+Multibody.render!(scene, ::typeof(Multibody.URDFPrismatic), sys, sol, t) = false
 
 # ==============================================================================
 ## PlanarMechanics

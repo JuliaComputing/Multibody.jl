@@ -45,6 +45,10 @@ julia = "1"
 [extras]
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
 
 [targets]
-test = ["OrdinaryDiffEq", "Test"]
+test = ["OrdinaryDiffEq", "Test", "JuliaFormatter", "LightXML", "Graphs", "MetaGraphsNext"]
