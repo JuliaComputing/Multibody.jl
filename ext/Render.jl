@@ -10,6 +10,72 @@ export render, loop_render
 using MeshIO, FileIO
 using StaticArrays
 
+"""
+This struct is used to mimic a solution object such that a model can be rendered without having an actual solution
+"""
+struct FakeSol
+    model
+    prob
+    function FakeSol(model, prob)
+        new(model, prob)
+    end
+end
+
+
+import ModelingToolkit.getu
+
+function recursive_extract(sol, s, depth=0)
+    depth > 10 && error("Recursion depth exceeded with symbol $s")
+    (; model, prob) = sol
+    v = if ModelingToolkit.isparameter(s)
+        prob.ps[s]
+    else
+        prob[s]
+    end
+
+    if ModelingToolkit.Symbolics.is_symbolic_or_array_of_symbolic(v)
+        return recursive_extract(sol, v, depth+1)
+    else
+        return v
+    end
+end
+
+
+function getu(sol::FakeSol, syms)
+    t->[recursive_extract(sol, s) for s in syms]
+end
+
+function ModelingToolkit.parameter_values(sol::FakeSol)
+    pars = Multibody.collect_all(parameters(sol.model))
+    
+    sol.prob.ps[pars]
+end
+
+function (sol::FakeSol)(t; idxs=nothing)
+    if idxs === nothing
+        sol.prob[unknowns(sol.model)]
+    elseif idxs isa Real
+        recursive_extract(sol, idxs)
+    else
+        # ret = zeros(length(idxs))
+        # Threads.@threads for i in 1:length(idxs)
+        #     ret[i] = recursive_extract(sol, idxs[i])
+        # end
+        # ret
+        [recursive_extract(sol, i) for i in idxs]
+    end
+end
+
+function Base.getproperty(sol::FakeSol, s::Symbol)
+    s ∈ fieldnames(typeof(sol)) && return getfield(sol, s)
+    if s === :t
+        return [0.0]
+    else
+        throw(ArgumentError("$(typeof(sol)) has no property named $s"))
+    end
+end
+
+
 
 """
     get_rot_fun(sol, frame)
@@ -20,7 +86,7 @@ See also [`get_rot`](@ref)
 """
 function get_rot_fun(sol, frame)
     syms = vec(ori(frame).R.mat')
-    getter = ModelingToolkit.getu(sol, syms)
+    getter = getu(sol, syms)
     p = ModelingToolkit.parameter_values(sol)
     function (t)
         iv = sol(t)
@@ -35,7 +101,7 @@ end
 Return a function of `t` that returns `syms` from the solution.
 """
 function get_fun(sol, syms)
-    getter = ModelingToolkit.getu(sol, syms)
+    getter = getu(sol, syms)
     p = ModelingToolkit.parameter_values(sol)
     function (t)
         iv = sol(t)
@@ -135,6 +201,10 @@ function render(model, sol,
     loop = 1,
     kwargs...
     )
+    if sol isa ODEProblem
+        sol = FakeSol(model, sol)
+        return render(model, sol, 0; x, y, z, lookat, up, show_axis, kwargs...)[1]
+    end
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
@@ -163,7 +233,7 @@ function render(model, sol,
     end
     if display
         Base.display(fig)
-        sleep(2)
+        sleep(3)
         fnt = @async begin
             record(fig, filename, timevec; framerate) do time
                 if time == timevec[1]
@@ -191,6 +261,12 @@ function render(model, sol, time::Real;
     kwargs...,
     )
 
+    slider = !(sol isa Union{ODEProblem, FakeSol})
+
+    if sol isa ODEProblem
+        sol = FakeSol(model, sol)
+    end
+
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
@@ -199,7 +275,11 @@ function render(model, sol, time::Real;
 
     steps = range(sol.t[1], sol.t[end], length=3000)
 
-    t = Slider(fig[2, 1], range = steps, startvalue = time).value
+    if slider
+        t = Slider(fig[2, 1], range = steps, startvalue = time).value
+    else
+        t = Observable(time)
+    end
     recursive_render!(scene, complete(model), sol, t)
 
     if traces !== nothing
@@ -602,7 +682,7 @@ function render!(scene, ::typeof(Damper), sys, sol, t)
 end
 
 
-function render!(scene, ::typeof(Spring), sys, sol, t)
+function render!(scene, ::Union{typeof(Spring), typeof(SpringDamperParallel)}, sys, sol, t)
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     color = get_color(sys, sol, :blue)
@@ -635,6 +715,10 @@ function render!(scene, ::typeof(Multibody.WorldForce), sys, sol, t)
 end
 
 function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems that have at least two frames
+    try
+        sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    catch
+    end
     frameinds = findall(ModelingToolkit.isframe, collect(sys.systems))
     length(frameinds) == 2 || return false
 
