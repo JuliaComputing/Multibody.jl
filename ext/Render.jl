@@ -332,13 +332,11 @@ end
 render!(scene, ::Any, args...) = false # Fallback for systems that have no rendering
 
 function render!(scene, ::typeof(Body), sys, sol, t)
-    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    render, radius, length_fraction, cylinder_radius = sol(sol.t[1], idxs=[sys.render, sys.radius, sys.length_fraction, sys.cylinder_radius]) .|> Float32
+    render==true || return true # yes, == true
     color = get_color(sys, sol, :purple)
     r_cm = get_fun(sol, collect(sys.r_cm))
     framefun = get_frame_fun(sol, sys.frame_a)
-    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
-    length_fraction = sol(sol.t[1], idxs=sys.length_fraction) |> Float32
-    cylinder_radius = sol(sol.t[1], idxs=sys.cylinder_radius) |> Float32
     thing = @lift begin # Sphere
         Ta = framefun($t)
         coords = (Ta*[r_cm($t); 1])[1:3] # TODO: make use of a proper transformation library instead of rolling own?
@@ -504,8 +502,6 @@ end
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
     color = get_color(sys, sol, :purple)
     shapepath = get_shape(sys, sol)
-    Tshape = reshape(sol(sol.t[1], idxs=sys.shape_transform), 4, 4)
-    scale = Vec3f(Float32(sol(sol.t[1], idxs=sys.shape_scale))*ones(Float32, 3))
     if isempty(shapepath)
         radius = Float32(sol(sol.t[1], idxs=sys.radius))
         r_0a = get_fun(sol, collect(sys.frame_a.r_0))
@@ -520,7 +516,9 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
         mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
     else
         T = get_frame_fun(sol, sys.frame_a)
-
+        scale = Vec3f(Float32(sol(sol.t[1], idxs=sys.shape_scale))*ones(Float32, 3))
+        Tshape = reshape(sol(sol.t[1], idxs=sys.shape_transform), 4, 4)
+        
         @info "Loading shape mesh $shapepath"
         shapemesh = FileIO.load(shapepath)
         m = mesh!(scene, shapemesh; color, specular = Vec3f(1.5))
@@ -570,9 +568,7 @@ function render!(scene, ::typeof(BodyBox), sys, sol, t)
     
     # NOTE: This draws a solid box without the hole in the middle. Cannot figure out how to render a hollow box
     color = get_color(sys, sol, [1, 0.2, 1, 0.9])
-    width = Float32(sol(sol.t[1], idxs=sys.width))
-    height = Float32(sol(sol.t[1], idxs=sys.height))
-    length = Float32(sol(sol.t[1], idxs=sys.render_length))
+    width, height, length = Float32.(sol(sol.t[1], idxs=[sys.width, sys.height, sys.render_length]))
 
     length_dir = sol(sol.t[1], idxs=collect(sys.render_length_dir))
     width_dir = sol(sol.t[1], idxs=collect(sys.render_width_dir))
