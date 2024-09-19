@@ -806,3 +806,91 @@ end
     end
 
 end
+
+@component function URDFRevolute(; name, r, R, axisflange = false, kwargs...)
+    if R == I(3) && r == zeros(3)
+        return j
+    end
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        rev = Revolute(; axisflange, kwargs...)
+    end
+    if R == I(3)
+        @named trans = FixedTranslation(; r, render=false)
+    else
+        R = RotMatrix{3}(R)
+        n = rotation_axis(R)
+        angle = rotation_angle(R)
+        @named trans = FixedRotation(; r, n, angle, render=false)
+    end
+    push!(systems, trans)
+    connections = [
+        connect(frame_a, trans.frame_a)
+        connect(trans.frame_b, rev.frame_a)
+        connect(rev.frame_b, frame_b)
+    ]   
+    if axisflange
+        more_systems = @named begin
+            axis = Rotational.Flange()
+            support = Rotational.Flange()
+        end
+        systems = [systems; more_systems]
+        connections = [
+            connections
+            connect(axis, rev.axis)
+            connect(support, rev.support)
+        ]
+    end
+    ODESystem(connections, t; systems, name)
+end
+
+@component function URDFPrismatic(; name, r, R, axisflange = false, kwargs...)
+    if R == I(3) && r == zeros(3)
+        return j
+    end
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+        rev = Prismatic(; axisflange, kwargs...)
+    end
+    if R == I(3)
+        @named trans = FixedTranslation(; r, render=false)
+    else
+        R = RotMatrix{3}(R)
+        n = rotation_axis(R)
+        angle = rotation_angle(R)
+        @named trans = FixedRotation(; r, n, angle, render=false)
+    end
+    push!(systems, trans)
+    connections = [
+        connect(frame_a, trans.frame_a)
+        connect(trans.frame_b, rev.frame_a)
+        connect(rev.frame_b, frame_b)
+    ]   
+    if axisflange
+        more_systems = @named begin
+            axis = Rotational.Flange()
+            support = Rotational.Flange()
+        end
+        systems = [systems; more_systems]
+        connections = [
+            connections
+            connect(axis, rev.axis)
+            connect(support, rev.support)
+        ]
+    end
+    ODESystem(connections, t; systems, name)
+end
+
+@mtkmodel NullJoint begin
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+    @equations begin
+        connect(frame_a, frame_b)
+    end
+end

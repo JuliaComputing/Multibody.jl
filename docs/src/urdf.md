@@ -1,16 +1,16 @@
 # URDF import
 
 Multibody.jl supports import of [URDF files](https://wiki.ros.org/urdf) by means of the function [`urdf2multibody`](@ref).
-The functionality requires the user to install and load the packages LightXML.jl, Graphs.jl, MetaGraphs.jl and JuliaFormatter.jl, e.g.,
+The functionality requires the user to install and load the packages LightXML.jl, Graphs.jl, MetaGraphsNext.jl and JuliaFormatter.jl, e.g.,
 ```julia
 using Pkg
 Pkg.add([
     "LightXML",
     "Graphs",
-    "MetaGraphs",
+    "MetaGraphsNext",
     "JuliaFormatter"
 ])
-using LightXML, Graphs, MetaGraphs, JuliaFormatter
+using Multibody, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
 ```
 
 
