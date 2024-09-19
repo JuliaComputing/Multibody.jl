@@ -124,7 +124,7 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
 @component function FixedTranslation(; name, r, radius=0.02f0, color = purple, render = true)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r[1:3]=r [
+    @parameters r[1:3]=collect(r) [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
     r = collect(r)
@@ -393,9 +393,11 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1, kwargs...)
     systems = @named begin
         translation = FixedTranslation(r = r)
-        body = Body(; r_cm, r_0, kwargs...)
+        translation_cm = FixedTranslation(r = r_cm)
+        body = Body(; m, r_cm, r_0, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
+        frame_cm = Frame()
     end
 
     @variables r_0(t)[1:3]=r_0 [
@@ -430,9 +432,11 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     eqs = [r_0 .~ collect(frame_a.r_0)
            v_0 .~ D.(r_0)
            a_0 .~ D.(v_0)
-           connect(frame_a, translation.frame_a)
+           connect(frame_a, translation.frame_a, translation_cm.frame_a)
            connect(frame_b, translation.frame_b)
-           connect(frame_a, body.frame_a)]
+           connect(frame_a, body.frame_a)
+           connect(frame_cm, translation_cm.frame_b)
+           ]
     ODESystem(eqs, t, [r_0; v_0; a_0], pars; name, systems)
 end
 

@@ -29,7 +29,7 @@ arm_density = 800 # Density of the arm [kg/m³].
 body_mass = 0.2 # Mass of the body.
 load_mass = 0.1 # Mass of the load.
 cable_length = 1 # Length of the cable.
-cable_mass = 0.1 # Mass of the cable.
+cable_mass = 5   # Mass of the cable.
 cable_diameter = 0.01 # Diameter of the cable.
 number_of_links = 5 # Number of links in the cable.
 

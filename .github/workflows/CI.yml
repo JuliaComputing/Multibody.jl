@@ -41,3 +41,8 @@ jobs:
           private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+        if: matrix.os == 'ubuntu-latest' && matrix.arch == 'x64'

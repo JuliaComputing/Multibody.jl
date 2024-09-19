@@ -1,7 +1,8 @@
 # Find variables that are both array form and scalarized / collected
 # foreach(println, sort(unknowns(IRSystem(model)), by=string))
 module Multibody
-
+# Find variables that are both array form and scalarized / collected
+# foreach(println, sort(unknowns(IRSystem(model)), by=string))
 using LinearAlgebra
 using ModelingToolkit
 using JuliaSimCompiler
@@ -195,7 +196,7 @@ include("joints.jl")
 export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR
 include("fancy_joints.jl")
 
-export RollingWheelJoint, RollingWheel, RollingWheelSet, RollingWheelSetJoint, RollingConstraintVerticalWheel
+export RollingWheelJoint, RollingWheel, SlipWheelJoint, SlippingWheel, RollingWheelSet, RollingWheelSetJoint, RollingConstraintVerticalWheel
 include("wheels.jl")
 
 export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce, WorldTorque
@@ -210,5 +211,7 @@ include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
 
 
+export PlanarMechanics
+include("PlanarMechanics/PlanarMechanics.jl")
 
 end

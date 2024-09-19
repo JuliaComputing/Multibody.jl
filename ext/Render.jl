@@ -2,6 +2,7 @@ module Render
 using Makie
 using Multibody
 import Multibody: render, render!, loop_render, encode, decode, get_rot, get_trans, get_frame
+import Multibody.PlanarMechanics as P
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
@@ -146,8 +147,14 @@ function render(model, sol,
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
-            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
-            points = get_trans(sol, frame, tvec) |> Matrix
+            (frame.metadata !== nothing) || error("Only frames can be traced in animations.")
+            if get(frame.metadata, :frame, false)
+                points = get_trans(sol, frame, tvec) |> Matrix
+            elseif get(frame.metadata, :frame_2d, false)
+                points = get_trans_2d(sol, frame, tvec) |> Matrix
+            else
+                error("Got fishy frame metadata")
+            end
             Makie.lines!(scene, points)
         end
     end
@@ -198,8 +205,14 @@ function render(model, sol, time::Real;
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
-            (frame.metadata !== nothing && get(frame.metadata, :frame, false)) || error("Only frames can be traced in animations.")
-            points = get_trans(sol, frame, tvec) |> Matrix
+            (frame.metadata !== nothing) || error("Only frames can be traced in animations.")
+            if get(frame.metadata, :frame, false)
+                points = get_trans(sol, frame, tvec) |> Matrix
+            elseif get(frame.metadata, :frame_2d, false)
+                points = get_trans_2d(sol, frame, tvec) |> Matrix
+            else
+                error("Got fishy frame metadata")
+            end
             Makie.lines!(scene, points)
         end
     end
@@ -343,6 +356,7 @@ function render!(scene, ::typeof(Frame), sys, sol, t)
 end
 
 function render!(scene, ::Union{typeof(Revolute), typeof(RevolutePlanarLoopConstraint)}, sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     n = get_fun(sol, collect(sys.n))
     color = get_color(sys, sol, :red)
@@ -374,6 +388,7 @@ end
 render!(scene, ::typeof(Universal), sys, sol, t) = false # To recurse down to rendering the revolute joints
 
 function render!(scene, ::typeof(Spherical), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     vars = get_fun(sol, collect(sys.frame_a.r_0))
     color = get_color(sys, sol, :yellow)
     radius = sol(sol.t[1], idxs=sys.radius)
@@ -401,7 +416,7 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
     true
 end
 
@@ -421,7 +436,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
             extremity = r2
             Makie.GeometryBasics.Cylinder(origin, extremity, radius)
         end
-        mesh!(scene, thing; color, specular = Vec3f(1.5))
+        mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
     else
         T = get_frame_fun(sol, sys.frame_a)
 
@@ -539,7 +554,7 @@ function render!(scene, ::typeof(UniversalSpherical), sys, sol, t)
     true
 end
 
-function render!(scene, ::typeof(RollingWheelJoint), sys, sol, t)
+function render!(scene, ::Union{typeof(RollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
     
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     # framefun = get_frame_fun(sol, sys.frame_a)
@@ -679,4 +694,171 @@ function rot_from_line(d)
     y = y ./ norm(y)
     RotMatrix{3}([x y d])
 end
+
+# ==============================================================================
+## PlanarMechanics
+# ==============================================================================
+function get_rot_fun_2d(sol, frame)
+    phifun = get_fun(sol, frame.phi)
+    function (t)
+        phi = phifun(t)
+        [cos(phi) -sin(phi); sin(phi) cos(phi)]
+    end
+end
+
+function get_frame_fun_2d(sol, frame)
+    R = get_rot_fun_2d(sol, frame)
+    tr = get_fun(sol, [frame.x, frame.y])
+    function (t)
+        [R(t) tr(t); 0 0 1]
+    end
+end
+
+get_trans_2d(sol, frame, t) = SVector{2}(sol(t, idxs = [frame.x, frame.y]))
+get_trans_2d(sol, frame, t::AbstractArray) = sol(t, idxs = [frame.x, frame.y])
+
+function render!(scene, ::typeof(P.Body), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    color = get_color(sys, sol, :purple)
+    r_cm = get_fun(sol, collect(sys.r))
+    framefun = get_frame_fun_2d(sol, sys.frame_a)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    thing = @lift begin # Sphere
+        # Ta = framefun($t)
+        # coords = (Ta*[0; 0; 1])[1:2]  # r_cm($t)
+
+        coords = r_cm($t)
+        point = Point3f(coords..., 0)
+        Sphere(point, Float32(radius))
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    false
+end
+
+
+function render!(scene, ::Union{typeof(P.FixedTranslation), typeof(P.BodyShape)}, sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    r_0a = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    r_0b = get_fun(sol, [sys.frame_b.x, sys.frame_b.y])
+    color = get_color(sys, sol, :purple)
+    thing = @lift begin
+        r1 = Point3f(r_0a($t)..., 0)
+        r2 = Point3f(r_0b($t)..., 0)
+        origin = r1#(r1+r2) ./ 2
+        extremity = r2#-r1 # Double pendulum is a good test for this
+        radius = Float32(sol($t, idxs=sys.radius))
+        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    true
+end
+
+function render!(scene, ::typeof(P.Prismatic), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    r_0a = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    r_0b = get_fun(sol, [sys.frame_b.x, sys.frame_b.y])
+    color = get_color(sys, sol, :purple)
+    thing = @lift begin
+        r1 = Point3f(r_0a($t)..., 0)
+        r2 = Point3f(r_0b($t)..., 0)
+        origin = r1#(r1+r2) ./ 2
+        extremity = r2#-r1 # Double pendulum is a good test for this
+        radius = Float32(sol($t, idxs=sys.radius))
+        Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    true
+end
+
+function render!(scene, ::typeof(P.Revolute), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    n = [0,0,1]
+    color = get_color(sys, sol, :red)
+
+    rotfun = get_rot_fun_2d(sol, sys.frame_a)
+    radius = try
+        sol(sol.t[1], idxs=sys.radius)
+    catch
+        0.05f0
+    end |> Float32
+    length = try
+        sol(sol.t[1], idxs=sys.length)
+    catch
+        radius
+    end |> Float32
+    thing = @lift begin
+        O = [r_0($t)..., 0]
+        R_w_a = cat(rotfun($t), 1, dims=(1,2))
+        n_w = R_w_a*n # Rotate to the world frame
+        p1 = Point3f(O + length*n_w)
+        p2 = Point3f(O - length*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    true
+end
+
+function render!(scene, ::Union{typeof(P.Spring), typeof(P.SpringDamper)}, sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    r_0a = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    r_0b = get_fun(sol, [sys.frame_b.x, sys.frame_b.y])
+    color = get_color(sys, sol, :blue)
+    n_wind = sol(sol.t[1], idxs=sys.num_windings)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    N = sol(sol.t[1], idxs=sys.N) |> Int
+    thing = @lift begin
+        r1 = Point3f(r_0a($t)..., 0)
+        r2 = Point3f(r_0b($t)..., 0)
+        spring_mesh(r1,r2; n_wind, radius, N)
+    end
+    plot!(scene, thing; color)
+    true
+end
+
+function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJoint)}, sys, sol, t)
+    
+    r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    rotfun = get_rot_fun_2d(sol, sys.frame_a)
+    color = get_color(sys, sol, :red)
+
+    # TODO: add some form of assumetry to indicate that the wheel is rotating
+
+    radius = try
+        sol(sol.t[1], idxs=sys.radius)
+    catch
+        0.05f0
+    end |> Float32
+    z = try
+        sol(sol.t[1], idxs=sys.z)
+    catch
+        0.0
+    end |> Float32
+    r = try
+        sol(sol.t[1], idxs=collect(sys.r))
+    catch
+        [1, 0]
+    end .|> Float32
+    n_a = perp(normalize(r)) # Rotation axis
+    thing = @lift begin
+        O = [r_0($t)..., z]
+        R_w_a = rotfun($t)
+        n_w = [R_w_a*n_a; 0] # Rotate to the world frame
+        width = radius/10
+        p1 = Point3f(O + width*n_w)
+        p2 = Point3f(O - width*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    true
+end
+
+function perp(r)
+    if r[1] == 0
+        return [1, 0]
+    else
+        return [-r[2], r[1]]
+    end
+end
+
 end

@@ -113,9 +113,9 @@ end
 `R21` is a 3x3 matrix that transforms a vector from frame 1 to frame 2. `h1` is a
 vector resolved in frame 1. `h2` is the same vector in frame 2.
 
-Typical usage:
+Typical usage (world to local):
 ```julia
-resolve2(ori(frame_a), a_0 - g_0)
+g_a = resolve2(ori(frame_a), a_0 - g_0)
 ```
 """
 resolve2(R21::RotationMatrix, v1) = R21 * collect(v1)
@@ -126,9 +126,9 @@ resolve2(R21::RotationMatrix, v1) = R21 * collect(v1)
 `R12` is a 3x3 matrix that transforms a vector from frame 1 to frame 2. `h2` is a
 vector resolved in frame 2. `h1` is the same vector in frame 1.
 
-Typical usage:
+Typical usage (local to world):
 ```julia
-resolve1(ori(frame_a), r_ab)
+r_wb = resolve1(ori(frame_a), r_ab)
 ```
 """
 resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
@@ -245,13 +245,6 @@ function residue(R1, R2)
     # -cross(R1[1, :], R1[2, :])'R2[1, :]
     # R1[2, :]'R2[1, :]
     # ]
-end
-
-function connect_loop(F1, F2)
-    F1.metadata[:loop_opening] = true
-    # connect(F1, F2)
-    # orientation_constraint(ori(F1)'ori(F2)) .~ 0
-    residue(F1, F2) .~ 0
 end
 
 ## Quaternions

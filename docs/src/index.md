@@ -179,6 +179,10 @@ Pkg.add("Multibody")
 - In Multibody.jl, the orientation object of a [`Frame`](@ref) is accessed using the function [`ori`](@ref).
 - Quaternions in Multibody.jl follow the order ``[s, i, j, k]``, i.e., scalar/real part first.
 
+## 2D and 3D modeling
+Multibody.jl offers components for modeling in both 2D and 3D. 2D modeling, often referred to as planar mechanics, is a subset of 3D modeling where the motion is constrained to a plane, the x,y plane. Planar mechanics is sometimes referred to as 3 degrees of freedom (DOF) modeling, referring to the 2 translational DOF and one rotational DOF that the plane offers. Most components in Multibody.jl are aimed at 3D modeling (sometimes referred to as 6 DOF modeling), but components for 2D modeling exist in the submodule `Multibody.PlanarMechanics`.
+
+The components from [`ModelingToolkitStandardLibrary.Mechanical`](https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/API/mechanical/) are 1D, i.e., a single degree of freedom only. These components can be used in both 2D and 3D modeling together with Multibody components that have support for attaching 1D components, such as joints supporting the `axisflange` keyword.
 
 
 ## Index
@@ -188,8 +192,8 @@ Pkg.add("Multibody")
 
 ## Frames
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["frames.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["frames.jl", "PlanarMechanics/utils.jl"]
 ```
 
 ## Joints
@@ -201,8 +205,8 @@ A [`Spherical`](@ref) joints restricts all translational degrees of freedom, but
 Some joints offer the option to add 1-dimensional components to them by providing the keyword `axisflange = true`. This allows us to add, e.g., springs, dampers, sensors, and actuators to the joint.
 
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["joints.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["joints.jl", "fancy_joints.jl", "PlanarMechanics/joints.jl"]
 ```
 
 ## Components
@@ -214,11 +218,9 @@ A mass with a shape can be modeled using a [`BodyShape`](@ref). The primary diff
 A rod without a mass (just a translation), is modeled using [`FixedTranslation`](@ref).
 
 
-
-
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["components.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["components.jl", "wheels.jl", "PlanarMechanics/components.jl"]
 ```
 
 ## Forces
@@ -231,13 +233,13 @@ Pages   = ["forces.jl"]
 A sensor is an object that translates quantities in the mechanical domain into causal signals which can interact with causal components from [ModelingToolkitStandardLibrary.Blocks](https://docs.sciml.ai/ModelingToolkitStandardLibrary/stable/API/blocks/), such as control systems etc.
 
 ```@autodocs
-Modules = [Multibody]
-Pages   = ["sensors.jl"]
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["sensors.jl", "PlanarMechanics/sensors.jl"]
 ```
 
 ## Orientation utilities
 ```@autodocs
-Modules = [Multibody]
+Modules = [Multibody, Multibody.PlanarMechanics]
 Pages   = ["orientation.jl"]
 ```
 

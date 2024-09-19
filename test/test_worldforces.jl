@@ -293,7 +293,7 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0, radius=0.1, color=[0,0,1,0.2])
-        b1 = Body(m=1, state=true, isroot=true, quat=false, neg_w=false, radius=0.05, color=[1,0,0,1])
+        b1 = Body(m=1, state=true, isroot=true, quat=false, neg_w=true, radius=0.05, color=[1,0,0,1])
     end
     @parameters begin
         f[1:3]
