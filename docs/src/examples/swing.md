@@ -76,7 +76,9 @@ import GLMakie
 Multibody.render(model, sol; z = -5, filename = "simple_swing.gif") # Use "simple_swing.mp4" for a video file
 nothing # hide
 ```
+
 ![animation](simple_swing.gif)
+
 This makes for a rather interesting-looking springy pendulum!
 
 
@@ -102,7 +104,7 @@ Next, we create the full swing assembly
         body_left  = BodyShape(m=0.1, r = [0, 0, w])
         body_right = BodyShape(m=0.1, r = [0, 0, -w])
 
-        body  = Body(m=6, isroot=true, r_cm = [w/2, -w/2, w/2], neg_w=true, cylinder_radius=0.01)
+        body  = Body(m=6, isroot=true, r_cm = [w/2, -w/2, w/2], cylinder_radius=0.01)
 
         damper = Damper(d=0.5)
     end

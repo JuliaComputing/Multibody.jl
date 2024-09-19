@@ -3,6 +3,7 @@ using Multibody
 using Test
 using JuliaSimCompiler
 using OrdinaryDiffEq
+using LinearAlgebra
 t = Multibody.t
 D = Differential(t)
 doplot() = false
@@ -48,6 +49,11 @@ end
 @testset "worldforces" begin
     @info "Testing worldforces"
     include("test_worldforces.jl")
+end
+
+@testset "PlanarMechanics" begin
+    @info "Testing PlanarMechanics"
+    include("test_PlanarMechanics.jl")
 end
 
 
@@ -387,7 +393,7 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = joint.s)
 end
 # ==============================================================================
-## Spring damper system from https://www.maplesoft.com/documentation_center/online_manuals/modelica/Modelica_Mechanics_MultiBody_Examples_Elementary.html#Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem
+## Spring damper system from Modelica.Mechanics.MultiBody.Examples.Elementary.SpringDamperSystem
 # ==============================================================================
 
 @testset "Spring damper system" begin
@@ -740,35 +746,9 @@ sol = solve(prob, Rodas4())
 @test sol[cm.inertia1.flange_a.tau] ≈ 10*sol[cm.inertia2.flange_a.tau] rtol=1e-2
 end
 
-# ==============================================================================
-## Rolling wheel ===============================================================
-# ==============================================================================
-using LinearAlgebra
-# The wheel does not need the world
-@testset "Rolling wheel" begin
-@named wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
-                        I_long = 0.12,
-                        x0 = 0.2,
-                        y0 = 0.2,
-                        der_angles = [0, 5, 1])
-
-
-wheel = complete(wheel)
-
-defs = [
-    collect(world.n .=> [0, 0, -1]);
-    vec(ori(wheel.frame_a).R .=> I(3));
-    vec(ori(wheel.body.frame_a).R .=> I(3));
-    # collect(D.(cwheel.rollingWheel.angles)) .=> [0, 5, 1]
-]
-
-@test_skip begin # Does not initialize
-    ssys = structural_simplify(IRSystem(wheel))
-    prob = ODEProblem(ssys, defs, (0, 10))
-    sol = solve(prob, Rodas5P(autodiff=false))
-    @info "Write tests"
-end
-
+@testset "wheels" begin
+    @info "Testing wheels"
+    include("test_wheels.jl")
 end
 
 # ==============================================================================
@@ -1195,6 +1175,7 @@ prob = ODEProblem(ssys, [
 
 ], (0, 1))
 sol1 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
+@test SciMLBase.successful_retcode(sol1)
 
 ## quat in joint
 @named joint = Multibody.Spherical(isroot=true, state=true, quat=true, neg_w=true)
@@ -1215,6 +1196,7 @@ prob = ODEProblem(ssys, [
 
 ], (0, 1))
 sol2 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
+@test SciMLBase.successful_retcode(sol2)
 
 ## euler
 @named joint = Multibody.Spherical(isroot=true, state=true, quat=false, neg_w=true)
@@ -1239,3 +1221,114 @@ sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 @test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol2(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
 @test Matrix(sol1(0:0.1:1, idxs=collect(body.r_0))) ≈ Matrix(sol3(0:0.1:1, idxs=collect(body.r_0))) rtol=1e-5
 
+
+# ==============================================================================
+## SphericalSpherical
+# ==============================================================================
+
+@mtkmodel TestSphericalSpherical begin
+    @components begin
+        world = W()
+        ss = SphericalSpherical(r_0 = [1, 0, 0], m = 1, kinematic_constraint=false)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
+        s = Spherical()
+        trans = FixedTranslation(r = [1,0,1])
+    end
+    @equations begin
+        connect(world.frame_b, ss.frame_a, trans.frame_a)
+        connect(ss.frame_b, ss2.frame_a)
+        connect(ss2.frame_b, s.frame_a)
+        connect(s.frame_b, trans.frame_b)
+    end
+end
+
+@named model = TestSphericalSpherical()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.ss2.body.phi[1] => 0.1;
+    model.ss2.body.phid[3] => 0.0;
+], (0, 1.37))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+# plot(sol)
+
+# ==============================================================================
+## UniversalSpherical
+# ==============================================================================
+
+@mtkmodel TestSphericalSpherical begin
+    @components begin
+        world = W()
+        ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false, sphere_diameter=0.3)
+        ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
+        s = Spherical()
+        trans = FixedTranslation(r = [1,0,1])
+        body2 = Body(; m = 1, r_cm=[0.1, 0, 0])
+        # rp = Multibody.RelativePosition(resolve_frame=:world)
+    end
+    @equations begin
+        connect(world.frame_b, ss.frame_a, trans.frame_a)
+        connect(ss.frame_b, ss2.frame_a)
+        connect(ss2.frame_b, s.frame_a)
+        connect(s.frame_b, trans.frame_b)
+        connect(ss.frame_ia, body2.frame_a)
+        # connect(world.frame_b, rp.frame_a)
+        # connect(rp.frame_b, ss2.body.frame_a)
+    end
+end
+
+@named model = TestSphericalSpherical()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.ss2.body.phi[1] => 0.1;
+    model.ss2.body.phi[3] => 0.1;
+    model.ss2.body.phid[3] => 0.0;
+], (0, 1.37))
+sol = solve(prob, Rodas4())
+@test SciMLBase.successful_retcode(sol)
+@test_skip sol[collect(model.rp.r_rel.u)] == sol[collect(model.ss.frame_b.r_0)] # This test is commented out, adding the sensor makes the problem singular and I can't seem to find a set of state priorities that make it solve
+# plot(sol)
+
+## =============================================================================
+@testset "fourbar" begin
+    @info "Testing fourbar"
+    include("test_fourbar.jl")
+end
+
+## =============================================================================
+# using Plots
+# Test cylindrical joint
+@mtkmodel CylinderTest begin
+    @components begin
+        world = W()
+        cyl = Cylindrical(n = [0, 1, 0])
+        # spring = Spring(c = 1)
+        body = Body(state_priority=0)
+    end
+    @equations begin
+        # connect(world.frame_b, cyl.frame_a, spring.frame_a)
+        # connect(cyl.frame_b, spring.frame_b, body.frame_a)
+
+        connect(world.frame_b, cyl.frame_a)
+        connect(cyl.frame_b, body.frame_a)
+    end
+end
+@named model = CylinderTest()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+prob = ODEProblem(ssys, [
+    model.cyl.revolute.w => 1
+], (0, 1))
+sol = solve(prob, Rodas4())
+# plot(sol)
+@test sol[model.cyl.v][end] ≈ -9.81 atol=0.01
+@test sol[model.cyl.phi][end] ≈ 1 atol=0.01
+
+## =============================================================================
+
+@testset "JointUSR_RRR" begin
+    @info "Testing JointUSR_RRR"
+    include("test_JointUSR_RRR.jl")
+end

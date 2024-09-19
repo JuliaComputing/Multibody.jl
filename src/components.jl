@@ -38,23 +38,27 @@ end
 """
     World(; name, render=true)
 """
-@component function World(; name, render=true, point_gravity=false)
+@component function World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
     # World should have
     # 3+3+9+3 // r_0+f+R.R+τ
     # - (3+3) // (f+t)
     # = 12 equations 
+    n0 = n
+    g0 = g
+    mu0 = mu
     @named frame_b = Frame()
-    @parameters n[1:3]=[0, -1, 0] [description = "gravity direction of world"]
-    @parameters g=9.80665 [description = "gravitational acceleration of world"]
-    @parameters mu=3.986004418e14 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
+    @parameters n[1:3]=n0 [description = "gravity direction of world"]
+    @parameters g=g0 [description = "gravitational acceleration of world"]
+    @parameters mu=mu0 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
+    n = Symbolics.scalarize(n)
     O = ori(frame_b)
-    eqs = Equation[collect(frame_b.r_0) .~ 0;
-                   O ~ nullrotation()
-                   # vec(D(O).R .~ 0); # QUESTION: not sure if I should have to add this, should only have 12 equations according to modelica paper
-                   ]
-    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
+    eqs = Equation[
+        collect(frame_b.r_0) .~ 0;
+        O ~ nullrotation()
+    ]
+    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
 end
 
 """
@@ -75,15 +79,16 @@ function inner_gravity(point_gravity, mu, g, n, r)
 end
 
 
-@component function Fixed(; name, r = [0, 0, 0])
+@component function Fixed(; name, r = [0, 0, 0], render = true)
     systems = @named begin frame_b = Frame() end
-    @parameters begin r[1:3] = r,
-                               [
-                                   description = "Position vector from world frame to frame_b, resolved in world frame",
-                               ] end
+    @parameters begin
+        r[1:3] = r, [description = "Position vector from world frame to frame_b, resolved in world frame"]
+        render = render, [description = "Render the component in animations"]
+    end
     eqs = [collect(frame_b.r_0 .~ r)
            ori(frame_b) ~ nullrotation()]
-    compose(ODESystem(eqs, t; name), systems...)
+    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    add_params(sys, [render]; name)
 end
 
 @component function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
@@ -116,16 +121,17 @@ Fixed translation of `frame_b` with respect to `frame_a` with position vector `r
 
 Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) or [`BodyCylinder`](@ref).
 """
-@component function FixedTranslation(; name, r, radius=0.02f0, color = purple)
+@component function FixedTranslation(; name, r, radius=0.02f0, color = purple, render = true)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r[1:3]=r [
+    @parameters r[1:3]=collect(r) [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
     r = collect(r)
     @parameters begin
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations (RGBA)"]
+        render = render, [description = "Render the component in animations"]
     end
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
@@ -135,7 +141,7 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
                    (ori(frame_b) ~ ori(frame_a))
                    collect(0 .~ fa + fb)
                    (0 .~ taua + taub + cross(r, fb))]
-    pars = [r; radius; color]
+    pars = [r; radius; color; render]
     vars = []
     compose(ODESystem(eqs, t, vars, pars; name), frame_a, frame_b)
 end
@@ -201,11 +207,14 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
 end
 
 """
-    Body(; name, m = 1, r_cm, isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0=zeros(3), state_priority = 2, quat=false)
+    Body(; name, m = 1, r_cm, isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = zeros(3), state_priority = 2, quat = false, sparse_I = false)
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
 This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref).
+
+# Performance optimization
+- `sparse_I`: If `true`, the zero elements of the inerita matrix are considered "structurally zero", and this fact is used to optimize performance. When this option is enabled, the elements of the inertia matrix that were zero when the component was created cannot changed without reinstantiating the component. This performance optimization may be useful, e.g., when the inertia matrix is known to be diagonal.
 
 # Parameters
 - `m`: Mass
@@ -214,7 +223,6 @@ This component has a single frame, `frame_a`. To represent bodies with more than
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
 - `phi0`: Initial orientation, only applicable if `isroot = true` and `quat = false`
 - `phid0`: Initial angular velocity
-
 
 # Variables
 - `r_0`: Position vector from origin of world frame to origin of `frame_a`
@@ -233,6 +241,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               I_21 = 0,
               I_31 = 0,
               I_32 = 0,
+              sparse_I = false,
               isroot = false,
               state = false,
               sequence = [1,2,3],
@@ -248,6 +257,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               air_resistance = 0.0,
               color = [1,0,0,1],
               state_priority = 2,
+              render = true,
               quat=false,)
     if state
         # @warn "Make the body have state variables by using isroot=true rather than state=true"
@@ -262,12 +272,11 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
     @variables a_0(t)[1:3] [guess = 0, 
-        state_priority = state_priority+isroot,
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
     @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
     @variables w_a(t)[1:3]=w_a [guess = 0, 
-        state_priority = state_priority-1+2quat*state,
+        state_priority = isroot ? quat ? state_priority : -1 : 0,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
     @variables z_a(t)[1:3] [guess = 0, 
@@ -286,7 +295,12 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     ]
     @parameters color[1:4] = color [description = "Color of the body in animations (RGBA)"]
     @parameters length_fraction=length_fraction, [description = "Fraction of the length of the body that is the cylinder from frame to COM in animations"]
+    @parameters render = render [description = "Render the component in animations"]
     # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
+
+    if sparse_I
+        Isparsity = sparse(.!isequal.(0, [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]))
+    end
 
     @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
     @parameters I_22=I_22 [description = "Element (2,2) of inertia tensor"]
@@ -296,6 +310,9 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     @parameters I_32=I_32 [description = "Element (3,2) of inertia tensor"]
 
     I = [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]
+    if sparse_I
+        I = I.*Isparsity
+    end
 
     r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
 
@@ -358,7 +375,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
     sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
-    add_params(sys, [radius; cylinder_radius; color; length_fraction]; name)
+    add_params(sys, [radius; cylinder_radius; color; length_fraction; render]; name)
 end
 
 
@@ -373,12 +390,14 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 
 See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1, kwargs...)
     systems = @named begin
         translation = FixedTranslation(r = r)
-        body = Body(; r_cm, r_0, kwargs...)
+        translation_cm = FixedTranslation(r = r_cm)
+        body = Body(; m, r_cm, r_0, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
+        frame_cm = Frame()
     end
 
     @variables r_0(t)[1:3]=r_0 [
@@ -401,19 +420,23 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations"]
         shapefile[1:length(shapecode)] = shapecode
+        shape_transform[1:16] = vec(shape_transform)
+        shape_scale = shape_scale
     end
 
 
-    pars = [r; radius; color; shapefile]
+    pars = [r; radius; color; shapefile; shape_transform; shape_scale]
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
     eqs = [r_0 .~ collect(frame_a.r_0)
            v_0 .~ D.(r_0)
            a_0 .~ D.(v_0)
-           connect(frame_a, translation.frame_a)
+           connect(frame_a, translation.frame_a, translation_cm.frame_a)
            connect(frame_b, translation.frame_b)
-           connect(frame_a, body.frame_a)]
+           connect(frame_a, body.frame_a)
+           connect(frame_cm, translation_cm.frame_b)
+           ]
     ODESystem(eqs, t, [r_0; v_0; a_0], pars; name, systems)
 end
 
@@ -682,7 +705,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w, sparse_I=true)
     end
 
     @equations begin
@@ -812,7 +835,7 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sparse_I = true)
     end
 
     @equations begin

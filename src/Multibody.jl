@@ -1,14 +1,49 @@
+# Find variables that are both array form and scalarized / collected
+# foreach(println, sort(unknowns(IRSystem(model)), by=string))
 module Multibody
-
+# Find variables that are both array form and scalarized / collected
+# foreach(println, sort(unknowns(IRSystem(model)), by=string))
 using LinearAlgebra
 using ModelingToolkit
 using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
+using SparseArrays
 using StaticArrays
 export Rotational, Translational
 
 export render, render!
+
+"""
+Find parameters that occur both scalarized and not scalarized
+"""
+function find_arry_problems(model)
+    # foreach(println, sort(unknowns(IRSystem(model)), by=string))
+    xs = string.(unknowns(IRSystem(model)))
+    for x in xs
+        endswith(x, ']') && continue # Only look at non-array vars
+        l = ncodeunits(x)
+        inds = findall(y->startswith(y, x*"["), xs)
+        isempty(inds) && continue
+        println(x)
+        println(xs[inds])
+    end
+end
+
+"""
+    benchmark_f(prob)
+    
+Benchmark the invocation of the function `prob.f` on the initial condition `prob.u0`
+"""
+function benchmark_f(prob)
+    x = prob.u0
+    dx = similar(x)
+    p = prob.p
+    if !isdefined(Main, :btime)
+        @eval Main using BenchmarkTools
+    end
+    @eval Main @btime $(prob.f)($dx, $x, $p, 0.0)
+end
 
 """
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])
@@ -154,9 +189,15 @@ include("interfaces.jl")
 export World, world, Mounting1D, Fixed, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, BodyBox, Rope
 include("components.jl")
 
-export Revolute, Prismatic, Planar, Spherical, Universal, GearConstraint, RollingWheelJoint,
-       RollingWheel, FreeMotion, RevolutePlanarLoopConstraint
+export Revolute, Prismatic, Planar, Spherical, Universal,
+GearConstraint, FreeMotion, RevolutePlanarLoopConstraint, Cylindrical
 include("joints.jl")
+
+export SphericalSpherical, UniversalSpherical, JointUSR, JointRRR
+include("fancy_joints.jl")
+
+export RollingWheelJoint, RollingWheel, SlipWheelJoint, SlippingWheel, RollingWheelSet, RollingWheelSetJoint, RollingConstraintVerticalWheel
+include("wheels.jl")
 
 export Spring, Damper, SpringDamperParallel, Torque, Force, WorldForce, WorldTorque
 include("forces.jl")
@@ -170,5 +211,7 @@ include("robot/robot_components.jl")
 include("robot/FullRobot.jl")
 
 
+export PlanarMechanics
+include("PlanarMechanics/PlanarMechanics.jl")
 
 end

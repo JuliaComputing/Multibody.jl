@@ -23,8 +23,8 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 - `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
 @component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
-                  isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0)
-    if !(eltype(n) <: Num)
+                  isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0, render = true)
+    if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     end
     @named frame_a = Frame()
@@ -34,10 +34,11 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         radius = radius, [description = "radius of the joint in animations"]
         length = length, [description = "length of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+        render = render, [description = "render the joint in animations"]
     end
     @variables tau(t)=0 [
         connect = Flow,
-        state_priority = 2,
+        # state_priority = 2,
         description = "Driving torque in direction of axis of rotation",
     ]
     @variables phi(t)=phi0 [
@@ -102,8 +103,8 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an ODESystem representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false)
-    if !(eltype(n) <: Num)
+                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
+    if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Prismatic axis of motion must be a unit vector, got norm(n) = $(norm(n))")
     end
     @named frame_a = Frame()
@@ -114,6 +115,7 @@ The function returns an ODESystem representing the prismatic joint.
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
+        render = render, [description = "render the joint in animations"]
     end
 
     @variables s(t)=s0 [
@@ -125,7 +127,6 @@ The function returns an ODESystem representing the prismatic joint.
         description = "Relative velocity between frame_a and frame_b",
     ]
     @variables a(t)=0 [
-        state_priority = state_priority,
         description = "Relative acceleration between frame_a and frame_b",
     ]
     @variables f(t)=0 [
@@ -174,6 +175,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 # Rendering options
 - `radius = 0.1`: Radius of the joint in animations
 - `color = [1,1,0,1]`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
+- `render = true`: Render the joint in animations
 """
 @component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
@@ -184,6 +186,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    color = [1, 1, 0, 1],
                    radius = 0.1,
                    quat = false,
+                   render = true,
                    )
 
     dnum = d
@@ -196,6 +199,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
         d = d
+        render = render, [description = "render the joint in animations"]
     end
     @unpack frame_a, frame_b = ptf
     # @parameters begin # Currently not using parameters due to these appearing in if statements
@@ -446,245 +450,6 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
     extend(ODESystem(eqs, t; name, systems), ptf)
 end
 
-"""
-    RollingWheelJoint(; name, radius, angles, x0, y0, z0)
-
-Joint (no mass, no inertia) that describes an ideal rolling wheel (rolling on the plane z=0). See [`RollingWheel`](@ref) for a realistic wheel model with inertia.
-
-A joint for a wheel rolling on the x-y plane of the world frame.
-The rolling contact is considered being ideal, i.e. there is no
-slip between the wheel and the ground. This is simply
-gained by two non-holonomic constraint equations on velocity level
-defined for both longitudinal and lateral direction of the wheel.
-There is also a holonomic constraint equation on position level
-granting a permanent contact of the wheel to the ground, i.e.
-the wheel can not take off.
-
-The origin of the frame `frame_a` is placed in the intersection
-of the wheel spin axis with the wheel middle plane and rotates
-with the wheel itself. The y-axis of `frame_a` is identical with
-the wheel spin axis, i.e. the wheel rotates about y-axis of `frame_a`.
-A wheel body collecting the mass and inertia should be connected to
-this frame.
-
-# Arguments and parameters:
-
-name: Name of the rolling wheel joint component
-radius: Radius of the wheel
-angles: Angles to rotate world-frame into frame_a around z-, y-, x-axis
-
-# Variables:
-- `x`: x-position of the wheel axis
-- `y`: y-position of the wheel axis
-- `z`: z-position of the wheel axis
-- `angles`: Angles to rotate world-frame into `frame_a` around z-, y-, x-axis
-- `der_angles`: Derivatives of angles
-- `r_road_0`: Position vector from world frame to contact point on road, resolved in world frame
-- `f_wheel_0`: Force vector on wheel, resolved in world frame
-- `f_n`: Contact force acting on wheel in normal direction
-- `f_lat`: Contact force acting on wheel in lateral direction
-- `f_long`: Contact force acting on wheel in longitudinal direction
-- `err`: Absolute value of `(r_road_0 - frame_a.r_0) - radius` (must be zero; used for checking)
-- `e_axis_0`: Unit vector along wheel axis, resolved in world frame
-- `delta_0`: Distance vector from wheel center to contact point
-- `e_n_0`: Unit vector in normal direction of road at contact point, resolved in world frame
-- `e_lat_0`: Unit vector in lateral direction of road at contact point, resolved in world frame
-- `e_long_0`: Unit vector in longitudinal direction of road at contact point, resolved in world frame
-- `s`: Road surface parameter 1
-- `w`: Road surface parameter 2
-- `e_s_0`: Road heading at `(s,w)`, resolved in world frame (unit vector)
-- `v_0`: Velocity of wheel center, resolved in world frame
-- `w_0`: Angular velocity of wheel, resolved in world frame
-- `vContact_0`: Velocity of contact point, resolved in world frame
-
-# Connector frames
-- `frame_a`: Frame for the wheel joint
-"""
-function RollingWheelJoint(; name, radius, angles = zeros(3), x0, y0, z0 = 0, sequence = [3, 2, 1])
-    @named frame_a = Frame(varw=true)
-    @parameters begin radius = radius, [description = "Radius of the wheel"] end
-    @variables begin
-        (x(t) = x0), [state_priority = 1, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 1, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 1, description = "z-position of the wheel axis"]
-        (angles(t)[1:3] = angles),
-        [description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = zeros(3)), [description = "Derivatives of angles"]
-        (r_road_0(t)[1:3] = zeros(3)),
-        [
-            description = "Position vector from world frame to contact point on road, resolved in world frame",
-        ]
-        (f_wheel_0(t)[1:3] = zeros(3)),
-        [description = "Force vector on wheel, resolved in world frame"]
-        (f_n(t) = 0), [description = "Contact force acting on wheel in normal direction"]
-        (f_lat(t) = 0), [
-            description = "Contact force acting on wheel in lateral direction",
-        ]
-        (f_long(t) = 0),
-        [description = "Contact force acting on wheel in longitudinal direction"]
-        # (err(t) = 0),
-        # [
-        #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
-        # ]
-        (e_axis_0(t)[1:3] = zeros(3)),
-        [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,0,-radius]),
-        [description = "Distance vector from wheel center to contact point"]
-        (e_n_0(t)[1:3] = zeros(3)),
-        [
-            description = "Unit vector in normal direction of road at contact point, resolved in world frame",
-        ]
-        (e_lat_0(t)[1:3] = zeros(3)),
-        [
-            description = "Unit vector in lateral direction of road at contact point, resolved in world frame",
-        ]
-        (e_long_0(t)[1:3] = zeros(3)),
-        [
-            description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
-        ]
-
-        (s(t) = 0), [state_priority = 1, description = "Road surface parameter 1"]
-        (w(t) = 0), [state_priority = 1, description = "Road surface parameter 2"]
-        (e_s_0(t)[1:3] = zeros(3)),
-        [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
-
-        (v_0(t)[1:3] = zeros(3)),
-        [description = "Velocity of wheel center, resolved in world frame"]
-        (w_0(t)[1:3] = zeros(3)),
-        [description = "Angular velocity of wheel, resolved in world frame"]
-        (vContact_0(t)[1:3] = zeros(3)),
-        [description = "Velocity of contact point, resolved in world frame"]
-
-        (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
-    end
-
-    angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
-
-    Ra = ori(frame_a, true)
-
-    Rarot = axes_rotations(sequence, angles, der_angles)
-
-    equations = [
-                Ra ~ Rarot
-                Ra.w ~ Rarot.w
-
-                 # frame_a.R is computed from generalized coordinates
-                 collect(frame_a.r_0) .~ [x, y, z]
-                 der_angles .~ D.(angles)
-
-                 # Road description
-                 r_road_0 .~ [s, w, 0]
-                 e_n_0 .~ [0, 0, 1]
-                 e_s_0 .~ [1, 0, 0]
-
-                 # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
-                 e_axis_0 .~ resolve1(Ra, [0, 1, 0])
-                 aux .~ (cross(e_n_0, e_axis_0))
-                 e_long_0 .~ (aux ./ _norm(aux))
-                 e_lat_0 .~ (cross(e_long_0, e_n_0))
-
-                 # Determine point on road where the wheel is in contact with the road
-                 delta_0 .~ r_road_0 - frame_a.r_0
-                 0 ~ delta_0'e_axis_0
-                 0 ~ delta_0'e_long_0
-
-                 # One holonomic positional constraint equation (no penetration in to the ground)
-                 0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
-
-                 # only for testing
-                #  err ~ norm(delta_0) - radius
-
-                 # Slip velocities
-                 v_0 .~ D.(frame_a.r_0)
-                 w_0 .~ angular_velocity1(Ra)
-                 vContact_0 .~ v_0 + cross(w_0, delta_0)
-
-                 # Two non-holonomic constraint equations on velocity level (ideal rolling, no slippage)
-                 0 ~ vContact_0'e_long_0
-                 0 ~ vContact_0'e_lat_0
-
-                 # Contact force
-                 f_wheel_0 .~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
-
-                 # Force and torque balance at the wheel center
-                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
-                 zeros(3) .~ collect(frame_a.tau) +
-                             resolve2(Ra, cross(delta_0, f_wheel_0))]
-    compose(ODESystem(equations, t; name), frame_a)
-end
-
-"""
-    RollingWheel(; name, radius, m, I_axis, I_long, width=0.035, x0, y0, kwargs...)
-
-Ideal rolling wheel on flat surface z=0 (5 positional, 3 velocity degrees of freedom)
-
-A wheel rolling on the x-y plane of the world frame including wheel mass.
-The rolling contact is considered being ideal, i.e. there is no
-slip between the wheel and the ground.
-The wheel can not take off but it can incline toward the ground.
-The frame frame_a is placed in the wheel center point and rotates
-with the wheel itself.
-
-# Arguments and parameters:
-- `name`: Name of the rolling wheel component
-- `radius`: Radius of the wheel
-- `m`: Mass of the wheel
-- `I_axis`: Moment of inertia of the wheel along its axis
-- `I_long`: Moment of inertia of the wheel perpendicular to its axis
-- `width`: Width of the wheel (default: 0.035)
-- `x0`: Initial x-position of the wheel axis
-- `y0`: Initial y-position of the wheel axis
-- `kwargs...`: Additional keyword arguments passed to the `RollingWheelJoint` function
-
-# Variables:
-- `x`: x-position of the wheel axis
-- `y`: y-position of the wheel axis
-- `angles`: Angles to rotate world-frame into `frame_a` around z-, y-, x-axis
-- `der_angles`: Derivatives of angles
-
-# Named components:
-- `frame_a`: Frame for the wheel component
-- `rollingWheel`: Rolling wheel joint representing the wheel's contact with the road surface
-"""
-@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0, y0,
-                      angles = zeros(3), der_angles = zeros(3), kwargs...)
-    @named begin
-        frame_a = Frame()
-        rollingWheel = RollingWheelJoint(; radius, angles, x0, y0, kwargs...)
-        body = Body(r_cm = [0, 0, 0],
-                    m = m,
-                    I_11 = I_long,
-                    I_22 = I_axis,
-                    I_33 = I_long,
-                    I_21 = 0,
-                    I_31 = 0,
-                    I_32 = 0)
-    end
-    pars = @parameters begin
-        radius = radius, [description = "Radius of the wheel"]
-        m = m, [description = "Mass of the wheel"]
-        I_axis = I_axis, [description = "Moment of inertia of the wheel along its axis"]
-        I_long = I_long,
-                 [description = "Moment of inertia of the wheel perpendicular to its axis"]
-        width = width, [description = "Width of the wheel"]
-    end
-    sts = @variables begin
-        (x(t) = x0), [state_priority = 2.0, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 2.0, description = "y-position of the wheel axis"]
-        (angles(t)[1:3] = angles),
-        [description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [state_priority = 3.0, description = "Derivatives of angles"]
-    end
-    # sts = reduce(vcat, collect.(sts))
-
-    equations = Equation[rollingWheel.x ~ x
-                         rollingWheel.y ~ y
-                         collect(rollingWheel.angles) .~ collect(angles)
-                         collect(rollingWheel.der_angles) .~ collect(der_angles)
-                         connect(body.frame_a, frame_a)
-                         connect(rollingWheel.frame_a, frame_a)]
-    compose(ODESystem(equations, t; name), frame_a, rollingWheel, body)
-end
 
 """
     FreeMotion(; name, state = true, sequence, isroot = true, w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0, phid = 0, phidd = 0, w_rel_b = 0, r_rel_a = 0, v_rel_a = 0, a_rel_a = 0)
@@ -795,14 +560,15 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         # Free motion joint does not have state
         if w_rel_a_fixed || z_rel_a_fixed
             append!(eqs,
-                    w_rel_b .~ angular_velocity2(frame_b) - resolve2(frame_b.
-                                        R, angular_velocity1(frame_a)))
+                    w_rel_b .~ angular_velocity2(ori(frame_b)) - resolve2(ori(frame_b), angular_velocity1(ori(frame_a))))
         end
     end
     if state && !isroot
         compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
-    else
+    elseif state
         compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, )
+    else
+        compose(ODESystem(eqs, t; name), frame_a, frame_b)
     end
 end
 
@@ -813,9 +579,9 @@ Revolute joint that is described by 2 positional constraints for usage in a plan
 
 Joint where `frame_b` rotates around axis `n` which is fixed in `frame_a` and where this joint is used in a planar loop providing 2 constraint equations on position level.
 
-If a planar loop is present, e.g., consisting of 4 revolute joints where the joint axes are all parallel to each other, then there is no unique mathematical solution if all revolute joints are modelled with `Revolute` and the symbolic algorithms will fail. The reason is that, e.g., the cut-forces in the revolute joints perpendicular to the planar loop are not uniquely defined when 3-dim. descriptions of revolute joints are used. Usually, an error message will be printed pointing out this situation. In this case, one revolute joint in the loop has to be replaced by model `RevolutePlanarLoopCutJoint`. The effect is that from the 5 constraints of a 3-dim. revolute joint, 3 constraints are removed and replaced by appropriate known variables (e.g., the force in the direction of the axis of rotation is treated as known with value equal to zero; for standard revolute joints, this force is an unknown quantity).
+If a planar loop is present, e.g., consisting of 4 revolute joints where the joint axes are all parallel to each other, then there is no unique mathematical solution if all revolute joints are modelled with [`Revolute`](@ref) and the symbolic algorithms will fail. The reason is that, e.g., the cut-forces in the revolute joints perpendicular to the planar loop are not uniquely defined when 3-dim. descriptions of revolute joints are used. In this case, one revolute joint in the loop has to be replaced by model `RevolutePlanarLoopConstraint`. The effect is that from the 5 constraints of a 3-dim. revolute joint, 3 constraints are removed and replaced by appropriate known variables (e.g., the force in the direction of the axis of rotation is treated as known with value equal to zero; for standard revolute joints, this force is an unknown quantity).
 """
-@component function RevolutePlanarLoopConstraint(; name, n = Float64[0, 0, 1])
+@component function RevolutePlanarLoopConstraint(; name, n = Float64[0, 0, 1], radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], render=true)
     norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -833,6 +599,12 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     # # @variables ex_b[1:3](t) [description = "ex_a, resolved in frame_b"]
 
 
+    pars = @parameters begin
+        radius = radius, [description = "Radius of revolute cylinder in animations"]
+        length = length, [description = "Length of revolute cylinder in animations"]
+        color[1:4] = color, [description = "Color of revolute cylinder in animations"]
+        render = render, [description = "Render the joint in animations"]
+    end
 
     nnx_a = ifelse(abs(n[1]) > 0.1, [0,1,0], ifelse(abs(n[2]) > 0.1, [0,0,1], [1,0,0])) 
     ey_a = normalize(cross(n, nnx_a)) 
@@ -849,7 +621,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
 
     Rrel0 = planar_rotation(n, 0, 0)
     varw = false
-    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw)
+    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw, state_priority = -1)
 
     n = collect(n)
     ey_a = collect(ey_a)
@@ -870,7 +642,8 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f)
         collect(n) .~ n0
     ]
-    ODESystem(eqs, t; name, systems=[frame_a, frame_b])
+    sys = ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b])
+    add_params(sys, pars; name)
 end
 
 LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)
@@ -885,17 +658,46 @@ vector `n` which is perpendicular to the plane and by vector `n_x`,
 which points in the direction of the x-axis of the plane.
 `frame_a` and `frame_b` coincide when `s_x=prismatic_x.s=0,
 s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
+
+# Structural parameters
+- `n`: Axis orthogonal to unconstrained plane, resolved in `frame_a` (= same as in `frame_b`)
+- `n_x`: Vector in direction of x-axis of plane, resolved in `frame_a` (`n_x` shall be orthogonal to `n`)
+
+# Connectors
+- `frame_a`: Frame for the joint
+- `frame_b`: Frame for the joint
+
+# Variables
+- `s_x`: Relative distance along first prismatic joint starting at `frame_a`
+- `s_y`: Relative distance along second prismatic joint starting at first prismatic joint
+- `phi`: Relative rotation angle from `frame_a` to `frame_b`
+- `v_x`: Relative velocity along first prismatic joint
+- `v_y`: Relative velocity along second prismatic joint
+- `w`: Relative angular velocity around revolute joint
+- `a_x`: Relative acceleration along first prismatic joint
+- `a_y`: Relative acceleration along second prismatic joint
+- `wd`: Relative angular acceleration around revolute joint
+
+# Rendering parameters
+- `cylinderlength`: Length of the revolute cylinder
+- `cylinderdiameter`: Diameter of the revolute cylinder
+- `cylindercolor`: (structural) Color of the revolute cylinder
+- `boxwidth`: Width of the prismatic joint boxes
+- `boxheight`: Height of the prismatic joint boxes
+- `boxcolor`: (structural) Color of the prismatic joint boxes
+- `radius`: (structural) Radius of the revolute cylinder
+- `render`: Enable rendering of the joint in animations
 """
 @mtkmodel Planar begin
     @structural_parameters begin
         state_priority = 1#, [description = "Priority used to choose whether the joint state variables are selected"]
         n
         n_x
-    end
-    begin
+        radius = 0.05
         cylindercolor = [1, 0, 1, 1]
         boxcolor = [0, 0, 1, 1]
-        radius = 0.05
+    end
+    begin
     end
     @parameters begin
         # (n[1:3]), [description = "Axis orthogonal to unconstrained plane, resolved in frame_a (= same as in frame_b)"]
@@ -906,6 +708,7 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
         boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
         # boxcolor[1:4] = boxcolordefault, [description = "Color of prismatic joint boxes"]
+        render = true, [description = "Enable rendering of the joint in animations"]
     end
     begin
         n = collect(n)
@@ -921,8 +724,8 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
     @components begin
         frame_a = Frame()
         frame_b = Frame()
-        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor)
-        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor)
+        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor, radius)
+        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor, radius)
         revolute = Revolute(; state_priority=2.1, n, isroot=false, color=cylindercolor, radius)
     end
     @variables begin
@@ -953,3 +756,53 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
     end
 end
 
+@mtkmodel Cylindrical begin
+    begin
+        n_def = [1, 0, 0] # Workaround for mtkmodel bug
+        cylinder_color_def = [1, 0, 1, 1]
+    end
+
+    @structural_parameters begin
+        # _state_priority = 2 # mtkmodel bug prevents this from being any form of parameter at all :/
+        cylinder_color = [1, 0, 1, 1]#, [description = "Color of cylinder"]
+    end
+
+    @parameters begin
+        n[1:3] = n_def, [description = "Cylinder axis resolved in frame_a (= same as in frame_b)"]
+        cylinder_diameter = 0.05, [description = "Diameter of cylinder"]
+        render = true, [description = "Enable rendering of the joint in animations"]
+    end
+    begin
+        n = collect(n)
+        cylinder_color = collect(cylinder_color)
+    end
+
+    @components begin
+        frame_a = Frame()
+        frame_b = Frame()
+        prismatic = Prismatic(; n, state_priority=1, render = false)
+        revolute = Revolute(; n, state_priority=1, color = cylinder_color, radius = cylinder_diameter/2)
+    end
+
+    @variables begin
+        (s(t) = 0), [state_priority = 200, description = "Relative distance between frame_a and frame_b"]
+        (phi(t) = 0), [state_priority = 200, description = "Relative rotation angle from frame_a to frame_b"]
+        (v(t) = 0), [state_priority = 200, description = "First derivative of s (relative velocity)"]
+        (w(t) = 0), [state_priority = 200, description = "First derivative of angle phi (relative angular velocity)"]
+        (a(t) = 0), [description = "Second derivative of s (relative acceleration)"]
+        (wd(t) = 0), [description = "Second derivative of angle phi (relative angular acceleration)"]
+    end
+
+    @equations begin
+        phi ~ revolute.phi
+        w ~ D(phi)
+        wd ~ D(w)
+        s ~ prismatic.s
+        v ~ D(s)
+        a ~ D(v)
+        connect(frame_a, prismatic.frame_a)
+        connect(prismatic.frame_b, revolute.frame_a)
+        connect(revolute.frame_b, frame_b)
+    end
+
+end
