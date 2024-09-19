@@ -56,6 +56,11 @@ end
     include("test_PlanarMechanics.jl")
 end
 
+@testset "urdf" begin
+    @info "Testing urdf"
+    include("test_urdf.jl")
+end
+
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
