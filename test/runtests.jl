@@ -26,6 +26,11 @@ ssys = structural_simplify(model)
 
 @test length(unknowns(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
+@testset "urdf" begin
+    @info "Testing urdf"
+    include("test_urdf.jl")
+end
+
 @testset "traj" begin
     @info "Testing traj"
     include("test_traj.jl")
@@ -55,12 +60,6 @@ end
     @info "Testing PlanarMechanics"
     include("test_PlanarMechanics.jl")
 end
-
-@testset "urdf" begin
-    @info "Testing urdf"
-    include("test_urdf.jl")
-end
-
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
