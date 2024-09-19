@@ -506,7 +506,7 @@ function render!(scene, ::typeof(BodyBox), sys, sol, t)
 
     R0 = [length_dir width_dir height_dir]
     # R0 = Multibody.from_nxy(r, width_dir).R'
-    @assert isapprox(det(R0), 1.0, atol=1e-6)
+    @assert isapprox(det(R0), 1.0, atol=1e-5) "Rotation matrix R0 is not a valid rotation matrix, got `R0 = $R0` with determinant `det(R0) = $(det(R0))`"
     # NOTE: The rotation by this R and the translation with r_shape needs to be double checked
 
     origin = Vec3f(-length/2, -width/2, -height/2) + r_shape

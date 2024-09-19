@@ -106,10 +106,11 @@ function render! end
 """
     urdf2multibody(filename::AbstractString; extras=false, out=nothing, worldconnection = :rigid)
 
-Translate a URDF file into a Multibody model. Only available if LightXML.jl, Graphs.jl, MetaGraphs.jl and JuliaFormatter.jl are installed and loaded byt the user.
+Translate a URDF file into a Multibody model. Only available if LightXML.jl, Graphs.jl, MetaGraphs.jl and JuliaFormatter.jl are manually installed and loaded by the user.
 
 Example usage:
 ```
+using Multibody, ModelingToolkit, JuliaSimCompiler, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
 urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf"), extras=true, out="/tmp/urdf_import.jl")
 ```
 
@@ -117,6 +118,7 @@ urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.u
 - `extras=false`: If `true`, the generated code will include package imports, a simulation of the model and a rendering of the model.
 - `out=nothing`: If provided, the generated code will be written to this file, otherwise the string will only be returned.
 - `worldconnection=:rigid`: If `:rigid`, the world frame will be connected to the root link with a rigid connection. If a joint constructor is provided, this component will be instantiated and the root link is connected to the world through this, e.g., `worldconnection = FreeMotion`, `()->Prismatic(n=[0, 1, 0])` etc.
+`render_fixed = false`: Whether or not to render "fixed" joints. These joints aren't actually joints (no degrees of freedom), they are translated to FixedTranslation or FixedRotation components.
 """
 function urdf2multibody end
 export urdf2multibody, URDFRevolute, URDFPrismatic
