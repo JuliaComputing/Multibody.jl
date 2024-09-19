@@ -121,7 +121,7 @@ urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.u
 `render_fixed = false`: Whether or not to render "fixed" joints. These joints aren't actually joints (no degrees of freedom), they are translated to FixedTranslation or FixedRotation components.
 """
 function urdf2multibody end
-export urdf2multibody, URDFRevolute, URDFPrismatic
+export urdf2multibody, URDFRevolute, URDFPrismatic, NullJoint
 
 const t = let
     (@independent_variables t)[1]

@@ -807,9 +807,9 @@ end
 
 end
 
-@component function URDFRevolute(; name, r, R, axisflange = false, kwargs...)
+@component function URDFRevolute(; name, r, R=I(3), axisflange = false, kwargs...)
     if R == I(3) && r == zeros(3)
-        return j
+        return Revolute(; axisflange, name, kwargs...)
     end
 
     systems = @named begin
@@ -848,7 +848,7 @@ end
 
 @component function URDFPrismatic(; name, r, R, axisflange = false, kwargs...)
     if R == I(3) && r == zeros(3)
-        return j
+        return Prismatic(; axisflange, name, kwargs...)
     end
 
     systems = @named begin
