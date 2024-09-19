@@ -158,7 +158,7 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 To obtain an axis-angle representation of any rotation, see [Conversion between orientation formats](@ref)
 """
 @component function FixedRotation(; name, r=[0, 0, 0], n = [1, 0, 0], isroot = false,
-                       angle)
+                       angle, render=true)
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -177,8 +177,11 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
     @parameters angle(t)=angle [
         description = "angle of rotation in radians",
     ]
+    @parameters begin
+        render = render, [description = "Render the component in animations"]
+    end
 
-    pars = [r; n; angle]
+    pars = [r; n; angle; render]
 
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
@@ -392,8 +395,8 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 """
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1, kwargs...)
     systems = @named begin
-        translation = FixedTranslation(r = r)
-        translation_cm = FixedTranslation(r = r_cm)
+        translation = FixedTranslation(r = r, render=false)
+        translation_cm = FixedTranslation(r = r_cm, render=false)
         body = Body(; m, r_cm, r_0, kwargs...)
         frame_a = Frame()
         frame_b = Frame()

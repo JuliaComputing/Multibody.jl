@@ -405,6 +405,7 @@ render!(scene, ::typeof(FreeMotion), sys, sol, t) = true
 
 
 function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
     color = get_color(sys, sol, :purple)
@@ -508,7 +509,7 @@ function render!(scene, ::typeof(BodyBox), sys, sol, t)
     @assert isapprox(det(R0), 1.0, atol=1e-6)
     # NOTE: The rotation by this R and the translation with r_shape needs to be double checked
 
-    origin = Vec3f(0, -width/2, -height/2) + r_shape
+    origin = Vec3f(-length/2, -width/2, -height/2) + r_shape
     extent = Vec3f(length, width, height) 
     thing = Makie.Rect3f(origin, extent)
     m = mesh!(scene, thing; color, specular = Vec3f(1.5))
@@ -694,6 +695,9 @@ function rot_from_line(d)
     y = y ./ norm(y)
     RotMatrix{3}([x y d])
 end
+
+Multibody.render!(scene, ::typeof(Multibody.URDFRevolute), sys, sol, t) = false
+Multibody.render!(scene, ::typeof(Multibody.URDFPrismatic), sys, sol, t) = false
 
 # ==============================================================================
 ## PlanarMechanics
