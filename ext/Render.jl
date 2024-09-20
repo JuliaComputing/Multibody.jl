@@ -40,7 +40,6 @@ function recursive_extract(sol, s, depth=0)
     end
 end
 
-
 function getu(sol::FakeSol, syms)
     t->[recursive_extract(sol, s) for s in syms]
 end
@@ -73,6 +72,81 @@ function Base.getproperty(sol::FakeSol, s::Symbol)
     else
         throw(ArgumentError("$(typeof(sol)) has no property named $s"))
     end
+end
+
+mutable struct CacheSol
+    model
+    sol
+    cache::Dict{Any, Any}
+    vars
+    last_t::Float64
+    function CacheSol(model, sol)
+        vars = get_all_vars(model) |> unique
+        Main.vars = vars
+        values = sol(0.0, idxs=vars)
+        new(model, sol, Dict(vars .=> values), vars, 0)
+    end
+end
+
+function get_all_vars(model, vars = Multibody.collect_all(unknowns(model)))
+    for sys in model.systems
+        if ModelingToolkit.isframe(sys)
+            newvars = Multibody.ModelingToolkit.renamespace.(model.name, Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
+            append!(vars, newvars)
+        else
+            subsys_ns = getproperty(model, sys.name)
+            get_all_vars(subsys_ns, vars)
+        end
+    end
+    vars
+end
+
+
+function get_cached(cs::CacheSol, t, idxs)
+    if ModelingToolkit.isparameter(idxs[1])
+        return cs.prob.ps[idxs]
+    end
+    if idxs isa AbstractArray{Num}
+        idxs = Multibody.Symbolics.unwrap.(idxs)
+    end
+    if !haskey(cs.cache, idxs[1])
+        # Fallback for things not in cache
+        return cs.sol(t; idxs)
+    end
+    if t != cs.last_t     
+        values = cs.sol(t, idxs=cs.vars)
+        cs.cache = Dict(cs.vars .=> values)
+        cs.last_t = t
+    end
+    if idxs isa Real
+        return cs.cache[idxs]
+    else
+        return [cs.cache[i] for i in idxs]
+    end
+end
+
+
+function getu(cs::CacheSol, syms)
+    t->get_cached(cs::CacheSol, t.t, syms)
+end
+
+function ModelingToolkit.parameter_values(cs::CacheSol)
+    ModelingToolkit.parameter_values(cs.sol)
+    # pars = Multibody.collect_all(parameters(cs.model))
+    # cs.prob.ps[pars]
+end
+
+function (cs::CacheSol)(t; idxs=nothing)
+    if idxs === nothing
+        cs.sol(t)
+    else
+        get_cached(cs, t, idxs)
+    end
+end
+
+function Base.getproperty(cs::CacheSol, s::Symbol)
+    s ∈ fieldnames(typeof(cs)) && return getfield(cs, s)
+    return getproperty(getfield(cs, :sol), s)
 end
 
 
@@ -199,11 +273,14 @@ function render(model, sol,
     traces = nothing,
     display = false,
     loop = 1,
+    cache = true,
     kwargs...
     )
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
         return render(model, sol, 0; x, y, z, lookat, up, show_axis, kwargs...)[1]
+    elseif cache
+        sol = CacheSol(model, sol)
     end
     scene, fig = default_scene(x,y,z; lookat,up,show_axis)
     if timevec === nothing
@@ -258,6 +335,7 @@ function render(model, sol, time::Real;
     x = 2,
     y = 0.5,
     z = 2,
+    cache = true,
     kwargs...,
     )
 
@@ -265,6 +343,9 @@ function render(model, sol, time::Real;
 
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
+    end
+    if cache
+        sol = CacheSol(model, sol)
     end
 
     # fig = Figure()
