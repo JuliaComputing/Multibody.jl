@@ -949,4 +949,97 @@ function perp(r)
     end
 end
 
+
+# ==============================================================================
+## Visualizers
+# ==============================================================================
+
+function render!(scene, ::typeof(Multibody.BoxVisualizer), sys, sol, t)
+    
+    # NOTE: This draws a solid box without the hole in the middle. Cannot figure out how to render a hollow box
+    color = get_color(sys, sol, [1, 0.2, 1, 0.9])
+    width = Float32(sol(sol.t[1], idxs=sys.width))
+    height = Float32(sol(sol.t[1], idxs=sys.height))
+    length = Float32(sol(sol.t[1], idxs=sys.length))
+
+    length_dir = sol(sol.t[1], idxs=collect(sys.render_length_dir))
+    width_dir = sol(sol.t[1], idxs=collect(sys.render_width_dir))
+    height_dir = normalize(cross(normalize(length_dir), normalize(width_dir)))
+    width_dir = normalize(cross(height_dir, length_dir))
+
+    Rfun = get_rot_fun(sol, sys.frame_a)
+    r_0a = get_fun(sol, collect(sys.frame_a.r_0)) # Origin is translated by r_shape
+    r_shape = sol(sol.t[1], idxs=collect(sys.r_shape))
+    # r = sol(sol.t[1], idxs=collect(sys.r))
+
+    R0 = [length_dir width_dir height_dir]
+    # R0 = Multibody.from_nxy(r, width_dir).R'
+    @assert isapprox(det(R0), 1.0, atol=1e-5) "Rotation matrix R0 is not a valid rotation matrix, got `R0 = $R0` with determinant `det(R0) = $(det(R0))`"
+    # NOTE: The rotation by this R and the translation with r_shape needs to be double checked
+
+    origin = Vec3f(-length/2, -width/2, -height/2) + r_shape
+    extent = Vec3f(length, width, height) 
+    thing = Makie.Rect3f(origin, extent)
+    m = mesh!(scene, thing; color, specular = Vec3f(1.5))
+    on(t) do t
+        r1 = Point3f(r_0a(t))
+        R = Rfun(t)
+        q = Rotations.QuatRotation(R*R0).q
+        Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
+        Makie.transform!(m, translation=r1, rotation=Q)
+    end
+
+    true
+end
+
+function render!(scene, ::typeof(Multibody.SphereVisualizer), sys, sol, t)
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    color = get_color(sys, sol, :purple)
+    framefun = get_frame_fun(sol, sys.frame_a)
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    thing = @lift begin # Sphere
+        Ta = framefun($t)
+        coords = Ta[1:3, 4]
+        point = Point3f(coords)
+        Sphere(point, Float32(radius))
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+end
+
+function render!(scene, ::typeof(Multibody.CylinderVisualizer), sys, sol, t)
+    color = get_color(sys, sol, :purple)
+    radius = Float32(sol(sol.t[1], idxs=sys.radius))
+    r_0a = get_fun(sol, collect(sys.frame_a.r_0))
+
+
+
+
+    length_dir = sol(sol.t[1], idxs=collect(sys.render_length_dir))
+    width_dir = randn(3,3)
+    height_dir = normalize(cross(normalize(length_dir), normalize(width_dir)))
+    width_dir = normalize(cross(height_dir, length_dir))
+
+    Rfun = get_rot_fun(sol, sys.frame_a)
+
+    R0 = [length_dir width_dir height_dir]
+
+    r1 = Point3f(0,0,0)
+    r2 = Point3f((length*length_direction)...)
+    origin = r1
+    extremity = r2
+    thing = Makie.GeometryBasics.Cylinder(origin, extremity, radius)
+    m = mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
+
+
+    on(t) do t
+        r1 = Point3f(r_0a(t))
+        R = Rfun(t)
+        q = Rotations.QuatRotation(R*R0).q
+        Q = Makie.Quaternionf(q.v1, q.v2, q.v3, q.s)
+        Makie.transform!(m, translation=r1, rotation=Q)
+    end
+
+    true
+end
+
 end
