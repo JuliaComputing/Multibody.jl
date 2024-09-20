@@ -276,6 +276,7 @@ function render(model, sol,
     cache = true,
     kwargs...
     )
+    ModelingToolkit.iscomplete(model) || (model = complete(model))
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
         return render(model, sol, 0; x, y, z, lookat, up, show_axis, kwargs...)[1]
@@ -339,6 +340,7 @@ function render(model, sol, time::Real;
     kwargs...,
     )
 
+    ModelingToolkit.iscomplete(model) || (model = complete(model))
     slider = !(sol isa Union{ODEProblem, FakeSol})
 
     if sol isa ODEProblem
