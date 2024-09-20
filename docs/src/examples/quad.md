@@ -82,19 +82,16 @@ function RotorCraft(; closed_loop = true, addload=true)
     end
 
     thrusters = [Thruster(name = Symbol("thruster$i")) for i = 1:num_arms]
-    @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
-    @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
+    @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1, isroot=true)
 
     connections = [
-        connect(world.frame_b, freemotion.frame_a)
-        connect(freemotion.frame_b, body.frame_a)
         y_alt ~ body.r_0[2]
-        y_roll ~ freemotion.phi[3]
-        y_pitch ~ freemotion.phi[1]
+        y_roll ~ body.phi[3]
+        y_pitch ~ body.phi[1]
         [connect(body.frame_a, arms[i].frame_a) for i = 1:num_arms]
         [connect(arms[i].frame_b, thrusters[i].frame_b) for i = 1:num_arms]
     ]
-    systems = [world; arms; body; thrusters; freemotion]
+    systems = [world; arms; body; thrusters]
     if addload
         @named load = Body(m = load_mass, air_resistance=0.1)
         @named cable = Rope(
@@ -142,8 +139,8 @@ function RotorCraft(; closed_loop = true, addload=true)
         # append!(connections, [feedback_gain.input.u[i] ~ arms[i].frame_b.r_0[2] for i = 1:num_arms ]) # Connect positions to controller
         # append!(connections, [feedback_gain.input.u[i+num_arms] ~ D(arms[i].frame_b.r_0[2]) for i = 1:num_arms]) # Connect velocities to controller
         # append!(connections, [feedback_gain.input.u[i+2num_arms] ~ Ie[i] for i = 1:num_arms]) #
-        # append!(connections, [feedback_gain.input.u[i] ~ freemotion.phi[[1,3][i]] for i = 1:2 ]) # Connect positions to controller
-        # append!(connections, [feedback_gain.input.u[i+2] ~ freemotion.phid[[1,3][i]] for i = 1:2]) # Connect velocities to controller
+        # append!(connections, [feedback_gain.input.u[i] ~ body.phi[[1,3][i]] for i = 1:2 ]) # Connect positions to controller
+        # append!(connections, [feedback_gain.input.u[i+2] ~ body.phid[[1,3][i]] for i = 1:2]) # Connect velocities to controller
         # push!(systems, feedback_gain)
         =#
     end
@@ -151,6 +148,7 @@ function RotorCraft(; closed_loop = true, addload=true)
     complete(model)
 end
 model = RotorCraft(closed_loop=true, addload=true)
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 op = [
