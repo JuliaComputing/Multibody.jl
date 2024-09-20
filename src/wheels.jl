@@ -262,6 +262,22 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
     compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
 end
 
+
+
+"""
+    SlipWheelJoint(; name, radius, angles = zeros(3), der_angles = zeros(3), x0 = 0, y0 = radius, z0 = 0, sequence, iscut = false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.1, sSlide = 0.1, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
+
+Joint for a wheel with slip rolling on a surface.
+
+# Parameters
+- `radius`: Radius of the wheel
+- `vAdhesion_min`: Minimum adhesion velocity
+- `vSlide_min`: Minimum sliding velocity
+- `sAdhesion`: Adhesion slippage
+- `sSlide`: Sliding slippage
+- `mu_A`: Friction coefficient at adhesion
+- `mu_S`: Friction coefficient at sliding
+"""
 @component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.1, sSlide = 0.1, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
     @parameters begin
         radius = radius, [description = "Radius of the wheel"]
