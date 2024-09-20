@@ -102,7 +102,8 @@ function get_all_vars(model, vars = Multibody.collect_all(unknowns(model)))
 end
 
 
-function get_cached(cs::CacheSol, t, idxs)
+get_cached(cs::CacheSol, t::AbstractArray, idxs) = cs.sol(t; idxs)
+function get_cached(cs::CacheSol, t::Real, idxs)
     if ModelingToolkit.isparameter(idxs[1])
         return cs.prob.ps[idxs]
     end
@@ -861,6 +862,7 @@ end
 
 Multibody.render!(scene, ::typeof(Multibody.URDFRevolute), sys, sol, t) = false
 Multibody.render!(scene, ::typeof(Multibody.URDFPrismatic), sys, sol, t) = false
+Multibody.render!(scene, ::typeof(Multibody.NullJoint), sys, sol, t) = false
 
 # ==============================================================================
 ## PlanarMechanics
