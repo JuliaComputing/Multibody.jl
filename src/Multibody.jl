@@ -251,4 +251,7 @@ include("robot/FullRobot.jl")
 export PlanarMechanics
 include("PlanarMechanics/PlanarMechanics.jl")
 
+export SphereVisualizer, CylinderVisualizer, BoxVisualizer
+include("visualizers.jl")
+
 end

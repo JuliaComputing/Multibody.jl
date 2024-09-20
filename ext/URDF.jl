@@ -55,7 +55,7 @@ function parse_pose(xml_pose::XMLElement)
     rot, trans
 end
 
-function parse_joint(xml_joint::XMLElement)
+function parse_joint(xml_joint::XMLElement, render_fixed, render_joints)
     urdf_joint_type = attribute(xml_joint, "type")
     name = getname(xml_joint)
 
@@ -69,7 +69,7 @@ function parse_joint(xml_joint::XMLElement)
             components = "$name = URDFRevolute(; r=$r, R=$R, n=$axis)"
         else
             components = """
-            $name = URDFRevolute(; r=$r, R=$R, n=$axis, axisflange=true)
+            $name = URDFRevolute(; r=$r, R=$R, n=$axis, axisflange=true, render=$render_joints)
             $(name)_damper = Rotational.Damper(; d=$damping)
             """
             connections = """
@@ -81,7 +81,7 @@ function parse_joint(xml_joint::XMLElement)
         axis = parse_vector(T, find_element(xml_joint, "axis"), "xyz", "1 0 0")
         damping = parse_scalar(Float64, find_element(xml_joint, "dynamics"), "damping", "0")
         if iszero(damping)
-            components = "$name = URDFPrismatic(; r=$r, R=$R, n=$axis)"
+            components = "$name = URDFPrismatic(; r=$r, R=$R, n=$axis, render=$render_joints)"
         else
             components = """
             $name = URDFPrismatic(; r=$r, R=$R, n=$axis, axisflange=true)
@@ -99,9 +99,9 @@ function parse_joint(xml_joint::XMLElement)
         if norm(r) == 0 && R == I
             components = "$name = NullJoint()" # Null joint
         elseif R == I(3)
-            components = "$name = FixedTranslation(; r=$r)"
+            components = "$name = FixedTranslation(; r=$r, render=$render_fixed)"
         else
-            components = "$name = FixedTranslation(; r=$r)"
+            components = "$name = FixedTranslation(; r=$r, render=$render_fixed)"
             @warn "Ignoring rotation of joint $name"
             # R = RotMatrix3(R)
             # components = "$name = FixedRotation(; r=$r, n = $(rotation_axis(R)), angle = $(rotation_angle(R)))"
@@ -130,6 +130,7 @@ function parse_inertia(xml_inertial::XMLElement)
         moment = R * moment * R'
         # TODO: Double-check and test inertia transform, rotation convention RotXYZ? Transformation RIR' or R'IR?
     end
+
     mass, moment, r_cm
 end
 
@@ -138,7 +139,8 @@ getname(xml_link::XMLElement) = attribute(xml_link, "name")
 function parse_geometry(xml_link::XMLElement)
     xml_geometry = find_element(xml_link, "visual", "geometry")
     if xml_geometry === nothing
-        return 0.1, 1, :sphere
+        @error "No geometry found for link $(getname(xml_link)), using sphere"
+        return (; radius=0.1), :sphere
     elseif (cylinder = find_element(xml_geometry, "cylinder")) !== nothing
         radius = parse_scalar(Float64, cylinder, "radius", "0.1")
         length = parse_scalar(Float64, cylinder, "length", "1")
@@ -166,22 +168,47 @@ function parse_geometry(xml_link::XMLElement)
     return geometry, type
 end
 
-function parse_body(graph, xml_link::XMLElement)
+function parse_body(graph, xml_link::XMLElement; min_mass)
     xml_inertial = find_element(xml_link, "inertial")
-    mass,inertia,r_cm = xml_inertial == nothing ? (0,0*I(3),zeros(3)) : parse_inertia(xml_inertial)
+    mass,inertia,r_cm = xml_inertial == nothing ? (0.0,0.0*I(3),zeros(3)) : parse_inertia(xml_inertial)
+    if min_mass > 0
+        mass = max(mass, min_mass)
+        for i = 1:3
+            inertia[i,i] = max(inertia[i,i], min_mass*0.01)
+        end
+    end
     linkname = getname(xml_link)
 
     R, r = parse_pose(find_element(xml_link, "visual", "origin"))
     color = parse_color(xml_link, "1 0 0 1")
     geometry, type = parse_geometry(xml_link)
+    if geometry === nothing
+        error("No geometry found for link $linkname")
+    end
     if R != I
         @warn "Ignoring rotation of link $linkname"
     end
-    if type === :sphere
+    if mass == 0
+        # We special case this since the dynamics becomes strange with zero mass
+        if type === :sphere
+            return "$(Symbol(linkname)) = SphereVisualizer(; radius=$(geometry.radius))" # color=$(color),
+        elseif type === :cylinder
+            if iszero(r)
+                r = [1, 0, 0]
+            end
+            return "$(Symbol(linkname)) = CylinderVisualizer(; length_direction=$(r), radius=$(geometry.radius), length=$(geometry.length))" # color=$(color),
+        elseif type === :box
+            return "$(Symbol(linkname)) = BoxVisualizer(; length_direction=[1,0,0], width_direction=[0,1,0], length=$(geometry.size[1]), width=$(geometry.size[2]), height=$(geometry.size[3]))" # color=$(color),
+        end
+
+    elseif type === :sphere
         radius = geometry.radius
         "$(Symbol(linkname)) = Body(; m=$(mass), r_cm=$(r_cm), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
     elseif type === :cylinder
         (; radius, length) = geometry
+        if iszero(r)
+            r = [1, 0, 0]
+        end
         r = normalize(r)*length
         "$(Symbol(linkname)) = BodyShape(; r=$(r), m=$(mass), r_cm=$(r_cm), I_11 = $(inertia[1,1]), I_22 = $(inertia[2,2]), I_33 = $(inertia[3,3]), I_21 = $(inertia[2,1]), I_31 = $(inertia[3,1]), I_32 = $(inertia[3,2]), color=$(color), radius=$(radius), sparse_I=true)"
     elseif type === :box
@@ -193,6 +220,8 @@ function parse_body(graph, xml_link::XMLElement)
             r = [1, 0, 0]
         end
         "$(Symbol(linkname)) = BodyBox(; r=$(r), body.m=$(mass), body.r_cm=$(r_cm), body.I_11 = $(inertia[1,1]), body.I_22 = $(inertia[2,2]), body.I_33 = $(inertia[3,3]), body.I_21 = $(inertia[2,1]), body.I_31 = $(inertia[3,1]), body.I_32 = $(inertia[3,2]), color=$(color), length=$(length), width=$(width), height=$(height))"
+    else
+        error("Geometry type $type not recognized")
     end
 end
 
@@ -209,11 +238,11 @@ urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test", "urdf", "doubl
 
 ## Keyword arguments
 - `extras=false`: If `true`, the generated code will include package imports, a simulation of the model and a rendering of the model.
-- `out=nothing`: If provided, the generated code will be written to this file, otherwise the string will only be returned.
+- `out=nothing`: If provided, the generated code will be written to this file, otherwise the translated model is returned as a string.
 - `worldconnection=:rigid`: If `:rigid`, the world frame will be connected to the root link with a rigid connection. If a joint constructor is provided, this component will be instantiated and the root link is connected to the world through this, e.g., `worldconnection = FreeMotion`, `()->Prismatic(n=[0, 1, 0])` etc.
 - `modelname`: The name of the model, default is the name of the URDF file with the extension removed and the first letter upper case.
 """
-function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=nothing, worldconnection = :rigid, modelname = default_modelname(filename))
+function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=nothing, worldconnection = :rigid, modelname = default_modelname(filename), solver = "FBDF", render_fixed=false, render_joints = true, min_mass=0)
     gravity = 9.81
     floating::Bool = false
 
@@ -246,14 +275,14 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
 
     # Parse all joints and possible extra connections due to axisflanges
     joints_extraconnections = map(xml_joints) do l
-        parse_joint(l)
+        parse_joint(l, render_fixed, render_joints)
     end
     joints = first.(joints_extraconnections)
     extra_connections = filter(!isempty, last.(joints_extraconnections))
 
     # Parse all bodies
     bodies = map(xml_links) do l
-        parse_body(graph, l)
+        parse_body(graph, l; min_mass)
     end
 
     roots = [v for v in vertices(graph) if indegree(graph, v) == 0]
@@ -305,7 +334,7 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
         model = complete(model)
         ssys = structural_simplify(IRSystem(model))
         prob = ODEProblem(ssys, [], (0.0, 10.0))
-        sol = solve(prob, FBDF())
+        sol = solve(prob, $(solver)())
         plot(sol) |> display
 
         import GLMakie
