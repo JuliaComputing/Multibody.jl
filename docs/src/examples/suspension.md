@@ -170,7 +170,6 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 2))
-# sol.u[1] = [0.17054946565059462, -0.6015077878288565, 0.274732819217001]
 sol = solve(prob, FBDF(autodiff=true))
 @test SciMLBase.successful_retcode(sol)
 rms(x) = sqrt(sum(abs2, x) / length(x))
@@ -259,7 +258,6 @@ display(sort(unknowns(ssys), by=string))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
-# first(Multibody.render(model, sol, 0, show_axis=true, x=-1.5, y=0.0, z=0.0))
 ```
 
 ```@example suspension
@@ -363,7 +361,6 @@ defs = [
     # model.body_upright.prismatic_y.s => 0.17
     # model.body_upright.prismatic_y.v => 0.14
 
-
     # vec(ori(model.mass.frame_a).R .=> I(3))
     # vec(ori(model.excited_suspension_r.suspension.r123.jointUSR.frame_a).R .=> I(3))
 ]
@@ -372,6 +369,8 @@ display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, FBDF(autodiff=false), initializealg = ShampineCollocationInit())#, u0 = prob.u0  .+ 1e-6 .* randn.())
-@show SciMLBase.successful_retcode(sol)
-first(Multibody.render(model, sol, 0, show_axis=true, x=-1.5, y=0.0, z=0.0))
+@test SciMLBase.successful_retcode(sol)
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_halfcar_wheels.gif") # Video
 ```
+
+![suspension with wheels](suspension_halfcar_wheels.gif)
