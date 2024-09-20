@@ -269,6 +269,9 @@ end
 
 Joint for a wheel with slip rolling on a surface.
 
+!!! tip "Integrator choice"
+    The slip model contains a discontinuity in the second derivative at the transitions between adhesion and sliding. This can cause problems for integrators, in particular BDF-type integrators.
+
 # Parameters
 - `radius`: Radius of the wheel
 - `vAdhesion_min`: Minimum adhesion velocity
@@ -436,6 +439,13 @@ Joint for a wheel with slip rolling on a surface.
                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                 zeros(3) .~ collect(frame_a.tau) +
                             resolve2(Ra, cross(delta_0, f_wheel_0))]
+
+                # continuous_events = [
+                #     v_slip~vAdhesion
+                #     v_slip~vSlide
+                #     v_slip~mu_A
+                #     v_slip~mu_S
+                # ]
     compose(ODESystem(equations, t; name), frame_a)
 end
 
