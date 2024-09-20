@@ -768,7 +768,7 @@ function render!(scene, ::Union{typeof(Spring), typeof(SpringDamperParallel)}, s
     color = get_color(sys, sol, :blue)
     n_wind = sol(sol.t[1], idxs=sys.num_windings)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
-    N = sol(sol.t[1], idxs=sys.N) |> Int
+    N = round(Int, sol(sol.t[1], idxs=sys.N))
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))

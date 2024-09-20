@@ -54,7 +54,7 @@ t5 = 19.84 |> deg2rad
         chassis_frame = Frame()
         
         if spring
-            springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius) 
+            springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius, num_windings=10)
         end
         if spring
             spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false) 
@@ -235,14 +235,12 @@ defs = [
     model.excited_suspension_r.freq => 10
     model.excited_suspension_r.suspension.ks => 30*44000
     model.excited_suspension_r.suspension.cs => 30*4000
-    model.excited_suspension_r.suspension.springdamper.num_windings => 10
     model.excited_suspension_r.suspension.r2.phi => -0.6031*(1)
 
     model.excited_suspension_l.amplitude => 0.05
     model.excited_suspension_l.freq => 9.5
     model.excited_suspension_l.suspension.ks => 30*44000
     model.excited_suspension_l.suspension.cs => 30*4000
-    model.excited_suspension_l.suspension.springdamper.num_windings => 10
     model.excited_suspension_l.suspension.r2.phi => -0.6031*(+1)
 
     model.ms => 1500/2
@@ -276,10 +274,11 @@ The connection between the wheels and the ground form two kinematic loops togeth
 @mtkmodel ExcitedWheelAssembly begin
     @structural_parameters begin
         mirror = false
+        iscut = true
     end
     @parameters begin
         rod_radius = 0.02
-        amplitude = 0.1, [description = "Amplitude of wheel displacement"]
+        amplitude = 0.02, [description = "Amplitude of wheel displacement"]
         freq = 2, [description = "Frequency of wheel displacement"]
     end
     begin
@@ -323,7 +322,7 @@ end
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = ExcitedWheelAssembly(; mirror=false, rod_radius)
         excited_suspension_l = ExcitedWheelAssembly(; mirror=true, rod_radius)
-        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000, iscut=false)
+        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000)
         body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0, iscut=false)
         # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=100000, radius=0.01)
     end
@@ -349,14 +348,12 @@ defs = [
     model.excited_suspension_r.freq => 10
     model.excited_suspension_r.suspension.ks => 30*44000
     model.excited_suspension_r.suspension.cs => 30*4000
-    model.excited_suspension_r.suspension.springdamper.num_windings => 10
     model.excited_suspension_r.suspension.r2.phi => -0.6031*(1)
 
     model.excited_suspension_l.amplitude => 0.05
     model.excited_suspension_l.freq => 9.5
     model.excited_suspension_l.suspension.ks => 30*44000
     model.excited_suspension_l.suspension.cs => 30*4000
-    model.excited_suspension_l.suspension.springdamper.num_windings => 10
     model.excited_suspension_l.suspension.r2.phi => -0.6031*(+1)
 
     model.ms => 1500
@@ -381,3 +378,103 @@ nothing # hide
 ```
 
 ![suspension with wheels](suspension_halfcar_wheels.gif)
+
+
+```@example suspension
+@mtkmodel FullCar begin
+    @structural_parameters begin
+        wheel_base = 1
+    end
+    @parameters begin
+        ms = 1500, [description = "Mass of the car [kg]"]
+        rod_radius = 0.02
+    end
+    @components begin
+        world = W()
+        front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
+        # back_front = FixedTranslation(r = [2, 0, 0], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
+        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=[0.4, 0.4, 0.4, 0.3])
+        back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
+
+        excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, iscut=true, freq = 10)
+        excited_suspension_fl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 10.5)
+
+        excited_suspension_br = ExcitedWheelAssembly(; mirror=false, rod_radius, iscut=true, freq = 10)
+        excited_suspension_bl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 9.7)
+
+        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000)
+        # body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0)
+        # body_upright2 = Spherical(render = false)
+        body_upright2 = Universal(n_a = [1, 0, 0], n_b = [0, 0, 1])
+        # body_upright = FreeMotion(state_priority=10)
+    end
+    @equations begin
+        connect(world.frame_b, body_upright.frame_a)
+        connect(body_upright.frame_b, body_upright2.frame_a)
+        connect(body_upright2.frame_b, back_axle.frame_cm)
+
+        # connect(body_upright.frame_b, back_front.frame_cm)
+
+        connect(back_front.frame_a, front_axle.frame_cm)
+        connect(back_front.frame_b, back_axle.frame_cm)
+
+
+        connect(excited_suspension_fr.chassis_frame, front_axle.frame_a)
+        connect(excited_suspension_fl.chassis_frame, front_axle.frame_b)
+
+        connect(excited_suspension_br.chassis_frame, back_axle.frame_a)
+        connect(excited_suspension_bl.chassis_frame, back_axle.frame_b)
+    end
+
+end
+
+@named model = FullCar()
+model = complete(model)
+@time "simplification" ssys = structural_simplify(IRSystem(model))
+
+
+defs = [
+    model.excited_suspension_br.amplitude => 0.02
+    model.excited_suspension_br.freq => 10
+    model.excited_suspension_br.suspension.ks => 30*44000
+    model.excited_suspension_br.suspension.cs => 30*4000
+    model.excited_suspension_br.suspension.r2.phi => -0.6031*(1)
+
+    model.excited_suspension_bl.amplitude => 0.02
+    model.excited_suspension_bl.freq => 10.5
+    model.excited_suspension_bl.suspension.ks => 30*44000
+    model.excited_suspension_bl.suspension.cs => 30*4000
+    model.excited_suspension_bl.suspension.r2.phi => -0.6031*(+1)
+
+    model.excited_suspension_fr.amplitude => 0.02
+    model.excited_suspension_fr.freq => 10
+    model.excited_suspension_fr.suspension.ks => 30*44000
+    model.excited_suspension_fr.suspension.cs => 30*4000
+    model.excited_suspension_fr.suspension.r2.phi => -0.6031*(1)
+
+    model.excited_suspension_fl.amplitude => 0.02
+    model.excited_suspension_fl.freq => 9.7
+    model.excited_suspension_fl.suspension.ks => 30*44000
+    model.excited_suspension_fl.suspension.cs => 30*4000
+    model.excited_suspension_fl.suspension.r2.phi => -0.6031*(+1)
+
+    model.ms => 100
+
+    model.body_upright.s => 0.17
+    model.body_upright.v => 0.14
+
+    # model.body_upright.prismatic_y.s => 0.17
+    # model.body_upright.prismatic_y.v => 0.14
+
+    # vec(ori(model.mass.frame_a).R .=> I(3))
+    # vec(ori(model.excited_suspension_r.suspension.r123.jointUSR.frame_a).R .=> I(3))
+]
+
+display(sort(unknowns(ssys), by=string))
+
+prob = ODEProblem(ssys, defs, (0, 3))
+sol = solve(prob, FBDF(autodiff=false), initializealg = BrownFullBasicInit());#, u0 = prob.u0  .+ 0*1e-6 .* randn.(), p = prob.p .+ 0*1e-6 .* randn.())
+@test SciMLBase.successful_retcode(sol)
+import GLMakie
+@time "render" Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename="suspension_fullcar_wheels.gif") # Video
+```
