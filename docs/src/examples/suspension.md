@@ -298,7 +298,7 @@ The connection between the wheels and the ground form two kinematic loops togeth
             z0 = 0.0,
             der_angles = [0, 0, 0],
             iscut = true, # NOTE: Only used since while we have an "upright joint"
-            surface = (x,z)->amplitude*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
+            surface = (x,z)->ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
 
     end
