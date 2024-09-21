@@ -42,6 +42,7 @@ nothing # hide
 With all components and connections defined, we can create an `ODESystem` like so:
 ```@example pendulum
 @named model = ODESystem(connections, t, systems=[world, joint, body])
+model = complete(model)
 nothing # hide
 ```
 The `ODESystem` is the fundamental model type in ModelingToolkit used for multibody-type models.
@@ -88,6 +89,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(body.frame_a, joint.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
@@ -120,6 +122,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(body_0.frame_a, joint.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 prob = ODEProblem(ssys, [], (0, 10))
@@ -146,6 +149,7 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
                 connect(root_body.frame_a, multibody_spring.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 defs = Dict(collect(root_body.r_0) .=> [0, 1e-3, 0]) # The spring has a singularity at zero length, so we start some distance away
@@ -163,6 +167,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_a, damper.flange_a))
 push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, defs, (0, 10))
 

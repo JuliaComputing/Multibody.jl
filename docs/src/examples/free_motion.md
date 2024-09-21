@@ -68,6 +68,7 @@ eqs = [connect(bar2.frame_a, world.frame_b)
                              spring1,
                              spring2,
                          ])
+model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [
     collect(body.body.v_0 .=> 0);
