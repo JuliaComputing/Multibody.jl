@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Suspension systems · Multibody.jl</title><meta name="title" content="Suspension systems · Multibody.jl"/><meta property="og:title" content="Suspension systems · Multibody.jl"/><meta property="twitter:title" content="Suspension systems · Multibody.jl"/><meta name="description" content="Documentation for Multibody.jl."/><meta property="og:description" content="Documentation for Multibody.jl."/><meta property="twitter:description" content="Documentation for Multibody.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Multibody.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../pendulum/">Getting started: Pendulum</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../spring_damper_system/">Spring-damper system</a></li><li><a class="tocitem" href="../spring_mass_system/">Spring-mass system</a></li><li><a class="tocitem" href="../three_springs/">Three springs (series forces)</a></li><li><a class="tocitem" href="../sensors/">Sensors</a></li><li><a class="tocitem" href="../spherical_pendulum/">Spherical pendulum</a></li><li><a class="tocitem" href="../gearbox/">Gearbox</a></li><li><a class="tocitem" href="../free_motion/">Free motions</a></li><li><a class="tocitem" href="../kinematic_loops/">Kinematic loops</a></li><li><a class="tocitem" href="../robot/">Industrial robot</a></li><li><a class="tocitem" href="../ropes_and_cables/">Ropes, cables and chains</a></li><li><a class="tocitem" href="../swing/">Swing</a></li><li><a class="tocitem" href="../space/">Bodies in space</a></li><li><a class="tocitem" href="../gyroscopic_effects/">Gyroscopic effects</a></li><li><a class="tocitem" href="../wheel/">Wheels</a></li><li class="is-active"><a class="tocitem" href>Suspension systems</a><ul class="internal"><li class="toplevel"><a class="tocitem" href="#Half-car-suspension"><span>Half-car suspension</span></a></li><li><a class="tocitem" href="#Adding-wheels"><span>Adding wheels</span></a></li></ul></li><li><a class="tocitem" href="../quad/">Quadrotor with cable-suspended load</a></li></ul></li><li><a class="tocitem" href="../../rotations/">Rotations and orientation</a></li><li><a class="tocitem" href="../../rendering/">3D rendering</a></li><li><a class="tocitem" href="../../urdf/">URDF import</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Suspension systems</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Suspension systems</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaComputing/Multibody.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Quarter-car-suspension"><a class="docs-heading-anchor" href="#Quarter-car-suspension">Quarter-car suspension</a><a id="Quarter-car-suspension-1"></a><a class="docs-heading-anchor-permalink" href="#Quarter-car-suspension" title="Permalink"></a></h1><p>A simple suspension system for one wheel, roughly modeled after &quot;Interaction between asymmetrical damping and geometrical nonlinearity in vehicle suspension systems improves comfort&quot;, Fernandes et al. 2020.</p><p><img src="https://www.researchgate.net/publication/337953665/figure/fig1/AS:941829033828436@1601560948959/Schematic-representation-of-a-vehicle-suspension-system-with-Double-Wishbone-geometry-a_W640.jpg" alt="suspension system"/></p><p>We model only the suspension, and excite the system with a force from the ground through a rod connected where the wheel would be. The actuation rod is modeled as a <a href="../../#Multibody.SphericalSpherical-Tuple{}"><code>SphericalSpherical</code></a> joint to avoid over constraining the system. We further add a prismatic joint called <code>body_upright</code> to hold the &quot;car body&quot; to the world frame. This allows the body to move up and down, but not sideways or rotate.</p><pre><code class="language-julia hljs">using Multibody
+using ModelingToolkit
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
+using Plots
+using OrdinaryDiffEq
+using LinearAlgebra
+using JuliaSimCompiler
+using Test
+
+t = Multibody.t
+D = Differential(t)
+W(args...; kwargs...) = Multibody.world
+
+n = [1, 0, 0]
+AB = 146.5 / 1000
+BC = 233.84 / 1000
+CD = 228.60 / 1000
+DA = 221.43 / 1000
+BP = 129.03 / 1000
+DE = 310.31 / 1000
+t5 = 19.84 |&gt; deg2rad
+
+@mtkmodel QuarterCarSuspension begin
+    @structural_parameters begin
+        spring = true
+        (jc = [0.5, 0.5, 0.5, 0.7])#, [description = &quot;Joint color&quot;]
+        mirror = false
+    end
+    @parameters begin
+        cs = 4000, [description = &quot;Damping constant [Ns/m]&quot;]
+        ks = 44000, [description = &quot;Spring constant [N/m]&quot;]
+        rod_radius = 0.02
+        jr = 0.03, [description = &quot;Radius of revolute joint&quot;]
+    end
+    begin
+        dir = mirror ? -1 : 1
+        rRod1_ia = AB*normalize([0, -0.1, 0.2dir])
+        rRod2_ib = BC*normalize([0, 0.2, 0dir])
+    end
+    @components begin
+        r123 = JointRRR(n_a = n*dir, n_b = n*dir, rRod1_ia, rRod2_ib, rod_radius=0.018, rod_color=jc)
+        r2 = Revolute(; n=n*dir, radius=jr, color=jc)
+        b1 = FixedTranslation(radius = rod_radius, r = CD*normalize([0, -0.1, 0.3dir])) # CD
+        chassis = FixedTranslation(r = DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=false)
+        chassis_frame = Frame()
+
+        if spring
+            springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius)
+        end
+        if spring
+            spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false)
+        end
+        if spring
+            spring_mount_E = FixedTranslation(r = 1.3DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=true)
+        end
+    end
+    begin
+        A = chassis.frame_b
+        D = chassis.frame_a
+    end
+    @equations begin
+        # Main loop
+        connect(A, r123.frame_a)
+        connect(r123.frame_b, b1.frame_b)
+        connect(b1.frame_a, r2.frame_b)
+        connect(r2.frame_a, D)
+
+        # Spring damper
+        if spring
+            connect(springdamper.frame_b, spring_mount_E.frame_b)
+            connect(b1.frame_a, spring_mount_F.frame_a)
+            connect(D, spring_mount_E.frame_a)
+            connect(springdamper.frame_a, spring_mount_F.frame_b)
+        end
+
+        connect(chassis_frame, chassis.frame_a)
+    end
+end
+
+mirror = false
+@mtkmodel SuspensionWithExcitation begin
+    @structural_parameters begin
+        mirror = false
+    end
+    @parameters begin
+        ms = 1500, [description = &quot;Mass of the car [kg]&quot;]
+        rod_radius = 0.02
+        amplitude = 0.1, [description = &quot;Amplitude of wheel displacement&quot;]
+        freq = 2, [description = &quot;Frequency of wheel displacement&quot;]
+    end
+    begin
+        dir = mirror ? -1 : 1
+    end
+    @components begin
+        world = W()
+        chassis_frame = Frame()
+        suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
+
+        wheel_prismatic = Prismatic(n = [0,1,0], axisflange=true, state_priority=100, iscut=false)
+        actuation_rod = SphericalSpherical(radius=rod_radius, r_0 = [0, BC, 0])
+        actuation_position = FixedTranslation(r = [0, 0, CD*dir], render=false)
+        wheel_position = Translational.Position(exact=true)
+
+    end
+    @equations begin
+        wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
+        connect(wheel_position.flange, wheel_prismatic.axis)
+
+        connect(world.frame_b, actuation_position.frame_a)
+        connect(actuation_position.frame_b, wheel_prismatic.frame_a)
+        connect(wheel_prismatic.frame_b, actuation_rod.frame_a,)
+        connect(actuation_rod.frame_b, suspension.r123.frame_ib)
+
+        connect(chassis_frame, suspension.chassis_frame)
+    end
+
+end
+
+@mtkmodel SuspensionWithExcitationAndMass begin
+    @structural_parameters begin
+        mirror = false
+    end
+    @parameters begin
+        ms = 1500, [description = &quot;Mass of the car [kg]&quot;]
+        rod_radius = 0.02
+    end
+    begin
+        dir = mirror ? -1 : 1
+    end
+    @components begin
+        world = W()
+        mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)*dir]))
+        excited_suspension = SuspensionWithExcitation(; suspension.spring=true, mirror, rod_radius)
+        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
+    end
+    @equations begin
+        connect(world.frame_b, body_upright.frame_a)
+        connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
+    end
+
+end
+
+@named model = SuspensionWithExcitationAndMass()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
+defs = [
+    model.body_upright.s =&gt; 0.17
+    model.excited_suspension.amplitude =&gt; 0.05
+    model.excited_suspension.freq =&gt; 10
+    model.excited_suspension.suspension.ks =&gt; 30*44000
+    model.excited_suspension.suspension.cs =&gt; 30*4000
+    model.ms =&gt; 1500/4
+    model.excited_suspension.suspension.springdamper.num_windings =&gt; 10
+    # model.r1.phi =&gt; -1.0889
+    model.excited_suspension.suspension.r2.phi =&gt; -0.6031*(mirror ? -1 : 1)
+    # model.r3.phi =&gt; 0.47595
+    model.body_upright.v =&gt; 0.14
+]
+
+display(sort(unknowns(ssys), by=string))
+
+prob = ODEProblem(ssys, defs, (0, 2))
+sol = solve(prob, FBDF(autodiff=true))
+@test SciMLBase.successful_retcode(sol)
+rms(x) = sqrt(sum(abs2, x) / length(x))
+@test rms(sol(0:0.1:2, idxs=model.body_upright.v)) ≈ 2.740 atol=0.01</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">import GLMakie
+Multibody.render(model, sol, show_axis=false, x=-1, y=0.3, z=0.3, lookat=[0,0.3,0.3], timescale=3, filename=&quot;suspension.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;suspension.gif&quot;, LScene(), Scene (600px, 450px):
+  0 Plots
+  1 Child Scene:
+    └ Scene (600px, 450px))</code></pre><p><img src="../suspension.gif" alt="suspension"/></p><h1 id="Half-car-suspension"><a class="docs-heading-anchor" href="#Half-car-suspension">Half-car suspension</a><a id="Half-car-suspension-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car-suspension" title="Permalink"></a></h1><p>In the example below, we extend the previous example to a half-car model with two wheels. We now model the car as a <a href="../../#Multibody.BodyShape-Tuple{}"><code>BodyShape</code></a> and attach one suspension system on each side. This time, we let the car rotate around the x-axis to visualize roll effects due to uneven road surfaces. We excite each wheel with similar but slightly different frequencies to produce a beat.</p><pre><code class="language-julia hljs">@mtkmodel DoubleSuspensionWithExcitationAndMass begin
+    @structural_parameters begin
+        wheel_base = 1
+    end
+    @parameters begin
+        ms = 1500, [description = &quot;Mass of the car [kg]&quot;]
+        rod_radius = 0.02
+    end
+    @components begin
+        world = W()
+        mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
+        excited_suspension_r = SuspensionWithExcitation(; suspension.spring=true, mirror=false, rod_radius,
+            actuation_position.r = [0, 0, (CD+wheel_base/2)],
+            actuation_rod.r_0 = r_0 = [0, 0.1, 0],
+        )
+        excited_suspension_l = SuspensionWithExcitation(; suspension.spring=true, mirror=true, rod_radius,
+            actuation_position.r = [0, 0, -(CD+wheel_base/2)],
+            actuation_rod.r_0 = r_0 = [0, 0.1, 0],
+        )
+        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
+        body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=1000, phi0=0, w0=0)
+        # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=1000, radius=0.01)
+    end
+    @equations begin
+        connect(world.frame_b, body_upright.frame_a)
+
+        connect(body_upright.frame_b, body_upright2.frame_a)
+        connect(body_upright2.frame_b, mass.frame_cm)
+
+        # connect(body_upright.frame_b, mass.frame_cm)
+
+        connect(excited_suspension_r.chassis_frame, mass.frame_a)
+        connect(excited_suspension_l.chassis_frame, mass.frame_b)
+    end
+
+end
+
+@named model = DoubleSuspensionWithExcitationAndMass()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
+defs = [
+    model.excited_suspension_r.amplitude =&gt; 0.05
+    model.excited_suspension_r.freq =&gt; 10
+    model.excited_suspension_r.suspension.ks =&gt; 30*44000
+    model.excited_suspension_r.suspension.cs =&gt; 30*4000
+    model.excited_suspension_r.suspension.springdamper.num_windings =&gt; 10
+    model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031*(1)
+
+    model.excited_suspension_l.amplitude =&gt; 0.05
+    model.excited_suspension_l.freq =&gt; 9.5
+    model.excited_suspension_l.suspension.ks =&gt; 30*44000
+    model.excited_suspension_l.suspension.cs =&gt; 30*4000
+    model.excited_suspension_l.suspension.springdamper.num_windings =&gt; 10
+    model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031*(+1)
+
+    model.ms =&gt; 1500/2
+
+    model.body_upright.s =&gt; 0.17
+    model.body_upright.v =&gt; 0.14
+
+    # model.body_upright.prismatic_y.s =&gt; 0.17
+    # model.body_upright.prismatic_y.v =&gt; 0.14
+]
+
+display(sort(unknowns(ssys), by=string))
+
+prob = ODEProblem(ssys, defs, (0, 4))
+sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit())
+@test SciMLBase.successful_retcode(sol)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_halfcar.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;suspension_halfcar.gif&quot;, LScene(), Scene (600px, 450px):
+  0 Plots
+  1 Child Scene:
+    └ Scene (600px, 450px))</code></pre><h2 id="Adding-wheels"><a class="docs-heading-anchor" href="#Adding-wheels">Adding wheels</a><a id="Adding-wheels-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-wheels" title="Permalink"></a></h2><p>The example below further extends the example from above by adding wheels to the suspension system. The excitation is not modeled as a time-varying surface profile, provided through the <code>surface</code> argument to the <a href="../../#Multibody.SlippingWheel-Tuple{}"><code>SlippingWheel</code></a> component. The connection between the wheels and the ground form two kinematic loops together with the <code>body_upright</code> joint, we thus set both wheels to be cut joints using <code>iscut=true</code>.</p><pre><code class="language-julia hljs">@mtkmodel ExcitedWheelAssembly begin
+    @structural_parameters begin
+        mirror = false
+    end
+    @parameters begin
+        rod_radius = 0.02
+        amplitude = 0.1, [description = &quot;Amplitude of wheel displacement&quot;]
+        freq = 2, [description = &quot;Frequency of wheel displacement&quot;]
+    end
+    begin
+        dir = mirror ? -1 : 1
+    end
+    @components begin
+        chassis_frame = Frame()
+        suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
+
+        wheel = SlippingWheel(
+            radius = 0.2,
+            m = 15,
+            I_axis = 0.06,
+            I_long = 0.12,
+            x0 = 0.0,
+            z0 = 0.0,
+            der_angles = [0, 0, 0],
+            iscut = true, # NOTE: Only used since while we have an &quot;upright joint&quot;
+            surface = (x,z)-&gt;amplitude*(sin(2pi*freq*t)), # Excitation from a time-varying surface profile
+        )
+
+    end
+    @equations begin
+        connect(wheel.frame_a, suspension.r123.frame_ib)
+        connect(chassis_frame, suspension.chassis_frame)
+    end
+
+end
+
+@mtkmodel HalfCar begin
+    @structural_parameters begin
+        wheel_base = 1
+    end
+    @parameters begin
+        ms = 1500, [description = &quot;Mass of the car [kg]&quot;]
+        rod_radius = 0.02
+    end
+    @components begin
+        world = W()
+        mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
+        excited_suspension_r = ExcitedWheelAssembly(; mirror=false, rod_radius)
+        excited_suspension_l = ExcitedWheelAssembly(; mirror=true, rod_radius)
+        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000, iscut=false)
+        body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0, iscut=false)
+        # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=100000, radius=0.01)
+    end
+    @equations begin
+        connect(world.frame_b, body_upright.frame_a)
+        connect(body_upright.frame_b, body_upright2.frame_a)
+        connect(body_upright2.frame_b, mass.frame_cm)
+
+        # connect(body_upright.frame_b, mass.frame_cm)
+
+        connect(excited_suspension_r.chassis_frame, mass.frame_a)
+        connect(excited_suspension_l.chassis_frame, mass.frame_b)
+    end
+
+end
+
+@named model = HalfCar()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
+defs = [
+    model.excited_suspension_r.amplitude =&gt; 0.05
+    model.excited_suspension_r.freq =&gt; 10
+    model.excited_suspension_r.suspension.ks =&gt; 30*44000
+    model.excited_suspension_r.suspension.cs =&gt; 30*4000
+    model.excited_suspension_r.suspension.springdamper.num_windings =&gt; 10
+    model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031*(1)
+
+    model.excited_suspension_l.amplitude =&gt; 0.05
+    model.excited_suspension_l.freq =&gt; 9.5
+    model.excited_suspension_l.suspension.ks =&gt; 30*44000
+    model.excited_suspension_l.suspension.cs =&gt; 30*4000
+    model.excited_suspension_l.suspension.springdamper.num_windings =&gt; 10
+    model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031*(+1)
+
+    model.ms =&gt; 1500
+
+    model.body_upright.s =&gt; 0.17
+    model.body_upright.v =&gt; 0.14
+
+    # model.body_upright.prismatic_y.s =&gt; 0.17
+    # model.body_upright.prismatic_y.v =&gt; 0.14
+
+    # vec(ori(model.mass.frame_a).R .=&gt; I(3))
+    # vec(ori(model.excited_suspension_r.suspension.r123.jointUSR.frame_a).R .=&gt; I(3))
+]
+
+display(sort(unknowns(ssys), by=string))
+
+prob = ODEProblem(ssys, defs, (0, 4))
+sol = solve(prob, FBDF(autodiff=false), initializealg = ShampineCollocationInit())#, u0 = prob.u0  .+ 1e-6 .* randn.())
+@test SciMLBase.successful_retcode(sol)
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_halfcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;suspension_halfcar_wheels.gif&quot;, LScene(), Scene (600px, 450px):
+  0 Plots
+  1 Child Scene:
+    └ Scene (600px, 450px))</code></pre><p><img src="../suspension_halfcar_wheels.gif" alt="suspension with wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Saturday 21 September 2024 09:05">Saturday 21 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
