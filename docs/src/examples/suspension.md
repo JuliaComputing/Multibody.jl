@@ -178,6 +178,7 @@ rms(x) = sqrt(sum(abs2, x) / length(x))
 ```@example suspension
 import GLMakie
 Multibody.render(model, sol, show_axis=false, x=-1, y=0.3, z=0.3, lookat=[0,0.3,0.3], timescale=3, filename="suspension.gif") # Video
+nothing # hide
 ```
 
 ![suspension](suspension.gif)
@@ -262,7 +263,11 @@ sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit()
 
 ```@example suspension
 Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_halfcar.gif") # Video
+nothing # hide
 ```
+
+![suspension half-car](suspension_halfcar.gif)
+
 
 ## Adding wheels
 The example below further extends the example from above by adding wheels to the suspension system. The excitation is not modeled as a time-varying surface profile, provided through the `surface` argument to the [`SlippingWheel`](@ref) component.
@@ -368,9 +373,10 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, FBDF(autodiff=false), initializealg = ShampineCollocationInit())#, u0 = prob.u0  .+ 1e-6 .* randn.())
+sol = solve(prob, FBDF(autodiff=false), initializealg = ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_halfcar_wheels.gif") # Video
+nothing # hide
 ```
 
 ![suspension with wheels](suspension_halfcar_wheels.gif)

@@ -95,7 +95,7 @@ Body component with mass and inertia
 end
 
 """
-    BodyShape(; name, r = [1,0], r_cm = 0.5*r, gy = -9.807)
+    BodyShape(; name, r = [1,0], r_cm = 0.5*r, gy = -9.80665)
 
 The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames and a vector `r` that describes the translation between them, while the body has a single frame only.
 
@@ -116,9 +116,9 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @structural_parameters begin
         r = [1,0]
         r_cm = 0.5*r
-        gy = -9.807
     end
     @parameters begin
+        gy = -9.80665
         # r[1:2] = [1,0], [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
         # r_cm[1:2] = 0.5*r, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
         m = 1, [description = "mass of the body"]

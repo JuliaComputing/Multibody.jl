@@ -265,7 +265,9 @@ prob = ODEProblem(ssys, defs, (0.0, 10.0))
 sol = solve(prob, Rodas5P())
 @test SciMLBase.successful_retcode(sol)
 render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
+nothing # hide
 ```
+
 
 ![drifting animation](drifting.gif)
 
