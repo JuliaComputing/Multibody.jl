@@ -1615,9 +1615,11 @@ version = "9.39.1"
 
 [[deps.ModelingToolkitStandardLibrary]]
 deps = ["ChainRulesCore", "DiffEqBase", "IfElse", "LinearAlgebra", "ModelingToolkit", "Symbolics"]
-git-tree-sha1 = "e45ea9a9183d8d3b888a614bd5230262c443cc4f"
+git-tree-sha1 = "c72ac148f5f4ff6bb052f2d5bc413db8ab201dde"
+repo-rev = "main"
+repo-url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl.git"
 uuid = "16a59e39-deab-5bd0-87e4-056b12336739"
-version = "2.11.0"
+version = "2.13.0"
 
 [[deps.ModernGL]]
 deps = ["Libdl"]
@@ -1645,10 +1647,17 @@ deps = ["CoordinateTransformations", "DataInterpolations", "FileIO", "JuliaSimCo
 path = ".."
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
 version = "0.2.0"
-weakdeps = ["Makie"]
 
     [deps.Multibody.extensions]
     Render = ["Makie"]
+    URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
+
+    [deps.Multibody.weakdeps]
+    Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+    JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+    LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
+    Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+    MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
 
 [[deps.MultivariatePolynomials]]
 deps = ["ChainRulesCore", "DataStructures", "LinearAlgebra", "MutableArithmetics"]
