@@ -439,6 +439,34 @@ Joint for a wheel with slip rolling on a surface.
     compose(ODESystem(equations, t; name), frame_a)
 end
 
+
+"""
+    SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
+                      angles = zeros(3), der_angles = zeros(3), kwargs...)
+
+Wheel with slip rolling on a surface.
+
+# Parameters
+- `radius`: Radius of the wheel
+- `m`: Mass of the wheel
+- `I_axis`: Moment of inertia of the wheel along its axis
+- `I_long`: Moment of inertia of the wheel perpendicular to its axis
+- `width`: Width of the wheel (for rendering)
+- `x0`: Initial x-position of the wheel axis
+- `z0`: Initial z-position of the wheel axis
+
+# Variables
+- `x`: x-position of the wheel axis
+- `z`: z-position of the wheel axis
+- `angles`: Angles to rotate world-frame into `frame_a` around y-, z-, x-axis
+- `der_angles`: Derivatives of angles
+
+# Connectors
+- `frame_a`: Frame for the wheel component
+
+# Examples
+See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
+"""
 @component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
     @named wheeljoint = SlipWheelJoint(; radius, angles, x0, z0, der_angles, kwargs...)

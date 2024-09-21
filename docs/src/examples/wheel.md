@@ -7,6 +7,8 @@ When modeling wheels, there are several different assumptions that can be made, 
 The wheel-related components available are
 - [`RollingWheel`](@ref): a wheel that can roll on the ground. It cannot slip and it cannot leave the ground.
 - [`RollingWheelJoint`](@ref): a lower-level component used in `RollingWheel` to model the kinematics of the wheel, without inertial or mass properties.
+- [`SlipWheel`](@ref): Similar [`RollingWheel`](@ref), but can also slip.
+- [`SlipWheelJoint`](@ref): Similar to [`RollingWheelJoint`](@ref), but for `SlipWheel`.
 - [`RollingWheelSet`](@ref): a set of two wheels connected by an axis. One of the wheels cannot slip, while the other one slips as required to allow the wheel set to turn (no differential is modeled). No wheel can leave the ground.
 - [`RollingWheelSetJoint`](@ref): A lower-level component used in `RollingWheelSet` to model the kinematics of the wheel set, without inertial or mass properties.
 - [`RollingConstraintVerticalWheel`](@ref): A low-level constraint that is used to enforce a perfectly rolling wheel that is always vertical, i.e., it can only roll forward and not fall down.
@@ -322,7 +324,6 @@ end
 @named model = TestSlipBasedWheel()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
-display(unknowns(ssys))
 defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
     model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
