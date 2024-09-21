@@ -332,7 +332,7 @@ prob = ODEProblem(ssys, [
     D(model.prismatic.r0[2]) => 0,
 ], (0.0, 15.0))
 sol = solve(prob, Rodas5Pr())
-render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif")
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=fale)
 nothing # hide
 ```
 
@@ -452,7 +452,7 @@ defs = merge(
 prob = ODEProblem(ssys, defs, (0.0, 5.0))
 sol = solve(prob, Rodas5P(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif")
+Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif", cache=false)
 nothing # hide
 ```
 
