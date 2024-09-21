@@ -333,7 +333,7 @@ prob = ODEProblem(ssys, [
     D(model.prismatic.r0[2]) => 0,
 ], (0.0, 15.0))
 sol = solve(prob, Rodas5Pr())
-render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=fale)
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=false)
 nothing # hide
 ```
 
