@@ -298,7 +298,7 @@ The connection between the wheels and the ground form two kinematic loops togeth
             z0 = 0.0,
             der_angles = [0, 0, 0],
             iscut = true, # NOTE: Only used since while we have an "upright joint"
-            surface = (x,z)->amplitude*(sin(2pi*freq*t)), # Excitation from a time-varying surface profile
+            surface = (x,z)->amplitude*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
 
     end
@@ -373,7 +373,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, FBDF(autodiff=false), initializealg = ShampineCollocationInit())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = ShampineCollocationInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_halfcar_wheels.gif") # Video
 nothing # hide
