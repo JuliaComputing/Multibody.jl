@@ -7,7 +7,7 @@ import Multibody.PlanarMechanics as Pl
 using JuliaSimCompiler
 
 tspan = (0.0, 3.0)
-g = -9.807
+g = -9.80665
 
 @testset "Free body" begin
     m = 2
