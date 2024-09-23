@@ -1,5 +1,16 @@
 (C) JuliaHub Inc. 2022-2023. All rights reserved.
 
+JuliaHub products (JuliaSim with all its modules, and all
+JuliaSim packages provided through the JuliaHubRegistry) are commercial
+products of JuliaHub, Inc. They are free to use for non-commercial academic
+teaching and research purposes. For commercial users, license fees apply.
+Please refer to the End User License Agreement (https://juliahub.com/company/eula/)
+for details. Please contact sales@juliahub.com for purchasing information.
+
+To report any bugs, issues, or feature requests for JuliaSim software,
+please use the public Github repository JuliaSimIssues, located at
+https://github.com/JuliaComputing/JuliaSimIssues.
+
 ===============================================================================
 
 Parts of the code in the PlanarMechanics submodule have been adapted from the PlanarMechanics modelica library, which is licensed under the 3-Clause BSD License. The original license text is included below.
