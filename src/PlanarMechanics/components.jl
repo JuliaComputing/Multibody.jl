@@ -29,7 +29,7 @@ Frame fixed in the planar world frame at a given position and orientation
 end
 
 """
-    Body(; name, m=1, I=0.1, r=0, gy=-9.807, radius=0.1, render=true, color=Multibody.purple)
+    Body(; name, m=1, I=0.1, r=0, gy=-9.80665, radius=0.1, render=true, color=Multibody.purple)
 
 Body component with mass and inertia
 
@@ -37,7 +37,7 @@ Body component with mass and inertia
 - `m`: [kg] mass of the body
 - `I`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
 - `r`: [m, m] Translational position x,y-position
-- `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.807
+- `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.80665
 - `radius`: [m] Radius of the body in animations
 - `render`: [Bool] Render the body in animations
 - `color`: [Array{Float64,1}] Color of the body in animations
@@ -53,7 +53,7 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.807, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
+@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
     @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
