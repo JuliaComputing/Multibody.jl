@@ -423,8 +423,10 @@ nothing # hide
 
 ![suspension with wheels](suspension_halfcar_wheels.gif)
 
+# Full car
 
 ```@example suspension
+transparent_gray = [0.4, 0.4, 0.4, 0.3]
 @mtkmodel FullCar begin
     @structural_parameters begin
         wheel_base = 1
@@ -435,21 +437,21 @@ nothing # hide
     end
     @components begin
         world = W()
-        front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
-        # back_front = FixedTranslation(r = [2, 0, 0], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
-        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=[0.4, 0.4, 0.4, 0.3])
-        back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
+        front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
+        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=false)
+        back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
 
-        excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, iscut=true, freq = 10)
+        excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
         excited_suspension_fl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 10.5)
 
-        excited_suspension_br = ExcitedWheelAssembly(; mirror=false, rod_radius, iscut=true, freq = 10)
+        excited_suspension_br = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
         excited_suspension_bl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 9.7)
 
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000)
+        # body_upright = Planar(n = [1, 0, 0], n_x = [0, 0, 1], render = false, state_priority=2000)
+        body_upright2 = Universal(n_a = [1, 0, 0], n_b = [0, 0, 1], state_priority=2000)
         # body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0)
         # body_upright2 = Spherical(render = false)
-        body_upright2 = Universal(n_a = [1, 0, 0], n_b = [0, 0, 1])
         # body_upright = FreeMotion(state_priority=10)
     end
     @equations begin
@@ -511,13 +513,12 @@ defs = [
     # model.body_upright.prismatic_y.v => 0.14
 
     # vec(ori(model.mass.frame_a).R .=> I(3))
-    # vec(ori(model.excited_suspension_r.suspension.r123.jointUSR.frame_a).R .=> I(3))
 ]
 
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit());#, u0 = prob.u0  .+ 0*1e-6 .* randn.(), p = prob.p .+ 0*1e-6 .* randn.())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
 import GLMakie
 @time "render" Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename="suspension_fullcar_wheels.gif") # Video
