@@ -269,7 +269,9 @@ nothing # hide
 
 ## Adding wheels
 The example below further extends the example from above by adding wheels to the suspension system. The excitation is not modeled as a time-varying surface profile, provided through the `surface` argument to the [`SlippingWheel`](@ref) component.
-The connection between the wheels and the ground form two kinematic loops together with the `body_upright` joint, we thus set both wheels to be cut joints using `iscut=true`.
+The connection between the wheels and the ground form two kinematic loops together with the `body_upright` joint, we thus set all wheels to be cut joints using `iscut=true`. We start by adding a wheel to the quarter-car setup and then to the half-car setup.
+
+### Quarter car
 ```@example suspension
 @mtkmodel ExcitedWheelAssembly begin
     @structural_parameters begin
@@ -296,7 +298,7 @@ The connection between the wheels and the ground form two kinematic loops togeth
             x0 = 0.0,
             z0 = 0.0,
             der_angles = [0, 0, 0],
-            iscut = true,
+            iscut = iscut,
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
             surface = (x,z)->ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
@@ -306,9 +308,51 @@ The connection between the wheels and the ground form two kinematic loops togeth
         connect(wheel.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
     end
+end
+
+
+@mtkmodel SuspensionWithExcitationAndMass begin
+    @parameters begin
+        ms = 1500/4, [description = "Mass of the car [kg]"]
+        rod_radius = 0.02
+    end
+    @components begin
+        world = W()
+        mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)]))
+        excited_suspension = ExcitedWheelAssembly(; rod_radius)
+        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
+    end
+    @equations begin
+        connect(world.frame_b, body_upright.frame_a)
+        connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
+    end
 
 end
 
+@named model = SuspensionWithExcitationAndMass()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+display([unknowns(ssys) diag(ssys.mass_matrix)])
+
+defs = [
+    model.excited_suspension.amplitude => 0.05
+    model.excited_suspension.freq => 10
+    model.excited_suspension.suspension.ks => 30*44000
+    model.excited_suspension.suspension.cs => 30*4000
+    model.excited_suspension.suspension.r2.phi => -0.6031*(1)
+    model.body_upright.s => 0.17
+    model.body_upright.v => 0.14
+]
+prob = ODEProblem(ssys, defs, (0, 4))
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
+@test SciMLBase.successful_retcode(sol)
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_wheel.gif") # Video
+nothing # hide
+```
+![suspension with wheel](suspension_wheel.gif)
+
+### Half car
+```@example suspension
 @mtkmodel HalfCar begin
     @structural_parameters begin
         wheel_base = 1
