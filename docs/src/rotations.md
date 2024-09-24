@@ -62,5 +62,12 @@ rotation_axis(R), rotation_angle(R) # Get an axis-angle representation
 See [Orientations and directions](@ref)
 
 
-## Orientation API
-See [Orientation utilities](@ref)
+
+## Docstrings
+```@index
+```
+
+```@autodocs
+Modules = [Multibody, Multibody.PlanarMechanics]
+Pages   = ["orientation.jl"]
+```
