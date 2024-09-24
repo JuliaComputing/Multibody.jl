@@ -82,7 +82,10 @@ mutable struct CacheSol
     last_t::Float64
     function CacheSol(model, sol)
         vars = get_all_vars(model) |> unique
-        Main.vars = vars
+        # Main.vars = vars
+        # @show length(vars)
+        # filter!(v->ModelingToolkit.SymbolicIndexingInterface.is_variable(sol, v), vars) # To work around https://github.com/SciML/ModelingToolkit.jl/issues/3065
+        # @show length(vars)
         values = sol(0.0, idxs=vars)
         new(model, sol, Dict(vars .=> values), vars, 0)
     end
