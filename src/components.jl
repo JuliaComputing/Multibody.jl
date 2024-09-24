@@ -79,6 +79,11 @@ function inner_gravity(point_gravity, mu, g, n, r)
 end
 
 
+"""
+    Fixed(; name, r = [0, 0, 0], render = true)
+
+A component rigidly attached to the world frame with translation `r` between the world and the `frame_b`. The position vector `r` is resolved in the world frame.
+"""
 @component function Fixed(; name, r = [0, 0, 0], render = true)
     systems = @named begin frame_b = Frame() end
     @parameters begin
@@ -87,6 +92,89 @@ end
     end
     eqs = [collect(frame_b.r_0 .~ r)
            ori(frame_b) ~ nullrotation()]
+    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    add_params(sys, [render]; name)
+end
+
+"""
+    Position(; name, r = [0, 0, 0], render = true, fixed_oreintation = true)
+
+Forced movement of a flange according to a reference position `r`. Similar to [`Fixed`](@ref), but `r` is not a parameter, and may thus be any time-varying symbolic expression. The reference position vector `r` is resolved in the world frame. Example: `r = [sin(t), 0, 0]`.
+
+# Arguments:
+- `r`: Position vector from world frame to frame_b, resolved in world frame
+- `render`: Render the component in animations
+- `fixed_oreintation`: If `true`, the orientation of the frame is fixed to the world frame. If `false`, the orientation is free to change.
+
+See also [`Pose`](@ref) for a component that allows for forced orientation as well.
+"""
+@component function Position(; name, r = [0, 0, 0], render = true, fixed_oreintation = true)
+    systems = @named begin frame_b = Frame() end
+    @parameters begin
+        render = render, [description = "Render the component in animations"]
+    end
+    @variables begin
+        p(t)[1:3], [description = "Position vector from world frame to frame_b, resolved in world frame"]
+        v(t)[1:3], [description = "Absolute velocity of frame_b, resolved in world frame"]
+        a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
+    end
+    eqs = [
+        collect(frame_b.r_0 .~ r)
+        collect(frame_b.r_0 .~ p)
+        collect(v .~ D.(p))
+        collect(a .~ D.(v))
+        ]
+    if fixed_oreintation
+        append!(eqs, ori(frame_b) ~ nullrotation())
+    end
+    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    add_params(sys, [render]; name)
+end
+
+"""
+    Pose(; name, r = [0, 0, 0], R, q, render = true)
+
+Forced movement of a flange according to a reference position `r` and reference orientation `R`. The reference arrays `r` and `R` are resolved in the world frame, and may be any symbolic expression. As an alternative to specifying `R`, it is possible to specify a quaternion `q` (4-vector quaternion with real part first).
+
+Example usage:
+```
+using Multibody.Rotations
+R = RotXYZ(0, 0.5sin(t), 0)
+@named rot = Multibody.Pose(; r=[sin(t), 0, 0], R)
+```
+
+# Arguments 
+- `r`: Position vector from world frame to frame_b, resolved in world frame
+- `R`: Reference orientation matrix
+- `q`: Reference quaternion (optional alternative to `R`)
+- `render`: Render the component in animations
+- `normalize`: If a quaternion is provided, normalize the quaternion (default = true)
+
+See also [`Position`](@ref) for a component that allows for only forced translation.
+"""
+@component function Pose(; name, r = [0, 0, 0], R=nothing, q=nothing, render = true, normalize=true)
+    systems = @named begin frame_b = Frame() end
+    @parameters begin
+        render = render, [description = "Render the component in animations"]
+    end
+    @variables begin
+        p(t)[1:3], [description = "Position vector from world frame to frame_b, resolved in world frame"]
+        v(t)[1:3], [description = "Absolute velocity of frame_b, resolved in world frame"]
+        a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
+    end
+    eqs = [
+        collect(frame_b.r_0 .~ r)
+        collect(frame_b.r_0 .~ p)
+        collect(v .~ D.(p))
+        collect(a .~ D.(v))
+        if R !== nothing
+            ori(frame_b).R ~ R
+        elseif q !== nothing
+            ori(frame_b) ~ from_Q(q, 0; normalize)
+        else
+            error("Either R or q must be provided")
+        end
+    ]
     sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
     add_params(sys, [render]; name)
 end
