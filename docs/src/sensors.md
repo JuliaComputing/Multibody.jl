@@ -4,7 +4,7 @@ A sensor is an object that translates quantities in the mechanical domain into c
 
 ## Docstrings
 ```@index
-Pages   = ["sensors.jl", "PlanarMechanics/sensors.jl"]
+Pages   = ["sensors.md"]
 ```
 
 

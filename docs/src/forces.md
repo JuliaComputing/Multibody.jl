@@ -1,7 +1,7 @@
 # Forces
 
 ```@index
-Pages   = ["forces.jl"]
+Pages   = ["forces.md"]
 ```
 
 

@@ -12,6 +12,9 @@ makedocs(;
          modules = [Multibody],
          authors = "JuliaHub Inc.",
          #  strict = [:example_block, :setup_block, :eval_block],
+        #  remotes = Dict(
+        #     dirname(dirname(pathof(Multibody))) => (Remotes.GitHub("JuliaComputing", "Multibody.jl"), "0"),
+        # ),
          sitename = "Multibody.jl",
          warnonly = [:missing_docs, :cross_references, :docs_block],
          pagesonly = true,

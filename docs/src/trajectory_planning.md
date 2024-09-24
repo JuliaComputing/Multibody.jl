@@ -15,7 +15,7 @@ See [Industrial robot](@ref) for an example making use of the [`point_to_point`]
 ## Docstrings
 
 ```@index
-Pages   = ["path_planning.jl", "ptp.jl"]
+Pages   = ["trajectory_planning.md"]
 ```
 
 

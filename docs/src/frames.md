@@ -2,7 +2,7 @@
 
 ## Docstrings
 ```@index
-Pages   = ["frames.jl", "PlanarMechanics/utils.jl"]
+Pages   = ["frames.md"]
 ```
 
 ```@autodocs

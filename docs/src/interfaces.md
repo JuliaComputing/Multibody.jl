@@ -3,7 +3,7 @@
 ## Docstrings
 
 ```@index
-Pages   = ["interfaces.jl"]
+Pages   = ["interfaces.md"]
 ```
 
 ```@autodocs

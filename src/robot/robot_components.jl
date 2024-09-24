@@ -51,7 +51,7 @@ end
 """
     AccSensor(;name)
 
-Ideal sensor to measure the absolute flange angular acceleration
+Ideal rotational sensor to measure the absolute flange angular acceleration
 
 # Connectors:
 
