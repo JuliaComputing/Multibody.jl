@@ -269,6 +269,9 @@ end
 
 Joint for a wheel with slip rolling on a surface.
 
+!!! tip "Integrator choice"
+    The slip model contains a discontinuity in the second derivative at the transitions between adhesion and sliding. This can cause problems for integrators, in particular BDF-type integrators.
+
 # Parameters
 - `radius`: Radius of the wheel
 - `vAdhesion_min`: Minimum adhesion velocity
@@ -277,6 +280,7 @@ Joint for a wheel with slip rolling on a surface.
 - `sSlide`: Sliding slippage
 - `mu_A`: Friction coefficient at adhesion
 - `mu_S`: Friction coefficient at sliding
+- `surface`: By default, the wheel is rolling on a flat xz plane. A function `surface = (x, z)->y` may be provided to define a road surface. The function should return the height of the road at `(x, z)`. Note: if a function that depends on parameters is provided, make sure the parameters are scoped appropriately using, e.g., `ParentScope`.
 """
 @component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.1, sSlide = 0.1, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
     @parameters begin
@@ -436,6 +440,13 @@ Joint for a wheel with slip rolling on a surface.
                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                 zeros(3) .~ collect(frame_a.tau) +
                             resolve2(Ra, cross(delta_0, f_wheel_0))]
+
+                # continuous_events = [
+                #     v_slip~vAdhesion
+                #     v_slip~vSlide
+                #     v_slip~mu_A
+                #     v_slip~mu_S
+                # ]
     compose(ODESystem(equations, t; name), frame_a)
 end
 

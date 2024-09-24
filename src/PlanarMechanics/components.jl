@@ -499,7 +499,7 @@ end
 
 Returns a point-symmetric Triple S-Function
 
-A point symmetric interpolation between points `(0, 0), (x_max, y_max) and (x_sat, y_sat)`, provided `x_max < x_sat`. The approximation is done in such a way that the 1st function's derivative is zero at points `(x_max, y_max)` and `(x_sat, y_sat)`. Thus, the 1st function's derivative is continuous for all `x`. The higher derivatives are discontinuous at these points.
+A point symmetric interpolation between points `(0, 0), (x_max, y_max) and (x_sat, y_sat)`, provided `x_max < x_sat`. The approximation is done in such a way that the function's 1st derivative is zero at points `(x_max, y_max)` and `(x_sat, y_sat)`. Thus, the function's 1st derivative is continuous for all `x`. The higher derivatives are discontinuous at these points.
 
 ```
 x_max = 0.2
@@ -546,7 +546,7 @@ end
 
 Returns a S-shaped transition
 
-A smooth transition between points `(x_min, y_min)` and `(x_max, y_max)`. The transition is done in such a way that the 1st function's derivative is continuous for all `x`. The higher derivatives are discontinuous at input points.
+A smooth transition between points `(x_min, y_min)` and `(x_max, y_max)`. The transition is done in such a way that the function's 1st derivative is continuous for all `x`. The higher derivatives are discontinuous at input points.
 
 ```
 x_min = -0.4
