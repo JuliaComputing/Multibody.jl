@@ -346,7 +346,7 @@ defs = [
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_wheel.gif") # Video
+Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_wheel.gif") # Video
 nothing # hide
 ```
 ![suspension with wheel](suspension_wheel.gif)
@@ -464,7 +464,6 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
         connect(back_front.frame_a, front_axle.frame_cm)
         connect(back_front.frame_b, back_axle.frame_cm)
 
-
         connect(excited_suspension_fr.chassis_frame, front_axle.frame_a)
         connect(excited_suspension_fl.chassis_frame, front_axle.frame_b)
 
@@ -477,7 +476,6 @@ end
 @named model = FullCar()
 model = complete(model)
 @time "simplification" ssys = structural_simplify(IRSystem(model))
-
 
 defs = [
     model.excited_suspension_br.amplitude => 0.02
@@ -521,5 +519,9 @@ prob = ODEProblem(ssys, defs, (0, 3))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
 import GLMakie
-@time "render" Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename="suspension_fullcar_wheels.gif") # Video
+Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename="suspension_fullcar_wheels.gif") # Video
 ```
+
+![suspension with 4 wheels](suspension_fullcar_wheels.gif)
+```
+
