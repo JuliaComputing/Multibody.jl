@@ -306,7 +306,7 @@ defs = [
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_wheel.gif&quot;) # Video</code></pre><p><img src="../suspension_wheel.gif" alt="suspension with wheel"/></p><h3 id="Half-car"><a class="docs-heading-anchor" href="#Half-car">Half car</a><a id="Half-car-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel HalfCar begin
+Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_wheel.gif&quot;) # Video</code></pre><p><img src="../suspension_wheel.gif" alt="suspension with wheel"/></p><h3 id="Half-car"><a class="docs-heading-anchor" href="#Half-car">Half car</a><a id="Half-car-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel HalfCar begin
     @structural_parameters begin
         wheel_base = 1
     end
@@ -408,7 +408,6 @@ Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.
         connect(back_front.frame_a, front_axle.frame_cm)
         connect(back_front.frame_b, back_axle.frame_cm)
 
-
         connect(excited_suspension_fr.chassis_frame, front_axle.frame_a)
         connect(excited_suspension_fl.chassis_frame, front_axle.frame_b)
 
@@ -421,7 +420,6 @@ end
 @named model = FullCar()
 model = complete(model)
 @time &quot;simplification&quot; ssys = structural_simplify(IRSystem(model))
-
 
 defs = [
     model.excited_suspension_br.amplitude =&gt; 0.02
@@ -465,7 +463,7 @@ prob = ODEProblem(ssys, defs, (0, 3))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
 import GLMakie
-@time &quot;render&quot; Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;suspension_fullcar_wheels.gif&quot;, LScene(), Scene (600px, 450px):
+Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;suspension_fullcar_wheels.gif&quot;, LScene(), Scene (600px, 450px):
   0 Plots
   1 Child Scene:
-    └ Scene (600px, 450px))</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 24 September 2024 09:54">Tuesday 24 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+    └ Scene (600px, 450px))</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/> ```</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 24 September 2024 10:37">Tuesday 24 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
