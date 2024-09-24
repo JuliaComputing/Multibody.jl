@@ -1,6 +1,7 @@
 # Forces
 
 ```@index
+Pages   = ["forces.jl"]
 ```
 
 

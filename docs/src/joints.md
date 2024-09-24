@@ -8,6 +8,7 @@ Some joints offer the option to add 1-dimensional components to them by providin
 
 ## Docstrings
 ```@index
+Pages   = ["joints.jl", "fancy_joints.jl", "PlanarMechanics/joints.jl"]
 ```
 
 ```@autodocs

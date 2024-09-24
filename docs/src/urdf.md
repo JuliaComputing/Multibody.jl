@@ -24,6 +24,8 @@ urdf2multibody(filename; extras=true, out)
 include(out) # Include model, perform simulation and plotting
 ```
 
+## Docstring
+
 ```@docs
 Multibody.urdf2multibody
 ```

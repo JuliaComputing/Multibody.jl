@@ -65,6 +65,7 @@ See [Orientations and directions](@ref)
 
 ## Docstrings
 ```@index
+Pages   = ["orientation.jl"]
 ```
 
 ```@autodocs

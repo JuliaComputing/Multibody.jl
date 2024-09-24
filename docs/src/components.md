@@ -7,6 +7,7 @@ A mass with a shape can be modeled using a [`BodyShape`](@ref). The primary diff
 A rod without a mass (just a translation), is modeled using [`FixedTranslation`](@ref).
 
 ```@index
+Pages   = ["components.jl", "wheels.jl", "PlanarMechanics/components.jl"]
 ```
 
 ```@autodocs
