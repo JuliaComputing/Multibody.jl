@@ -17,20 +17,17 @@ jobs:
     permissions:
       contents: write
       statuses: write
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.3.0
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      - uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
       - uses: PumasAI/add-private-registry@main
         with:
           juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
-          private_registry_name: JuliaSimRegistry
-          private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
+          private_registry_name: JuliaHubRegistry
+          private_registry_uuid: de52bcdf-fcb2-40cf-a397-3d64b64f4d9c
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
                                       Pkg.setprotocol!(; domain = "github.com", protocol = "ssh"); 
