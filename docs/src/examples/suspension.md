@@ -279,6 +279,7 @@ We start by adding a wheel to the quarter-car setup and then to the half-car set
 
 ### Quarter car
 ```@example suspension
+using ModelingToolkitStandardLibrary.Mechanical.Rotational
 @mtkmodel ExcitedWheelAssembly begin
     @structural_parameters begin
         mirror = false
@@ -295,7 +296,8 @@ We start by adding a wheel to the quarter-car setup and then to the half-car set
     @components begin
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
-        wheel_rotation = Revolute(n = [0, 0, 1]) # Wheel rotation axis
+        wheel_rotation = Revolute(n = [0, 0, 1], axisflange=true) # Wheel rotation axis
+        rotational_losses = Rotational.Damper(d = 0.1)
         wheel = SlippingWheel(
             radius = 0.2,
             m = 15,
@@ -313,6 +315,9 @@ We start by adding a wheel to the quarter-car setup and then to the half-car set
         connect(wheel.frame_a, wheel_rotation.frame_b)
         connect(wheel_rotation.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
+
+        connect(rotational_losses.flange_a, wheel_rotation.axis)
+        connect(rotational_losses.flange_b, wheel_rotation.support)
     end
 end
 
@@ -484,29 +489,33 @@ model = complete(model)
 @time "simplification" ssys = structural_simplify(IRSystem(model))
 
 defs = [
+    model.excited_suspension_br.wheel.wheeljoint.v_small => 10
     model.excited_suspension_br.amplitude => 0.02
     model.excited_suspension_br.freq => 10
     model.excited_suspension_br.suspension.ks => 30*44000
     model.excited_suspension_br.suspension.cs => 30*4000
-    model.excited_suspension_br.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension_br.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_bl.wheel.wheeljoint.v_small => 10
     model.excited_suspension_bl.amplitude => 0.02
     model.excited_suspension_bl.freq => 10.5
     model.excited_suspension_bl.suspension.ks => 30*44000
     model.excited_suspension_bl.suspension.cs => 30*4000
-    model.excited_suspension_bl.suspension.r2.phi => -0.6031*(+1)
+    model.excited_suspension_bl.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_fr.wheel.wheeljoint.v_small => 10
     model.excited_suspension_fr.amplitude => 0.02
     model.excited_suspension_fr.freq => 10
     model.excited_suspension_fr.suspension.ks => 30*44000
     model.excited_suspension_fr.suspension.cs => 30*4000
-    model.excited_suspension_fr.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension_fr.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_fl.wheel.wheeljoint.v_small => 10
     model.excited_suspension_fl.amplitude => 0.02
     model.excited_suspension_fl.freq => 9.7
     model.excited_suspension_fl.suspension.ks => 30*44000
     model.excited_suspension_fl.suspension.cs => 30*4000
-    model.excited_suspension_fl.suspension.r2.phi => -0.6031*(+1)
+    model.excited_suspension_fl.suspension.r2.phi => -0.6031
 
     model.ms => 100
 
@@ -530,5 +539,4 @@ nothing # hide
 ```
 
 ![suspension with 4 wheels](suspension_fullcar_wheels.gif)
-```
 
