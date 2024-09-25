@@ -531,7 +531,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit(), u0 = prob.u0.+1e-8.*randn.())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit(), u0 = prob.u0.+1e-6.*randn.())
 @test SciMLBase.successful_retcode(sol)
 import GLMakie
 Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=3, filename="suspension_fullcar_wheels.gif") # Video
