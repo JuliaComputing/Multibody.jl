@@ -31,7 +31,6 @@ jobs:
           private_registry_uuid: de52bcdf-fcb2-40cf-a397-3d64b64f4d9c
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
-                                      Pkg.setprotocol!(; domain = "github.com", protocol = "ssh");
                                       Pkg.add(PackageSpec(name = "ModelingToolkitStandardLibrary", url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl", rev = "main"));
                                       Pkg.develop(PackageSpec(path=pwd()));
                                       Pkg.instantiate()'
