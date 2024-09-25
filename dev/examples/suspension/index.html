@@ -166,7 +166,7 @@ sol = solve(prob, FBDF(autodiff=true))
 @test SciMLBase.successful_retcode(sol)
 rms(x) = sqrt(sum(abs2, x) / length(x))
 @test rms(sol(0:0.1:2, idxs=model.body_upright.v)) ≈ 2.740 atol=0.01</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-1, y=0.3, z=0.3, lookat=[0,0.3,0.3], timescale=3, filename=&quot;suspension.gif&quot;) # Video</code></pre><p><img src="../suspension.gif" alt="suspension"/></p><h1 id="Half-car-suspension"><a class="docs-heading-anchor" href="#Half-car-suspension">Half-car suspension</a><a id="Half-car-suspension-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car-suspension" title="Permalink"></a></h1><p>In the example below, we extend the previous example to a half-car model with two wheels. We now model the car as a <a href="../../components/#Multibody.BodyShape-Tuple{}"><code>BodyShape</code></a> and attach one suspension system on each side. This time, we let the car rotate around the x-axis to visualize roll effects due to uneven road surfaces. We excite each wheel with similar but slightly different frequencies to produce a beat.</p><pre><code class="language-julia hljs">@mtkmodel DoubleSuspensionWithExcitationAndMass begin
+Multibody.render(model, sol, show_axis=false, x=-1, y=0.3, z=0.3, lookat=[0,0.3,0.3], timescale=3, filename=&quot;suspension.gif&quot;) # Video</code></pre><p><img src="../suspension.gif" alt="suspension"/></p><p>Due to the high excitation frequency, we make use of the argument <code>timescale = 3</code> when we render the 3D animation to slow down the animation by a factor of 3.</p><h1 id="Half-car-suspension"><a class="docs-heading-anchor" href="#Half-car-suspension">Half-car suspension</a><a id="Half-car-suspension-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car-suspension" title="Permalink"></a></h1><p>In the example below, we extend the previous example to a half-car model with two wheels. We now model the car as a <a href="../../components/#Multibody.BodyShape-Tuple{}"><code>BodyShape</code></a> and attach one suspension system on each side. This time, we let the car rotate around the x-axis to visualize roll effects due to uneven road surfaces. We excite each wheel with similar but slightly different frequencies to produce a beat.</p><pre><code class="language-julia hljs">@mtkmodel DoubleSuspensionWithExcitationAndMass begin
     @structural_parameters begin
         wheel_base = 1
     end
@@ -212,13 +212,13 @@ defs = [
     model.excited_suspension_r.freq =&gt; 10
     model.excited_suspension_r.suspension.ks =&gt; 30*44000
     model.excited_suspension_r.suspension.cs =&gt; 30*4000
-    model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031*(1)
+    model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031
 
     model.excited_suspension_l.amplitude =&gt; 0.05
     model.excited_suspension_l.freq =&gt; 9.5
     model.excited_suspension_l.suspension.ks =&gt; 30*44000
     model.excited_suspension_l.suspension.cs =&gt; 30*4000
-    model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031*(+1)
+    model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031
 
     model.ms =&gt; 1500/2
 
@@ -233,7 +233,8 @@ display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit())
-@test SciMLBase.successful_retcode(sol)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_halfcar.gif&quot;) # Video</code></pre><p><img src="../suspension_halfcar.gif" alt="suspension half-car"/></p><h2 id="Adding-wheels"><a class="docs-heading-anchor" href="#Adding-wheels">Adding wheels</a><a id="Adding-wheels-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-wheels" title="Permalink"></a></h2><p>The example below further extends the example from above by adding wheels to the suspension system. The excitation is not modeled as a time-varying surface profile, provided through the <code>surface</code> argument to the <a href="../../components/#Multibody.SlippingWheel-Tuple{}"><code>SlippingWheel</code></a> component. The connection between the wheels and the ground form two kinematic loops together with the <code>body_upright</code> joint, we thus set all wheels to be cut joints using <code>iscut=true</code>. We start by adding a wheel to the quarter-car setup and then to the half-car setup.</p><h3 id="Quarter-car"><a class="docs-heading-anchor" href="#Quarter-car">Quarter car</a><a id="Quarter-car-1"></a><a class="docs-heading-anchor-permalink" href="#Quarter-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel ExcitedWheelAssembly begin
+@test SciMLBase.successful_retcode(sol)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_halfcar.gif&quot;) # Video</code></pre><p><img src="../suspension_halfcar.gif" alt="suspension half-car"/></p><h2 id="Adding-wheels"><a class="docs-heading-anchor" href="#Adding-wheels">Adding wheels</a><a id="Adding-wheels-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-wheels" title="Permalink"></a></h2><p>The example below further extends the example from above by adding wheels to the suspension system. The excitation is not modeled as a time-varying surface profile, provided through the <code>surface</code> argument to the <a href="../../components/#Multibody.SlippingWheel-Tuple{}"><code>SlippingWheel</code></a> component. The connection between the wheels and the ground form two kinematic loops together with the <code>body_upright</code> joint, which we can handle in one of two ways.</p><ol><li>include a cut joint in the loop, e.g., by setting all wheels to be cut joints using <code>iscut=true</code>.</li><li>Remove angular state variables from the wheels by passing <code>state = false</code>. Since we do not need the angular state variables in this case, we choose this option which reduces the total number of unknowns to solve for.</li></ol><p>We start by adding a wheel to the quarter-car setup and then to the half-car setup.</p><h3 id="Quarter-car"><a class="docs-heading-anchor" href="#Quarter-car">Quarter car</a><a id="Quarter-car-1"></a><a class="docs-heading-anchor-permalink" href="#Quarter-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">using ModelingToolkitStandardLibrary.Mechanical.Rotational
+@mtkmodel ExcitedWheelAssembly begin
     @structural_parameters begin
         mirror = false
         iscut = true
@@ -249,24 +250,28 @@ sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit()
     @components begin
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
-
+        wheel_rotation = Revolute(n = [0, 0, 1], axisflange=true) # Wheel rotation axis
+        rotational_losses = Rotational.Damper(d = 0.1)
         wheel = SlippingWheel(
             radius = 0.2,
             m = 15,
-            I_axis = 0.06,
-            I_long = 0.12,
+            I_axis = 0.8,
+            I_long = 0.8,
             x0 = 0.0,
             z0 = 0.0,
-            der_angles = [0, 0, 0],
-            iscut = iscut,
+            state = false,
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
             surface = (x,z)-&gt;ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
 
     end
     @equations begin
-        connect(wheel.frame_a, suspension.r123.frame_ib)
+        connect(wheel.frame_a, wheel_rotation.frame_b)
+        connect(wheel_rotation.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
+
+        connect(rotational_losses.flange_a, wheel_rotation.axis)
+        connect(rotational_losses.flange_b, wheel_rotation.support)
     end
 end
 
@@ -299,7 +304,7 @@ defs = [
     model.excited_suspension.freq =&gt; 10
     model.excited_suspension.suspension.ks =&gt; 30*44000
     model.excited_suspension.suspension.cs =&gt; 30*4000
-    model.excited_suspension.suspension.r2.phi =&gt; -0.6031*(1)
+    model.excited_suspension.suspension.r2.phi =&gt; -0.6031
     model.body_upright.s =&gt; 0.17
     model.body_upright.v =&gt; 0.14
 ]
@@ -345,13 +350,13 @@ defs = [
     model.excited_suspension_r.freq =&gt; 10
     model.excited_suspension_r.suspension.ks =&gt; 30*44000
     model.excited_suspension_r.suspension.cs =&gt; 30*4000
-    model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031*(1)
+    model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031
 
     model.excited_suspension_l.amplitude =&gt; 0.05
     model.excited_suspension_l.freq =&gt; 9.5
     model.excited_suspension_l.suspension.ks =&gt; 30*44000
     model.excited_suspension_l.suspension.cs =&gt; 30*4000
-    model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031*(+1)
+    model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031
 
     model.ms =&gt; 1500
 
@@ -422,29 +427,33 @@ model = complete(model)
 @time &quot;simplification&quot; ssys = structural_simplify(IRSystem(model))
 
 defs = [
+    model.excited_suspension_br.wheel.wheeljoint.v_small =&gt; 10
     model.excited_suspension_br.amplitude =&gt; 0.02
     model.excited_suspension_br.freq =&gt; 10
     model.excited_suspension_br.suspension.ks =&gt; 30*44000
     model.excited_suspension_br.suspension.cs =&gt; 30*4000
-    model.excited_suspension_br.suspension.r2.phi =&gt; -0.6031*(1)
+    model.excited_suspension_br.suspension.r2.phi =&gt; -0.6031
 
+    model.excited_suspension_bl.wheel.wheeljoint.v_small =&gt; 10
     model.excited_suspension_bl.amplitude =&gt; 0.02
     model.excited_suspension_bl.freq =&gt; 10.5
     model.excited_suspension_bl.suspension.ks =&gt; 30*44000
     model.excited_suspension_bl.suspension.cs =&gt; 30*4000
-    model.excited_suspension_bl.suspension.r2.phi =&gt; -0.6031*(+1)
+    model.excited_suspension_bl.suspension.r2.phi =&gt; -0.6031
 
+    model.excited_suspension_fr.wheel.wheeljoint.v_small =&gt; 10
     model.excited_suspension_fr.amplitude =&gt; 0.02
     model.excited_suspension_fr.freq =&gt; 10
     model.excited_suspension_fr.suspension.ks =&gt; 30*44000
     model.excited_suspension_fr.suspension.cs =&gt; 30*4000
-    model.excited_suspension_fr.suspension.r2.phi =&gt; -0.6031*(1)
+    model.excited_suspension_fr.suspension.r2.phi =&gt; -0.6031
 
+    model.excited_suspension_fl.wheel.wheeljoint.v_small =&gt; 10
     model.excited_suspension_fl.amplitude =&gt; 0.02
     model.excited_suspension_fl.freq =&gt; 9.7
     model.excited_suspension_fl.suspension.ks =&gt; 30*44000
     model.excited_suspension_fl.suspension.cs =&gt; 30*4000
-    model.excited_suspension_fl.suspension.r2.phi =&gt; -0.6031*(+1)
+    model.excited_suspension_fl.suspension.r2.phi =&gt; -0.6031
 
     model.ms =&gt; 100
 
@@ -460,10 +469,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit(), u0 = prob.u0.+1e-6.*randn.())
 @test SciMLBase.successful_retcode(sol)
 import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(&quot;suspension_fullcar_wheels.gif&quot;, LScene(), Scene (600px, 450px):
-  0 Plots
-  1 Child Scene:
-    └ Scene (600px, 450px))</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/> ```</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 25 September 2024 05:30">Wednesday 25 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 20.830744 seconds (90.75 M allocations: 5.340 GiB, 6.43% gc time, 0.36% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 25 September 2024 14:03">Wednesday 25 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
