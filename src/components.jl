@@ -11,7 +11,7 @@ purple = [0.5019608f0,0.0f0,0.5019608f0,1.0f0]
 """
     ori(frame, varw = false)
 
-Get the orientation of `sys` as a `RotationMatrix` object.
+Get the orientation of `sys` as a `RotationMatrix` object. See also [`get_rot`](@ref). `ori(frame).R` is the rotation matrix that rotates a vector from the world coordinate system to the local frame.
 
 For frames, the orientation is stored in the metadata field of the system as `sys.metadata[:orientation]`.
 

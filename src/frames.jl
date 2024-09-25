@@ -33,6 +33,11 @@ The `Frame` connector has internal variables for
 - `r_0`: The position vector from the world frame to the frame origin, resolved in the world frame
 - `f`: The cut force resolved in the connector frame
 - `tau`: The cut torque resolved in the connector frame
-- Depending on usage, also rotation and rotational velocity variables.
+- Depending on usage, also rotation and rotational velocity variables, accessed using `ori(frame).R` and `ori(frame).w`. The rotation matrix represents the rotation to rotate the world frame into the connector frame
+
+# Parameters
+- `render = false`: If true, the connector is rendered in animations
+- `length = 1.0`: Length of the frame when rendered
+- `radius = 0.1`: Radius of the frame when rendered
 """
 Frame

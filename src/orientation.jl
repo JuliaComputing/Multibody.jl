@@ -382,6 +382,7 @@ The rotation matrix returned, ``R_W^F``, is such that when a vector ``p_F`` expr
 ```math
 p_W = R_W^F  p_F
 ```
+This is the inverse (transpose) of the rotation matrix stored in frame connectors (e.g. `ori(frame).R = get_rot(sol, frame, t)'`).
 
 The columns of ``R_W_F`` indicate are the basis vectors of the frame ``F`` expressed in the world coordinate frame.
 
