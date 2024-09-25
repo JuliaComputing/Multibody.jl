@@ -89,6 +89,8 @@ sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
 # first(Multibody.render(worldwheel, sol, 0, show_axis=true))
 @test sol(4, idxs=[worldwheel.wheel.x; worldwheel.wheel.z]) ≈ [0.162547, -2.23778] atol=1e-3
 
+@test all(norm.(sol[collect(worldwheel.wheel.wheeljoint.e_lat_0)]) .≈ 1)
+
 @named worldwheel = WheelInWorld(surface = (x,z)->x)
 worldwheel = complete(worldwheel)
 
@@ -111,6 +113,8 @@ dd = diff(sol(tv, idxs=worldwheel.wheel.wheeljoint.der_angles[2]).u) # angular a
 @test norm(dd .- dd[1]) < 1e-10 # constant acceleration
 @test abs(dd[1]) < 9.81
 @test abs(dd[1]) > 5
+@test all(norm.(sol[collect(worldwheel.wheel.wheeljoint.e_lat_0)]) .≈ 1)
+@test all(norm.(sol[collect(worldwheel.wheel.wheeljoint.e_long_0)]) .≈ 1)
 
 
 
