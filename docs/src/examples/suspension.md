@@ -183,6 +183,8 @@ nothing # hide
 
 ![suspension](suspension.gif)
 
+Due to the high excitation frequency, we make use of the argument `timescale = 3` when we render the 3D animation to slow down the animation by a factor of 3.
+
 
 # Half-car suspension
 
@@ -235,13 +237,13 @@ defs = [
     model.excited_suspension_r.freq => 10
     model.excited_suspension_r.suspension.ks => 30*44000
     model.excited_suspension_r.suspension.cs => 30*4000
-    model.excited_suspension_r.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension_r.suspension.r2.phi => -0.6031
 
     model.excited_suspension_l.amplitude => 0.05
     model.excited_suspension_l.freq => 9.5
     model.excited_suspension_l.suspension.ks => 30*44000
     model.excited_suspension_l.suspension.cs => 30*4000
-    model.excited_suspension_l.suspension.r2.phi => -0.6031*(+1)
+    model.excited_suspension_l.suspension.r2.phi => -0.6031
 
     model.ms => 1500/2
 
@@ -269,10 +271,15 @@ nothing # hide
 
 ## Adding wheels
 The example below further extends the example from above by adding wheels to the suspension system. The excitation is not modeled as a time-varying surface profile, provided through the `surface` argument to the [`SlippingWheel`](@ref) component.
-The connection between the wheels and the ground form two kinematic loops together with the `body_upright` joint, we thus set all wheels to be cut joints using `iscut=true`. We start by adding a wheel to the quarter-car setup and then to the half-car setup.
+The connection between the wheels and the ground form two kinematic loops together with the `body_upright` joint, which we can handle in one of two ways.
+1. include a cut joint in the loop, e.g., by setting all wheels to be cut joints using `iscut=true`.
+2. Remove angular state variables from the wheels by passing `state = false`. Since we do not need the angular state variables in this case, we choose this option which reduces the total number of unknowns to solve for.
+
+We start by adding a wheel to the quarter-car setup and then to the half-car setup.
 
 ### Quarter car
 ```@example suspension
+using ModelingToolkitStandardLibrary.Mechanical.Rotational
 @mtkmodel ExcitedWheelAssembly begin
     @structural_parameters begin
         mirror = false
@@ -289,24 +296,28 @@ The connection between the wheels and the ground form two kinematic loops togeth
     @components begin
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
-
+        wheel_rotation = Revolute(n = [0, 0, 1], axisflange=true) # Wheel rotation axis
+        rotational_losses = Rotational.Damper(d = 0.1)
         wheel = SlippingWheel(
             radius = 0.2,
             m = 15,
-            I_axis = 0.06,
-            I_long = 0.12,
+            I_axis = 0.8,
+            I_long = 0.8,
             x0 = 0.0,
             z0 = 0.0,
-            der_angles = [0, 0, 0],
-            iscut = iscut,
+            state = false,
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
             surface = (x,z)->ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
 
     end
     @equations begin
-        connect(wheel.frame_a, suspension.r123.frame_ib)
+        connect(wheel.frame_a, wheel_rotation.frame_b)
+        connect(wheel_rotation.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
+
+        connect(rotational_losses.flange_a, wheel_rotation.axis)
+        connect(rotational_losses.flange_b, wheel_rotation.support)
     end
 end
 
@@ -339,7 +350,7 @@ defs = [
     model.excited_suspension.freq => 10
     model.excited_suspension.suspension.ks => 30*44000
     model.excited_suspension.suspension.cs => 30*4000
-    model.excited_suspension.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension.suspension.r2.phi => -0.6031
     model.body_upright.s => 0.17
     model.body_upright.v => 0.14
 ]
@@ -392,13 +403,13 @@ defs = [
     model.excited_suspension_r.freq => 10
     model.excited_suspension_r.suspension.ks => 30*44000
     model.excited_suspension_r.suspension.cs => 30*4000
-    model.excited_suspension_r.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension_r.suspension.r2.phi => -0.6031
 
     model.excited_suspension_l.amplitude => 0.05
     model.excited_suspension_l.freq => 9.5
     model.excited_suspension_l.suspension.ks => 30*44000
     model.excited_suspension_l.suspension.cs => 30*4000
-    model.excited_suspension_l.suspension.r2.phi => -0.6031*(+1)
+    model.excited_suspension_l.suspension.r2.phi => -0.6031
 
     model.ms => 1500
 
@@ -478,29 +489,33 @@ model = complete(model)
 @time "simplification" ssys = structural_simplify(IRSystem(model))
 
 defs = [
+    model.excited_suspension_br.wheel.wheeljoint.v_small => 10
     model.excited_suspension_br.amplitude => 0.02
     model.excited_suspension_br.freq => 10
     model.excited_suspension_br.suspension.ks => 30*44000
     model.excited_suspension_br.suspension.cs => 30*4000
-    model.excited_suspension_br.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension_br.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_bl.wheel.wheeljoint.v_small => 10
     model.excited_suspension_bl.amplitude => 0.02
     model.excited_suspension_bl.freq => 10.5
     model.excited_suspension_bl.suspension.ks => 30*44000
     model.excited_suspension_bl.suspension.cs => 30*4000
-    model.excited_suspension_bl.suspension.r2.phi => -0.6031*(+1)
+    model.excited_suspension_bl.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_fr.wheel.wheeljoint.v_small => 10
     model.excited_suspension_fr.amplitude => 0.02
     model.excited_suspension_fr.freq => 10
     model.excited_suspension_fr.suspension.ks => 30*44000
     model.excited_suspension_fr.suspension.cs => 30*4000
-    model.excited_suspension_fr.suspension.r2.phi => -0.6031*(1)
+    model.excited_suspension_fr.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_fl.wheel.wheeljoint.v_small => 10
     model.excited_suspension_fl.amplitude => 0.02
     model.excited_suspension_fl.freq => 9.7
     model.excited_suspension_fl.suspension.ks => 30*44000
     model.excited_suspension_fl.suspension.cs => 30*4000
-    model.excited_suspension_fl.suspension.r2.phi => -0.6031*(+1)
+    model.excited_suspension_fl.suspension.r2.phi => -0.6031
 
     model.ms => 100
 
@@ -516,12 +531,12 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit(), u0 = prob.u0.+1e-6.*randn.())
 @test SciMLBase.successful_retcode(sol)
 import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=2, filename="suspension_fullcar_wheels.gif") # Video
+Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=3, filename="suspension_fullcar_wheels.gif") # Video
+nothing # hide
 ```
 
 ![suspension with 4 wheels](suspension_fullcar_wheels.gif)
-```
 

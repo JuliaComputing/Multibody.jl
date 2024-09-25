@@ -13,32 +13,30 @@ env:
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         version:
           - '1'
         os:
-          - self-hosted
+          - ubuntu-latest
         arch:
           - x64
     steps:
       - name: Set debug env
         run: export JULIA_DEBUG="loading"
       - uses: actions/checkout@v3.3.0
+      - uses: julia-actions/cache@v1
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: webfactory/ssh-agent@v0.8.0 
-        with: 
-          ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
       - uses: PumasAI/add-private-registry@main
         with:
           juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
-          private_registry_name: JuliaSimRegistry
-          private_registry_uuid: 309a7822-a73e-4490-9504-7d1983f27685
+          private_registry_name: JuliaHubRegistry
+          private_registry_uuid: de52bcdf-fcb2-40cf-a397-3d64b64f4d9c
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
