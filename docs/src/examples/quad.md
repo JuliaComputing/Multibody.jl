@@ -294,40 +294,42 @@ nothing # hide
 The observant reader may have noticed that we linearized the quadrotor without the cable-suspended load applied, but we simulated the closed-loop system with the load. Thankfully, the LQR controller is robust enough to stabilize the system despite this large model error. Before being satisfied with the controller, we should perform robustness analysis. Below, we compute sensitivity functions at the plant output and input and plot their sigma plots, as well as simultaneous diskmargins at the plant output and input.
 
 ```@example QUAD
-linop = merge(op, Dict([
-    collect(model.system_outputs.u) .=> 0
-    collect(model.body.r_0) .=> 1e-32
-    collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
-    collect(model.system_outputs.u) .=> 1e-32
-    collect(model.feedback_gain.input.u) .=> 1e-32
-    ]))
-@time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
-S = minreal(S, 1e-6)
-isstable(S) || @error "Sensitivity function S is not stable"
-T = I(S.ny) - S
-T = minreal(T, 1e-6)
-isstable(T) || @error "Sensitivity function T is not stable"
-LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
+# NOTE: this section is temporarily disabled waiting for improved performance in linearization
 
-@time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
-Ti = minreal(Ti, 1e-6)
-isstable(Ti) || @error "Sensitivity function Ti is not stable"
-LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
+# linop = merge(op, Dict([
+#     collect(model.system_outputs.u) .=> 0
+#     collect(model.body.r_0) .=> 1e-32
+#     collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
+#     collect(model.system_outputs.u) .=> 1e-32
+#     collect(model.feedback_gain.input.u) .=> 1e-32
+#     ]))
+# @time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
+# S = minreal(S, 1e-6)
+# isstable(S) || @error "Sensitivity function S is not stable"
+# T = I(S.ny) - S
+# T = minreal(T, 1e-6)
+# isstable(T) || @error "Sensitivity function T is not stable"
+# LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
 
-CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop system from measurement noise to control signal
+# @time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
+# Ti = minreal(Ti, 1e-6)
+# isstable(Ti) || @error "Sensitivity function Ti is not stable"
+# LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
 
-w = 2pi.*exp10.(LinRange(-2, 2, 200))
-fig_dm = plot(diskmargin(LT, 0.5), label="Plant output") # Compute diskmargin with a positive skew of 0.5 to account for a likely gain increase when the load is dropped
-plot!(diskmargin(LTi, 0.5), label="Plant input", titlefontsize=8) # Note, simultaneous diskmargins are somewhat conservative
+# CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop system from measurement noise to control signal
 
-plot(
-    sigmaplot(S, w, hz=true, label="", title="S", legend=false),
-    sigmaplot(T, w, hz=true, label="", title="T", legend=false),
-    sigmaplot(LT, w, hz=true, label="", title="L", legend=false),
-    bodeplot(CS, w, hz=true, label="", title="CS", legend=false, plotphase=false, layout=1),
-    fig_dm,
-    layout=(2,3), size=(800,500), legend=:bottomright, ylims=(1e-4, Inf),
-)
+# w = 2pi.*exp10.(LinRange(-2, 2, 200))
+# fig_dm = plot(diskmargin(LT, 0.5), label="Plant output") # Compute diskmargin with a positive skew of 0.5 to account for a likely gain increase when the load is dropped
+# plot!(diskmargin(LTi, 0.5), label="Plant input", titlefontsize=8) # Note, simultaneous diskmargins are somewhat conservative
+
+# plot(
+#     sigmaplot(S, w, hz=true, label="", title="S", legend=false),
+#     sigmaplot(T, w, hz=true, label="", title="T", legend=false),
+#     sigmaplot(LT, w, hz=true, label="", title="L", legend=false),
+#     bodeplot(CS, w, hz=true, label="", title="CS", legend=false, plotphase=false, layout=1),
+#     fig_dm,
+#     layout=(2,3), size=(800,500), legend=:bottomright, ylims=(1e-4, Inf),
+# )
 ```
 
 While gain and phase margins appear to be reasonable, we have a large high-frequency gain in the transfer functions from measurement noise to control signal, ``C(s)S(s)``. For a rotor craft where the control signal manipulates the current through motor windings, this may lead to excessive heat generation in the motors if the sensor measurements are noisy.

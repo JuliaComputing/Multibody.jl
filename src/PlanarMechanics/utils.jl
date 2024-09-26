@@ -39,8 +39,6 @@ function ori_2d(frame)
     return [cos(phi) -sin(phi); sin(phi) cos(phi)]
 end
 
-# extends Frame with just styling
-# https://github.com/dzimmer/PlanarMechanics/blob/master/PlanarMechanics/Interfaces/Frame_resolve.mo
 FrameResolve = Frame
 
 @mtkmodel PartialTwoFrames begin
@@ -55,8 +53,8 @@ Base.@doc """
 Partial model with two frames
 
 # Connectors:
-    - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
-    - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """ PartialTwoFrames
 
 """
@@ -64,7 +62,7 @@ Partial model with two frames
 Set zero position vector and orientation object of frame_resolve
 
 # Connectors:
-    - `frame_resolve` [FrameResolve](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
+- `frame_resolve` [FrameResolve](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
 @mtkmodel ZeroPosition begin
     @components begin
