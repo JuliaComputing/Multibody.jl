@@ -53,7 +53,7 @@ Tdpitch = 1
     @components begin
         frame_b = Frame()
         thrust3d = WorldForce(resolve_frame = :frame_b, scale=0.1, radius=0.02) # The thrust force is resolved in the local frame of the thruster.
-        torque3d = WorldTorque(resolve_frame = :frame_b, scale=0.1, radius=0.02) # The torque is resolved in the local frame of the thruster.
+        torque3d = WorldTorque(resolve_frame = :frame_b, scale=0.1, radius=0.02) # Using the thruster also causes a torque around the force axis.
         thrust = RealInput()
     end
     @parameters begin
@@ -89,37 +89,39 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
     ]
 
     @variables begin
-        y_alt(t)
-        y_roll(t)
-        y_pitch(t)
-        y_yaw(t)
-        y_forward(t)
-        y_sideways(t)
-        v_alt(t)=0
-        v_roll(t)=0
-        v_pitch(t)=0
-        v_yaw(t)=0
-        v_forward(t)=0
-        v_sideways(t)=0
+        y_alt(t), [state_priority=2]
+        y_roll(t), [state_priority=2]
+        y_pitch(t), [state_priority=2]
+        y_yaw(t), [state_priority=2]
+        y_forward(t), [state_priority=2]
+        y_sideways(t), [state_priority=2]
+        v_alt(t)=0, [state_priority=2]
+        v_roll(t)=0, [state_priority=2]
+        v_pitch(t)=0, [state_priority=2]
+        v_yaw(t)=0, [state_priority=2]
+        v_forward(t)=0, [state_priority=2]
+        v_sideways(t)=0, [state_priority=2]
         (Ie_alt(t)=0), [description="Integral of altitude error"]
         yIe_alt(t)
     end
 
     thrusters = [Thruster(name = Symbol("thruster$i"), clockwise = (i-1) % 2 == 0) for i = 1:num_arms]
-    @named body = Body(m = body_mass, state_priority = 0, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1)
-    @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
+    @named body = Body(m = body_mass, state_priority = 100, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1, isroot=true)
+    # @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
 
     connections = [
+        # connect(world.frame_b, freemotion.frame_a)
+        # connect(freemotion.frame_b, body.frame_a)
         y_alt ~ body.r_0[2]
-        y_roll ~ freemotion.phi[3]
-        y_pitch ~ freemotion.phi[1]
-        y_yaw ~ freemotion.phi[2]
+        y_roll ~ body.phi[3]
+        y_pitch ~ body.phi[1]
+        y_yaw ~ body.phi[2]
         y_forward ~ body.r_0[1]
         y_sideways ~ body.r_0[3]
         v_alt ~ D(body.r_0[2])
-        v_roll ~ D(freemotion.phi[3])
-        v_pitch ~ D(freemotion.phi[1])
-        v_yaw ~ D(freemotion.phi[2])
+        v_roll ~ D(body.phi[3])
+        v_pitch ~ D(body.phi[1])
+        v_yaw ~ D(body.phi[2])
         v_forward ~ D(body.r_0[1])
         v_sideways ~ D(body.r_0[3])
         D(Ie_alt) ~ y_alt
@@ -194,7 +196,6 @@ ssys = structural_simplify(IRSystem(model))
 op = [
     model.body.v_0[1] => 0;
     collect(model.cable.joint_2.phi) .=> 0.03;
-    model.world.g => 9.81;
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
@@ -227,15 +228,16 @@ inputs = [quad.thruster1.u; quad.thruster2.u; quad.thruster3.u; quad.thruster4.u
 outputs = [quad.y_alt, quad.y_roll, quad.y_pitch, quad.y_yaw, quad.y_forward, quad.y_sideways, quad.v_alt, quad.v_roll, quad.v_pitch, quad.v_yaw, quad.v_forward, quad.v_sideways, quad.yIe_alt]
 
 op = [
-    quad.arm4.body.r_0[2] => 1e-32
-    quad.arm2.body.v_0[2] => 1e-32 # To avoid singularity in linearization
+    quad.body.r_0[2] => 1e-32
+    quad.v_alt => 1e-32 # To avoid singularity in linearization
     quad.world.g => 9.81
     inputs .=> 1;
 ] |> Dict
 
-lsys = named_ss(IRSystem(quad), inputs, outputs; op)
+@time lsys = named_ss(IRSystem(quad), inputs, outputs; op)
 rsys = minreal(sminreal(lsys))
 C = rsys.C
+rank(C) >= rsys.nx || @warn "The output matrix C is not full rank"
 Q = Diagonal([ # Output penalty matrix
     30  # Altitude
     1   # Roll
@@ -253,7 +255,9 @@ Q = Diagonal([ # Output penalty matrix
 ])
 R = I(4)
 L = lqr(rsys, Symmetric(C'Q*C), R)/C
-nothing # hide
+trunc_zero!(A) = A[abs.(A) .< 1e4eps(maximum(abs, A))] .= 0
+trunc_zero!(L)
+L
 ```
 
 
@@ -261,17 +265,20 @@ nothing # hide
 ModelingToolkit.get_iv(i::IRSystem) = i.t
 model = RotorCraft(; closed_loop=true, addload=true, L=-L, outputs) # Negate L for negative feedback
 model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
 op = [
-    model.arm4.body.r_0[2] => 1e-3
-    model.arm1.body.r_0[3] => 1e-3
-    model.arm1.body.r_0[1] => 1e-3
-    # collect(model.cable.joint_2.phi) .=> 0.3;
+    model.body.r_0[2] => 1e-3
+    model.body.r_0[3] => 1e-3
+    model.body.r_0[1] => 1e-3
+    collect(model.cable.joint_2.phi) .=> 0.1 # Usa a larger initial cable bend since this controller is more robust
     model.world.g => 9.81;
-    collect(model.freemotion.phid) .=> 0;
-    collect(D.(model.freemotion.phi)) .=> 0;
+    collect(model.body.phid) .=> 0;
+    collect(D.(model.body.phi)) .=> 0;
+    model.feedback_gain.input.u[9] => 0;
+    model.feedback_gain.input.u[12] => 0;
     model.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
-ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
@@ -289,7 +296,7 @@ The observant reader may have noticed that we linearized the quadrotor without t
 ```@example QUAD
 linop = merge(op, Dict([
     collect(model.system_outputs.u) .=> 0
-    collect(model.arm4.body.r_0) .=> 1e-32
+    collect(model.body.r_0) .=> 1e-32
     collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
     ]))
 S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
