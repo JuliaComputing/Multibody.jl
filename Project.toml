@@ -17,12 +17,11 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
-Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
-
 
 [extensions]
 Render = ["Makie"]
@@ -34,6 +33,7 @@ DataInterpolations = "5, 6"
 FileIO = "1"
 JuliaSimCompiler = "0.1.12"
 LinearAlgebra = "1.6"
+Makie = "0.21"
 MeshIO = "0.4"
 ModelingToolkit = "9"
 ModelingToolkitStandardLibrary = "2.7.2"
@@ -43,12 +43,12 @@ StaticArrays = "1"
 julia = "1"
 
 [extras]
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
-Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["OrdinaryDiffEq", "Test", "JuliaFormatter", "LightXML", "Graphs", "MetaGraphsNext"]
