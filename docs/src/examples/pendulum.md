@@ -315,7 +315,7 @@ the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.
 ## Control-design example: Pendulum on cart
 We will now demonstrate a complete workflow including
 - Modeling
-- Linearizaiton
+- Linearization
 - Control design
 
 We will continue the pendulum theme and design an inverted pendulum on cart. The cart is modeled as [`BodyShape`](@ref) with specified mass, and `shape = "box"` to render it as a box in animations. The cart is moving along the $x$-axis by means of a [`Prismatic`](@ref) joint, and the pendulum is attached to the cart by means of a [`Revolute`](@ref) joint. The pendulum is a [`BodyCylinder`](@ref) with a diameter of `0.015`, the mass and inertia properties are automatically computed using the geometrical dimensions and the density (which defaults to that of steel). A force is applied to the cart by means of a `TranslationalModelica.Force` component.
@@ -363,6 +363,7 @@ gray = [0.5, 0.5, 0.5, 1]
 end
 @mtkmodel CartWithInput begin
     @components begin
+        world = W()
         cartpole = Cartpole()
         input = Blocks.Cosine(frequency=1, amplitude=1)
     end
@@ -413,32 +414,46 @@ lsys = named_ss(IRSystem(cp), inputs, outputs; op) # identical to linearize, but
 ```
 
 ### LQR Control design
-With a linear statespace object in hand, we can proceed to design an LQR controller. Since the function `lqr` operates on the state vector, and we have access to the specified output vector, we make use of the system ``C`` matrix to reformulate the problem in terms of the outputs. This relies on the ``C`` matrix being full rank, which is the case here since our outputs include a complete state realization of the system.
+With a linear statespace object in hand, we can proceed to design an LQR or LQG controller. We will design both an LQR and an LQG controller in order to demonstrate two possible workflows.
+
+The LQR contorller is designed using the function `ControlSystemsBase.lqr`, and it takes the two cost matrices `Q1` and `Q2` penalizing state deviation and control action respectively. The LQG controller is designed using [`RobustAndOptimalControl.LQGProblem`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#LQG-design), and this function additionally takes the covariance matrices `r1, R2` for a Kalman filter. Before we call `LQGProblem` we partition the linearized system into an [`ExtendedStateSpace`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.ExtendedStateSpace) object using the [`partition`](@https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.partition-Tuple{AbstractStateSpace}) function, this indicates what inputs of the system are available for control and what are considered disturbances, and what outputs of the system are available for measurement. In this case, we assume that we have access to the cart position and the pendulum angle, and we control the cart position. The remaining two outputs are still important for the performance, but we cannot measure them and will rely on the Kalman filter to estimate them. When we call [`observer_controller`](https://juliacontrol.github.io/ControlSystems.jl/dev/lib/analysis/#ControlSystemsBase.observer_controller-Tuple{Any,%20AbstractMatrix,%20AbstractMatrix}) we get a linear system that represents the combined state estimator and state feedback controller. This linear system is then converted to an `ODESystem` by the function `LQGSystem`.
+
+Since the function `lqr` operates on the state vector, and we have access to the specified output vector, we make use of the system ``C`` matrix to reformulate the problem in terms of the outputs. This relies on the ``C`` matrix being full rank, which is the case here since our outputs include a complete state realization of the system. This is of no concern when using the `LQGProblem` structure since we penalize outputs rather than the state in this case. 
 
 To make the simulation interesting, we make a change in the reference position of the cart after a few seconds. 
 ```@example pendulum
-using ControlSystemsBase
+using ControlSystemsBase, RobustAndOptimalControl
 C = lsys.C
-Q = Diagonal([1, 1, 1, 1])
-R = Diagonal([0.1])
-Lmat = lqr(lsys, C'Q*C, R)/C # Compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
+Q1 = Diagonal([10, 10, 10, 1])
+Q2 = Diagonal([0.1])
+
+R1 = Diagonal([1])
+R2 = Diagonal([0.01, 0.01])
+
+lqg = LQGProblem(partition(lsys, u = [:u], y = [:x, :phi]), Q1, Q2, R1, R2)
+Lmat = lqr(lsys, C'Q1*C, Q2)/C # Alternatively, compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
+
+LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
 
 @mtkmodel CartWithFeedback begin
     @components begin
+        world = W()
         cartpole = Cartpole()
-        L = Blocks.MatrixGain(K = Lmat)
         reference = Blocks.Step(start_time = 5, height=0.5)
         control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
+        # controller = Blocks.MatrixGain(K = Lmat) # uncomment to use LQR controller instead
+        controller = LQGSystem()
     end
     begin
         namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
     end
     @equations begin
-        L.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cartpole.x
-        L.input.u[2] ~ 0 - namespaced_outputs[2] # cartpole.phi
-        L.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v
-        L.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
-        connect(L.output, control_saturation.input)
+        controller.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cartpole.x
+        controller.input.u[2] ~ 0 - namespaced_outputs[2] # cartpole.phi
+        # controller.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v # uncomment if using LQR controller instead
+        # controller.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
+
+        connect(controller.output, control_saturation.input)
         connect(control_saturation.output, cartpole.motor.f)
     end
 end
@@ -476,8 +491,9 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 
 @mtkmodel CartWithSwingup begin
     @components begin
+        world = W()
         cartpole = Cartpole()
-        L = Blocks.MatrixGain(K = Lmat)
+        L = Blocks.MatrixGain(K = Lmat) # Here we use the LQR controller instead
         control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude
     end
     @variables begin
