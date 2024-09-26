@@ -295,14 +295,11 @@ linop = merge(op, Dict([
 S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 S = minreal(S, 1e-6)
 isstable(S) || @error "Sensitivity function S is not stable"
-T = get_named_comp_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
+T = I - S
 T = minreal(T, 1e-6)
 isstable(T) || @error "Sensitivity function T is not stable"
 LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
 
-Si = get_named_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
-Si = minreal(Si, 1e-6)
-isstable(Si) || @error "Sensitivity function Si is not stable"
 Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
 Ti = minreal(Ti, 1e-6)
 isstable(Ti) || @error "Sensitivity function Ti is not stable"
