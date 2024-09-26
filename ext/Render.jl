@@ -598,6 +598,7 @@ end
 function render!(scene, ::typeof(BodyShape), sys, sol, t)
     color = get_color(sys, sol, :purple)
     shapepath = get_shapefile(sys, sol)
+    shape = get_shape(sys, sol)
     Tshape = reshape(sol(sol.t[1], idxs=sys.shape_transform), 4, 4)
     scale = Vec3f(Float32(sol(sol.t[1], idxs=sys.shape_scale))*ones(Float32, 3))
     if isempty(shapepath)
@@ -617,7 +618,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
         elseif shape == "box"
             Rfun = get_rot_fun(sol, sys.frame_a)
 
-            width = Float32(sol(sol.t[1], idxs=sys.radius*2))
+            width = 2*Float32(sol(sol.t[1], idxs=sys.radius))
             height = width
             r = sol(sol.t[1], idxs=collect(sys.r))
             length = norm(r)

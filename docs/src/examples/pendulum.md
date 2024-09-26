@@ -380,7 +380,7 @@ plot(sol, layout=4)
 As usual, we render the simulation in 3D to get a better feel for the system:
 ```@example pendulum
 import GLMakie
-Multibody.render(model, sol, filename = "cartpole.gif", traces=[model.cart.pendulum.frame_b])
+Multibody.render(model, sol, filename = "cartpole.gif", traces=[model.cartpole.pendulum.frame_b])
 nothing # hide
 ```
 ![cartpole](cartpole.gif)

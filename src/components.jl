@@ -507,7 +507,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 
     shapecode = encode(shapefile)
     shape = encode(shape)
-    @parameters begin
+    pars = @parameters begin
         r[1:3]=r, [
             description = "Vector from frame_a to frame_b resolved in frame_a",
         ]
@@ -521,8 +521,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         shape[1:length(shape)] = shape
     end
 
-
-    pars = [r; radius; color; shapefile; shape_transform; shape_scale; height; width; shape]
+    pars = collect_all(pars)
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 

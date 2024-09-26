@@ -298,16 +298,18 @@ linop = merge(op, Dict([
     collect(model.system_outputs.u) .=> 0
     collect(model.body.r_0) .=> 1e-32
     collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
+    collect(model.system_outputs.u) .=> 1e-32
+    collect(model.feedback_gain.input.u) .=> 1e-32
     ]))
-S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
+@time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 S = minreal(S, 1e-6)
 isstable(S) || @error "Sensitivity function S is not stable"
-T = I - S
+T = I(S.ny) - S
 T = minreal(T, 1e-6)
 isstable(T) || @error "Sensitivity function T is not stable"
 LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
 
-Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
+@time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
 Ti = minreal(Ti, 1e-6)
 isstable(Ti) || @error "Sensitivity function Ti is not stable"
 LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
@@ -316,7 +318,7 @@ CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop s
 
 w = 2pi.*exp10.(LinRange(-2, 2, 200))
 fig_dm = plot(diskmargin(LT, 0.5), label="Plant output") # Compute diskmargin with a positive skew of 0.5 to account for a likely gain increase when the load is dropped
-plot!(diskmargin(LTi, 0.5), label="Plant input") # Note, simultaneous diskmargins are somewhat conservative
+plot!(diskmargin(LTi, 0.5), label="Plant input", titlefontsize=8) # Note, simultaneous diskmargins are somewhat conservative
 
 plot(
     sigmaplot(S, w, hz=true, label="", title="S", legend=false),
@@ -329,3 +331,5 @@ plot(
 ```
 
 While gain and phase margins appear to be reasonable, we have a large high-frequency gain in the transfer functions from measurement noise to control signal, ``C(s)S(s)``. For a rotor craft where the control signal manipulates the current through motor windings, this may lead to excessive heat generation in the motors if the sensor measurements are noisy.
+
+The diskmargin at the plant output is small, luckily, the gain variation appears at the plant input where the diskmargin is significantly larger. The diskmargins are visualized in the figure titled "Stable region for combined gain and phase variation". See [Diskmargin example](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#Diskmargin-example) to learn more about diskmargins.
