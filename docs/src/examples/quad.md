@@ -330,6 +330,7 @@ The observant reader may have noticed that we linearized the quadrotor without t
 #     fig_dm,
 #     layout=(2,3), size=(800,500), legend=:bottomright, ylims=(1e-4, Inf),
 # )
+nothing
 ```
 
 While gain and phase margins appear to be reasonable, we have a large high-frequency gain in the transfer functions from measurement noise to control signal, ``C(s)S(s)``. For a rotor craft where the control signal manipulates the current through motor windings, this may lead to excessive heat generation in the motors if the sensor measurements are noisy.
