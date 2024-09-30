@@ -198,7 +198,6 @@ end
 
 # @testset "Spherical joint with quaternion state" begin
     using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
-    t = Multibody.t
     world = Multibody.world
 
 
@@ -220,7 +219,7 @@ end
     ssys = structural_simplify(irsys)
 
 
-    D = Differential(t)
+    isdefined(Main, :D) || (D = Differential(t))
     # q0 = randn(4); q0 ./= norm(q0)
     # q0 = [1,0,0,0]
     prob = ODEProblem(ssys, [
