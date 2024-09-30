@@ -302,7 +302,7 @@ end
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
-This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref).
+This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref). The inertia tensor is defined with respect to a coordinate system that is parallel to `frame_a` with the origin at the center of mass of the body.
 
 # Performance optimization
 - `sparse_I`: If `true`, the zero elements of the inerita matrix are considered "structurally zero", and this fact is used to optimize performance. When this option is enabled, the elements of the inertia matrix that were zero when the component was created cannot changed without reinstantiating the component. This performance optimization may be useful, e.g., when the inertia matrix is known to be diagonal.

@@ -18,7 +18,8 @@ end
 Base.@doc """
     Frame(;name)
 
-Coordinate system (2-dim.) fixed to the component with one cut-force and cut-torque
+Coordinate system (2-dim.) fixed to the component with one cut-force and cut-torque.
+All variables are resolved in the planar world frame.
 
 # Variables:
 - `x`: [m] x position
