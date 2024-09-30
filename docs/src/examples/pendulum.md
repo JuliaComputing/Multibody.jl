@@ -433,16 +433,22 @@ R2 = Diagonal([0.01, 0.01])
 lqg = LQGProblem(partition(lsys, u = [:u], y = [:x, :phi]), Q1, Q2, R1, R2)
 Lmat = lqr(lsys, C'Q1*C, Q2)/C # Alternatively, compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
 
-LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
+LQGSystem(args...; kwargs...) = ODESystem(extended_controller(lqg); kwargs...) # TODO: make ODESystem handle ExtendedStateSpace objects so that we can use extended_controller with nice inputs
 
 @mtkmodel CartWithFeedback begin
+    @structural_parameters
+        use_lqg = true
+    end
     @components begin
         world = W()
         cartpole = Cartpole()
         reference = Blocks.Step(start_time = 5, height=0.5)
         control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
-        # controller = Blocks.MatrixGain(K = Lmat) # uncomment to use LQR controller instead
-        controller = LQGSystem()
+        if use_lqg
+            controller = LQGSystem()
+        else
+            controller = Blocks.MatrixGain(K = Lmat) # uncomment to use LQR controller instead
+        end
     end
     begin
         namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
