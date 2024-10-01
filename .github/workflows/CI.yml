@@ -26,7 +26,6 @@ jobs:
           - x64
     steps:
       - name: Set debug env
-        run: export JULIA_DEBUG="loading"
       - uses: actions/checkout@v3.3.0
       - uses: julia-actions/cache@v1
       - uses: julia-actions/setup-julia@v1
