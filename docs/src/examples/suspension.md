@@ -296,7 +296,7 @@ using ModelingToolkitStandardLibrary.Mechanical.Rotational
     @components begin
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
-        wheel_rotation = Revolute(n = [0, 0, 1], axisflange=true) # Wheel rotation axis
+        wheel_rotation = Revolute(n = [0, 0, dir], axisflange=true) # Wheel rotation axis
         rotational_losses = Rotational.Damper(d = 0.1)
         wheel = SlippingWheel(
             radius = 0.2,
@@ -306,6 +306,7 @@ using ModelingToolkitStandardLibrary.Mechanical.Rotational
             x0 = 0.0,
             z0 = 0.0,
             state = false,
+            # iscut = true,
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
             surface = (x,z)->ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
@@ -346,18 +347,19 @@ ssys = structural_simplify(IRSystem(model))
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [
-    model.excited_suspension.amplitude => 0.05
-    model.excited_suspension.freq => 10
-    model.excited_suspension.suspension.ks => 30*44000
-    model.excited_suspension.suspension.cs => 30*4000
+    model.excited_suspension.amplitude => 0.02
+    model.excited_suspension.freq => 3
+    model.excited_suspension.suspension.ks => 5*44000
+    model.excited_suspension.suspension.cs => 5*4000
     model.excited_suspension.suspension.r2.phi => -0.6031
     model.body_upright.s => 0.17
     model.body_upright.v => 0.14
 ]
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
+@assert all(sol[model.excited_suspension.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_wheel.gif") # Video
+Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename="suspension_wheel.gif") # Video
 nothing # hide
 ```
 ![suspension with wheel](suspension_wheel.gif)
@@ -399,14 +401,14 @@ model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 defs = [
-    model.excited_suspension_r.amplitude => 0.05
-    model.excited_suspension_r.freq => 10
+    model.excited_suspension_r.amplitude => 0.015
+    model.excited_suspension_r.freq => 3
     model.excited_suspension_r.suspension.ks => 30*44000
     model.excited_suspension_r.suspension.cs => 30*4000
     model.excited_suspension_r.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_l.amplitude => 0.05
-    model.excited_suspension_l.freq => 9.5
+    model.excited_suspension_l.amplitude => 0.015
+    model.excited_suspension_l.freq => 2.9
     model.excited_suspension_l.suspension.ks => 30*44000
     model.excited_suspension_l.suspension.cs => 30*4000
     model.excited_suspension_l.suspension.r2.phi => -0.6031
@@ -428,7 +430,9 @@ display(sort(unknowns(ssys), by=string))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = ShampineCollocationInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename="suspension_halfcar_wheels.gif") # Video
+@assert all(sol[model.excited_suspension_r.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
+@assert all(sol[model.excited_suspension_l.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename="suspension_halfcar_wheels.gif") # Video
 nothing # hide
 ```
 
@@ -449,7 +453,7 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
     @components begin
         world = W()
         front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
-        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=false)
+        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
         back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
 
         excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
@@ -457,21 +461,8 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
 
         excited_suspension_br = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
         excited_suspension_bl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 9.7)
-
-        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000)
-        # body_upright = Planar(n = [1, 0, 0], n_x = [0, 0, 1], render = false, state_priority=2000)
-        body_upright2 = Universal(n_a = [1, 0, 0], n_b = [0, 0, 1], state_priority=2000)
-        # body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0)
-        # body_upright2 = Spherical(render = false)
-        # body_upright = FreeMotion(state_priority=10)
     end
     @equations begin
-        connect(world.frame_b, body_upright.frame_a)
-        connect(body_upright.frame_b, body_upright2.frame_a)
-        connect(body_upright2.frame_b, back_axle.frame_cm)
-
-        # connect(body_upright.frame_b, back_front.frame_cm)
-
         connect(back_front.frame_a, front_axle.frame_cm)
         connect(back_front.frame_b, back_axle.frame_cm)
 
@@ -489,52 +480,52 @@ model = complete(model)
 @time "simplification" ssys = structural_simplify(IRSystem(model))
 
 defs = [
-    model.excited_suspension_br.wheel.wheeljoint.v_small => 10
-    model.excited_suspension_br.amplitude => 0.02
-    model.excited_suspension_br.freq => 10
-    model.excited_suspension_br.suspension.ks => 30*44000
-    model.excited_suspension_br.suspension.cs => 30*4000
+    model.excited_suspension_br.wheel.wheeljoint.v_small => 1e-3
+    model.excited_suspension_br.amplitude => 0.015
+    model.excited_suspension_br.freq => 3.1
+    model.excited_suspension_br.suspension.ks => 5*44000
+    model.excited_suspension_br.suspension.cs => 5*4000
     model.excited_suspension_br.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_bl.wheel.wheeljoint.v_small => 10
-    model.excited_suspension_bl.amplitude => 0.02
-    model.excited_suspension_bl.freq => 10.5
-    model.excited_suspension_bl.suspension.ks => 30*44000
-    model.excited_suspension_bl.suspension.cs => 30*4000
+    model.excited_suspension_bl.wheel.wheeljoint.v_small => 1e-3
+    model.excited_suspension_bl.amplitude => 0.015
+    model.excited_suspension_bl.freq => 3.2
+    model.excited_suspension_bl.suspension.ks => 5*44000
+    model.excited_suspension_bl.suspension.cs => 5*4000
     model.excited_suspension_bl.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_fr.wheel.wheeljoint.v_small => 10
-    model.excited_suspension_fr.amplitude => 0.02
-    model.excited_suspension_fr.freq => 10
-    model.excited_suspension_fr.suspension.ks => 30*44000
-    model.excited_suspension_fr.suspension.cs => 30*4000
+    model.excited_suspension_fr.wheel.wheeljoint.v_small => 1e-3
+    model.excited_suspension_fr.amplitude => 0.015
+    model.excited_suspension_fr.freq => 2.9
+    model.excited_suspension_fr.suspension.ks => 5*44000
+    model.excited_suspension_fr.suspension.cs => 5*4000
     model.excited_suspension_fr.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_fl.wheel.wheeljoint.v_small => 10
-    model.excited_suspension_fl.amplitude => 0.02
-    model.excited_suspension_fl.freq => 9.7
-    model.excited_suspension_fl.suspension.ks => 30*44000
-    model.excited_suspension_fl.suspension.cs => 30*4000
+    model.excited_suspension_fl.wheel.wheeljoint.v_small => 1e-3
+    model.excited_suspension_fl.amplitude => 0.015
+    model.excited_suspension_fl.freq => 2.8
+    model.excited_suspension_fl.suspension.ks => 5*44000
+    model.excited_suspension_fl.suspension.cs => 5*4000
     model.excited_suspension_fl.suspension.r2.phi => -0.6031
 
-    model.ms => 100
+    model.ms => 1500
 
-    model.body_upright.s => 0.17
-    model.body_upright.v => 0.14
-
-    # model.body_upright.prismatic_y.s => 0.17
-    # model.body_upright.prismatic_y.v => 0.14
-
-    # vec(ori(model.mass.frame_a).R .=> I(3))
+    model.back_front.body.r_0[1] => -2.0
+    model.back_front.body.r_0[2] => 0.193
+    model.back_front.body.r_0[3] => 0.0
+    model.back_front.body.v_0[1] => 1
 ]
 
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit(), u0 = prob.u0.+1e-6.*randn.())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
+@assert all(reduce(hcat, sol[[model.excited_suspension_bl.wheel.wheeljoint.f_n, model.excited_suspension_br.wheel.wheeljoint.f_n, model.excited_suspension_fl.wheel.wheeljoint.f_n, model.excited_suspension_fr.wheel.wheeljoint.f_n]]) .> 0) "Model not valid for negative normal forces"
+
+# plot(sol, layout=length(unknowns(ssys)), size=(1900,1200))
 import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=3, filename="suspension_fullcar_wheels.gif") # Video
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.7, z=0.15, lookat=[0,0.1,0.0], timescale=1, filename="suspension_fullcar_wheels.gif") # Video
 nothing # hide
 ```
 

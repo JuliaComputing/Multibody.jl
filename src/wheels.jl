@@ -265,12 +265,15 @@ end
 
 
 """
-    SlipWheelJoint(; name, radius, angles = zeros(3), der_angles = zeros(3), x0 = 0, y0 = radius, z0 = 0, sequence, iscut = false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.1, sSlide = 0.1, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
+    SlipWheelJoint(; name, radius, angles = zeros(3), der_angles = zeros(3), x0 = 0, y0 = radius, z0 = 0, sequence, iscut = false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
 
 Joint for a wheel with slip rolling on a surface.
 
 !!! tip "Integrator choice"
     The slip model contains a discontinuity in the second derivative at the transitions between adhesion and sliding. This can cause problems for integrators, in particular BDF-type integrators.
+
+!!! warn "Normal force"
+    The wheel cannot leave the ground. Make sure that the normal force `f_n` never becomes negative.
 
 # Parameters
 - `radius`: Radius of the wheel
@@ -286,7 +289,7 @@ Joint for a wheel with slip rolling on a surface.
 # State and iscut
 When the wheel is mounted on an axis that is rooted, one may either supply `state=false` or `iscut = true`. With `state = false`, the angular state variables are not included in the wheel and there is thus no kinematic chain introduced. This reduces the total number of variables in the system. if the angular variables are required, one may instead pass `iscut=true` to cut the kinematic loop that is introduced when coupling the angles of the wheel to the orientation of the `frame_a`, unless this is cut elsewhere.
 """
-@component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.1, sSlide = 0.1, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0, v_small = 1e-5, state=true)
+@component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0, v_small = 1e-5, state=true)
     @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
@@ -402,18 +405,18 @@ When the wheel is mounted on an axis that is rooted, one may either supply `stat
 
                     ]
                 else
-                    w_roll ~ -Ra.w[3] # w: Absolute angular velocity of local frame, resolved in local frame
+                    w_roll ~ Ra.w[3] # w: Absolute angular velocity of local frame, resolved in local frame
                 end
 
                 # frame_a.R is computed from generalized coordinates
                 collect(frame_a.r_0) .~ [x, y, z]
 
 
-                # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0), resolved on world frame
+                # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0), resolved in world frame
                 e_axis_0 .~ resolve1(Ra, [0, 0, 1])
                 aux .~ (cross(e_n_0, e_axis_0))
                 e_long_0 .~ (aux ./ _norm(aux))
-                e_lat_0 .~ (cross(e_long_0, e_n_0))
+                e_lat_0 .~ -(cross(e_long_0, e_n_0)) # wheel rotation axis and lateral axis are opposite
 
                 # Determine point on road where the wheel is in contact with the road
                 delta_0 .~ r_road_0 - frame_a.r_0
