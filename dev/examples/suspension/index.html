@@ -250,7 +250,7 @@ sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit()
     @components begin
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
-        wheel_rotation = Revolute(n = [0, 0, 1], axisflange=true) # Wheel rotation axis
+        wheel_rotation = Revolute(n = [0, 0, dir], axisflange=true) # Wheel rotation axis
         rotational_losses = Rotational.Damper(d = 0.1)
         wheel = SlippingWheel(
             radius = 0.2,
@@ -260,6 +260,7 @@ sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit()
             x0 = 0.0,
             z0 = 0.0,
             state = false,
+            # iscut = true,
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
             surface = (x,z)-&gt;ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
@@ -300,18 +301,19 @@ ssys = structural_simplify(IRSystem(model))
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [
-    model.excited_suspension.amplitude =&gt; 0.05
-    model.excited_suspension.freq =&gt; 10
-    model.excited_suspension.suspension.ks =&gt; 30*44000
-    model.excited_suspension.suspension.cs =&gt; 30*4000
+    model.excited_suspension.amplitude =&gt; 0.02
+    model.excited_suspension.freq =&gt; 3
+    model.excited_suspension.suspension.ks =&gt; 5*44000
+    model.excited_suspension.suspension.cs =&gt; 5*4000
     model.excited_suspension.suspension.r2.phi =&gt; -0.6031
     model.body_upright.s =&gt; 0.17
     model.body_upright.v =&gt; 0.14
 ]
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
+@assert all(sol[model.excited_suspension.wheel.wheeljoint.f_n] .&gt; 0) &quot;Model not valid for negative normal forces&quot;
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_wheel.gif&quot;) # Video</code></pre><p><img src="../suspension_wheel.gif" alt="suspension with wheel"/></p><h3 id="Half-car"><a class="docs-heading-anchor" href="#Half-car">Half car</a><a id="Half-car-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel HalfCar begin
+Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename=&quot;suspension_wheel.gif&quot;) # Video</code></pre><p><img src="../suspension_wheel.gif" alt="suspension with wheel"/></p><h3 id="Half-car"><a class="docs-heading-anchor" href="#Half-car">Half car</a><a id="Half-car-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel HalfCar begin
     @structural_parameters begin
         wheel_base = 1
     end
@@ -346,14 +348,14 @@ model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 
 defs = [
-    model.excited_suspension_r.amplitude =&gt; 0.05
-    model.excited_suspension_r.freq =&gt; 10
+    model.excited_suspension_r.amplitude =&gt; 0.015
+    model.excited_suspension_r.freq =&gt; 3
     model.excited_suspension_r.suspension.ks =&gt; 30*44000
     model.excited_suspension_r.suspension.cs =&gt; 30*4000
     model.excited_suspension_r.suspension.r2.phi =&gt; -0.6031
 
-    model.excited_suspension_l.amplitude =&gt; 0.05
-    model.excited_suspension_l.freq =&gt; 9.5
+    model.excited_suspension_l.amplitude =&gt; 0.015
+    model.excited_suspension_l.freq =&gt; 2.9
     model.excited_suspension_l.suspension.ks =&gt; 30*44000
     model.excited_suspension_l.suspension.cs =&gt; 30*4000
     model.excited_suspension_l.suspension.r2.phi =&gt; -0.6031
@@ -375,7 +377,9 @@ display(sort(unknowns(ssys), by=string))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = ShampineCollocationInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_halfcar_wheels.gif&quot;) # Video</code></pre><p><img src="../suspension_halfcar_wheels.gif" alt="suspension with wheels"/></p><h1 id="Full-car"><a class="docs-heading-anchor" href="#Full-car">Full car</a><a id="Full-car-1"></a><a class="docs-heading-anchor-permalink" href="#Full-car" title="Permalink"></a></h1><pre><code class="language-julia hljs">transparent_gray = [0.4, 0.4, 0.4, 0.3]
+@assert all(sol[model.excited_suspension_r.wheel.wheeljoint.f_n] .&gt; 0) &quot;Model not valid for negative normal forces&quot;
+@assert all(sol[model.excited_suspension_l.wheel.wheeljoint.f_n] .&gt; 0) &quot;Model not valid for negative normal forces&quot;
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename=&quot;suspension_halfcar_wheels.gif&quot;) # Video</code></pre><p><img src="../suspension_halfcar_wheels.gif" alt="suspension with wheels"/></p><h1 id="Full-car"><a class="docs-heading-anchor" href="#Full-car">Full car</a><a id="Full-car-1"></a><a class="docs-heading-anchor-permalink" href="#Full-car" title="Permalink"></a></h1><pre><code class="language-julia hljs">transparent_gray = [0.4, 0.4, 0.4, 0.3]
 @mtkmodel FullCar begin
     @structural_parameters begin
         wheel_base = 1
@@ -387,7 +391,7 @@ Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.
     @components begin
         world = W()
         front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
-        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=false)
+        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
         back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
 
         excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
@@ -395,21 +399,8 @@ Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.
 
         excited_suspension_br = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
         excited_suspension_bl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 9.7)
-
-        body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000)
-        # body_upright = Planar(n = [1, 0, 0], n_x = [0, 0, 1], render = false, state_priority=2000)
-        body_upright2 = Universal(n_a = [1, 0, 0], n_b = [0, 0, 1], state_priority=2000)
-        # body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0)
-        # body_upright2 = Spherical(render = false)
-        # body_upright = FreeMotion(state_priority=10)
     end
     @equations begin
-        connect(world.frame_b, body_upright.frame_a)
-        connect(body_upright.frame_b, body_upright2.frame_a)
-        connect(body_upright2.frame_b, back_axle.frame_cm)
-
-        # connect(body_upright.frame_b, back_front.frame_cm)
-
         connect(back_front.frame_a, front_axle.frame_cm)
         connect(back_front.frame_b, back_axle.frame_cm)
 
@@ -427,49 +418,49 @@ model = complete(model)
 @time &quot;simplification&quot; ssys = structural_simplify(IRSystem(model))
 
 defs = [
-    model.excited_suspension_br.wheel.wheeljoint.v_small =&gt; 10
-    model.excited_suspension_br.amplitude =&gt; 0.02
-    model.excited_suspension_br.freq =&gt; 10
-    model.excited_suspension_br.suspension.ks =&gt; 30*44000
-    model.excited_suspension_br.suspension.cs =&gt; 30*4000
+    model.excited_suspension_br.wheel.wheeljoint.v_small =&gt; 1e-3
+    model.excited_suspension_br.amplitude =&gt; 0.015
+    model.excited_suspension_br.freq =&gt; 3.1
+    model.excited_suspension_br.suspension.ks =&gt; 5*44000
+    model.excited_suspension_br.suspension.cs =&gt; 5*4000
     model.excited_suspension_br.suspension.r2.phi =&gt; -0.6031
 
-    model.excited_suspension_bl.wheel.wheeljoint.v_small =&gt; 10
-    model.excited_suspension_bl.amplitude =&gt; 0.02
-    model.excited_suspension_bl.freq =&gt; 10.5
-    model.excited_suspension_bl.suspension.ks =&gt; 30*44000
-    model.excited_suspension_bl.suspension.cs =&gt; 30*4000
+    model.excited_suspension_bl.wheel.wheeljoint.v_small =&gt; 1e-3
+    model.excited_suspension_bl.amplitude =&gt; 0.015
+    model.excited_suspension_bl.freq =&gt; 3.2
+    model.excited_suspension_bl.suspension.ks =&gt; 5*44000
+    model.excited_suspension_bl.suspension.cs =&gt; 5*4000
     model.excited_suspension_bl.suspension.r2.phi =&gt; -0.6031
 
-    model.excited_suspension_fr.wheel.wheeljoint.v_small =&gt; 10
-    model.excited_suspension_fr.amplitude =&gt; 0.02
-    model.excited_suspension_fr.freq =&gt; 10
-    model.excited_suspension_fr.suspension.ks =&gt; 30*44000
-    model.excited_suspension_fr.suspension.cs =&gt; 30*4000
+    model.excited_suspension_fr.wheel.wheeljoint.v_small =&gt; 1e-3
+    model.excited_suspension_fr.amplitude =&gt; 0.015
+    model.excited_suspension_fr.freq =&gt; 2.9
+    model.excited_suspension_fr.suspension.ks =&gt; 5*44000
+    model.excited_suspension_fr.suspension.cs =&gt; 5*4000
     model.excited_suspension_fr.suspension.r2.phi =&gt; -0.6031
 
-    model.excited_suspension_fl.wheel.wheeljoint.v_small =&gt; 10
-    model.excited_suspension_fl.amplitude =&gt; 0.02
-    model.excited_suspension_fl.freq =&gt; 9.7
-    model.excited_suspension_fl.suspension.ks =&gt; 30*44000
-    model.excited_suspension_fl.suspension.cs =&gt; 30*4000
+    model.excited_suspension_fl.wheel.wheeljoint.v_small =&gt; 1e-3
+    model.excited_suspension_fl.amplitude =&gt; 0.015
+    model.excited_suspension_fl.freq =&gt; 2.8
+    model.excited_suspension_fl.suspension.ks =&gt; 5*44000
+    model.excited_suspension_fl.suspension.cs =&gt; 5*4000
     model.excited_suspension_fl.suspension.r2.phi =&gt; -0.6031
 
-    model.ms =&gt; 100
+    model.ms =&gt; 1500
 
-    model.body_upright.s =&gt; 0.17
-    model.body_upright.v =&gt; 0.14
-
-    # model.body_upright.prismatic_y.s =&gt; 0.17
-    # model.body_upright.prismatic_y.v =&gt; 0.14
-
-    # vec(ori(model.mass.frame_a).R .=&gt; I(3))
+    model.back_front.body.r_0[1] =&gt; -2.0
+    model.back_front.body.r_0[2] =&gt; 0.193
+    model.back_front.body.r_0[3] =&gt; 0.0
+    model.back_front.body.v_0[1] =&gt; 1
 ]
 
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit(), u0 = prob.u0.+1e-6.*randn.())
+sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
+@assert all(reduce(hcat, sol[[model.excited_suspension_bl.wheel.wheeljoint.f_n, model.excited_suspension_br.wheel.wheeljoint.f_n, model.excited_suspension_fl.wheel.wheeljoint.f_n, model.excited_suspension_fr.wheel.wheeljoint.f_n]]) .&gt; 0) &quot;Model not valid for negative normal forces&quot;
+
+# plot(sol, layout=length(unknowns(ssys)), size=(1900,1200))
 import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-3.5, y=0.5, z=0.15, lookat=[0,0.1,0.0], timescale=3, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 28.639100 seconds (90.77 M allocations: 5.342 GiB, 16.47% gc time, 0.38% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 26 September 2024 13:38">Thursday 26 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.7, z=0.15, lookat=[0,0.1,0.0], timescale=1, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 23.889182 seconds (84.09 M allocations: 4.752 GiB, 11.54% gc time, 0.31% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 1 October 2024 03:55">Tuesday 1 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
