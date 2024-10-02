@@ -41,7 +41,23 @@ ssys = structural_simplify(IRSystem(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">import GLMakie
-Multibody.render(worldwheel, sol; filename = &quot;worldwheel.gif&quot;)</code></pre><p><img src="../worldwheel.gif" alt="wheel animation"/></p><h3 id="Add-slip"><a class="docs-heading-anchor" href="#Add-slip">Add slip</a><a id="Add-slip-1"></a><a class="docs-heading-anchor-permalink" href="#Add-slip" title="Permalink"></a></h3><p>The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling.</p><pre><code class="language-julia hljs">@mtkmodel SlipWheelInWorld begin
+Multibody.render(worldwheel, sol; filename = &quot;worldwheel.gif&quot;)</code></pre><p><img src="../worldwheel.gif" alt="wheel animation"/></p><h3 id="Add-slip"><a class="docs-heading-anchor" href="#Add-slip">Add slip</a><a id="Add-slip-1"></a><a class="docs-heading-anchor-permalink" href="#Add-slip" title="Permalink"></a></h3><p>The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling. We start by showing the slip model</p><pre><code class="language-julia hljs">using Plots
+vAdhesion = 0.2
+vSlide = 0.4
+mu_A = 0.95
+mu_S = 0.7
+v = range(0, stop=1, length=500) # Simulating the slip velocity
+μ = Multibody.PlanarMechanics.limit_S_triple.(vAdhesion, vSlide, mu_A, mu_S, v)
+plot(v, μ, label=nothing, lw=2, color=:black, xlabel = &quot;\$v_{Slip}\$&quot;, ylabel = &quot;\$\\mu\$&quot;)
+scatter!([vAdhesion, vSlide], [mu_A, mu_S], color=:white, markerstrokecolor=:black)
+hline!([mu_A, mu_S], linestyle=:dash, color=:black, alpha=0.5)
+vline!([vAdhesion, vSlide], linestyle=:dash, color=:black, alpha=0.5)
+plot!(
+    xticks = ((vAdhesion, vSlide), [&quot;\$v_{Adhesion}\$&quot;, &quot;\$v_{Slide}\$&quot;]),
+    yticks = ((mu_A, mu_S), [&quot;\$\\mu_{adhesion}\$&quot;, &quot;\$\\mu_{slide}\$&quot;]),
+    framestyle = :zerolines,
+    legend = false,
+)</code></pre><img src="2a0865cc.svg" alt="Example block output"/><p>The longitudinal force on the tire is given by</p><p class="math-container">\[f_{long} = - f_n \dfrac{\mu(v_{Slip})}{v_{Slip}} v_{SlipLong}\]</p><p>where <code>f_n</code> is the normal force on the tire, <code>μ</code> is the friction coefficient from the slip model, and <code>v_{Slip}</code> is the magnitude of the slip velocity.</p><p>The slip velocity is defined such that when the wheel is moving with positive velocity and increasing in speed (accelerating), the slip velocity is negative, i.e., the contact patch is moving slightly backwards. When the wheel is moving with positive velocity and decreasing in speed (braking), the slip velocity is positive, i.e., the contact patch is moving slightly forwards.</p><pre><code class="language-julia hljs">@mtkmodel SlipWheelInWorld begin
     @components begin
         world = W()
         wheel = SlippingWheel(
@@ -52,7 +68,6 @@ Multibody.render(worldwheel, sol; filename = &quot;worldwheel.gif&quot;)</code><
             x0 = 0.2,
             z0 = 0.2,
             der_angles = [0, 25, 0.1],
-
             mu_A = 0.95,             # Friction coefficient at adhesion
             mu_S = 0.5,             # Friction coefficient at sliding
             sAdhesion = 0.04,       # Adhesion slippage
@@ -248,8 +263,13 @@ prob = ODEProblem(ssys, [
     D(model.revolute.frame_b.phi) =&gt; 0,
     D(model.prismatic.r0[2]) =&gt; 0,
 ], (0.0, 15.0))
-sol = solve(prob, Rodas5Pr())
-render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename=&quot;slipwheel.gif&quot;, cache=false)</code></pre><p><img src="../slipwheel.gif" alt="slipwheel animation"/></p><h2 id="Planar-two-track-model"><a class="docs-heading-anchor" href="#Planar-two-track-model">Planar two-track model</a><a id="Planar-two-track-model-1"></a><a class="docs-heading-anchor-permalink" href="#Planar-two-track-model" title="Permalink"></a></h2><p>A more elaborate example with 4 wheels.</p><pre><code class="language-julia hljs">@mtkmodel TwoTrackWithDifferentialGear begin
+sol = solve(prob, Rodas5P())
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename=&quot;slipwheel.gif&quot;, cache=false)</code></pre><p><img src="../slipwheel.gif" alt="slipwheel animation"/></p><pre><code class="language-julia hljs">plot(sol, idxs=[
+    model.slipBasedWheelJoint.w_roll
+    model.slipBasedWheelJoint.v_long
+    model.slipBasedWheelJoint.v_slip_long
+    model.slipBasedWheelJoint.f_long
+], layout=4)</code></pre><img src="95e62d49.svg" alt="Example block output"/><h2 id="Planar-two-track-model"><a class="docs-heading-anchor" href="#Planar-two-track-model">Planar two-track model</a><a id="Planar-two-track-model-1"></a><a class="docs-heading-anchor-permalink" href="#Planar-two-track-model" title="Permalink"></a></h2><p>A more elaborate example with 4 wheels.</p><pre><code class="language-julia hljs">@mtkmodel TwoTrackWithDifferentialGear begin
     @components begin
         body = Pl.Body(m = 100, I = 1, gy = 0)
         body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0,)
@@ -359,4 +379,4 @@ defs = merge(
 prob = ODEProblem(ssys, defs, (0.0, 5.0))
 sol = solve(prob, Rodas5P(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename=&quot;twotrack.gif&quot;, cache=false)</code></pre><p><img src="../twotrack.gif" alt="twotrack animation"/> ```</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gyroscopic_effects/">« Gyroscopic effects</a><a class="docs-footer-nextpage" href="../suspension/">Suspension systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 2 October 2024 02:58">Wednesday 2 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename=&quot;twotrack.gif&quot;, cache=false)</code></pre><p><img src="../twotrack.gif" alt="twotrack animation"/> ```</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../gyroscopic_effects/">« Gyroscopic effects</a><a class="docs-footer-nextpage" href="../suspension/">Suspension systems »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 2 October 2024 16:54">Wednesday 2 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
