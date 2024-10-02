@@ -47,18 +47,37 @@ end
     g0 = g
     mu0 = mu
     @named frame_b = Frame()
-    @parameters n[1:3]=n0 [description = "gravity direction of world"]
+
+    @parameters n[1:3] = n0 [description = "gravity direction"]
     @parameters g=g0 [description = "gravitational acceleration of world"]
     @parameters mu=mu0 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
+
+    @variables n_inner(t)[1:3]
+    @variables g_inner(t)
+    @variables mu_inner(t)
+    @variables render_inner(t)
+    @variables point_gravity_inner(t)
+
     n = Symbolics.scalarize(n)
+    n_inner = GlobalScope.(Symbolics.scalarize(n_inner))
+    g_inner = GlobalScope(g_inner)
+    mu_inner = GlobalScope(mu_inner)
+    render_inner = GlobalScope(render_inner)
+    point_gravity_inner = GlobalScope(point_gravity_inner)
+
     O = ori(frame_b)
     eqs = Equation[
         collect(frame_b.r_0) .~ 0;
         O ~ nullrotation()
+        n_inner .~ n
+        g_inner ~ g
+        mu_inner ~ mu
+        render_inner ~ render
+        point_gravity_inner ~ point_gravity
     ]
-    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
+    ODESystem(eqs, t, [n_inner; g_inner; mu_inner; render_inner; point_gravity_inner], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
 end
 
 """
@@ -68,7 +87,7 @@ const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 function gravity_acceleration(r)
-    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g), GlobalScope.(collect(world.n)), collect(r))
+    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
 end
 
 function inner_gravity(point_gravity, mu, g, n, r)

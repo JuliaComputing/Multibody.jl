@@ -26,6 +26,11 @@ ssys = structural_simplify(model)
 
 @test length(unknowns(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
 
+@testset "world" begin
+    @info "Testing world"
+    include("test_world.jl")
+end
+
 @testset "urdf" begin
     @info "Testing urdf"
     include("test_urdf.jl")
