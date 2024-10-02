@@ -72,7 +72,35 @@ nothing # hide
 ![wheel animation](worldwheel.gif)
 
 ### Add slip
-The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling.
+The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling. We start by showing the slip model
+```@example WHEEL
+using Plots
+vAdhesion = 0.2
+vSlide = 0.4
+mu_A = 0.95
+mu_S = 0.7
+v = range(0, stop=1, length=500) # Simulating the slip velocity
+μ = Multibody.PlanarMechanics.limit_S_triple.(vAdhesion, vSlide, mu_A, mu_S, v)
+plot(v, μ, label=nothing, lw=2, color=:black, xlabel = "\$v_{Slip}\$", ylabel = "\$\\mu\$")
+scatter!([vAdhesion, vSlide], [mu_A, mu_S], color=:white, markerstrokecolor=:black)
+hline!([mu_A, mu_S], linestyle=:dash, color=:black, alpha=0.5)
+vline!([vAdhesion, vSlide], linestyle=:dash, color=:black, alpha=0.5)
+plot!(
+    xticks = ((vAdhesion, vSlide), ["\$v_{Adhesion}\$", "\$v_{Slide}\$"]),
+    yticks = ((mu_A, mu_S), ["\$\\mu_{adhesion}\$", "\$\\mu_{slide}\$"]),
+    framestyle = :zerolines,
+    legend = false,
+)
+```
+The longitudinal force on the tire is given by
+```math
+f_{long} = - f_n \dfrac{\mu(v_{Slip})}{v_{Slip}} v_{SlipLong}
+```
+where `f_n` is the normal force on the tire, `μ` is the friction coefficient from the slip model, and `v_{Slip}` is the magnitude of the slip velocity.
+
+The slip velocity is defined such that when the wheel is moving with positive velocity and increasing in speed (accelerating), the slip velocity is negative, i.e., the contact patch is moving slightly backwards. When the wheel is moving with positive velocity and decreasing in speed (braking), the slip velocity is positive, i.e., the contact patch is moving slightly forwards.
+
+
 ```@example WHEEL
 @mtkmodel SlipWheelInWorld begin
     @components begin
@@ -85,7 +113,6 @@ The example below is similar to that above, but models a wheel with slip propert
             x0 = 0.2,
             z0 = 0.2,
             der_angles = [0, 25, 0.1],
-
             mu_A = 0.95,             # Friction coefficient at adhesion
             mu_S = 0.5,             # Friction coefficient at sliding
             sAdhesion = 0.04,       # Adhesion slippage
@@ -334,12 +361,21 @@ prob = ODEProblem(ssys, [
     D(model.revolute.frame_b.phi) => 0,
     D(model.prismatic.r0[2]) => 0,
 ], (0.0, 15.0))
-sol = solve(prob, Rodas5Pr())
+sol = solve(prob, Rodas5P())
 render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=false)
 nothing # hide
 ```
 
 ![slipwheel animation](slipwheel.gif)
+
+```@example WHEEL
+plot(sol, idxs=[
+    model.slipBasedWheelJoint.w_roll
+    model.slipBasedWheelJoint.v_long
+    model.slipBasedWheelJoint.v_slip_long
+    model.slipBasedWheelJoint.f_long
+], layout=4)
+```
 
 
 ## Planar two-track model
