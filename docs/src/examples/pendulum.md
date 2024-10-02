@@ -363,7 +363,6 @@ gray = [0.5, 0.5, 0.5, 1]
 end
 @mtkmodel CartWithInput begin
     @components begin
-        world = W()
         cartpole = Cartpole()
         input = Blocks.Cosine(frequency=1, amplitude=1)
     end
@@ -437,7 +436,6 @@ LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
 
 @mtkmodel CartWithFeedback begin
     @components begin
-        world = W()
         cartpole = Cartpole()
         reference = Blocks.Step(start_time = 5, height=0.5)
         control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
@@ -479,7 +477,7 @@ Below, we add also an energy-based swing-up controller. For more details this ki
 ```@example pendulum
 "Compute total energy, kinetic + potential, for a body rotating around the z-axis of the world"
 function energy(body, w)
-    g = world.g
+    g = GlobalScope(world.g_inner)
     m = body.m
     d2 = body.r_cm[1]^2 + body.r_cm[2]^2 # Squared distance from 
     I = body.I_33 + m*d2 # Parallel axis theorem
@@ -491,7 +489,6 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 
 @mtkmodel CartWithSwingup begin
     @components begin
-        world = W()
         cartpole = Cartpole()
         L = Blocks.MatrixGain(K = Lmat) # Here we use the LQR controller instead
         control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude
