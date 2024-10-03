@@ -51,7 +51,7 @@ end
 
 @named logo = Logo()
 logo = complete(logo)
-ssys = structural_simplify(IRSystem(logo))
+ssys = structural_simplify(multibody(logo))
 prob = ODEProblem(ssys, [], (0.0, 3.51))
 sol = solve(prob, Rodas5P())
 Plots.plot(sol)

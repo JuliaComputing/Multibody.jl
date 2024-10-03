@@ -144,7 +144,7 @@ end
 
 @named model = SuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [

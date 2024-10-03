@@ -90,7 +90,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
 
@@ -123,7 +123,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -150,7 +150,7 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 defs = Dict(collect(root_body.r_0) .=> [0, 1e-3, 0]) # The spring has a singularity at zero length, so we start some distance away
 
@@ -168,7 +168,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
@@ -218,7 +218,7 @@ end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
@@ -380,7 +380,7 @@ end
 end
 @named model = CartWithInput()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.0, model.cartpole.revolute.phi => 0.1], (0, 10))
 sol = solve(prob, Tsit5())
 plot(sol, layout=4)
@@ -411,13 +411,13 @@ op = Dict([ # Operating point to linearize in
     cp.revolute.phi => 0 # Pendulum pointing upwards
 ]
 )
-matrices, simplified_sys = linearize(IRSystem(cp), inputs, outputs; op)
+matrices, simplified_sys = linearize(multibody(cp), inputs, outputs; op)
 matrices
 ```
 This gives us the matrices $A,B,C,D$ in a linearized statespace representation of the system. To make these easier to work with, we load the control packages and call `named_ss` instead of `linearize` to get a named statespace object instead:
 ```@example pendulum
 using ControlSystemsMTK
-lsys = named_ss(IRSystem(cp), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
+lsys = named_ss(multibody(cp), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
 ```
 
 ### LQR Control design
@@ -466,7 +466,7 @@ LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
 end
 @named model = CartWithFeedback()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 10))
 sol = solve(prob, Tsit5())
 cp = model.cartpole
@@ -533,7 +533,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 end
 @named model = CartWithSwingup()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 cp = model.cartpole
 prob = ODEProblem(ssys, [cp.prismatic.s => 0.0, cp.revolute.phi => 0.99pi], (0, 5))
 sol = solve(prob, Tsit5(), dt = 1e-2, adaptive=false)

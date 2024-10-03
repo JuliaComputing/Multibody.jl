@@ -33,7 +33,7 @@ end
 
 @named model = TestUSR()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 @test length(unknowns(ssys)) == 2
 ##
 
@@ -64,7 +64,7 @@ end
 
 @named model = TestRRR()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 @test length(unknowns(ssys)) == 2
 ##
 

@@ -191,7 +191,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 # display(unknowns(ssys))
 op = [
     model.body.v_0[1] => 0;
@@ -234,7 +234,7 @@ op = [
     inputs .=> 1;
 ] |> Dict
 
-@time lsys = named_ss(IRSystem(quad), inputs, outputs; op)
+@time lsys = named_ss(multibody(quad), inputs, outputs; op)
 rsys = minreal(sminreal(lsys))
 C = rsys.C
 rank(C) >= rsys.nx || @warn "The output matrix C is not full rank"
@@ -265,7 +265,7 @@ L
 ModelingToolkit.get_iv(i::IRSystem) = i.t
 model = RotorCraft(; closed_loop=true, addload=true, L=-L, outputs) # Negate L for negative feedback
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 op = [
     model.body.r_0[2] => 1e-3

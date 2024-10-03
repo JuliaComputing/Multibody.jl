@@ -75,7 +75,7 @@ connections = [
 ]
 @named fourbar = ODESystem(connections, t, systems = [world; systems])
 fourbar = complete(fourbar)
-ssys = structural_simplify(IRSystem(fourbar))
+ssys = structural_simplify(multibody(fourbar))
 prob = ODEProblem(ssys, [fourbar.j1.phi => 0.1], (0.0, 10.0))
 sol = solve(prob, FBDF(autodiff=true))
 
@@ -146,7 +146,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                ]
 @named fourbar2 = ODESystem(connections, t, systems = [world; systems])
 fourbar2 = complete(fourbar2)
-ssys = structural_simplify(IRSystem(fourbar2))
+ssys = structural_simplify(multibody(fourbar2))
 
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
 
@@ -187,7 +187,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
 
 @named fourbar_analytic = ODESystem(connections, t, systems = [world; systems])
 fourbar_analytic = complete(fourbar_analytic)
-ssys_analytic = structural_simplify(IRSystem(fourbar_analytic))
+ssys_analytic = structural_simplify(multibody(fourbar_analytic))
 prob = ODEProblem(ssys_analytic, [], (0.0, 1.4399)) 
 sol2 = solve(prob, FBDF(autodiff=true)) # about 4x faster than the simulation above
 plot!(sol2, idxs=[j2.s]) # Plot the same coordinate as above

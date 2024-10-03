@@ -50,7 +50,7 @@ W(;kwargs...) = Multibody.world
 end
 @named model = PointGrav()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = [
     model.world.mu => 1
     model.world.point_gravity => true # The gravity model is selected here
