@@ -76,14 +76,17 @@ Perform validity checks on the model, such as the precense of exactly one world 
 """
 function multibody(model, level=0)
     found_world = false
+    found_planar = false
     for subsys in model.systems
         system_type = get_systemtype(subsys)
         subsys_ns = getproperty(model, subsys.name)
         isworld = system_type == World
+        isplanar = parentmodule(system_type) == PlanarMechanics
         found_world = found_world || isworld
+        found_planar = found_planar || isplanar
         multibody(subsys_ns, level + 1)
     end
-    if level == 0 && !found_world
+    if level == 0 && !found_world && !found_planar
         @warn("No world found in the top level of the model, this may lead to missing equations")
     elseif level != 0 && found_world
         @warn("World found in a non-top level component ($(nameof(model))) of the model, this may lead to extra equations. Consider using the component `Fixed` instead of `World` in component models.")
