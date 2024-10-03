@@ -81,7 +81,7 @@ function multibody(model, level=0)
         system_type = get_systemtype(subsys)
         subsys_ns = getproperty(model, subsys.name)
         isworld = system_type == World
-        isplanar = parentmodule(system_type) == PlanarMechanics
+        isplanar = system_type !== nothing && parentmodule(system_type) == PlanarMechanics
         found_world = found_world || isworld
         found_planar = found_planar || isplanar
         multibody(subsys_ns, level + 1)
