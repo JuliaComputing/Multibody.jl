@@ -10,7 +10,6 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-W(args...; kwargs...) = Multibody.world
 
 n = [1, 0, 0]
 AB = 146.5 / 1000
@@ -129,7 +128,7 @@ end
         dir = mirror ? -1 : 1
     end
     @components begin
-        world = W()
+        world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)*dir]))
         excited_suspension = SuspensionWithExcitation(; suspension.spring=true, mirror, rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
@@ -143,7 +142,7 @@ end
 
 @named model = SuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 defs = [
     model.body_upright.s =&gt; 0.17
@@ -205,7 +204,7 @@ end
 
 @named model = DoubleSuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 defs = [
     model.excited_suspension_r.amplitude =&gt; 0.05
@@ -297,7 +296,7 @@ end
 
 @named model = SuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [
@@ -345,7 +344,7 @@ end
 
 @named model = HalfCar()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 defs = [
     model.excited_suspension_r.amplitude =&gt; 0.015
@@ -415,7 +414,7 @@ end
 
 @named model = FullCar()
 model = complete(model)
-@time &quot;simplification&quot; ssys = structural_simplify(IRSystem(model))
+@time &quot;simplification&quot; ssys = structural_simplify(multibody(model))
 
 defs = [
     model.excited_suspension_br.wheel.wheeljoint.v_small =&gt; 1e-3
@@ -467,4 +466,4 @@ sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 
 # plot(sol, layout=length(unknowns(ssys)), size=(1900,1200))
 import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.7, z=0.15, lookat=[0,0.1,0.0], timescale=1, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 22.661935 seconds (84.39 M allocations: 4.767 GiB, 5.26% gc time, 0.32% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 3 October 2024 01:42">Thursday 3 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.7, z=0.15, lookat=[0,0.1,0.0], timescale=1, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 23.582743 seconds (84.40 M allocations: 4.769 GiB, 11.70% gc time, 0.32% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 3 October 2024 04:58">Thursday 3 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
