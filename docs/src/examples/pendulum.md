@@ -186,11 +186,10 @@ This pendulum, sometimes referred to as a _rotary pendulum_, has two joints, one
 using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Damper as RDamper
 import Multibody.Rotations
-W(args...; kwargs...) = Multibody.world
 
 @mtkmodel FurutaPendulum begin
     @components begin
-        world = W()
+        world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1)
         upper_arm = BodyShape(; m = 0.1, r = [0, 0, 0.6], radius=0.04)

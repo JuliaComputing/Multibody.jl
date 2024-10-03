@@ -36,7 +36,19 @@ function ori(sys, varw = false)
 end
 
 """
-    World(; name, render=true)
+    World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
+
+All multibody models must include exactly one world component defined at the top level. The `frame_b` of the world is fixed in the origin.
+
+If a connection to the world is needed in a component model, use [`Fixed`](@ref) instead.
+
+# Arguments
+- `name`: Name of the world component
+- `render`: Render the component in animations
+- `point_gravity`: If `true`, the gravity is always opinting towards a single point in space. If `false`, the gravity is always pointing in the same direction `n`.
+- `n`: Gravity direction unit vector, defaults to [0, -1, 0], only applicable if `point_gravity = false`
+- `g`: Gravitational acceleration, defaults to 9.80665
+- `mu`: Gravity field constant, defaults to 3.986004418e14, only applicable to point gravity
 """
 @component function World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
     # World should have

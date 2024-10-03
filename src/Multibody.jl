@@ -84,10 +84,9 @@ function multibody(model, level=0)
         multibody(subsys_ns, level + 1)
     end
     if level == 0 && !found_world
-        @warn("No world found in the top level of the model, using default world")
-        push!(getfield(model, :systems), Multibody.world)
+        @warn("No world found in the top level of the model, this may lead to missing equations")
     elseif level != 0 && found_world
-        @warn("World found in a non-top level of the model, this may lead to extra equations")
+        @warn("World found in a non-top level component ($(nameof(model))) of the model, this may lead to extra equations. Consider using the component `Fixed` instead of `World` in component models.")
     end
     if level == 0
         return IRSystem(model)

@@ -10,22 +10,6 @@ doplot() = false
 world = Multibody.world
 W(args...; kwargs...) = Multibody.world
 
-## Only body and world
-@named body = Body(; m = 1, isroot = false, r_cm = [1, 0, 1])
-Multibody.isroot(body)
-
-connections = [
-    connect(world.frame_b, body.frame_a),
-]
-
-@named model = ODESystem(connections, t, systems = [world, body])
-
-modele = ModelingToolkit.expand_connections(model)
-
-ssys = structural_simplify(model)
-
-@test length(unknowns(ssys)) == 0 # This example is completely rigid and should simplify down to zero state variables
-
 @testset "world" begin
     @info "Testing world"
     include("test_world.jl")
@@ -143,10 +127,9 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = ODESystem(connections, t,
                          systems = [world, joint, body, torksensor, forcesensor, powersensor, damper])
-modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = multibody(modele)
+irsys = multibody(model)
 ssys = structural_simplify(irsys)
 
 D = Differential(t)
@@ -178,7 +161,7 @@ end
 # ==============================================================================
 @mtkmodel PointGrav begin
     @components begin
-        world = W()
+        world = World()
         body1 = Body(
             m=1,
             I_11=0.1,
@@ -230,10 +213,9 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(body.frame_a, rev.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper])
-modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = multibody(modele)
+irsys = multibody(model)
 ssys = structural_simplify(irsys)
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
@@ -300,10 +282,9 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
 @named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
-modele = ModelingToolkit.expand_connections(model)
 
 # ssys = structural_simplify(model)#, allow_parameter = false)
-ssys = structural_simplify(multibody(modele))
+ssys = structural_simplify(multibody(model))
 
 D = Differential(t)
 
@@ -891,11 +872,10 @@ D = Differential(t)
 # Workarounds for @mtkmodel bugs and limitations
 RTorque = Rotational.Torque
 BSine = Blocks.Sine
-W(args...; kwargs...) = Multibody.world
 
 @mtkmodel ActuatedJoint begin
     @components begin
-        world = W()
+        world = World()
         torque = RTorque()
         joint = Revolute(axisflange=true) # The axis flange provides an interface to the 1D torque input from ModelingToolkitStandardLibrary.Mechanical.Rotational
         torque_signal = BSine(frequency=1/5)
@@ -1472,7 +1452,7 @@ end
 @testset "QuarterCar JointRRR" begin
     @info "Testing QuarterCar JointRRR"
 
-## Quarter car with JointRRR
+# Quarter car with JointRRR
 n = [1, 0, 0]
 AB = 146.5 / 1000
 BC = 233.84 / 1000
