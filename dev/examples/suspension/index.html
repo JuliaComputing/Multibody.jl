@@ -93,7 +93,7 @@ mirror = false
         dir = mirror ? -1 : 1
     end
     @components begin
-        world = W()
+        fixed = Fixed()
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
 
@@ -107,7 +107,7 @@ mirror = false
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
-        connect(world.frame_b, actuation_position.frame_a)
+        connect(fixed.frame_b, actuation_position.frame_a)
         connect(actuation_position.frame_b, wheel_prismatic.frame_a)
         connect(wheel_prismatic.frame_b, actuation_rod.frame_a,)
         connect(actuation_rod.frame_b, suspension.r123.frame_ib)
@@ -175,7 +175,7 @@ Multibody.render(model, sol, show_axis=false, x=-1, y=0.3, z=0.3, lookat=[0,0.3,
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = SuspensionWithExcitation(; suspension.spring=true, mirror=false, rod_radius,
             actuation_position.r = [0, 0, (CD+wheel_base/2)],
@@ -283,7 +283,7 @@ end
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)]))
         excited_suspension = ExcitedWheelAssembly(; rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
@@ -313,7 +313,7 @@ prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @assert all(sol[model.excited_suspension.wheel.wheeljoint.f_n] .&gt; 0) &quot;Model not valid for negative normal forces&quot;
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename=&quot;suspension_wheel.gif&quot;) # Video</code></pre><p><img src="../suspension_wheel.gif" alt="suspension with wheel"/></p><h3 id="Half-car"><a class="docs-heading-anchor" href="#Half-car">Half car</a><a id="Half-car-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel HalfCar begin
+Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename=&quot;suspension_wheel.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">WARNING: using Rotational.Fixed in module Main conflicts with an existing identifier.</code></pre><p><img src="../suspension_wheel.gif" alt="suspension with wheel"/></p><h3 id="Half-car"><a class="docs-heading-anchor" href="#Half-car">Half car</a><a id="Half-car-1"></a><a class="docs-heading-anchor-permalink" href="#Half-car" title="Permalink"></a></h3><pre><code class="language-julia hljs">@mtkmodel HalfCar begin
     @structural_parameters begin
         wheel_base = 1
     end
@@ -322,7 +322,7 @@ Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = ExcitedWheelAssembly(; mirror=false, rod_radius)
         excited_suspension_l = ExcitedWheelAssembly(; mirror=true, rod_radius)
@@ -389,9 +389,9 @@ Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
-        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
+        back_front = BodyShape(m=ms/2, r = [-2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
         back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
 
         excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
@@ -446,9 +446,13 @@ defs = [
     model.excited_suspension_fl.suspension.cs =&gt; 5*4000
     model.excited_suspension_fl.suspension.r2.phi =&gt; -0.6031
 
+    model.excited_suspension_fr.wheel.frame_a.render =&gt; true # To visualize one wheel rolling
+    model.excited_suspension_fr.wheel.frame_a.radius =&gt; 0.01
+    model.excited_suspension_fr.wheel.frame_a.length =&gt; 0.3
+
     model.ms =&gt; 1500
 
-    model.back_front.body.r_0[1] =&gt; -2.0
+    model.back_front.body.r_0[1] =&gt; 0
     model.back_front.body.r_0[2] =&gt; 0.193
     model.back_front.body.r_0[3] =&gt; 0.0
     model.back_front.body.v_0[1] =&gt; 1
@@ -463,4 +467,4 @@ sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 
 # plot(sol, layout=length(unknowns(ssys)), size=(1900,1200))
 import GLMakie
-Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.7, z=0.15, lookat=[0,0.1,0.0], timescale=1, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 24.117122 seconds (84.40 M allocations: 4.767 GiB, 12.43% gc time, 0.44% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 2 October 2024 16:55">Wednesday 2 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.7, z=0.15, lookat=[0,0.1,0.0], timescale=1, filename=&quot;suspension_fullcar_wheels.gif&quot;) # Video</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">simplification: 22.661935 seconds (84.39 M allocations: 4.767 GiB, 5.26% gc time, 0.32% compilation time)</code></pre><p><img src="../suspension_fullcar_wheels.gif" alt="suspension with 4 wheels"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../wheel/">« Wheels</a><a class="docs-footer-nextpage" href="../quad/">Quadrotor with cable-suspended load »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 3 October 2024 01:42">Thursday 3 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
