@@ -1,4 +1,4 @@
-# Trajectory_planning
+# Trajectory planning
 
 Two methods of planning trajectories are available
 - [`point_to_point`](@ref): Generate a minimum-time point-to-point trajectory with specified start and endpoints, not exceeding specified speed and acceleration limits.
