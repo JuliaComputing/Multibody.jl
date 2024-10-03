@@ -3,7 +3,6 @@ using Multibody, JuliaSimCompiler
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 t = Multibody.t
-W(args...; kwargs...) = Multibody.world
 
 
 JULIASIM_PURPLE = [87,87,219,255.0f0]./255 # RGBA

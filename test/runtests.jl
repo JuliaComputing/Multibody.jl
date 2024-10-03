@@ -8,7 +8,7 @@ t = Multibody.t
 D = Differential(t)
 doplot() = false
 world = Multibody.world
-W(args...; kwargs...) = Multibody.world
+
 
 @testset "world" begin
     @info "Testing world"
@@ -388,7 +388,7 @@ end
 
 @testset "Spring damper system" begin
 systems = @named begin
-    world = W()
+    world = World()
     body1 = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], I_11 = 0.1, I_22 = 0.1,
                  I_33 = 0.1, r_0 = [0.3, -0.2, 0], quat=false) # This is root since there is no joint parallel to the spring leading to this body
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
@@ -565,7 +565,7 @@ end
 using LinearAlgebra
 @mtkmodel PlanarTest begin
     @components begin
-        world = W()
+        world = World()
         planar = Planar(n=[0,0,1], n_x=[1,0,0])
         force = Force()
         body = Body(m=1)
@@ -1054,7 +1054,7 @@ using LinearAlgebra
     world = Multibody.world
     @mtkmodel CylinderPend begin
         @components begin
-            world = W()
+            world = World()
             body = BodyCylinder(r=[1,2,3], diameter=0.1)
             joint = Revolute()
         end
@@ -1102,7 +1102,7 @@ using LinearAlgebra
     @info "Testing BodyBox"
     @mtkmodel BoxPend begin
         @components begin
-            world = W()
+            world = World()
             body = Multibody.BodyBox(r=[0.1, 1, 0.2], r_shape=[0, 0, 0], width=0.1, height=0.3, inner_width=0.05)
             joint = Revolute()
         end
@@ -1217,7 +1217,7 @@ sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 
 @mtkmodel TestSphericalSpherical begin
     @components begin
-        world = W()
+        world = World()
         ss = SphericalSpherical(r_0 = [1, 0, 0], m = 1, kinematic_constraint=false)
         ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
         s = Spherical()
@@ -1248,7 +1248,7 @@ sol = solve(prob, Rodas4())
 
 @mtkmodel TestSphericalSpherical begin
     @components begin
-        world = W()
+        world = World()
         ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false, sphere_diameter=0.3)
         ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
         s = Spherical()
@@ -1291,7 +1291,7 @@ end
 # Test cylindrical joint
 @mtkmodel CylinderTest begin
     @components begin
-        world = W()
+        world = World()
         cyl = Cylindrical(n = [0, 1, 0])
         # spring = Spring(c = 1)
         body = Body(state_priority=0)
@@ -1352,7 +1352,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         jr = 0.03, [description = "Radius of revolute joint"]
     end
     @components begin
-        world = W()
+        world = World()
 
         r1 = Revolute(; n, radius=jr, color=jc)
         r2 = Revolute(; n, radius=jr, color=jc)
@@ -1482,7 +1482,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         rRod2_ib = BC*normalize([0, 0.2, 0])
     end
     @components begin
-        world = W()
+        world = World()
 
         r123 = JointRRR(n_a = n, n_b = n, rRod1_ia, rRod2_ib, rod_radius=0.02, rod_color=jc)
         r2 = Revolute(; n, radius=jr, color=jc)

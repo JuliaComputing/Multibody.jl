@@ -18,7 +18,6 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-W(args...; kwargs...) = Multibody.world
 
 n = [1, 0, 0]
 AB = 146.5 / 1000
@@ -137,7 +136,7 @@ end
         dir = mirror ? -1 : 1
     end
     @components begin
-        world = W()
+        world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)*dir]))
         excited_suspension = SuspensionWithExcitation(; suspension.spring=true, mirror, rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)

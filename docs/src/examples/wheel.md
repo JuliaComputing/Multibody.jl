@@ -31,11 +31,10 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-W(args...; kwargs...) = Multibody.world
 
 @mtkmodel WheelInWorld begin
     @components begin
-        world = W()
+        world = World()
         wheel = RollingWheel(
             radius = 0.3,
             m = 2,
@@ -104,7 +103,7 @@ The slip velocity is defined such that when the wheel is moving with positive ve
 ```@example WHEEL
 @mtkmodel SlipWheelInWorld begin
     @components begin
-        world = W()
+        world = World()
         wheel = SlippingWheel(
             radius = 0.3,
             m = 2,
@@ -164,7 +163,7 @@ A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common a
         wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5, state_priority=100)
         bar = FixedTranslation(r = [0.2, 0, 0])
         body = Body(m=0.01, state_priority=1)
-        world = W()
+        world = World()
     end
     @equations begin
         connect(sine1.output, torque1.tau)
@@ -216,7 +215,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
         g=0
     end
     @components begin
-        world = W()
+        world = World()
 
         sine1 = Blocks.Sine(frequency=1, amplitude=150)
         sine2 = Blocks.Sine(frequency=1, amplitude=150, phase=pi/6)

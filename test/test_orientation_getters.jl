@@ -2,7 +2,7 @@ using Test
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 @mtkmodel FurutaPendulum begin
     @components begin
-        world = W()
+        world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, axisflange = true, phi0=0.1)
         upper_arm = BodyShape(; m = 1, isroot = false, r = [0, 0, 0.6], radius=0.04)

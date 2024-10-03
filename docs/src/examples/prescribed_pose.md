@@ -30,7 +30,7 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-W(args...; kwargs...) = Multibody.world
+
 
 n = [1, 0, 0]
 AB = 146.5 / 1000
@@ -131,7 +131,7 @@ end
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)]))
         excited_suspension = ExcitedWheelAssembly(; rod_radius)
         prescribed_motion = Pose(; r = [0, 0.1 + 0.1sin(t), 0], R = RotXYZ(0, 0.5sin(t), 0))
