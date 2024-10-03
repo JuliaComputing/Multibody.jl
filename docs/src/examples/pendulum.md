@@ -326,11 +326,18 @@ We start by putting the model together and control it in open loop using a simpl
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 import ModelingToolkitStandardLibrary.Blocks
 using Plots
-W(args...; kwargs...) = Multibody.world
 gray = [0.5, 0.5, 0.5, 1]
 @mtkmodel Cartpole begin
+    @structural_parameters begin
+        use_world = false
+    end
     @components begin
-        world = W()
+        if use_world
+            fixed = World()
+        else
+            # In case we wrap this model in an outer model below, we place the world there instead
+            fixed = Fixed() 
+        end
         cart = BodyShape(m = 1, r = [0.2, 0, 0], color=[0.2, 0.2, 0.2, 1], shape="box")
         mounting_point = FixedTranslation(r = [0.1, 0, 0])
         prismatic = Prismatic(n = [1, 0, 0], axisflange = true, color=gray, state_priority=100)
@@ -347,7 +354,7 @@ gray = [0.5, 0.5, 0.5, 1]
         w(t)
     end
     @equations begin
-        connect(world.frame_b, prismatic.frame_a)
+        connect(fixed.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, cart.frame_a, mounting_point.frame_a)
         connect(mounting_point.frame_b, revolute.frame_a)
         connect(revolute.frame_b, pendulum.frame_a)
@@ -363,6 +370,7 @@ gray = [0.5, 0.5, 0.5, 1]
 end
 @mtkmodel CartWithInput begin
     @components begin
+        world = World()
         cartpole = Cartpole()
         input = Blocks.Cosine(frequency=1, amplitude=1)
     end
@@ -387,14 +395,14 @@ nothing # hide
 
 ### Adding feedback
 
-We will attempt to stabilize the pendulum in the upright position by using feedback control. To design the contorller, we linearize the model in the upward equilibrium position and design an infinite-horizon LQR controller using ControlSystems.jl. We then connect the controller to the motor on the cart. See also [RobustAndOptimalControl.jl: Control design for a pendulum on a cart](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/cartpole/) for a similar example with more detail on the control design.
+We will attempt to stabilize the pendulum in the upright position by using feedback control. To design the controller, we linearize the model in the upward equilibrium position and design an infinite-horizon LQR controller using ControlSystems.jl. We then connect the controller to the motor on the cart. See also [RobustAndOptimalControl.jl: Control design for a pendulum on a cart](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/cartpole/) for a similar example with more detail on the control design.
 
 ### Linearization
 We start by linearizing the model in the upward equilibrium position using the function `ModelingToolkit.linearize`.
 ```@example pendulum
 import ModelingToolkit: D_nounits as D
 using LinearAlgebra
-@named cp = Cartpole()
+@named cp = Cartpole(use_world = true)
 cp = complete(cp)
 inputs = [cp.u] # Input to the linearized system
 outputs = [cp.x, cp.phi, cp.v, cp.w] # These are the outputs of the linearized system
@@ -436,6 +444,7 @@ LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
 
 @mtkmodel CartWithFeedback begin
     @components begin
+        world = World()
         cartpole = Cartpole()
         reference = Blocks.Step(start_time = 5, height=0.5)
         control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
@@ -489,6 +498,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 
 @mtkmodel CartWithSwingup begin
     @components begin
+        world = World()
         cartpole = Cartpole()
         L = Blocks.MatrixGain(K = Lmat) # Here we use the LQR controller instead
         control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude

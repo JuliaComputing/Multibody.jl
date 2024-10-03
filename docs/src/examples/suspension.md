@@ -101,7 +101,7 @@ mirror = false
         dir = mirror ? -1 : 1
     end
     @components begin
-        world = W()
+        fixed = Fixed()
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
 
@@ -115,7 +115,7 @@ mirror = false
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
-        connect(world.frame_b, actuation_position.frame_a)
+        connect(fixed.frame_b, actuation_position.frame_a)
         connect(actuation_position.frame_b, wheel_prismatic.frame_a)
         connect(wheel_prismatic.frame_b, actuation_rod.frame_a,)
         connect(actuation_rod.frame_b, suspension.r123.frame_ib)
@@ -200,7 +200,7 @@ In the example below, we extend the previous example to a half-car model with tw
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = SuspensionWithExcitation(; suspension.spring=true, mirror=false, rod_radius,
             actuation_position.r = [0, 0, (CD+wheel_base/2)],
@@ -329,7 +329,7 @@ end
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)]))
         excited_suspension = ExcitedWheelAssembly(; rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
@@ -375,7 +375,7 @@ nothing # hide
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = ExcitedWheelAssembly(; mirror=false, rod_radius)
         excited_suspension_l = ExcitedWheelAssembly(; mirror=true, rod_radius)
@@ -451,9 +451,9 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
         rod_radius = 0.02
     end
     @components begin
-        world = W()
+        world = World()
         front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
-        back_front = BodyShape(m=ms/2, r = [2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
+        back_front = BodyShape(m=ms/2, r = [-2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
         back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
 
         excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
@@ -508,9 +508,13 @@ defs = [
     model.excited_suspension_fl.suspension.cs => 5*4000
     model.excited_suspension_fl.suspension.r2.phi => -0.6031
 
+    model.excited_suspension_fr.wheel.frame_a.render => true # To visualize one wheel rolling
+    model.excited_suspension_fr.wheel.frame_a.radius => 0.01
+    model.excited_suspension_fr.wheel.frame_a.length => 0.3
+
     model.ms => 1500
 
-    model.back_front.body.r_0[1] => -2.0
+    model.back_front.body.r_0[1] => 0
     model.back_front.body.r_0[2] => 0.193
     model.back_front.body.r_0[3] => 0.0
     model.back_front.body.v_0[1] => 1
