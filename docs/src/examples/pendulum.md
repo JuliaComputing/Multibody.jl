@@ -1,5 +1,5 @@
 # Pendulum--The "Hello World of multi-body dynamics"
-This beginners tutorial will start by modeling a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
+This beginners tutorial will start by modeling a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included exactly once in all models, at the top level.
 
 To start, we load the required packages
 ```@example pendulum
@@ -47,9 +47,9 @@ nothing # hide
 ```
 The `ODESystem` is the fundamental model type in ModelingToolkit used for multibody-type models.
 
-Before we can simulate the system, we must perform model compilation using [`structural_simplify`](@ref)
+Before we can simulate the system, we must perform model check using the function [`multibody`](@ref) and compilation using [`structural_simplify`](@ref)
 ```@example pendulum
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 ```
 This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
 
