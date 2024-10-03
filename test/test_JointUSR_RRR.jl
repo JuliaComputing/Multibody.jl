@@ -8,7 +8,7 @@ using LinearAlgebra
 using JuliaSimCompiler
 
 world = Multibody.world
-W(args...; kwargs...) = Multibody.world
+
 t = Multibody.t
 D = Differential(t)
 
@@ -17,7 +17,7 @@ D = Differential(t)
 # ==============================================================================
 @mtkmodel TestUSR begin
     @components begin
-        world = W()
+        world = World()
         j1 = JointUSR(positive_branch=true, use_arrays=false)
         fixed = FixedTranslation(r=[1,0,0])
         b1 = Body(m=1)
@@ -33,7 +33,7 @@ end
 
 @named model = TestUSR()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 @test length(unknowns(ssys)) == 2
 ##
 
@@ -48,7 +48,7 @@ sol = solve(prob, FBDF(autodiff=true))
 # ==============================================================================
 @mtkmodel TestRRR begin
     @components begin
-        world = W()
+        world = World()
         j1 = JointRRR(positive_branch=true)
         fixed = FixedTranslation(r=[1,0,0])
         b1 = Body(m=1)
@@ -64,7 +64,7 @@ end
 
 @named model = TestRRR()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 @test length(unknowns(ssys)) == 2
 ##
 

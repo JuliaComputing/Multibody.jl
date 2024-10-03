@@ -310,7 +310,6 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
         """
         using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
         import ModelingToolkit: t_nounits as t, D_nounits as D
-        W(args...; kwargs...) = Multibody.world
         """
     else 
         ""
@@ -318,7 +317,7 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
     s = s * """
     @mtkmodel $(modelname) begin
         @components begin
-            world = W()
+            world = World()
             $(join(bodies, "\n"))
             $(join(joints, "\n"))
         end
@@ -332,7 +331,7 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
         s = s * """
         @named model = $(modelname)()
         model = complete(model)
-        ssys = structural_simplify(IRSystem(model))
+        ssys = structural_simplify(multibody(model))
         prob = ODEProblem(ssys, [], (0.0, 10.0))
         sol = solve(prob, $(solver)())
         plot(sol) |> display

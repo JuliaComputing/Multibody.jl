@@ -1,7 +1,7 @@
 module Render
 using Makie
 using Multibody
-import Multibody: render, render!, loop_render, encode, decode, get_rot, get_trans, get_frame
+import Multibody: render, render!, loop_render, encode, decode, get_rot, get_trans, get_frame, get_systemtype
 import Multibody.PlanarMechanics as P
 using Rotations
 using LinearAlgebra
@@ -204,13 +204,6 @@ function get_frame_fun(sol, frame)
     end
 end
 
-
-"get_systemtype(sys): Get the constructor of a component for dispatch purposes. This only supports components that have the `gui_metadata` property set. If no metadata is available, nothing is returned."
-function get_systemtype(sys)
-    meta = getfield(sys, :gui_metadata)
-    meta === nothing && return nothing
-    eval(meta.type)
-end
 
 function get_color(sys, sol, default, var_name = :color)
     try
@@ -786,7 +779,7 @@ function render!(scene, ::Union{typeof(RollingWheelJoint), typeof(SlipWheelJoint
         width = radius/10
         p1 = Point3f(O + width*n_w)
         p2 = Point3f(O - width*n_w)
-        Makie.GeometryBasics.Cylinder(p1, p2, radius)
+        Makie.normal_mesh(Makie.Tesselation(Makie.GeometryBasics.Cylinder(p1, p2, radius), 64))
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true

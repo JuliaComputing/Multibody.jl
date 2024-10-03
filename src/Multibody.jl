@@ -60,6 +60,44 @@ function benchmark_f(prob)
     @eval Main @btime $(prob.f)($dx, $x, $p, 0.0)
 end
 
+"get_systemtype(sys): Get the constructor of a component for dispatch purposes. This only supports components that have the `gui_metadata` property set. If no metadata is available, nothing is returned."
+function get_systemtype(sys)
+    meta = getfield(sys, :gui_metadata)
+    meta === nothing && return nothing
+    eval(meta.type)
+end
+
+export multibody
+
+"""
+    multibody(model)
+
+Perform validity checks on the model, such as the precense of exactly one world component in the top level of the model, and transform the model into an `IRSystem` object for passing into `structural_simplify`.
+"""
+function multibody(model, level=0)
+    found_world = false
+    found_planar = false
+    for subsys in model.systems
+        system_type = get_systemtype(subsys)
+        subsys_ns = getproperty(model, subsys.name)
+        isworld = system_type == World
+        isplanar = system_type !== nothing && parentmodule(system_type) == PlanarMechanics
+        found_world = found_world || isworld
+        found_planar = found_planar || isplanar
+        multibody(subsys_ns, level + 1)
+    end
+    if level == 0 && !found_world && !found_planar
+        @warn("No world found in the top level of the model, this may lead to missing equations")
+    elseif level != 0 && found_world
+        @warn("World found in a non-top level component ($(nameof(model))) of the model, this may lead to extra equations. Consider using the component `Fixed` instead of `World` in component models.")
+    end
+    if level == 0
+        return IRSystem(model)
+    else
+        return nothing
+    end
+end
+
 """
     scene       = render(model, prob)
     scene, time = render(model, sol, t::Real; framerate = 30, traces = [])

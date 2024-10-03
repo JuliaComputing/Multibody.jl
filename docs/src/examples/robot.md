@@ -21,7 +21,7 @@ The robot is a medium sized system with some 2000 equations before simplificatio
 
 After simplification, the following states are chosen:
 ```@example robot
-ssys = structural_simplify(IRSystem(robot))
+ssys = structural_simplify(multibody(robot))
 unknowns(ssys)
 ```
     

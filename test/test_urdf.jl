@@ -11,7 +11,7 @@ include("doublependulum.jl")
 
 using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq#, Plots
 import ModelingToolkit: t_nounits as t, D_nounits as D
-W(args...; kwargs...) = Multibody.world
+
 @named model = DoublePendulum()
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))

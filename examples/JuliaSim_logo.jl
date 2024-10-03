@@ -3,7 +3,6 @@ using Multibody, JuliaSimCompiler
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 t = Multibody.t
-W(args...; kwargs...) = Multibody.world
 
 
 JULIASIM_PURPLE = [87,87,219,255.0f0]./255 # RGBA
@@ -51,7 +50,7 @@ end
 
 @named logo = Logo()
 logo = complete(logo)
-ssys = structural_simplify(IRSystem(logo))
+ssys = structural_simplify(multibody(logo))
 prob = ODEProblem(ssys, [], (0.0, 3.51))
 sol = solve(prob, Rodas5P())
 Plots.plot(sol)

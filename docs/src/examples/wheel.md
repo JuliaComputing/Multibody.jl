@@ -31,11 +31,10 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-W(args...; kwargs...) = Multibody.world
 
 @mtkmodel WheelInWorld begin
     @components begin
-        world = W()
+        world = World()
         wheel = RollingWheel(
             radius = 0.3,
             m = 2,
@@ -57,7 +56,7 @@ defs = Dict([
     worldwheel.wheel.body.r_0[3] => 0.2;
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = structural_simplify(multibody(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -104,7 +103,7 @@ The slip velocity is defined such that when the wheel is moving with positive ve
 ```@example WHEEL
 @mtkmodel SlipWheelInWorld begin
     @components begin
-        world = W()
+        world = World()
         wheel = SlippingWheel(
             radius = 0.3,
             m = 2,
@@ -135,7 +134,7 @@ defs = Dict([
     worldwheel.wheel.frame_a.radius => 0.01;
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = structural_simplify(multibody(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 3))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -164,7 +163,7 @@ A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common a
         wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5, state_priority=100)
         bar = FixedTranslation(r = [0.2, 0, 0])
         body = Body(m=0.01, state_priority=1)
-        world = W()
+        world = World()
     end
     @equations begin
         connect(sine1.output, torque1.tau)
@@ -178,7 +177,7 @@ end
 
 @named model = DrivingWheelSet()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 # display(unknowns(ssys))
 prob = ODEProblem(ssys, [
     model.wheels.wheelSetJoint.prismatic1.s => 0.1
@@ -216,7 +215,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
         g=0
     end
     @components begin
-        world = W()
+        world = World()
 
         sine1 = Blocks.Sine(frequency=1, amplitude=150)
         sine2 = Blocks.Sine(frequency=1, amplitude=150, phase=pi/6)
@@ -246,7 +245,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
 end
 @named model = Car()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [], (0, 6))
 sol = solve(prob, Tsit5())
@@ -286,7 +285,7 @@ import Multibody.PlanarMechanics as Pl
 end
 @named model = TestWheel()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = Dict(unknowns(ssys) .=> 0)
 prob = ODEProblem(ssys, defs, (0.0, 10.0))
 sol = solve(prob, Rodas5P())
@@ -352,7 +351,7 @@ end
 
 @named model = TestSlipBasedWheel()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
     model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
@@ -482,7 +481,7 @@ end
 
 @named model = TwoTrackWithDifferentialGear()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = merge(
     Dict(unknowns(ssys) .=> 0),
     ModelingToolkit.defaults(model),

@@ -5,7 +5,7 @@ using JuliaSimCompiler
 using OrdinaryDiffEq
 doplot() = false
 world = Multibody.world
-W(args...; kwargs...) = Multibody.world
+
 t = Multibody.t
 D = Differential(t)
 
@@ -14,7 +14,7 @@ D = Differential(t)
 # ==============================================================================
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b = Body(m=1, state=true, isroot=true, quat=false, neg_w=false)
@@ -46,7 +46,7 @@ sol = solve(prob, Tsit5())
 # Tests here pass for any combination of quat and neg_w
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         force = WorldForce()
         body = Body(m=1, state=true, isroot=true, quat=false, neg_w=false)
     end
@@ -84,7 +84,7 @@ sol = solve(prob, Tsit5())
 # ==============================================================================
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:world)
         forceb = WorldForce(resolve_frame=:world)
         body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=true)
@@ -124,7 +124,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
 # ==============================================================================
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         body = BodyShape(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=true)
@@ -162,7 +162,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
 # ==============================================================================
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         body = BodyCylinder(r=[1,0,0], state=true, isroot=true, quat=false, neg_w=true, density=1, diameter=0.1)
@@ -202,7 +202,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
 using LinearAlgebra
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         forceb = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         b0 = Body(m=1e-32, I_11=1e-32, I_22=1e-32, I_33=1e-32, state_priority=0, radius=0.14, color=[1,0,0,0.5])
@@ -244,7 +244,7 @@ sol = solve(prob, Rodas4(), reltol=1e-8)
 # ==============================================================================
 @mtkmodel TestWorldForce begin 
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         forceb = WorldForce(resolve_frame=:frame_b, radius=0.15, scale=0.2)
         b0 = Body(m=1e-32, I_11=1e-32, I_22=1e-32, I_33=1e-32, state_priority=0, radius=0.14, color=[1,0,0,0.5])
@@ -289,7 +289,7 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 # =============================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0, radius=0.1, color=[0,0,1,0.2])
@@ -325,7 +325,7 @@ reshape(sol(1, idxs = [testwf.forceb.frame_b.f; testwf.forcea.frame_b.f; testwf.
 
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0, radius=0.1, color=[0,0,1,0.2])
@@ -358,7 +358,7 @@ sol = solve(prob, Tsit5())
 
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         body = Body(m=1, state=true, isroot=true, quat=false, radius=0.05, color=[1,0,0,1])
@@ -392,7 +392,7 @@ sol = solve(prob, Tsit5())
 # ==============================================================================
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)
         b0 = Body(m=1, state_priority=0)
@@ -444,7 +444,7 @@ sol(1, idxs=testwf.b0.w_a)
 # This works with both quat and Euler
 @mtkmodel TestWorldForce begin
     @components begin
-        world = W()
+        world = World()
         freemotion = FreeMotion(state=true, isroot=true, quat=false)
         forcea = WorldForce(resolve_frame=:frame_b)
         forceb = WorldForce(resolve_frame=:frame_b)

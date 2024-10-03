@@ -2,7 +2,7 @@ using Test
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 @mtkmodel FurutaPendulum begin
     @components begin
-        world = W()
+        world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, axisflange = true, phi0=0.1)
         upper_arm = BodyShape(; m = 1, isroot = false, r = [0, 0, 0.6], radius=0.04)
@@ -30,7 +30,7 @@ end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1, model.world.g => 9.81], (0, 12))
 sol = solve(prob, Rodas4())
