@@ -1,9 +1,11 @@
 using LinearAlgebra
+using ModelingToolkit: get_metadata
 import ModelingToolkitStandardLibrary
 
 function isroot(sys)
-    sys.metadata isa Dict || return false
-    get(sys.metadata, :isroot, false)
+    md = get_metadata(sys)
+    md isa Dict || return false
+    get(md, :isroot, false)
 end
 
 purple = [0.5019608f0,0.0f0,0.5019608f0,1.0f0]
@@ -13,12 +15,13 @@ purple = [0.5019608f0,0.0f0,0.5019608f0,1.0f0]
 
 Get the orientation of `sys` as a `RotationMatrix` object. See also [`get_rot`](@ref). `ori(frame).R` is the rotation matrix that rotates a vector from the world coordinate system to the local frame.
 
-For frames, the orientation is stored in the metadata field of the system as `sys.metadata[:orientation]`.
+For frames, the orientation is stored in the metadata field of the system as `get_metadata(sys)[:orientation]`.
 
 If `varw = true`, the angular velocity variables `w` of the frame is also included in the `RotationMatrix` object, otherwise `w` is derived as the time derivative of `R`. `varw = true` is primarily used when selecting a component as root.
 """
 function ori(sys, varw = false)
-    if sys.metadata isa Dict && (O = get(sys.metadata, :orientation, nothing)) !== nothing
+    md = get_metadata(sys)
+    if md isa Dict && (O = get(md, :orientation, nothing)) !== nothing
         R = collect(O.R)
         # Since we are using this function instead of sys.ori, we need to handle namespacing properly as well
         ns = nameof(sys)
