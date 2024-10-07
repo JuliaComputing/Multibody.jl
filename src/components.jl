@@ -99,7 +99,7 @@ const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 function gravity_acceleration(r)
-    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
+    inner_gravity(GlobalScope(world.point_gravity_inner), GlobalScope(world.mu_inner), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
 end
 
 function inner_gravity(point_gravity, mu, g, n, r)
