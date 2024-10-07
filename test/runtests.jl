@@ -1,3 +1,5 @@
+include("windows_crash.jl")
+
 using ModelingToolkit
 using Multibody
 using Test
