@@ -1,7 +1,11 @@
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 JuliaSimCompiler = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
+LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 Multibody = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"

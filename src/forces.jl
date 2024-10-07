@@ -500,21 +500,30 @@ f = c (s - s_{unstretched}) + d \\cdot D(s)
 ```
 where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between the origin of `frame_a` and the origin of `frame_b` and `D(s)` is the time derivative of `s`.
 """
-@component function SpringDamperParallel(; name, c, d, s_unstretched=0, kwargs...)
+@component function SpringDamperParallel(; name, c, d, s_unstretched=0,
+    color = [0, 0, 1, 1], radius = 0.1, N = 200, num_windings = 6, kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
 
-    @parameters c=c [description = "spring constant", bounds = (0, Inf)]
-    @parameters d=d [description = "damping constant", bounds = (0, Inf)]
-    @parameters s_unstretched=s_unstretched [
-        description = "unstretched length of spring",
-        bounds = (0, Inf),
-    ]
+    pars = @parameters begin
+        c=c, [description = "spring constant", bounds = (0, Inf)]
+        d=d, [description = "damping constant", bounds = (0, Inf)]
+        s_unstretched=s_unstretched, [
+            description = "unstretched length of spring",
+            bounds = (0, Inf),
+        ]
+        color[1:4] = color, [description = "Color of the spring when rendered"]
+        radius = radius, [description = "Radius of spring when rendered"]
+        N = N, [description = "Number of points in mesh when rendered"]
+        num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
+    end
+    # pars = collect_all(pars)
+    
 
     f_d = d * D(s)
     eqs = [
            f ~ c * (s - s_unstretched) + f_d
            # lossPower ~ f_d*der(s)
            ]
-    extend(ODESystem(eqs, t; name), plf)
+    extend(ODESystem(eqs, t, [], pars; name), plf)
 end

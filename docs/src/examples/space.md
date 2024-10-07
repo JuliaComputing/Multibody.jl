@@ -23,11 +23,10 @@ using OrdinaryDiffEq
 
 t = Multibody.t
 D = Differential(t)
-W(;kwargs...) = Multibody.world
 
 @mtkmodel PointGrav begin
     @components begin
-        world = W()
+        world = World()
         body1 = Body(
             m=1,
             I_11=0.1,
@@ -50,7 +49,7 @@ W(;kwargs...) = Multibody.world
 end
 @named model = PointGrav()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = [
     model.world.mu => 1
     model.world.point_gravity => true # The gravity model is selected here

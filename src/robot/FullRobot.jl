@@ -158,6 +158,7 @@ function Robot6DOF(; name, kwargs...)
     q16 = 45 # Can't yet have these as parameters
 
     systems = @named begin
+        world = World()
         mechanics = MechanicalStructure(mLoad = (mLoad),
                                         rLoad = (rLoad),
                                         g = (g))

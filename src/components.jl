@@ -11,7 +11,7 @@ purple = [0.5019608f0,0.0f0,0.5019608f0,1.0f0]
 """
     ori(frame, varw = false)
 
-Get the orientation of `sys` as a `RotationMatrix` object.
+Get the orientation of `sys` as a `RotationMatrix` object. See also [`get_rot`](@ref). `ori(frame).R` is the rotation matrix that rotates a vector from the world coordinate system to the local frame.
 
 For frames, the orientation is stored in the metadata field of the system as `sys.metadata[:orientation]`.
 
@@ -36,7 +36,19 @@ function ori(sys, varw = false)
 end
 
 """
-    World(; name, render=true)
+    World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
+
+All multibody models must include exactly one world component defined at the top level. The `frame_b` of the world is fixed in the origin.
+
+If a connection to the world is needed in a component model, use [`Fixed`](@ref) instead.
+
+# Arguments
+- `name`: Name of the world component
+- `render`: Render the component in animations
+- `point_gravity`: If `true`, the gravity is always opinting towards a single point in space. If `false`, the gravity is always pointing in the same direction `n`.
+- `n`: Gravity direction unit vector, defaults to [0, -1, 0], only applicable if `point_gravity = false`
+- `g`: Gravitational acceleration, defaults to 9.80665
+- `mu`: Gravity field constant, defaults to 3.986004418e14, only applicable to point gravity
 """
 @component function World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
     # World should have
@@ -47,18 +59,37 @@ end
     g0 = g
     mu0 = mu
     @named frame_b = Frame()
-    @parameters n[1:3]=n0 [description = "gravity direction of world"]
+
+    @parameters n[1:3] = n0 [description = "gravity direction"]
     @parameters g=g0 [description = "gravitational acceleration of world"]
     @parameters mu=mu0 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
     @parameters point_gravity = point_gravity
+
+    @variables n_inner(t)[1:3]
+    @variables g_inner(t)
+    @variables mu_inner(t)
+    @variables render_inner(t)
+    @variables point_gravity_inner(t)
+
     n = Symbolics.scalarize(n)
+    n_inner = GlobalScope.(Symbolics.scalarize(n_inner))
+    g_inner = GlobalScope(g_inner)
+    mu_inner = GlobalScope(mu_inner)
+    render_inner = GlobalScope(render_inner)
+    point_gravity_inner = GlobalScope(point_gravity_inner)
+
     O = ori(frame_b)
     eqs = Equation[
         collect(frame_b.r_0) .~ 0;
         O ~ nullrotation()
+        n_inner .~ n
+        g_inner ~ g
+        mu_inner ~ mu
+        render_inner ~ render
+        point_gravity_inner ~ point_gravity
     ]
-    ODESystem(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
+    ODESystem(eqs, t, [n_inner; g_inner; mu_inner; render_inner; point_gravity_inner], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
 end
 
 """
@@ -68,7 +99,7 @@ const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 function gravity_acceleration(r)
-    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g), GlobalScope.(collect(world.n)), collect(r))
+    inner_gravity(GlobalScope(world.point_gravity_inner), GlobalScope(world.mu_inner), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
 end
 
 function inner_gravity(point_gravity, mu, g, n, r)
@@ -79,6 +110,11 @@ function inner_gravity(point_gravity, mu, g, n, r)
 end
 
 
+"""
+    Fixed(; name, r = [0, 0, 0], render = true)
+
+A component rigidly attached to the world frame with translation `r` between the world and the `frame_b`. The position vector `r` is resolved in the world frame.
+"""
 @component function Fixed(; name, r = [0, 0, 0], render = true)
     systems = @named begin frame_b = Frame() end
     @parameters begin
@@ -87,6 +123,89 @@ end
     end
     eqs = [collect(frame_b.r_0 .~ r)
            ori(frame_b) ~ nullrotation()]
+    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    add_params(sys, [render]; name)
+end
+
+"""
+    Position(; name, r = [0, 0, 0], render = true, fixed_oreintation = true)
+
+Forced movement of a flange according to a reference position `r`. Similar to [`Fixed`](@ref), but `r` is not a parameter, and may thus be any time-varying symbolic expression. The reference position vector `r` is resolved in the world frame. Example: `r = [sin(t), 0, 0]`.
+
+# Arguments:
+- `r`: Position vector from world frame to frame_b, resolved in world frame
+- `render`: Render the component in animations
+- `fixed_oreintation`: If `true`, the orientation of the frame is fixed to the world frame. If `false`, the orientation is free to change.
+
+See also [`Pose`](@ref) for a component that allows for forced orientation as well.
+"""
+@component function Position(; name, r = [0, 0, 0], render = true, fixed_oreintation = true)
+    systems = @named begin frame_b = Frame() end
+    @parameters begin
+        render = render, [description = "Render the component in animations"]
+    end
+    @variables begin
+        p(t)[1:3], [description = "Position vector from world frame to frame_b, resolved in world frame"]
+        v(t)[1:3], [description = "Absolute velocity of frame_b, resolved in world frame"]
+        a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
+    end
+    eqs = [
+        collect(frame_b.r_0 .~ r)
+        collect(frame_b.r_0 .~ p)
+        collect(v .~ D.(p))
+        collect(a .~ D.(v))
+        ]
+    if fixed_oreintation
+        append!(eqs, ori(frame_b) ~ nullrotation())
+    end
+    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    add_params(sys, [render]; name)
+end
+
+"""
+    Pose(; name, r = [0, 0, 0], R, q, render = true)
+
+Forced movement of a flange according to a reference position `r` and reference orientation `R`. The reference arrays `r` and `R` are resolved in the world frame, and may be any symbolic expression. As an alternative to specifying `R`, it is possible to specify a quaternion `q` (4-vector quaternion with real part first).
+
+Example usage:
+```
+using Multibody.Rotations
+R = RotXYZ(0, 0.5sin(t), 0)
+@named rot = Multibody.Pose(; r=[sin(t), 0, 0], R)
+```
+
+# Arguments 
+- `r`: Position vector from world frame to frame_b, resolved in world frame
+- `R`: Reference orientation matrix
+- `q`: Reference quaternion (optional alternative to `R`)
+- `render`: Render the component in animations
+- `normalize`: If a quaternion is provided, normalize the quaternion (default = true)
+
+See also [`Position`](@ref) for a component that allows for only forced translation.
+"""
+@component function Pose(; name, r = [0, 0, 0], R=nothing, q=nothing, render = true, normalize=true)
+    systems = @named begin frame_b = Frame() end
+    @parameters begin
+        render = render, [description = "Render the component in animations"]
+    end
+    @variables begin
+        p(t)[1:3], [description = "Position vector from world frame to frame_b, resolved in world frame"]
+        v(t)[1:3], [description = "Absolute velocity of frame_b, resolved in world frame"]
+        a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
+    end
+    eqs = [
+        collect(frame_b.r_0 .~ r)
+        collect(frame_b.r_0 .~ p)
+        collect(v .~ D.(p))
+        collect(a .~ D.(v))
+        if R !== nothing
+            ori(frame_b).R ~ R
+        elseif q !== nothing
+            ori(frame_b) ~ from_Q(q, 0; normalize)
+        else
+            error("Either R or q must be provided")
+        end
+    ]
     sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
     add_params(sys, [render]; name)
 end
@@ -158,7 +277,7 @@ Fixed translation followed by a fixed rotation of `frame_b` with respect to `fra
 To obtain an axis-angle representation of any rotation, see [Conversion between orientation formats](@ref)
 """
 @component function FixedRotation(; name, r=[0, 0, 0], n = [1, 0, 0], isroot = false,
-                       angle)
+                       angle, render=true)
     norm(n) ≈ 1 || error("n must be a unit vector")
     @named frame_a = Frame()
     @named frame_b = Frame()
@@ -177,8 +296,11 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
     @parameters angle(t)=angle [
         description = "angle of rotation in radians",
     ]
+    @parameters begin
+        render = render, [description = "Render the component in animations"]
+    end
 
-    pars = [r; n; angle]
+    pars = [r; n; angle; render]
 
     fa = frame_a.f |> collect
     fb = frame_b.f |> collect
@@ -211,7 +333,7 @@ end
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
-This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref).
+This component has a single frame, `frame_a`. To represent bodies with more than one frame, see [`BodyShape`](@ref), [`BodyCylinder`](@ref), [`BodyBox`](@ref). The inertia tensor is defined with respect to a coordinate system that is parallel to `frame_a` with the origin at the center of mass of the body.
 
 # Performance optimization
 - `sparse_I`: If `true`, the zero elements of the inerita matrix are considered "structurally zero", and this fact is used to optimize performance. When this option is enabled, the elements of the inertia matrix that were zero when the component was created cannot changed without reinstantiating the component. This performance optimization may be useful, e.g., when the inertia matrix is known to be diagonal.
@@ -390,11 +512,29 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 
 See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1, kwargs...)
+@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1,
+    height = 0.1_norm(r), width = height, shape = "cylinder",
+    I_11 = 0.001,
+    I_22 = 0.001,
+    I_33 = 0.001,
+    I_21 = 0,
+    I_31 = 0,
+    I_32 = 0,
+    kwargs...
+    )
+    pars = @parameters begin
+        m = m, [description = "mass"]
+        I_11=I_11, [description = "Element (1,1) of inertia tensor"]
+        I_22=I_22, [description = "Element (2,2) of inertia tensor"]
+        I_33=I_33, [description = "Element (3,3) of inertia tensor"]
+        I_21=I_21, [description = "Element (2,1) of inertia tensor"]
+        I_31=I_31, [description = "Element (3,1) of inertia tensor"]
+        I_32=I_32, [description = "Element (3,2) of inertia tensor"]
+    end
     systems = @named begin
-        translation = FixedTranslation(r = r)
-        translation_cm = FixedTranslation(r = r_cm)
-        body = Body(; m, r_cm, r_0, kwargs...)
+        translation = FixedTranslation(r = r, render=false)
+        translation_cm = FixedTranslation(r = r_cm, render=false)
+        body = Body(; m, r_cm, r_0, I_11, I_22, I_33, I_21, I_31, I_32, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
         frame_cm = Frame()
@@ -413,7 +553,8 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     ]
 
     shapecode = encode(shapefile)
-    @parameters begin
+    shape = encode(shape)
+    more_pars = @parameters begin
         r[1:3]=r, [
             description = "Vector from frame_a to frame_b resolved in frame_a",
         ]
@@ -422,10 +563,12 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         shapefile[1:length(shapecode)] = shapecode
         shape_transform[1:16] = vec(shape_transform)
         shape_scale = shape_scale
+        width = width, [description = """Width of the body in animations (if shape = "box")"""]
+        height = height, [description = """Height of the body in animations (if shape = "box")"""]
+        shape[1:length(shape)] = shape
     end
 
-
-    pars = [r; radius; color; shapefile; shape_transform; shape_scale]
+    pars = collect_all([pars; more_pars])
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 

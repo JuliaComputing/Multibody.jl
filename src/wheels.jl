@@ -267,15 +267,65 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
     compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
 end
 
-@component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.1, sSlide = 0.1, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
+
+
+"""
+    SlipWheelJoint(; name, radius, angles = zeros(3), der_angles = zeros(3), x0 = 0, y0 = radius, z0 = 0, sequence, iscut = false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
+
+Joint for a wheel with slip rolling on a surface. See https://people.inf.ethz.ch/fcellier/MS/andres_ms.pdf for details.
+
+!!! tip "Integrator choice"
+    The slip model contains a discontinuity in the second derivative at the transitions between adhesion and sliding. This can cause problems for integrators, in particular BDF-type integrators.
+
+!!! warn "Normal force"
+    The wheel cannot leave the ground. Make sure that the normal force `f_n` never becomes negative.
+
+# Parameters
+- `radius`: Radius of the wheel
+- `vAdhesion_min`: Minimum velocity for the peak of the adhesion curve (regularization close to 0)
+- `vSlide_min`: Minimum velocity for the start of the flat region of the slip curve (regularization close to 0)
+- `sAdhesion`: Adhesion slippage. The peak of the adhesion curve appears when the wheel slip is equal to `sAdhesion`.
+- `sSlide`: Sliding slippage. The flat region of the adhesion curve appears when the wheel slip is greater than `sSlide`.
+- `mu_A`: Friction coefficient at adhesion
+- `mu_S`: Friction coefficient at sliding
+- `surface`: By default, the wheel is rolling on a flat xz plane. A function `surface = (x, z)->y` may be provided to define a road surface. The function should return the height of the road at `(x, z)`. Note: if a function that depends on parameters is provided, make sure the parameters are scoped appropriately using, e.g., `ParentScope`.
+- `state`: (structural) whether or not the component has angular state variables. Default is `true`.
+
+# State and iscut
+When the wheel is mounted on an axis that is rooted, one may either supply `state=false` or `iscut = true`. With `state = false`, the angular state variables are not included in the wheel and there is thus no kinematic chain introduced. This reduces the total number of variables in the system. if the angular variables are required, one may instead pass `iscut=true` to cut the kinematic loop that is introduced when coupling the angles of the wheel to the orientation of the `frame_a`, unless this is cut elsewhere.
+
+# Understaning the slip model
+The following Julia code draws the slip model with descriptive labels
+```
+using Plots
+vAdhesion = 0.2
+vSlide = 0.4
+mu_A = 0.95
+mu_S = 0.7
+v = range(0, stop=1, length=500) # Simulating the slip velocity
+μ = Multibody.PlanarMechanics.limit_S_triple.(vAdhesion, vSlide, mu_A, mu_S, v)
+plot(v, μ, label=nothing, lw=2, color=:black, xlabel = "\$v_{Slip}\$", ylabel = "\$\\mu\$")
+scatter!([vAdhesion, vSlide], [mu_A, mu_S], color=:white, markerstrokecolor=:black)
+hline!([mu_A, mu_S], linestyle=:dash, color=:black, alpha=0.5)
+vline!([vAdhesion, vSlide], linestyle=:dash, color=:black, alpha=0.5)
+plot!(
+    xticks = ((vAdhesion, vSlide), ["\$v_{Adhesion}\$", "\$v_{Slide}\$"]),
+    yticks = ((mu_A, mu_S), ["\$\\mu_{adhesion}\$", "\$\\mu_{slide}\$"]),
+    framestyle = :zerolines,
+    legend = false,
+)
+```
+"""
+@component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0, v_small = 1e-5, state=true)
     @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
         vSlide_min = vSlide_min, [description = "Minimum sliding velocity"]
         sAdhesion = sAdhesion, [description = "Adhesion slippage"]
         sSlide = sSlide, [description = "Sliding slippage"]
-        mu_A = mu_A, [description = "Friction coefficient at adhesion"]
+        mu_A = mu_A, [description = "Friction coefficient at adhesion peak"]
         mu_S = mu_S, [description = "Friction coefficient at sliding"]
+        v_small = v_small, [description = "Small value added to v_slip to avoid division by zero in slip model."]
     end
     @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
@@ -339,15 +389,16 @@ end
         v_slip_long(t), [guess=0, description="Slip velocity in longitudinal direction"]
         v_slip_lat(t), [guess=0, description="Slip velocity in lateral direction"]
         v_slip(t), [description="Slip velocity, norm of component slip velocities"]
+        slip_ratio(t)
         f(t), [description="Total traction force"]
-        vAdhesion(t), [description="Adhesion velocity"]
-        vSlide(t), [description="Sliding velocity"]
+        vAdhesion(t), [description="Slip velocity at which adhesion is maximized"]
+        vSlide(t), [description="Slip velocity at which the flat region of the slip model starts"]
     end
 
     angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
-    @named frame_a = Frame(varw=true)
-    Ra = ori(frame_a, true)
+    @named frame_a = Frame(varw=state)
+    Ra = ori(frame_a, state)
 
     Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
 
@@ -371,22 +422,29 @@ end
 
     equations = [
                 equations;
-                connect_orientation(Ra, Rarot; iscut)   # Ra ~ Rarot
-                Ra.w ~ Rarot.w
 
-                phi_roll ~ angles[2]
-                w_roll ~ D(phi_roll)
+                if state
+                    [
+                        connect_orientation(Ra, Rarot; iscut)
+                        Ra.w ~ Rarot.w
+                        phi_roll ~ angles[2]
+                        w_roll ~ D(phi_roll)
+                        der_angles .~ D.(angles)
+
+                    ]
+                else
+                    w_roll ~ Ra.w[3] # w: Absolute angular velocity of local frame, resolved in local frame
+                end
 
                 # frame_a.R is computed from generalized coordinates
                 collect(frame_a.r_0) .~ [x, y, z]
-                der_angles .~ D.(angles)
 
 
-                # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
+                # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0), resolved in world frame
                 e_axis_0 .~ resolve1(Ra, [0, 0, 1])
                 aux .~ (cross(e_n_0, e_axis_0))
                 e_long_0 .~ (aux ./ _norm(aux))
-                e_lat_0 .~ (cross(e_long_0, e_n_0))
+                e_lat_0 .~ -(cross(e_long_0, e_n_0)) # wheel rotation axis and lateral axis are opposite
 
                 # Determine point on road where the wheel is in contact with the road
                 delta_0 .~ r_road_0 - frame_a.r_0
@@ -396,41 +454,80 @@ end
                 # One holonomic positional constraint equation (no penetration in to the ground)
                 0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
 
-                # Slip velocities
+                # Slip velocities (world frame)
                 v_0 .~ D.(frame_a.r_0)
                 w_0 .~ angular_velocity1(Ra)
                 vContact_0 .~ v_0 + cross(w_0, delta_0)
 
-                # Contact dynamics =============================================
+                # Contact dynamics (world frame) ===============================
 
                 v_slip_lat ~ vContact_0' * e_lat_0
                 v_slip_long ~ vContact_0' * e_long_0
                 # v_slip_lat ~ v_lat - 0
                 # v_slip_long ~ v_long - radius * w_roll
 
-                v_slip ~ sqrt(v_slip_long^2 + v_slip_lat^2) + 0.00001
+                v_slip ~ sqrt(v_slip_long^2 + v_slip_lat^2) + v_small
                 # -f_long * radius ~ flange_a.tau # No longer needed?
                 # frame_a.tau ~ 0
+                slip_ratio ~ v_slip_long / (v_0'e_long_0)
                 vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
                 vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
 
                 f ~ f_n * PlanarMechanics.limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip) # limit_S_triple(x_max, x_sat, y_max, y_sat, x)
-                f_long ~ -f * v_slip_long / v_slip
-                f_lat ~ -f * v_slip_lat / v_slip
+                f_long ~ f * v_slip_long / v_slip
+                f_lat ~ f * v_slip_lat / v_slip
 
-                # Contact force
-                f_wheel_0 .~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
+                # Contact force (world frame)
+                f_wheel_0 .~ f_n * e_n_0 - f_lat * e_lat_0 - f_long * e_long_0
 
                 # Force and torque balance at the wheel center
                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                 zeros(3) .~ collect(frame_a.tau) +
                             resolve2(Ra, cross(delta_0, f_wheel_0))]
+
+                    
+
+                # continuous_events = [
+                #     v_slip~vAdhesion
+                #     v_slip~vSlide
+                #     v_slip~mu_A
+                #     v_slip~mu_S
+                # ]
     compose(ODESystem(equations, t; name), frame_a)
 end
 
-@component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
+
+"""
+    SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
-    @named wheeljoint = SlipWheelJoint(; radius, angles, x0, z0, der_angles, kwargs...)
+
+Wheel with slip rolling on a surface.
+
+# Parameters
+- `radius`: Radius of the wheel
+- `m`: Mass of the wheel
+- `I_axis`: Moment of inertia of the wheel along its axis
+- `I_long`: Moment of inertia of the wheel perpendicular to its axis
+- `width`: Width of the wheel (for rendering)
+- `x0`: Initial x-position of the wheel axis
+- `z0`: Initial z-position of the wheel axis
+- `state`: (structural) whether or not the component has angular state variables. 
+
+# Variables
+- `x`: x-position of the wheel axis
+- `z`: z-position of the wheel axis
+- `angles`: Angles to rotate world-frame into `frame_a` around y-, z-, x-axis
+- `der_angles`: Derivatives of angles
+
+# Connectors
+- `frame_a`: Frame for the wheel component
+
+# Examples
+See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
+"""
+@component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
+                      angles = zeros(3), der_angles = zeros(3), state = true, kwargs...)
+    @named wheeljoint = SlipWheelJoint(; radius, angles, x0, z0, der_angles, state, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],
@@ -462,10 +559,13 @@ end
 
     equations = Equation[wheeljoint.x ~ x
                          wheeljoint.z ~ z
-                         collect(wheeljoint.angles) .~ collect(angles)
-                         collect(wheeljoint.der_angles) .~ collect(der_angles)
                          connect(body.frame_a, frame_a)
                          connect(wheeljoint.frame_a, frame_a)]
+    if state
+        append!(equations, [collect(wheeljoint.angles) .~ collect(angles)
+                            collect(wheeljoint.der_angles) .~ collect(der_angles)]
+        )
+    end
     compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
 end
 
@@ -833,8 +933,7 @@ function RollingWheelSet(;
         connect(wheelSetJoint.frame_middle, frame_middle)
     ]
 
-    sys = ODESystem(equations, t; name=:nothing, systems)
-    add_params(sys, [width_wheel]; name)
+    sys = ODESystem(equations, t, sts, pars; name, systems)
 
 end
 

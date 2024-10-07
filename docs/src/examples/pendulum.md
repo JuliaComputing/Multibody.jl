@@ -1,5 +1,5 @@
 # Pendulum--The "Hello World of multi-body dynamics"
-This beginners tutorial will start by modeling a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included in all models.
+This beginners tutorial will start by modeling a pendulum pivoted around the origin in the world frame. The world frame is a constant that lives inside the Multibody module, all multibody models are "grounded" in the same world, i.e., the `world` component must be included exactly once in all models, at the top level.
 
 To start, we load the required packages
 ```@example pendulum
@@ -42,15 +42,20 @@ nothing # hide
 With all components and connections defined, we can create an `ODESystem` like so:
 ```@example pendulum
 @named model = ODESystem(connections, t, systems=[world, joint, body])
+model = complete(model)
 nothing # hide
 ```
 The `ODESystem` is the fundamental model type in ModelingToolkit used for multibody-type models.
 
-Before we can simulate the system, we must perform model compilation using [`structural_simplify`](@ref)
+Before we can simulate the system, we must perform model check using the function [`multibody`](@ref) and compilation using [`structural_simplify`](@ref)
 ```@example pendulum
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 ```
 This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
+
+```@docs
+multibody
+```
 
 We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
 ```@example pendulum
@@ -88,7 +93,8 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(body.frame_a, joint.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, joint, body, damper])
-ssys = structural_simplify(IRSystem(model))
+model = complete(model)
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
 
@@ -120,7 +126,8 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(body_0.frame_a, joint.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
-ssys = structural_simplify(IRSystem(model))
+model = complete(model)
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -146,7 +153,8 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
                 connect(root_body.frame_a, multibody_spring.frame_b)]
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
-ssys = structural_simplify(IRSystem(model))
+model = complete(model)
+ssys = structural_simplify(multibody(model))
 
 defs = Dict(collect(root_body.r_0) .=> [0, 1e-3, 0]) # The spring has a singularity at zero length, so we start some distance away
 
@@ -163,7 +171,8 @@ push!(connections, connect(multibody_spring.spring2d.flange_a, damper.flange_a))
 push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
-ssys = structural_simplify(IRSystem(model))
+model = complete(model)
+ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
@@ -181,11 +190,10 @@ This pendulum, sometimes referred to as a _rotary pendulum_, has two joints, one
 using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Damper as RDamper
 import Multibody.Rotations
-W(args...; kwargs...) = Multibody.world
 
 @mtkmodel FurutaPendulum begin
     @components begin
-        world = W()
+        world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1)
         upper_arm = BodyShape(; m = 0.1, r = [0, 0, 0.6], radius=0.04)
@@ -213,7 +221,7 @@ end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
@@ -305,3 +313,241 @@ r_A = [r_A; 1] # Homogeneous coordinates
 get_frame(sol, model.lower_arm.frame_a, 12)*r_A
 ```
 the vector is now coinciding with `get_trans(sol, model.lower_arm.frame_b, 12)`.
+
+
+## Control-design example: Pendulum on cart
+We will now demonstrate a complete workflow including
+- Modeling
+- Linearization
+- Control design
+
+We will continue the pendulum theme and design an inverted pendulum on cart. The cart is modeled as [`BodyShape`](@ref) with specified mass, and `shape = "box"` to render it as a box in animations. The cart is moving along the $x$-axis by means of a [`Prismatic`](@ref) joint, and the pendulum is attached to the cart by means of a [`Revolute`](@ref) joint. The pendulum is a [`BodyCylinder`](@ref) with a diameter of `0.015`, the mass and inertia properties are automatically computed using the geometrical dimensions and the density (which defaults to that of steel). A force is applied to the cart by means of a `TranslationalModelica.Force` component.
+
+We start by putting the model together and control it in open loop using a simple periodic input signal:
+
+```@example pendulum
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
+import ModelingToolkitStandardLibrary.Blocks
+using Plots
+gray = [0.5, 0.5, 0.5, 1]
+@mtkmodel Cartpole begin
+    @structural_parameters begin
+        use_world = false
+    end
+    @components begin
+        if use_world
+            fixed = World()
+        else
+            # In case we wrap this model in an outer model below, we place the world there instead
+            fixed = Fixed() 
+        end
+        cart = BodyShape(m = 1, r = [0.2, 0, 0], color=[0.2, 0.2, 0.2, 1], shape="box")
+        mounting_point = FixedTranslation(r = [0.1, 0, 0])
+        prismatic = Prismatic(n = [1, 0, 0], axisflange = true, color=gray, state_priority=100)
+        revolute = Revolute(n = [0, 0, 1], axisflange = false, state_priority=100)
+        pendulum = BodyCylinder(r = [0, 0.5, 0], diameter = 0.015, color=gray)
+        motor = TranslationalModelica.Force(use_support = true)
+        tip = Body(m = 0.05)
+    end
+    @variables begin
+        u(t) = 0
+        x(t)
+        v(t)
+        phi(t)
+        w(t)
+    end
+    @equations begin
+        connect(fixed.frame_b, prismatic.frame_a)
+        connect(prismatic.frame_b, cart.frame_a, mounting_point.frame_a)
+        connect(mounting_point.frame_b, revolute.frame_a)
+        connect(revolute.frame_b, pendulum.frame_a)
+        connect(pendulum.frame_b, tip.frame_a)
+        connect(motor.flange, prismatic.axis)
+        connect(prismatic.support, motor.support)
+        u ~ motor.f.u
+        x ~ prismatic.s
+        v ~ prismatic.v
+        phi ~ revolute.phi
+        w ~ revolute.w
+    end
+end
+@mtkmodel CartWithInput begin
+    @components begin
+        world = World()
+        cartpole = Cartpole()
+        input = Blocks.Cosine(frequency=1, amplitude=1)
+    end
+    @equations begin
+        connect(input.output, :u, cartpole.motor.f)
+    end
+end
+@named model = CartWithInput()
+model = complete(model)
+ssys = structural_simplify(multibody(model))
+prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.0, model.cartpole.revolute.phi => 0.1], (0, 10))
+sol = solve(prob, Tsit5())
+plot(sol, layout=4)
+```
+As usual, we render the simulation in 3D to get a better feel for the system:
+```@example pendulum
+import GLMakie
+Multibody.render(model, sol, filename = "cartpole.gif", traces=[model.cartpole.pendulum.frame_b])
+nothing # hide
+```
+![cartpole](cartpole.gif)
+
+### Adding feedback
+
+We will attempt to stabilize the pendulum in the upright position by using feedback control. To design the controller, we linearize the model in the upward equilibrium position and design an infinite-horizon LQR controller using ControlSystems.jl. We then connect the controller to the motor on the cart. See also [RobustAndOptimalControl.jl: Control design for a pendulum on a cart](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/cartpole/) for a similar example with more detail on the control design.
+
+### Linearization
+We start by linearizing the model in the upward equilibrium position using the function `ModelingToolkit.linearize`.
+```@example pendulum
+import ModelingToolkit: D_nounits as D
+using LinearAlgebra
+@named cp = Cartpole(use_world = true)
+cp = complete(cp)
+inputs = [cp.u] # Input to the linearized system
+outputs = [cp.x, cp.phi, cp.v, cp.w] # These are the outputs of the linearized system
+op = Dict([ # Operating point to linearize in
+    cp.u => 0
+    cp.revolute.phi => 0 # Pendulum pointing upwards
+]
+)
+matrices, simplified_sys = linearize(multibody(cp), inputs, outputs; op)
+matrices
+```
+This gives us the matrices $A,B,C,D$ in a linearized statespace representation of the system. To make these easier to work with, we load the control packages and call `named_ss` instead of `linearize` to get a named statespace object instead:
+```@example pendulum
+using ControlSystemsMTK
+lsys = named_ss(multibody(cp), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
+```
+
+### LQR Control design
+With a linear statespace object in hand, we can proceed to design an LQR or LQG controller. We will design both an LQR and an LQG controller in order to demonstrate two possible workflows.
+
+The LQR contorller is designed using the function `ControlSystemsBase.lqr`, and it takes the two cost matrices `Q1` and `Q2` penalizing state deviation and control action respectively. The LQG controller is designed using [`RobustAndOptimalControl.LQGProblem`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#LQG-design), and this function additionally takes the covariance matrices `r1, R2` for a Kalman filter. Before we call `LQGProblem` we partition the linearized system into an [`ExtendedStateSpace`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.ExtendedStateSpace) object using the [`partition`](@https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.partition-Tuple{AbstractStateSpace}) function, this indicates what inputs of the system are available for control and what are considered disturbances, and what outputs of the system are available for measurement. In this case, we assume that we have access to the cart position and the pendulum angle, and we control the cart position. The remaining two outputs are still important for the performance, but we cannot measure them and will rely on the Kalman filter to estimate them. When we call [`observer_controller`](https://juliacontrol.github.io/ControlSystems.jl/dev/lib/analysis/#ControlSystemsBase.observer_controller-Tuple{Any,%20AbstractMatrix,%20AbstractMatrix}) we get a linear system that represents the combined state estimator and state feedback controller. This linear system is then converted to an `ODESystem` by the function `LQGSystem`.
+
+Since the function `lqr` operates on the state vector, and we have access to the specified output vector, we make use of the system ``C`` matrix to reformulate the problem in terms of the outputs. This relies on the ``C`` matrix being full rank, which is the case here since our outputs include a complete state realization of the system. This is of no concern when using the `LQGProblem` structure since we penalize outputs rather than the state in this case. 
+
+To make the simulation interesting, we make a change in the reference position of the cart after a few seconds. 
+```@example pendulum
+using ControlSystemsBase, RobustAndOptimalControl
+C = lsys.C
+Q1 = Diagonal([10, 10, 10, 1])
+Q2 = Diagonal([0.1])
+
+R1 = Diagonal([1])
+R2 = Diagonal([0.01, 0.01])
+
+lqg = LQGProblem(partition(lsys, u = [:u], y = [:x, :phi]), Q1, Q2, R1, R2)
+Lmat = lqr(lsys, C'Q1*C, Q2)/C # Alternatively, compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
+
+LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
+
+@mtkmodel CartWithFeedback begin
+    @components begin
+        world = World()
+        cartpole = Cartpole()
+        reference = Blocks.Step(start_time = 5, height=0.5)
+        control_saturation = Blocks.Limiter(y_max = 10) # To limit the control signal magnitude
+        # controller = Blocks.MatrixGain(K = Lmat) # uncomment to use LQR controller instead
+        controller = LQGSystem()
+    end
+    begin
+        namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
+    end
+    @equations begin
+        controller.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cartpole.x
+        controller.input.u[2] ~ 0 - namespaced_outputs[2] # cartpole.phi
+        # controller.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v # uncomment if using LQR controller instead
+        # controller.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
+
+        connect(controller.output, control_saturation.input)
+        connect(control_saturation.output, cartpole.motor.f)
+    end
+end
+@named model = CartWithFeedback()
+model = complete(model)
+ssys = structural_simplify(multibody(model))
+prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 10))
+sol = solve(prob, Tsit5())
+cp = model.cartpole
+plot(sol, idxs=[cp.prismatic.s, cp.revolute.phi, cp.motor.f.u], layout=3)
+plot!(sol, idxs=model.reference.output.u, sp=1, l=(:black, :dash), legend=:bottomright)
+```
+
+```@example pendulum
+Multibody.render(model, sol, filename = "inverted_cartpole.gif", x=1, z=1)
+nothing # hide
+```
+![inverted cartpole](inverted_cartpole.gif)
+
+
+### Swing up
+Below, we add also an energy-based swing-up controller. For more details this kind of swing-up controller, see [Part 7: Control of rotary pendulum using Julia: Swing up control (YouTube)](https://www.youtube.com/watch?v=RhF2NMCYoiw)
+```@example pendulum
+"Compute total energy, kinetic + potential, for a body rotating around the z-axis of the world"
+function energy(body, w)
+    g = GlobalScope(world.g_inner)
+    m = body.m
+    d2 = body.r_cm[1]^2 + body.r_cm[2]^2 # Squared distance from 
+    I = body.I_33 + m*d2 # Parallel axis theorem
+    r_cm_worldframe = Multibody.resolve1(ori(body.frame_a), body.r_cm)[2] # Rotate the distance from frame_a to the center of mass to the world frame
+    1/2*I*w^2 + 2m*g*(body.frame_a.r_0[2] + r_cm_worldframe) # Assuming rotation around the z-axis
+end
+
+normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
+
+@mtkmodel CartWithSwingup begin
+    @components begin
+        world = World()
+        cartpole = Cartpole()
+        L = Blocks.MatrixGain(K = Lmat) # Here we use the LQR controller instead
+        control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude
+    end
+    @variables begin
+        phi(t)
+        w(t)
+        E(t), [description = "Total energy of the pendulum"]
+        u_swing(t), [description = "Swing-up control signal"]
+        switching_condition(t)::Bool, [description = "Switching condition that indicates when stabilizing controller is active"]
+    end
+    @parameters begin
+        Er = 3.825676486352941 # Total energy of the cartpole at the top equilibrium position
+    end
+    begin
+        namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
+    end
+    @equations begin
+        phi ~ normalize_angle(cartpole.phi)
+        w ~ cartpole.w
+        E ~ energy(cartpole.pendulum.body, w) + energy(cartpole.tip, w)
+        u_swing ~ 100*(E - Er)*sign(w*cos(phi-3.1415))
+
+        L.input.u[1] ~ 0 - namespaced_outputs[1] # - cartpole.x
+        L.input.u[2] ~ 0 - phi # cartpole.phi but normalized
+        L.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v
+        L.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
+        switching_condition ~ abs(phi) < 0.4
+        control_saturation.input.u ~ ifelse(switching_condition, L.output.u, u_swing)
+        connect(control_saturation.output, cartpole.motor.f)
+    end
+end
+@named model = CartWithSwingup()
+model = complete(model)
+ssys = structural_simplify(multibody(model))
+cp = model.cartpole
+prob = ODEProblem(ssys, [cp.prismatic.s => 0.0, cp.revolute.phi => 0.99pi], (0, 5))
+sol = solve(prob, Tsit5(), dt = 1e-2, adaptive=false)
+plot(sol, idxs=[cp.prismatic.s, cp.revolute.phi, cp.motor.f.u, model.E], layout=4)
+hline!([0, 2pi], sp=2, l=(:black, :dash), primary=false)
+plot!(sol, idxs=[model.switching_condition], sp=2)
+```
+
+
+```@example pendulum
+Multibody.render(model, sol, filename = "swingup.gif", x=2, z=2)
+nothing # hide
+```
+![inverted cartpole](swingup.gif)

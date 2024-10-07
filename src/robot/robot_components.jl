@@ -51,7 +51,7 @@ end
 """
     AccSensor(;name)
 
-Ideal sensor to measure the absolute flange angular acceleration
+Ideal rotational sensor to measure the absolute flange angular acceleration
 
 # Connectors:
 
@@ -407,6 +407,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     path = @__DIR__()
 
     systems = @named begin
+        fixed = Fixed()
         axis1 = Rotational.Flange()
         axis2 = Rotational.Flange()
         axis3 = Rotational.Flange()
@@ -525,7 +526,7 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
            qdd .~ D.(qd)
            tau .~ [r1.tau, r2.tau, r3.tau, r4.tau, r5.tau, r6.tau]
            connect(load.frame_a, b6.frame_b)
-           connect(world.frame_b, b0.frame_a)
+           connect(fixed.frame_b, b0.frame_a)
            connect(b0.frame_b, r1.frame_a)
            connect(b1.frame_b, r2.frame_a)
            connect(r1.frame_b, b1.frame_a)
@@ -545,5 +546,5 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
            connect(r6.axis, axis6)
            connect(r6.frame_b, b6.frame_a)]
 
-    compose(ODESystem(eqs, t; name), [world; systems])
+    compose(ODESystem(eqs, t; name), systems)
 end

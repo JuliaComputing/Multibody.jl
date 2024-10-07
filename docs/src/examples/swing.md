@@ -18,8 +18,6 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-W(args...; kwargs...) = Multibody.world
-
 @mtkmodel SwingRope begin
     @components begin
         frame_a = Frame()
@@ -44,7 +42,7 @@ end
         w = 0.4
     end
     @components begin
-        world = W()
+        world = World()
         upper_trans1 = FixedTranslation(r=[-w/2, 0, 0])
         rope1 = SwingRope(rope.r=[-w/2, h, -w/2])
         body  = Body(m=6, isroot=true, I_11=0.1, I_22=0.1, I_33=0.1)
@@ -62,7 +60,7 @@ end
 end
 @named model = SimpleSwing()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [
     collect(model.body.v_0) .=> 0;
     collect(model.body.w_a) .=> 0;
@@ -91,7 +89,7 @@ Next, we create the full swing assembly
         w = 0.4
     end
     @components begin
-        world = W()
+        world = World()
         upper_trans1 = FixedTranslation(r=[-w/2, 0, 0])
         upper_trans2 = FixedTranslation(r=[ w/2, 0, 0])
         rope1 = SwingRope(rope.r=[-w/2, -h, -w/2])
@@ -129,7 +127,7 @@ end
 
 @named model = Swing()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 d = 10
 dj = 0.01

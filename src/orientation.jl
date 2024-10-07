@@ -256,8 +256,11 @@ end
 # end
 
 Base.:/(q::Rotations.Quaternions.Quaternion, x::Num) = Rotations.Quaternions.Quaternion(q.s / x, q.v1 / x, q.v2 / x, q.v3 / x)
-function from_Q(Q2, w)
+function from_Q(Q2, w; normalize=false)
     # Q2 = to_q(Q) # Due to different conventions
+    if normalize
+        Q2 = Q2 / _norm(Q2)
+    end
     q = Rotations.QuatRotation(Q2, false)
     R = RotMatrix(q)
     RotationMatrix(R, w)
@@ -379,6 +382,7 @@ The rotation matrix returned, ``R_W^F``, is such that when a vector ``p_F`` expr
 ```math
 p_W = R_W^F  p_F
 ```
+This is the inverse (transpose) of the rotation matrix stored in frame connectors (e.g. `ori(frame).R = get_rot(sol, frame, t)'`).
 
 The columns of ``R_W_F`` indicate are the basis vectors of the frame ``F`` expressed in the world coordinate frame.
 

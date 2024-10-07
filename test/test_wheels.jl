@@ -8,7 +8,7 @@ using LinearAlgebra
 @mtkmodel WheelInWorld begin
     @components begin
         # world = World(n=[0,0,-1])
-        world = W()
+        world = World()
         wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
                             I_long = 0.12,
                             x0 = 0.2,
@@ -59,7 +59,7 @@ using LinearAlgebra
     end
     @components begin
         # world = World(n=[0,0,-1])
-        world = W()
+        world = World()
         wheel = RollingWheel(; radius = 0.3, m = 2, I_axis = 0.06,
                             I_long = 0.12,
                             x0 = 0.2,
@@ -89,6 +89,8 @@ sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
 # first(Multibody.render(worldwheel, sol, 0, show_axis=true))
 @test sol(4, idxs=[worldwheel.wheel.x; worldwheel.wheel.z]) ≈ [0.162547, -2.23778] atol=1e-3
 
+@test all(norm.(sol[collect(worldwheel.wheel.wheeljoint.e_lat_0)]) .≈ 1)
+
 @named worldwheel = WheelInWorld(surface = (x,z)->x)
 worldwheel = complete(worldwheel)
 
@@ -111,6 +113,8 @@ dd = diff(sol(tv, idxs=worldwheel.wheel.wheeljoint.der_angles[2]).u) # angular a
 @test norm(dd .- dd[1]) < 1e-10 # constant acceleration
 @test abs(dd[1]) < 9.81
 @test abs(dd[1]) > 5
+@test all(norm.(sol[collect(worldwheel.wheel.wheeljoint.e_lat_0)]) .≈ 1)
+@test all(norm.(sol[collect(worldwheel.wheel.wheeljoint.e_long_0)]) .≈ 1)
 
 
 
@@ -119,7 +123,7 @@ dd = diff(sol(tv, idxs=worldwheel.wheel.wheeljoint.der_angles[2]).u) # angular a
 import ModelingToolkitStandardLibrary.Blocks
 @mtkmodel WheelWithAxis begin
     @components begin
-        world = W()
+        world = World()
         prismatic = Prismatic(n = [0,1,0])
         world_axis = Revolute(n = [0,1,0], iscut=false, state_priority=100, w0=10)
         # world_axis = RevolutePlanarLoopConstraint(n = [0,1,0])
@@ -164,7 +168,7 @@ end
         wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5, state_priority=100)
         bar = FixedTranslation(r = [0.2, 0, 0])
         body = Body(m=0.01, state_priority=1)
-        world = W()
+        world = World()
     end
     @equations begin
         connect(sine1.output, torque1.tau)

@@ -1,7 +1,7 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
 authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
-version = "0.2.0"
+version = "0.3.1"
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
@@ -18,17 +18,27 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
+
 
 [extensions]
 Render = ["Makie"]
+URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
 
 [compat]
 CoordinateTransformations = "0.6"
 DataInterpolations = "5, 6"
 FileIO = "1"
+Graphs = "1.0"
+JuliaFormatter = "1.0"
 JuliaSimCompiler = "0.1.12"
+LightXML = "0.9"
 LinearAlgebra = "1.6"
 MeshIO = "0.4"
+MetaGraphsNext = "0.7"
 ModelingToolkit = "9"
 ModelingToolkitStandardLibrary = "2.7.2"
 Rotations = "1.4"
@@ -39,6 +49,10 @@ julia = "1"
 [extras]
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
 
 [targets]
-test = ["OrdinaryDiffEq", "Test"]
+test = ["OrdinaryDiffEq", "Test", "JuliaFormatter", "LightXML", "Graphs", "MetaGraphsNext"]

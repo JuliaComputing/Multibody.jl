@@ -29,7 +29,7 @@ Frame fixed in the planar world frame at a given position and orientation
 end
 
 """
-    Body(; name, m=1, I=0.1, r=0, gy=-9.807, radius=0.1, render=true, color=Multibody.purple)
+    Body(; name, m=1, I=0.1, r=0, gy=-9.80665, radius=0.1, render=true, color=Multibody.purple)
 
 Body component with mass and inertia
 
@@ -37,7 +37,7 @@ Body component with mass and inertia
 - `m`: [kg] mass of the body
 - `I`: [kg.m²] inertia of the body with respect to the origin of `frame` along the z-axis of `frame`
 - `r`: [m, m] Translational position x,y-position
-- `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.807
+- `gy`: [m/s²] gravity field acting on the mass in the y-direction, positive value acts in the positive direction defaults to -9.80665
 - `radius`: [m] Radius of the body in animations
 - `render`: [Bool] Render the body in animations
 - `color`: [Array{Float64,1}] Color of the body in animations
@@ -53,7 +53,7 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.807, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
+@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
     @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
@@ -95,7 +95,7 @@ Body component with mass and inertia
 end
 
 """
-    BodyShape(; name, r = [1,0], r_cm = 0.5*r, gy = -9.807)
+    BodyShape(; name, r = [1,0], r_cm = 0.5*r, gy = -9.80665)
 
 The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames and a vector `r` that describes the translation between them, while the body has a single frame only.
 
@@ -116,9 +116,9 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @structural_parameters begin
         r = [1,0]
         r_cm = 0.5*r
-        gy = -9.807
     end
     @parameters begin
+        gy = -9.80665
         # r[1:2] = [1,0], [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
         # r_cm[1:2] = 0.5*r, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
         m = 1, [description = "mass of the body"]
@@ -499,7 +499,7 @@ end
 
 Returns a point-symmetric Triple S-Function
 
-A point symmetric interpolation between points `(0, 0), (x_max, y_max) and (x_sat, y_sat)`, provided `x_max < x_sat`. The approximation is done in such a way that the 1st function's derivative is zero at points `(x_max, y_max)` and `(x_sat, y_sat)`. Thus, the 1st function's derivative is continuous for all `x`. The higher derivatives are discontinuous at these points.
+A point symmetric interpolation between points `(0, 0), (x_max, y_max) and (x_sat, y_sat)`, provided `x_max < x_sat`. The approximation is done in such a way that the function's 1st derivative is zero at points `(x_max, y_max)` and `(x_sat, y_sat)`. Thus, the function's 1st derivative is continuous for all `x`. The higher derivatives are discontinuous at these points.
 
 ```
 x_max = 0.2
@@ -546,7 +546,7 @@ end
 
 Returns a S-shaped transition
 
-A smooth transition between points `(x_min, y_min)` and `(x_max, y_max)`. The transition is done in such a way that the 1st function's derivative is continuous for all `x`. The higher derivatives are discontinuous at input points.
+A smooth transition between points `(x_min, y_min)` and `(x_max, y_max)`. The transition is done in such a way that the function's 1st derivative is continuous for all `x`. The higher derivatives are discontinuous at input points.
 
 ```
 x_min = -0.4

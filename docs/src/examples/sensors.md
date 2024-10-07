@@ -31,7 +31,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = ODESystem(connections, t,
                          systems = [world, joint, body, torquesensor, forcesensor])
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 
 D = Differential(t)

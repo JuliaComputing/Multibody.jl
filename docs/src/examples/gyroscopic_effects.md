@@ -38,7 +38,7 @@ connections = [
 
 @named model = ODESystem(connections, t, systems = [world; systems])
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [model.world.g => 9.80665, model.revolute.w => 10], (0, 5))
 

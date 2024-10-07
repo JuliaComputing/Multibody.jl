@@ -7,6 +7,8 @@ When modeling wheels, there are several different assumptions that can be made, 
 The wheel-related components available are
 - [`RollingWheel`](@ref): a wheel that can roll on the ground. It cannot slip and it cannot leave the ground.
 - [`RollingWheelJoint`](@ref): a lower-level component used in `RollingWheel` to model the kinematics of the wheel, without inertial or mass properties.
+- [`SlipWheel`](@ref): Similar [`RollingWheel`](@ref), but can also slip.
+- [`SlipWheelJoint`](@ref): Similar to [`RollingWheelJoint`](@ref), but for `SlipWheel`.
 - [`RollingWheelSet`](@ref): a set of two wheels connected by an axis. One of the wheels cannot slip, while the other one slips as required to allow the wheel set to turn (no differential is modeled). No wheel can leave the ground.
 - [`RollingWheelSetJoint`](@ref): A lower-level component used in `RollingWheelSet` to model the kinematics of the wheel set, without inertial or mass properties.
 - [`RollingConstraintVerticalWheel`](@ref): A low-level constraint that is used to enforce a perfectly rolling wheel that is always vertical, i.e., it can only roll forward and not fall down.
@@ -29,11 +31,10 @@ using Test
 
 t = Multibody.t
 D = Differential(t)
-W(args...; kwargs...) = Multibody.world
 
 @mtkmodel WheelInWorld begin
     @components begin
-        world = W()
+        world = World()
         wheel = RollingWheel(
             radius = 0.3,
             m = 2,
@@ -55,7 +56,7 @@ defs = Dict([
     worldwheel.wheel.body.r_0[3] => 0.2;
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = structural_simplify(multibody(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -70,11 +71,39 @@ nothing # hide
 ![wheel animation](worldwheel.gif)
 
 ### Add slip
-The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling.
+The example below is similar to that above, but models a wheel with slip properties instead of ideal rolling. We start by showing the slip model
+```@example WHEEL
+using Plots
+vAdhesion = 0.2
+vSlide = 0.4
+mu_A = 0.95
+mu_S = 0.7
+v = range(0, stop=1, length=500) # Simulating the slip velocity
+μ = Multibody.PlanarMechanics.limit_S_triple.(vAdhesion, vSlide, mu_A, mu_S, v)
+plot(v, μ, label=nothing, lw=2, color=:black, xlabel = "\$v_{Slip}\$", ylabel = "\$\\mu\$")
+scatter!([vAdhesion, vSlide], [mu_A, mu_S], color=:white, markerstrokecolor=:black)
+hline!([mu_A, mu_S], linestyle=:dash, color=:black, alpha=0.5)
+vline!([vAdhesion, vSlide], linestyle=:dash, color=:black, alpha=0.5)
+plot!(
+    xticks = ((vAdhesion, vSlide), ["\$v_{Adhesion}\$", "\$v_{Slide}\$"]),
+    yticks = ((mu_A, mu_S), ["\$\\mu_{adhesion}\$", "\$\\mu_{slide}\$"]),
+    framestyle = :zerolines,
+    legend = false,
+)
+```
+The longitudinal force on the tire is given by
+```math
+f_{long} = - f_n \dfrac{\mu(v_{Slip})}{v_{Slip}} v_{SlipLong}
+```
+where `f_n` is the normal force on the tire, `μ` is the friction coefficient from the slip model, and `v_{Slip}` is the magnitude of the slip velocity.
+
+The slip velocity is defined such that when the wheel is moving with positive velocity and increasing in speed (accelerating), the slip velocity is negative, i.e., the contact patch is moving slightly backwards. When the wheel is moving with positive velocity and decreasing in speed (braking), the slip velocity is positive, i.e., the contact patch is moving slightly forwards.
+
+
 ```@example WHEEL
 @mtkmodel SlipWheelInWorld begin
     @components begin
-        world = W()
+        world = World()
         wheel = SlippingWheel(
             radius = 0.3,
             m = 2,
@@ -83,7 +112,6 @@ The example below is similar to that above, but models a wheel with slip propert
             x0 = 0.2,
             z0 = 0.2,
             der_angles = [0, 25, 0.1],
-
             mu_A = 0.95,             # Friction coefficient at adhesion
             mu_S = 0.5,             # Friction coefficient at sliding
             sAdhesion = 0.04,       # Adhesion slippage
@@ -106,7 +134,7 @@ defs = Dict([
     worldwheel.wheel.frame_a.radius => 0.01;
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = structural_simplify(multibody(worldwheel))
 prob = ODEProblem(ssys, defs, (0, 3))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -135,7 +163,7 @@ A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common a
         wheels = RollingWheelSet(radius=0.1, m_wheel=0.5, I_axis=0.01, I_long=0.02, track=0.5, state_priority=100)
         bar = FixedTranslation(r = [0.2, 0, 0])
         body = Body(m=0.01, state_priority=1)
-        world = W()
+        world = World()
     end
     @equations begin
         connect(sine1.output, torque1.tau)
@@ -149,7 +177,7 @@ end
 
 @named model = DrivingWheelSet()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 # display(unknowns(ssys))
 prob = ODEProblem(ssys, [
     model.wheels.wheelSetJoint.prismatic1.s => 0.1
@@ -187,7 +215,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
         g=0
     end
     @components begin
-        world = W()
+        world = World()
 
         sine1 = Blocks.Sine(frequency=1, amplitude=150)
         sine2 = Blocks.Sine(frequency=1, amplitude=150, phase=pi/6)
@@ -217,7 +245,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
 end
 @named model = Car()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [], (0, 6))
 sol = solve(prob, Tsit5())
@@ -257,13 +285,15 @@ import Multibody.PlanarMechanics as Pl
 end
 @named model = TestWheel()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = Dict(unknowns(ssys) .=> 0)
 prob = ODEProblem(ssys, defs, (0.0, 10.0))
 sol = solve(prob, Rodas5P())
 @test SciMLBase.successful_retcode(sol)
 render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
+nothing # hide
 ```
+
 
 ![drifting animation](drifting.gif)
 
@@ -321,8 +351,7 @@ end
 
 @named model = TestSlipBasedWheel()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
-display(unknowns(ssys))
+ssys = structural_simplify(multibody(model))
 defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
     model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
@@ -331,12 +360,21 @@ prob = ODEProblem(ssys, [
     D(model.revolute.frame_b.phi) => 0,
     D(model.prismatic.r0[2]) => 0,
 ], (0.0, 15.0))
-sol = solve(prob, Rodas5Pr())
-render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif")
+sol = solve(prob, Rodas5P())
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=false)
 nothing # hide
 ```
 
 ![slipwheel animation](slipwheel.gif)
+
+```@example WHEEL
+plot(sol, idxs=[
+    model.slipBasedWheelJoint.w_roll
+    model.slipBasedWheelJoint.v_long
+    model.slipBasedWheelJoint.v_slip_long
+    model.slipBasedWheelJoint.f_long
+], layout=4)
+```
 
 
 ## Planar two-track model
@@ -443,7 +481,7 @@ end
 
 @named model = TwoTrackWithDifferentialGear()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = structural_simplify(multibody(model))
 defs = merge(
     Dict(unknowns(ssys) .=> 0),
     ModelingToolkit.defaults(model),
@@ -452,7 +490,7 @@ defs = merge(
 prob = ODEProblem(ssys, defs, (0.0, 5.0))
 sol = solve(prob, Rodas5P(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
-Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif")
+Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif", cache=false)
 nothing # hide
 ```
 
