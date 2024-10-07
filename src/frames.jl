@@ -1,6 +1,7 @@
 @connector function Frame(; name, varw = false, r_0 = zeros(3), render=false, length=1.0, radius=0.1)
     @variables r_0(t)[1:3]=r_0 [
         description = "Position vector directed from the origin of the world frame to the connector frame origin, resolved in world frame",
+        state_priority=-1,
     ]
     @variables f(t)[1:3] [
         connect = Flow,
