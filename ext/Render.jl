@@ -6,6 +6,7 @@ import Multibody.PlanarMechanics as P
 using Rotations
 using LinearAlgebra
 using ModelingToolkit
+using ModelingToolkit: get_metadata
 export render, loop_render
 using MeshIO, FileIO
 using StaticArrays
@@ -301,10 +302,11 @@ function render(model, sol,
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
-            (frame.metadata !== nothing) || error("Only frames can be traced in animations.")
-            if get(frame.metadata, :frame, false)
+            md = get_metadata(frame)
+            (md !== nothing) || error("Only frames can be traced in animations.")
+            if get(md, :frame, false)
                 points = get_trans(sol, frame, tvec) |> Matrix
-            elseif get(frame.metadata, :frame_2d, false)
+            elseif get(md, :frame_2d, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
                 error("Got fishy frame metadata")
@@ -374,10 +376,11 @@ function render(model, sol, time::Real;
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
-            (frame.metadata !== nothing) || error("Only frames can be traced in animations.")
-            if get(frame.metadata, :frame, false)
+            md = get_metadata(frame)
+            (md !== nothing) || error("Only frames can be traced in animations.")
+            if get(md, :frame, false)
                 points = get_trans(sol, frame, tvec) |> Matrix
-            elseif get(frame.metadata, :frame_2d, false)
+            elseif get(md, :frame_2d, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
                 error("Got fishy frame metadata")
