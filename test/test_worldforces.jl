@@ -2,7 +2,7 @@ using ModelingToolkit
 using Multibody
 using Test
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqTsit5, OrdinaryDiffEqRosenbrock
 doplot() = false
 world = Multibody.world
 

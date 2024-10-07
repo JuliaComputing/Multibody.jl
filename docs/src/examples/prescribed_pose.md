@@ -23,7 +23,7 @@ using Multibody
 using Multibody.Rotations # To specify orientations using Euler angles
 using ModelingToolkit
 using Plots
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 using LinearAlgebra
 using JuliaSimCompiler
 using Test

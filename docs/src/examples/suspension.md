@@ -11,7 +11,7 @@ using Multibody
 using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 using Plots
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF, OrdinaryDiffEqRosenbrock
 using LinearAlgebra
 using JuliaSimCompiler
 using Test

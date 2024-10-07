@@ -7,7 +7,7 @@ using Multibody
 using ModelingToolkit
 using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 using Test
 
 t = Multibody.t

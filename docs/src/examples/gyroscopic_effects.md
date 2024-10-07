@@ -12,7 +12,7 @@ using Multibody
 using ModelingToolkit
 using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF
 
 t = Multibody.t
 D = Differential(t)

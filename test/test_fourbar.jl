@@ -2,7 +2,7 @@ using Test
 using Multibody
 using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF
 using LinearAlgebra
 using JuliaSimCompiler
 

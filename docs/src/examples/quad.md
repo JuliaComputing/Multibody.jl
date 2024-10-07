@@ -13,7 +13,7 @@ using ModelingToolkitStandardLibrary.Blocks
 using LinearAlgebra
 using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF
 using Test
 t = Multibody.t
 D = Differential(t)
@@ -336,3 +336,79 @@ nothing
 While gain and phase margins appear to be reasonable, we have a large high-frequency gain in the transfer functions from measurement noise to control signal, ``C(s)S(s)``. For a rotor craft where the control signal manipulates the current through motor windings, this may lead to excessive heat generation in the motors if the sensor measurements are noisy.
 
 The diskmargin at the plant output is small, luckily, the gain variation appears at the plant input where the diskmargin is significantly larger. The diskmargins are visualized in the figure titled "Stable region for combined gain and phase variation". See [Diskmargin example](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#Diskmargin-example) to learn more about diskmargins.
+
+```@example QUAD
+using LowLevelParticleFilters, SeeToDee, StaticArrays
+
+Ts = 0.02
+tv = range(0, 7, step=Ts)
+Y = [SVector(i...) .+ 0.01 .* randn.() for i in sol(tv, idxs=outputs)]
+Y0 = [SVector(i...) for i in sol(tv, idxs=outputs)]
+U = [SVector(i...) .+ 0.2 .* randn.() for i in sol(tv, idxs=inputs)]
+X = Matrix(sol(tv, idxs=x_sym))
+##
+
+state_parameters = [quad.body.m]
+
+function dyn_with_state_parameters(mmodel, inputs, state_parameters)
+    fdyn, x_sym, p_sym, io_sys = ModelingToolkit.generate_control_function(mmodel, inputs)
+
+    p_inds = [findfirst(x -> string(x) == string(p), p_sym) for p in state_parameters]
+    # @info "found" p_sym[p_inds]
+
+    nx_orig = length(x_sym)
+    nx_extended = nx_orig + length(state_parameters)
+
+    p1 = copy(p)
+    dx = zeros(nx_orig)
+    out = zeros(nx_extended)
+
+    f_ext = function (x, u, p, t)
+        for (i, p_ind) in enumerate(p_inds)
+            p1[p_ind] = max(x[nx_orig + i], 0.1) # NOTE: temp hack
+        end
+        dx .= 0
+        fdyn(dx, x, u, p1, t)
+        @views out[1:nx_orig] .= dx
+        # [dx; x[nx_orig+1:end]]
+        @views out[nx_orig+1:end] .= x[nx_orig+1:end]
+        out
+    end
+    # f_ext, [x_sym; p_sym[p_inds]], p_sym[1:end-length(inputs)], io_sys
+    f_ext, [x_sym; p_sym[p_inds]], p_sym, io_sys
+end
+
+fdyn, x_sym, p_sym, io_sys = dyn_with_state_parameters(multibody(quad), inputs, state_parameters)
+
+g = JuliaSimCompiler.build_explicit_observed_function(io_sys, outputs; inputs)
+nx = length(x_sym)
+nu = length(inputs)
+ny = length(outputs)
+x = randn(nx)
+u = randn(nu)
+
+op = [
+    quad.body.r_0[2] => 1e-32
+    quad.v_alt => 1e-32 # To avoid singularity in linearization
+    quad.world.g => 9.81
+    inputs .=> 13;
+    quad.body.m => 2 # We pretend that the body mass is close to cable+load+body mass for better altitude estimation
+] |> Dict
+##
+x0, p = JuliaSimCompiler.initial_conditions(io_sys, op, op)
+y0 = g(x0, u, p, 0)
+R1 = collect(0.001I(nx))
+R1[end] = 0.01
+R2 = 0.01^2 * I(ny)
+
+d0 = LowLevelParticleFilters.MvNormal([x0; 2], R1)
+discrete_dynamics = SeeToDee.Rk4(fdyn, 0.01)
+
+ukf = UnscentedKalmanFilter(discrete_dynamics, g, R1, R2, d0; p, nu, ny)
+
+
+@time filtersol = forward_trajectory(ukf, U, Y)
+plot(filtersol, size=(1200, 1000), ploty=false, plotu=false)
+X[end,:] .= 5.3
+plot!(X', sp=(1:nx)', label=false, l=(:black, :dash))
+```

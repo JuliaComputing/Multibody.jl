@@ -12,7 +12,7 @@ using Multibody
 using ModelingToolkit
 using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF
 
 t = Multibody.t
 D = Differential(t)
@@ -64,8 +64,9 @@ ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [
     collect(model.body.v_0) .=> 0;
     collect(model.body.w_a) .=> 0;
+    collect(model.body.r_0) .=> [0.5, 2, 0.1]; # To make the animation interesting
 ], (0, 4))
-sol = solve(prob, ImplicitEuler(autodiff=false), reltol=5e-3)
+sol = solve(prob, QNDF1(autodiff=false), reltol=5e-3)
 @assert SciMLBase.successful_retcode(sol)
 ```
 
@@ -149,7 +150,7 @@ prob = ODEProblem(ssys, [
 ], (0.0, 6))
 
 
-@time sol = solve(prob, ImplicitEuler(autodiff=false), reltol=1e-2)
+@time sol = solve(prob, QNDF1(autodiff=false), reltol=1e-2)
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = [collect(model.body.r_0);])
@@ -162,5 +163,3 @@ nothing # hide
 ```
 
 ![animation](swing.gif)
-
-There is an initial transient in the beginning where the springs in the ropes are vibrating substantially, but after about a second this transient is damped out (thanks in part to the, in this case desired, numerical damping contributed by the implicit Euler solver).

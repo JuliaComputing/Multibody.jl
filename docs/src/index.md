@@ -9,7 +9,7 @@ Documentation for [Multibody](https://github.com/JuliaComputing/Multibody.jl).
 ```@setup logo
 using ModelingToolkit
 using Multibody, JuliaSimCompiler
-using OrdinaryDiffEq # Contains the ODE solver we will use
+using OrdinaryDiffEqRosenbrock # Contains the ODE solver we will use
 using Plots
 t = Multibody.t
 
@@ -160,6 +160,18 @@ After the registry is added and JuliaSimCompiler is installed, you may install t
 import Pkg
 Pkg.add("Multibody")
 ```
+
+In addition to Multibody.jl, we recommend installing the following **solver packages** to follow along with the examples in the documentation
+```julia
+Pkg.add([
+    "OrdinaryDiffEqBDF", "OrdinaryDiffEqRosenbrock", "OrdinaryDiffEqTsit5"
+])
+```
+Alternatively, install all available DAE solvers at the same time using (incurs lengthy pre compilation)
+```julia
+Pkg.add("OrdinaryDiffEq")
+```
+
 
 
 ## Notable differences from Modelica
