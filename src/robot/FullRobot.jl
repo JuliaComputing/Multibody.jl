@@ -247,7 +247,6 @@ function Robot6DOF(; name, kwargs...)
 
         controlBus = ControlBus()
     end
-    push!(systems, world)
 
     eqs = [connect(axis2.flange, mechanics.axis2)
            connect(axis1.flange, mechanics.axis1)
