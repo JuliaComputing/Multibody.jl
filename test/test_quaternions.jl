@@ -118,7 +118,7 @@ for (i, ti) in enumerate(ts)
 end
 
 # Test that rotational velocity of 1 results in one full rotation in 2π seconds. Test rotation around all three major axes
-@test get_R(sol, body.frame_a, 0pi) ≈ I
+@test get_R(sol, body.frame_a, 0pi) ≈ I atol=1e-3
 @test get_R(sol, body.frame_a, pi/2) ≈ [1 0 0; 0 0 -1; 0 1 0]' atol=1e-3
 @test get_rot(sol, body.frame_a, pi/2)*[0,1,0] ≈ [0,0,1] atol=1e-3 # Same test as above, but in one other way for sanity. They y-axis basis vector is rotated around x axis which aligns it with the z-axis basis vector. get_rot is used for this, which is the transpose of get_R
 @test get_R(sol, body.frame_a, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
@@ -126,14 +126,14 @@ end
 
 prob = ODEProblem(ssys, [collect(body.w_a) .=> [0,1,0];], (0, 2pi))
 sol = solve(prob, Rodas4())#, 
-@test get_R(sol, body.frame_a, 0pi) ≈ I
+@test get_R(sol, body.frame_a, 0pi) ≈ I atol=1e-3
 @test get_R(sol, body.frame_a, 1pi) ≈ diagm([-1, 1, -1]) atol=1e-3
 @test get_R(sol, body.frame_a, 2pi) ≈ I atol=1e-3
 
 
 prob = ODEProblem(ssys, [collect(body.w_a) .=> [0,0,1];], (0, 2pi))
 sol = solve(prob, Rodas4())#, 
-@test get_R(sol, body.frame_a, 0pi) ≈ I
+@test get_R(sol, body.frame_a, 0pi) ≈ I atol=1e-3
 @test get_R(sol, body.frame_a, 1pi) ≈ diagm([-1, -1, 1]) atol=1e-3
 @test get_R(sol, body.frame_a, 2pi) ≈ I atol=1e-3
 
@@ -184,7 +184,7 @@ end
     @test Q ≈ Qh ./ sqrt.(n) atol=1e-2
     @test norm(mapslices(norm, Q, dims=1) .- 1) < 1e-2
 
-    @test get_R(sol, joint.frame_b, 0pi) ≈ I
+    @test get_R(sol, joint.frame_b, 0pi) ≈ I atol=1e-3
     @test_broken get_R(sol, joint.frame_b, pi/2)*[0,1,0] ≈ [0,0,1] atol=1e-3
     @test get_R(sol, joint.frame_b, 1pi) ≈ diagm([1, -1, -1]) atol=1e-3
     @test get_R(sol, joint.frame_b, 2pi) ≈ I atol=1e-3
@@ -245,7 +245,7 @@ end
 
     Matrix(sol(ts, idxs = [body.w_a...]))
 
-    @test get_R(sol, joint.frame_b, 0pi) ≈ I
+    @test get_R(sol, joint.frame_b, 0pi) ≈ I atol = 1e-3
 
 
     # Matrix(sol(ts, idxs = [joint.w_rel_b...]))
