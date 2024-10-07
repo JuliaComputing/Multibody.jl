@@ -4,8 +4,8 @@ using Test
 using JuliaSimCompiler
 using OrdinaryDiffEq
 using LinearAlgebra
-t = Multibody.t
-D = Differential(t)
+isdefined(Main, :t) || (t = Multibody.t)
+isdefined(Main, :D) || (D = Differential(t))
 doplot() = false
 world = Multibody.world
 
@@ -1124,6 +1124,7 @@ using LinearAlgebra
 
     prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 1))
     sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
+    @test SciMLBase.successful_retcode(sol)
     # first(render(model, sol, 0, x=2.5, y=1.5, z=2.5, show_axis=true))
     # @test sol(10, idxs=model.body.body.m) ≈ 226.27 rtol=1e-3 # Values from open modelica
     # @test sol(10, idxs=model.body.body.I_11) ≈ 245.28 rtol=1e-3
@@ -1148,8 +1149,6 @@ end
 
 using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq
 using Multibody.Rotations: RotXYZ
-t = Multibody.t
-D = Multibody.D
 world = Multibody.world
 
 @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)

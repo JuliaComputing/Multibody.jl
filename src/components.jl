@@ -540,6 +540,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         frame_cm = Frame()
     end
 
+    # NOTE: these parameters should be defined before the `systems` block above, but due to bugs in MTK/JSC with higher-order array parameters we cannot do that. We still define the parameters so that they are available to make animations
     @variables r_0(t)[1:3]=r_0 [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
