@@ -928,8 +928,7 @@ function RollingWheelSet(;
         connect(wheelSetJoint.frame_middle, frame_middle)
     ]
 
-    sys = ODESystem(equations, t; name=:nothing, systems)
-    add_params(sys, [width_wheel]; name)
+    sys = ODESystem(equations, t, sts, pars; name, systems)
 
 end
 

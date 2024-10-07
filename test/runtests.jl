@@ -908,6 +908,8 @@ end
 ## Rope pendulum ===============================================================
 # ==============================================================================
 
+@testset "ropes" begin
+    @info "Testing ropes"
 # Stiff rope
 world = Multibody.world
 number_of_links = 6
@@ -965,12 +967,15 @@ if false
     @time "render flexible_rope" render(flexible_rope, sol) # Takes very long time for n>=8
 end
 
+end
 
 
 
 ## Resistance in spherical joint
 # This test creates a spherical pendulum and one simple one with Revolute joint. The damping should work the same
 
+@testset "resistance in speherical" begin
+    @info "Testing resistance in speherical"
 
 systems = @named begin
     joint = Spherical(state=true, isroot=true, phi = [π/2, 0, 0], d = 0.3)
@@ -1016,6 +1021,7 @@ sol = solve(prob, Rodas4())
 
 tt = 0:0.1:10
 @test Matrix(sol(tt, idxs = [collect(body.r_0[2:3]);])) ≈ Matrix(sol(tt, idxs = [collect(body2.r_0[2:3]);]))
+end
 
 
 @test_skip begin # Produces state with rotation matrix
@@ -1096,7 +1102,7 @@ end
 # ==============================================================================
 using LinearAlgebra
 
-# @testset "BodyBox" begin
+@testset "BodyBox" begin
     # NOTE: r = [0,1,0] yields unstable simulation due to the commented branch in from_nxy: if n_z_aux' * n_z_aux > 1.0e-6
     # NOTE: for r=[0,0,1], r_shape=[0.1, 0, 0] the render of the box appears to have negative gravity
     @info "Testing BodyBox"
@@ -1136,7 +1142,7 @@ using LinearAlgebra
     # @test sol(10, idxs=model.joint.phi) ≈ -2.0992 atol=1e-2
     # @test sol(10, idxs=model.body.body.I_31) ≈ -42.39 rtol=1e-3
 # using Plots; plot(sol)
-# end
+end
 
 ##
 
@@ -1214,6 +1220,7 @@ sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 # ==============================================================================
 ## SphericalSpherical
 # ==============================================================================
+
 
 @mtkmodel TestSphericalSpherical begin
     @components begin
@@ -1441,7 +1448,7 @@ display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 2))
 
-sol = solve(prob, FBDF(autodiff=true); initializealg=ShampineCollocationInit())
+sol = solve(prob, FBDF(autodiff=true))#; initializealg=ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
 # Multibody.render(model, sol, show_axis=false, x=-1.5, y=0, z=0, timescale=3, display=true) # Video
 # first(Multibody.render(model, sol, 0, show_axis=true, x=-1.5, y=0, z=0))
@@ -1564,7 +1571,7 @@ display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 2))
 
-sol = solve(prob, FBDF(autodiff=true); initializealg=ShampineCollocationInit())
+sol = solve(prob, FBDF(autodiff=true))#; initializealg=ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
 # Multibody.render(model, sol, show_axis=false, x=-1.5, y=0, z=0, timescale=3, display=true) # Video
 # first(Multibody.render(model, sol, 0, show_axis=true, x=-1.5, y=0, z=0))

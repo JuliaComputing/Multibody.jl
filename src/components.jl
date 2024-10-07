@@ -99,7 +99,7 @@ const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 function gravity_acceleration(r)
-    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
+    inner_gravity(GlobalScope(world.point_gravity_inner), GlobalScope(world.mu_inner), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
 end
 
 function inner_gravity(point_gravity, mu, g, n, r)
@@ -514,11 +514,27 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 """
 @component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1,
     height = 0.1_norm(r), width = height, shape = "cylinder",
-    kwargs...)
+    I_11 = 0.001,
+    I_22 = 0.001,
+    I_33 = 0.001,
+    I_21 = 0,
+    I_31 = 0,
+    I_32 = 0,
+    kwargs...
+    )
+    pars = @parameters begin
+        m = m, [description = "mass"]
+        I_11=I_11, [description = "Element (1,1) of inertia tensor"]
+        I_22=I_22, [description = "Element (2,2) of inertia tensor"]
+        I_33=I_33, [description = "Element (3,3) of inertia tensor"]
+        I_21=I_21, [description = "Element (2,1) of inertia tensor"]
+        I_31=I_31, [description = "Element (3,1) of inertia tensor"]
+        I_32=I_32, [description = "Element (3,2) of inertia tensor"]
+    end
     systems = @named begin
         translation = FixedTranslation(r = r, render=false)
         translation_cm = FixedTranslation(r = r_cm, render=false)
-        body = Body(; m, r_cm, r_0, kwargs...)
+        body = Body(; m, r_cm, r_0, I_11, I_22, I_33, I_21, I_31, I_32, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
         frame_cm = Frame()
@@ -538,7 +554,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 
     shapecode = encode(shapefile)
     shape = encode(shape)
-    pars = @parameters begin
+    more_pars = @parameters begin
         r[1:3]=r, [
             description = "Vector from frame_a to frame_b resolved in frame_a",
         ]
@@ -552,7 +568,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         shape[1:length(shape)] = shape
     end
 
-    pars = collect_all(pars)
+    pars = collect_all([pars; more_pars])
 
     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
 
