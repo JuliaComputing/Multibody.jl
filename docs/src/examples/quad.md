@@ -292,9 +292,9 @@ The observant reader may have noticed that we linearized the quadrotor without t
 
 ```@example QUAD
 linop = merge(op, Dict([
-    collect(model.system_outputs.u) .=> 0
+    collect(model.cable.joint_2.phi) .=> 0
     collect(model.body.r_0) .=> 1e-32
-    collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
+    collect(model.body.v_0) .=> 1e-32 # To avoid singularity in linearization
     collect(model.system_outputs.u) .=> 1e-32
     collect(model.feedback_gain.input.u) .=> 1e-32
     ]))
