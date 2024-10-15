@@ -1,0 +1,47 @@
+---
+name: Documentation Cleanup
+
+on:
+  pull_request:
+    types:
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cleanup-preview:
+    name: Documentation preview cleanup
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        name: Checkout
+        with:
+          fetch-depth: 0
+          ref: gh-pages
+      # Ensure an SSH agent is running so the modified Git history can be
+      # pushed back to GitHub
+      - uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}
+      - name: Download `git-filter-repo`
+        run: curl -O https://raw.githubusercontent.com/newren/git-filter-repo/v2.38.0/git-filter-repo
+      - name: Perform cleanup
+        run: |
+          # Remove the actual preview deployment, but keep a record of its
+          # deployment in the Git history
+          #
+          # This uses the `--force` flag as, by default, `git-filter-repo` will
+          # _not_ work on an existing clone of a repository. It needs to be
+          # explicitly told it is okay to rewrite the history. In this case
+          # this should be fine, given that this code is run on CI machines so
+          # there will always be a backup of the repository
+          python3 git-filter-repo \
+            --force \
+            --invert-paths \
+            --path=previews/PR${{ github.event.pull_request.number }} \
+            --prune-empty=never \
+            --refs=gh-pages
+      - name: Push modified `gh-pages` branch
+        run: git push "git@github.com:${GITHUB_REPOSITORY}" +HEAD:gh-pages
