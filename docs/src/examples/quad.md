@@ -192,7 +192,8 @@ ssys = structural_simplify(multibody(model))
 # display(unknowns(ssys))
 op = [
     model.body.v_0[1] => 0;
-    collect(model.cable.joint_2.phi) .=> 0.03;
+    model.Calt.int.x => 4;
+    collect(model.cable.joint_2.phi) .=> 0.1;
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
@@ -268,12 +269,11 @@ op = [
     model.body.r_0[2] => 1e-3
     model.body.r_0[3] => 1e-3
     model.body.r_0[1] => 1e-3
-    collect(model.cable.joint_2.phi) .=> 0.1 # Usa a larger initial cable bend since this controller is more robust
+    collect(model.cable.joint_2.phi) .=> 1 # Usa a larger initial cable bend since this controller is more robust
     model.world.g => 9.81;
     collect(model.body.phid) .=> 0;
     collect(D.(model.body.phi)) .=> 0;
-    model.feedback_gain.input.u[9] => 0;
-    model.feedback_gain.input.u[12] => 0;
+    collect(model.feedback_gain.input.u) .=> 0;
     model.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
 prob = ODEProblem(ssys, op, (0, 20))
