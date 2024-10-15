@@ -31,7 +31,7 @@ load_mass = 0.1 # Mass of the load.
 cable_length = 1 # Length of the cable.
 cable_mass = 5   # Mass of the cable.
 cable_diameter = 0.01 # Diameter of the cable.
-number_of_links = 5 # Number of links in the cable.
+number_of_links = 4 # Number of links in the cable.
 
 # PID Controller parameters
 kalt = 2.7
@@ -107,11 +107,8 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
 
     thrusters = [Thruster(name = Symbol("thruster$i"), clockwise = (i-1) % 2 == 0) for i = 1:num_arms]
     @named body = Body(m = body_mass, state_priority = 100, I_11=0.01, I_22=0.01, I_33=0.01, air_resistance=1, isroot=true)
-    # @named freemotion = FreeMotion(state=true, isroot=true, quat=false) # We use Euler angles to describe the orientation of the rotorcraft.
 
     connections = [
-        # connect(world.frame_b, freemotion.frame_a)
-        # connect(freemotion.frame_b, body.frame_a)
         y_alt ~ body.r_0[2]
         y_roll ~ body.phi[3]
         y_pitch ~ body.phi[1]
@@ -195,7 +192,8 @@ ssys = structural_simplify(multibody(model))
 # display(unknowns(ssys))
 op = [
     model.body.v_0[1] => 0;
-    collect(model.cable.joint_2.phi) .=> 0.03;
+    model.Calt.int.x => 4;
+    collect(model.cable.joint_2.phi) .=> 0.1;
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
@@ -271,12 +269,11 @@ op = [
     model.body.r_0[2] => 1e-3
     model.body.r_0[3] => 1e-3
     model.body.r_0[1] => 1e-3
-    collect(model.cable.joint_2.phi) .=> 0.1 # Usa a larger initial cable bend since this controller is more robust
+    collect(model.cable.joint_2.phi) .=> 1 # Usa a larger initial cable bend since this controller is more robust
     model.world.g => 9.81;
     collect(model.body.phid) .=> 0;
     collect(D.(model.body.phi)) .=> 0;
-    model.feedback_gain.input.u[9] => 0;
-    model.feedback_gain.input.u[12] => 0;
+    collect(model.feedback_gain.input.u) .=> 0;
     model.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
 prob = ODEProblem(ssys, op, (0, 20))
@@ -294,43 +291,40 @@ nothing # hide
 The observant reader may have noticed that we linearized the quadrotor without the cable-suspended load applied, but we simulated the closed-loop system with the load. Thankfully, the LQR controller is robust enough to stabilize the system despite this large model error. Before being satisfied with the controller, we should perform robustness analysis. Below, we compute sensitivity functions at the plant output and input and plot their sigma plots, as well as simultaneous diskmargins at the plant output and input.
 
 ```@example QUAD
-# NOTE: this section is temporarily disabled waiting for improved performance in linearization
+linop = merge(op, Dict([
+    collect(model.cable.joint_2.phi) .=> 0
+    collect(model.body.r_0) .=> 1e-32
+    collect(model.body.v_0) .=> 1e-32 # To avoid singularity in linearization
+    collect(model.system_outputs.u) .=> 1e-32
+    collect(model.feedback_gain.input.u) .=> 1e-32
+    ]))
+@time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
+S = minreal(S, 1e-6)
+isstable(S) || @error "Sensitivity function S is not stable"
+T = I(S.ny) - S
+T = minreal(T, 1e-6)
+isstable(T) || @error "Sensitivity function T is not stable"
+LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
 
-# linop = merge(op, Dict([
-#     collect(model.system_outputs.u) .=> 0
-#     collect(model.body.r_0) .=> 1e-32
-#     collect(model.load.v_0) .=> 1e-32 # To avoid singularity in linearization
-#     collect(model.system_outputs.u) .=> 1e-32
-#     collect(model.feedback_gain.input.u) .=> 1e-32
-#     ]))
-# @time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
-# S = minreal(S, 1e-6)
-# isstable(S) || @error "Sensitivity function S is not stable"
-# T = I(S.ny) - S
-# T = minreal(T, 1e-6)
-# isstable(T) || @error "Sensitivity function T is not stable"
-# LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
+@time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
+Ti = minreal(Ti, 1e-6)
+isstable(Ti) || @error "Sensitivity function Ti is not stable"
+LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
 
-# @time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
-# Ti = minreal(Ti, 1e-6)
-# isstable(Ti) || @error "Sensitivity function Ti is not stable"
-# LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
+CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop system from measurement noise to control signal
 
-# CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop system from measurement noise to control signal
+w = 2pi.*exp10.(LinRange(-2, 2, 200))
+fig_dm = plot(diskmargin(LT, 0.5), label="Plant output") # Compute diskmargin with a positive skew of 0.5 to account for a likely gain increase when the load is dropped
+plot!(diskmargin(LTi, 0.5), label="Plant input", titlefontsize=8) # Note, simultaneous diskmargins are somewhat conservative
 
-# w = 2pi.*exp10.(LinRange(-2, 2, 200))
-# fig_dm = plot(diskmargin(LT, 0.5), label="Plant output") # Compute diskmargin with a positive skew of 0.5 to account for a likely gain increase when the load is dropped
-# plot!(diskmargin(LTi, 0.5), label="Plant input", titlefontsize=8) # Note, simultaneous diskmargins are somewhat conservative
-
-# plot(
-#     sigmaplot(S, w, hz=true, label="", title="S", legend=false),
-#     sigmaplot(T, w, hz=true, label="", title="T", legend=false),
-#     sigmaplot(LT, w, hz=true, label="", title="L", legend=false),
-#     bodeplot(CS, w, hz=true, label="", title="CS", legend=false, plotphase=false, layout=1),
-#     fig_dm,
-#     layout=(2,3), size=(800,500), legend=:bottomright, ylims=(1e-4, Inf),
-# )
-nothing
+plot(
+    sigmaplot(S, w, hz=true, label="", title="S", legend=false),
+    sigmaplot(T, w, hz=true, label="", title="T", legend=false),
+    sigmaplot(LT, w, hz=true, label="", title="L", legend=false),
+    bodeplot(CS, w, hz=true, label="", title="CS", legend=false, plotphase=false, layout=1),
+    fig_dm,
+    layout=(2,3), size=(800,500), legend=:bottomright, ylims=(1e-4, Inf),
+)
 ```
 
 While gain and phase margins appear to be reasonable, we have a large high-frequency gain in the transfer functions from measurement noise to control signal, ``C(s)S(s)``. For a rotor craft where the control signal manipulates the current through motor windings, this may lead to excessive heat generation in the motors if the sensor measurements are noisy.
