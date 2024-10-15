@@ -131,18 +131,18 @@ A component rigidly attached to the world frame with translation `r` between the
 end
 
 """
-    Position(; name, r = [0, 0, 0], render = true, fixed_oreintation = true)
+    Position(; name, r = [0, 0, 0], render = true, fixed_orientation = true)
 
 Forced movement of a flange according to a reference position `r`. Similar to [`Fixed`](@ref), but `r` is not a parameter, and may thus be any time-varying symbolic expression. The reference position vector `r` is resolved in the world frame. Example: `r = [sin(t), 0, 0]`.
 
 # Arguments:
 - `r`: Position vector from world frame to frame_b, resolved in world frame
 - `render`: Render the component in animations
-- `fixed_oreintation`: If `true`, the orientation of the frame is fixed to the world frame. If `false`, the orientation is free to change.
+- `fixed_orientation`: If `true`, the orientation of the frame is fixed to the world frame. If `false`, the orientation is free to change.
 
 See also [`Pose`](@ref) for a component that allows for forced orientation as well.
 """
-@component function Position(; name, r = [0, 0, 0], render = true, fixed_oreintation = true)
+@component function Position(; name, r = [0, 0, 0], render = true, fixed_orientation = true, x_locked = true, y_locked = true, z_locked = true)
     systems = @named begin frame_b = Frame() end
     @parameters begin
         render = render, [description = "Render the component in animations"]
@@ -153,12 +153,12 @@ See also [`Pose`](@ref) for a component that allows for forced orientation as we
         a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
     end
     eqs = [
-        collect(frame_b.r_0 .~ r)
+        collect(frame_b.r_0 .~ r)[[x_locked, y_locked, z_locked]]
         collect(frame_b.r_0 .~ p)
         collect(v .~ D.(p))
         collect(a .~ D.(v))
         ]
-    if fixed_oreintation
+    if fixed_orientation
         append!(eqs, ori(frame_b) ~ nullrotation())
     end
     sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
@@ -177,16 +177,20 @@ R = RotXYZ(0, 0.5sin(t), 0)
 @named rot = Multibody.Pose(; r=[sin(t), 0, 0], R)
 ```
 
+# Connectors
+- `frame_b`: The frame that is forced to move according to the reference position and orientation.
+
 # Arguments 
 - `r`: Position vector from world frame to frame_b, resolved in world frame
 - `R`: Reference orientation matrix
 - `q`: Reference quaternion (optional alternative to `R`)
 - `render`: Render the component in animations
 - `normalize`: If a quaternion is provided, normalize the quaternion (default = true)
+- `x_locked`, `y_locked`, `z_locked`: Lock the translation in the x, y, and z directions, respectively. This allows for selective specification of the translation components, i.e., if `y_locked = false`, the y-component of the translation is not constrained to follow `r`.
 
 See also [`Position`](@ref) for a component that allows for only forced translation.
 """
-@component function Pose(; name, r = [0, 0, 0], R=nothing, q=nothing, render = true, normalize=true)
+@component function Pose(; name, r = [0, 0, 0], R=nothing, q=nothing, render = true, normalize=true, x_locked = true, y_locked = true, z_locked = true)
     systems = @named begin frame_b = Frame() end
     @parameters begin
         render = render, [description = "Render the component in animations"]
@@ -197,7 +201,7 @@ See also [`Position`](@ref) for a component that allows for only forced translat
         a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
     end
     eqs = [
-        collect(frame_b.r_0 .~ r)
+        collect(frame_b.r_0 .~ r)[[x_locked, y_locked, z_locked]]
         collect(frame_b.r_0 .~ p)
         collect(v .~ D.(p))
         collect(a .~ D.(v))
@@ -206,7 +210,7 @@ See also [`Position`](@ref) for a component that allows for only forced translat
         elseif q !== nothing
             ori(frame_b) ~ from_Q(q, 0; normalize)
         else
-            error("Either R or q must be provided")
+            error("Either R or q must be provided. If you only want to specify the position, use the `Position` component instead.")
         end
     ]
     sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
