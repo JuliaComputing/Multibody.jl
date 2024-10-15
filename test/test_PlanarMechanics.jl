@@ -1,9 +1,10 @@
 # using Revise
 # using Plots
-using ModelingToolkit, OrdinaryDiffEq, Test
+using ModelingToolkit, OrdinaryDiffEqRosenbrock, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
 import Multibody.PlanarMechanics as Pl
+import Multibody.Rotational
 using JuliaSimCompiler
 
 tspan = (0.0, 3.0)
@@ -22,7 +23,7 @@ g = -9.80665
     unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, unset_vars .=> 0.0, tspan)
 
-    sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+    sol = solve(prob, Rodas5P())#, initializealg=BrownFullBasicInit())
     @test SciMLBase.successful_retcode(sol)
 
     free_falling_displacement = 0.5 * g * tspan[end]^2  # 0.5 * g * t^2
@@ -129,7 +130,7 @@ end
     @test_skip begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
         ssys = structural_simplify(IRSystem(model))
         prob = ODEProblem(ssys, [model.body.w => w], tspan)
-        sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+        sol = solve(prob, Rodas5P())#, initializealg=BrownFullBasicInit())
 
         # phi 
         @test sol[body.phi][end] ≈ tspan[end] * w
@@ -381,7 +382,7 @@ end
     sys = structural_simplify(IRSystem(model)) # Yingbo: fails with JSCompiler
     unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5), [])
-    sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+    sol = solve(prob, Rodas5P())#, initializealg=BrownFullBasicInit())
     @test SciMLBase.successful_retcode(sol)
 end
 
@@ -411,10 +412,10 @@ end
     end
     @named model = TestWheel()
     model = complete(model)
-    ssys = structural_simplify((model))
+    ssys = structural_simplify(IRSystem(model))
     defs = Dict(unknowns(ssys) .=> 0)
     prob = ODEProblem(ssys, defs, (0.0, 10.0))
-    sol = solve(prob, Rodas5P(), initializealg = BrownFullBasicInit())
+    sol = solve(prob, Rodas5P())#, initializealg = BrownFullBasicInit())
     @test SciMLBase.successful_retcode(sol)
     # Multibody.render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
 end
