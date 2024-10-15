@@ -154,7 +154,10 @@ function Base.getproperty(cs::CacheSol, s::Symbol)
     return getproperty(getfield(cs, :sol), s)
 end
 
-
+function get_cam()
+    cam = GLMakie.current_axis().scene.camera
+    (; eyeposition=cam.eyeposition[], lookat = cam.view_direction[])
+end
 
 """
     get_rot_fun(sol, frame)
@@ -237,12 +240,12 @@ function get_shape(sys, sol)::String
 end
 
 
-function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=false)
+function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=false, size)
     # if string(Makie.current_backend()) == "CairoMakie"
     #     scene = Scene() # https://github.com/MakieOrg/Makie.jl/issues/3763
     #     fig = nothing
     # else
-        fig = Figure()
+        fig = Figure(; size)
         # scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
         scene = LScene(fig[1, 1])#.scene
     # end
@@ -281,6 +284,7 @@ function render(model, sol,
     display = false,
     loop = 1,
     cache = true,
+    size = (600,450),
     kwargs...
     )
     ModelingToolkit.iscomplete(model) || (model = complete(model))
@@ -290,7 +294,7 @@ function render(model, sol,
     elseif cache
         sol = CacheSol(model, sol)
     end
-    scene, fig = default_scene(x,y,z; lookat,up,show_axis)
+    scene, fig = default_scene(x,y,z; lookat,up,show_axis, size)
     if timevec === nothing
         timevec = range(sol.t[1], sol.t[end]*timescale, step=1/framerate)
     end
@@ -345,6 +349,7 @@ function render(model, sol, time::Real;
     y = 0.5,
     z = 2,
     cache = true,
+    size = (1200,1000),
     kwargs...,
     )
 
@@ -361,7 +366,7 @@ function render(model, sol, time::Real;
     # fig = Figure()
     # scene = LScene(fig[1, 1]).scene
     # cam3d!(scene)
-    scene, fig = default_scene(x,y,z; kwargs...)
+    scene, fig = default_scene(x,y,z; size, kwargs...)
     # mesh!(scene, Rect3f(Vec3f(-5, -3.6, -5), Vec3f(10, 0.1, 10)), color=:gray) # Floor
 
     steps = range(sol.t[1], sol.t[end], length=3000)
