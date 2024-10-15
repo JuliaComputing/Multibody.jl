@@ -256,7 +256,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit())
+sol = solve(prob, FBDF(autodiff=true))
 @test SciMLBase.successful_retcode(sol)
 ```
 
@@ -355,7 +355,7 @@ defs = [
     model.body_upright.v => 0.14
 ]
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
+sol = solve(prob, Rodas5P(autodiff=false)) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @assert all(sol[model.excited_suspension.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename="suspension_wheel.gif") # Video
@@ -365,6 +365,8 @@ nothing # hide
 
 ### Half car
 ```@example suspension
+using OrdinaryDiffEqCore: ShampineCollocationInit
+
 @mtkmodel HalfCar begin
     @structural_parameters begin
         wheel_base = 1
