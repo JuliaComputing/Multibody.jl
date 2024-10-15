@@ -82,7 +82,14 @@ mutable struct CacheSol
     vars
     last_t::Float64
     function CacheSol(model, sol)
-        vars = get_all_vars(model) |> unique
+        vars = get_all_vars(model, sol) |> unique
+        vars = filter(v->!occursin("₊tau(t)", string(v)), vars)
+        vars = filter(v->!occursin("₊a_0(t)", string(v)), vars)
+        vars = filter(v->!occursin("₊w_a(t)", string(v)), vars)
+        vars = filter(v->!occursin("₊v_0(t)", string(v)), vars)
+        vars = filter(v->!occursin("₊u(t)", string(v)), vars)
+        vars = filter(v->!occursin("₊z_a(t)", string(v)), vars)
+        vars = filter(v->!occursin("₊phid(t)", string(v)), vars)
         # Main.vars = vars
         # @show length(vars)
         # filter!(v->ModelingToolkit.SymbolicIndexingInterface.is_variable(sol, v), vars) # To work around https://github.com/SciML/ModelingToolkit.jl/issues/3065
@@ -92,14 +99,22 @@ mutable struct CacheSol
     end
 end
 
-function get_all_vars(model, vars = Multibody.collect_all(unknowns(model)))
+function get_all_vars(model, sol, vars = Multibody.collect_all(unknowns(model)))
+    @parameters render
+    nsrender = Multibody.ModelingToolkit.renamespace(model.name, render)
+    dorender = try
+        Bool(sol.prob.ps[nsrender])
+    catch
+        true
+    end
     for sys in model.systems
         if ModelingToolkit.isframe(sys)
+            dorender || continue
             newvars = Multibody.ModelingToolkit.renamespace.(model.name, Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
             append!(vars, newvars)
         else
             subsys_ns = getproperty(model, sys.name)
-            get_all_vars(subsys_ns, vars)
+            get_all_vars(subsys_ns, sol, vars)
         end
     end
     vars
