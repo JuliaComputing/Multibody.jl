@@ -4,6 +4,7 @@ using ModelingToolkit, OrdinaryDiffEqRosenbrock, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
 import Multibody.PlanarMechanics as Pl
+import Multibody.Rotational
 using JuliaSimCompiler
 
 tspan = (0.0, 3.0)
@@ -411,7 +412,7 @@ end
     end
     @named model = TestWheel()
     model = complete(model)
-    ssys = structural_simplify((model))
+    ssys = structural_simplify(IRSystem(model))
     defs = Dict(unknowns(ssys) .=> 0)
     prob = ODEProblem(ssys, defs, (0.0, 10.0))
     sol = solve(prob, Rodas5P())#, initializealg = BrownFullBasicInit())
