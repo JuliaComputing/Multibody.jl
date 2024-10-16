@@ -1,7 +1,7 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
 authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
