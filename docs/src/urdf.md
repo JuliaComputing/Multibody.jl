@@ -17,11 +17,11 @@ using Multibody, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
 ## Usage
 The following example demonstrates how to import a URDF file, the translated model is saved in file `multibody_urdf.jl`. `extras = true` makes the file self contained by including package imports, simulation and plotting.
 ```julia
-filename = joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf")
+filename = joinpath(dirname(pathof(Multibody)), "..", "test/urdf/doublependulum.urdf")
 out = "multibody_urdf.jl"
 urdf2multibody(filename; extras=true, out)
 
-include(out) # Include model, perform simulation and plotting
+include(joinpath(pwd(), out)) # Include model, perform simulation and plotting
 ```
 
 ## Docstring
