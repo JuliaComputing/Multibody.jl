@@ -541,7 +541,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     systems = @named begin
         translation = FixedTranslation(r = r, render=false)
         translation_cm = FixedTranslation(r = r_cm, render=false)
-        body = Body(; m, r_cm, r_0, I_11, I_22, I_33, I_21, I_31, I_32, kwargs...)
+        body = Body(; m, r_cm, r_0, I_11, I_22, I_33, I_21, I_31, I_32, render=false, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
         frame_cm = Frame()

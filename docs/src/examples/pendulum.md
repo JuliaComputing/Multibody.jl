@@ -423,10 +423,10 @@ using ControlSystemsMTK
 lsys = named_ss(multibody(cp), inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
 ```
 
-### LQR Control design
+### LQR and LQG Control design
 With a linear statespace object in hand, we can proceed to design an LQR or LQG controller. We will design both an LQR and an LQG controller in order to demonstrate two possible workflows.
 
-The LQR contorller is designed using the function `ControlSystemsBase.lqr`, and it takes the two cost matrices `Q1` and `Q2` penalizing state deviation and control action respectively. The LQG controller is designed using [`RobustAndOptimalControl.LQGProblem`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#LQG-design), and this function additionally takes the covariance matrices `r1, R2` for a Kalman filter. Before we call `LQGProblem` we partition the linearized system into an [`ExtendedStateSpace`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.ExtendedStateSpace) object using the [`partition`](@https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.partition-Tuple{AbstractStateSpace}) function, this indicates what inputs of the system are available for control and what are considered disturbances, and what outputs of the system are available for measurement. In this case, we assume that we have access to the cart position and the pendulum angle, and we control the cart position. The remaining two outputs are still important for the performance, but we cannot measure them and will rely on the Kalman filter to estimate them. When we call [`observer_controller`](https://juliacontrol.github.io/ControlSystems.jl/dev/lib/analysis/#ControlSystemsBase.observer_controller-Tuple{Any,%20AbstractMatrix,%20AbstractMatrix}) we get a linear system that represents the combined state estimator and state feedback controller. This linear system is then converted to an `ODESystem` by the function `LQGSystem`.
+The LQR controller is designed using the function `ControlSystemsBase.lqr`, and it takes the two cost matrices `Q1` and `Q2` penalizing state deviation and control action respectively. The LQG controller is designed using [`RobustAndOptimalControl.LQGProblem`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#LQG-design), and this function additionally takes the covariance matrices `r1, R2` for a Kalman filter. Before we call `LQGProblem` we partition the linearized system into an [`ExtendedStateSpace`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.ExtendedStateSpace) object, this indicates which inputs of the system are available for control and which are considered disturbances, and which outputs of the system are available for measurement. In this case, we assume that we have access to the cart position and the pendulum angle, and we control the cart position. The remaining two outputs are still important for the performance, but we cannot measure them and will rely on the Kalman filter to estimate them. When we call [`extended_controller`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.extended_controller) we get a linear system that represents the combined state estimator and state feedback controller. This linear system is then converted to an `ODESystem` by the function `LQGSystem`.
 
 Since the function `lqr` operates on the state vector, and we have access to the specified output vector, we make use of the system ``C`` matrix to reformulate the problem in terms of the outputs. This relies on the ``C`` matrix being full rank, which is the case here since our outputs include a complete state realization of the system. This is of no concern when using the `LQGProblem` structure since we penalize outputs rather than the state in this case. 
 
@@ -434,16 +434,22 @@ To make the simulation interesting, we make a change in the reference position o
 ```@example pendulum
 using ControlSystemsBase, RobustAndOptimalControl
 C = lsys.C
-Q1 = Diagonal([10, 10, 10, 1])
+Q1 = Diagonal([10, 10, 10, 1]) # LQR cost matrices
 Q2 = Diagonal([0.1])
 
-R1 = Diagonal([1])
+R1 = lsys.B*Diagonal([1])*lsys.B' # Kalman covariance matrices
 R2 = Diagonal([0.01, 0.01])
+Pn = lsys[[:x, :phi], :]    # Named system with only cart position and pendulum angle measurable
 
-lqg = LQGProblem(partition(lsys, u = [:u], y = [:x, :phi]), Q1, Q2, R1, R2)
+lqg = LQGProblem(ss(Pn), Q1, Q2, R1, R2)
 Lmat = lqr(lsys, C'Q1*C, Q2)/C # Alternatively, compute LQR feedback gain. The multiplication by the C matrix is to handle the difference between state and output
 
-LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
+# Compute a static gain compensation
+z = [:x] # The output for which we want to have unit static gain
+Ce, cl = extended_controller(lqg, z = RobustAndOptimalControl.names2indices(z, Pn.y))
+dc_gain_compensation = inv((Pn[:x, :].C*dcgain(cl)')[]) # Multiplier that makes the static gain from references to cart position unity
+
+LQGSystem(args...; kwargs...) = ODESystem(Ce; kwargs...)
 
 @mtkmodel CartWithFeedback begin
     @components begin
@@ -458,10 +464,12 @@ LQGSystem(args...; kwargs...) = ODESystem(observer_controller(lqg); kwargs...)
         namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
     end
     @equations begin
-        controller.input.u[1] ~ reference.output.u - namespaced_outputs[1] # reference cart position - cartpole.x
-        controller.input.u[2] ~ 0 - namespaced_outputs[2] # cartpole.phi
-        # controller.input.u[3] ~ 0 - namespaced_outputs[3] # cartpole.v # uncomment if using LQR controller instead
-        # controller.input.u[4] ~ 0 - namespaced_outputs[4] # cartpole.w
+        controller.input.u[1] ~ 0
+        controller.input.u[2] ~ reference.output.u * dc_gain_compensation
+        controller.input.u[3] ~ 0
+        controller.input.u[4] ~ 0
+        controller.input.u[5] ~ namespaced_outputs[1]
+        controller.input.u[6] ~ namespaced_outputs[2]
 
         connect(controller.output, control_saturation.input)
         connect(control_saturation.output, cartpole.motor.f)
@@ -470,7 +478,7 @@ end
 @named model = CartWithFeedback()
 model = complete(model)
 ssys = structural_simplify(multibody(model))
-prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 10))
+prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 12))
 sol = solve(prob, Tsit5())
 cp = model.cartpole
 plot(sol, idxs=[cp.prismatic.s, cp.revolute.phi, cp.motor.f.u], layout=3)
