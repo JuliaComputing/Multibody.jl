@@ -13,7 +13,6 @@ using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
-D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
