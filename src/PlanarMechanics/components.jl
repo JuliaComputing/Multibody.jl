@@ -133,11 +133,12 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
         body = Body(; r=r_cm, I, m, gy)
         frame_a = Frame()
         frame_b = Frame()
+        frame_cm = Frame()
     end
     @equations begin
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
-        connect(translation_cm.frame_b, body.frame_a)
+        connect(translation_cm.frame_b, body.frame_a, frame_cm)
     end
 end
 
@@ -168,6 +169,7 @@ A fixed translation between two components (rigid rod)
         ]
         radius = 0.1, [description = "Radius of the rod in animations"]
         render = true, [description = "Render the rod in animations"]
+        color[1:4] = purple, [description = "Color of the rod in animations"]
     end
     begin
         r = collect(r)
@@ -343,8 +345,8 @@ Linear 2D translational spring damper model
 - `d_x`: [N.s/m] Damping constant in x dir
 - `d_y`: [N.s/m] Damping constant in y dir
 - `d_phi`: [N.m.s/rad] Damping constant in phi dir
-- `s_relx0`: [m] Unstretched spring length
-- `s_rely0`: [m] Unstretched spring length
+- `s_relx0`: [m] Unstretched spring extension (direction important)
+- `s_rely0`: [m] Unstretched spring extension (direction important)
 - `phi_rel0`: [rad] Unstretched spring angle
 - `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
 - `num_windings`: [Int] Number of windings of the coil when rendered
@@ -367,8 +369,8 @@ Linear 2D translational spring damper model
         d_x = 1, [description = "Damping constant in x dir"]
         d_y = 1, [description = "Damping constant in y dir"]
         d_phi = 1, [description = "Damping constant in phi dir"]
-        s_relx0 = 0, [description = "Unstretched spring length"]
-        s_rely0 = 0, [description = "Unstretched spring length"]
+        s_relx0 = 0, [description = "Unstretched spring extensions (signed)"]
+        s_rely0 = 0, [description = "Unstretched spring extensions (signed)"]
         phi_rel0 = 0, [description = "Unstretched spring angle"]
         s_small = 1.e-10,
         [
@@ -385,12 +387,15 @@ Linear 2D translational spring damper model
         v_relx(t)
         v_rely(t)
         w_rel(t) = 0
-        s_relx(t)
-        s_rely(t)
-        phi_rel(t) = 0
-        f_x(t)
-        f_y(t)
-        tau(t)
+        s_relx(t), [description = "Spring extension in x dir"]
+        s_rely(t), [description = "Spring extension in y dir"]
+        phi_rel(t) = 0, [description = "Spring extension angle"]
+        delta_x(t), [description = "Spring deflection in x dir"]
+        delta_y(t), [description = "Spring deflection in y dir"]
+        delta_phi(t), [description = "Spring deflection in phi dir"]
+        f_x(t), [description = "Spring-damper force in x dir"]
+        f_y(t), [description = "Spring-damper force in y dir"]
+        tau(t), [description = "Rotational spring-damper torque"]
     end
 
     begin
@@ -407,11 +412,14 @@ Linear 2D translational spring damper model
         v_rely ~ D(s_rely)
         w_rel ~ D(phi_rel)
 
-        tau ~ c_phi * (phi_rel - phi_rel0) + d_phi * w_rel
         frame_a.tau ~ -tau
         frame_b.tau ~ tau
-        f_x ~ c_x * (s_relx - s_relx0) + d_x * v_relx
-        f_y ~ c_y * (s_rely - s_rely0) + d_y * v_rely
+        delta_x ~ s_relx - s_relx0
+        delta_y ~ s_rely - s_rely0
+        delta_phi ~ phi_rel - phi_rel0
+        f_x ~ c_x * delta_x + d_x * v_relx
+        f_y ~ c_y * delta_y + d_y * v_rely
+        tau ~ c_phi * delta_phi + d_phi * w_rel
         frame_a.fx ~ -f_x
         frame_b.fx ~ f_x
         frame_a.fy ~ -f_y
