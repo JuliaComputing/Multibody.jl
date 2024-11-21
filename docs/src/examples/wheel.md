@@ -24,7 +24,7 @@ using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Blocks
 using Plots
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock, OrdinaryDiffEqTsit5
 using LinearAlgebra
 using JuliaSimCompiler
 using Test
@@ -307,7 +307,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Blocks
 import Multibody.PlanarMechanics as Pl
 using Plots
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 using LinearAlgebra
 using JuliaSimCompiler
 using Test

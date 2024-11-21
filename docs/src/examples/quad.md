@@ -13,7 +13,7 @@ using ModelingToolkitStandardLibrary.Blocks
 using LinearAlgebra
 using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF
 using Test
 t = Multibody.t
 D = Differential(t)

@@ -8,7 +8,7 @@ using Multibody
 using ModelingToolkit
 using JuliaSimCompiler
 using Plots
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 using LinearAlgebra
 
 t = Multibody.t
@@ -37,7 +37,6 @@ ssys = structural_simplify(multibody(model))
 D = Differential(t)
 prob = ODEProblem(ssys, [], (0, 3))
 
-using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 

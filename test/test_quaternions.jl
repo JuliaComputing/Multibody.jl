@@ -69,7 +69,7 @@ end
 ## Simple motion with quaternions===============================================
 # ==============================================================================
 using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
-using OrdinaryDiffEq, Test
+using Test
 
 @testset "Simple motion with quaternions and state in Body" begin
 
@@ -169,7 +169,6 @@ end
         collect(joint.Q̂) .=> q0;
         ], (0, 2pi))
 
-    using OrdinaryDiffEq, Test
     sol = solve(prob, Rodas4(); u0 = prob.u0 .+ 1e-6 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     # doplot() && plot(sol, layout=21)
@@ -229,7 +228,6 @@ end
         collect(body.Q̂d) .=> [0,0,0,0];
         ], (0, 30))
 
-    using OrdinaryDiffEq, Test
     sol = solve(prob, Rodas5Pr(); u0 = prob.u0 .+ 0 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     # doplot() && plot(sol, layout=21)
@@ -262,7 +260,6 @@ using Multibody
 using ModelingToolkit
 # using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
 using Multibody.Rotations: params
 
 @testset "FreeBody" begin

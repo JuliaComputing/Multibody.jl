@@ -2,7 +2,7 @@ using ModelingToolkit
 using Multibody
 using Test
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqBDF, OrdinaryDiffEqRosenbrock, OrdinaryDiffEqTsit5
 using LinearAlgebra
 isdefined(Main, :t) || (t = Multibody.t)
 isdefined(Main, :D) || (D = Differential(t))
@@ -136,7 +136,6 @@ D = Differential(t)
 defs = Dict()
 prob = ODEProblem(ssys, defs, (0, 10))
 
-using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 @test minimum(sol[joint.phi])≈-π rtol=0.01

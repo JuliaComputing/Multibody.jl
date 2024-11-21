@@ -10,7 +10,7 @@ using Multibody
 using ModelingToolkit
 using Plots
 using JuliaSimCompiler
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 
 t = Multibody.t
 world = Multibody.world

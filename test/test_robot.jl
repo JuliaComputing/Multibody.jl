@@ -4,8 +4,8 @@ using Test
 using JuliaSimCompiler
 t = Multibody.t
 D = Differential(t)
-using OrdinaryDiffEq
-using OrdinaryDiffEq.SciMLBase: successful_retcode
+using OrdinaryDiffEqRosenbrock
+using OrdinaryDiffEqRosenbrock.SciMLBase: successful_retcode
 
 using Multibody: AccSensor,AxisType2,AxisType1,Controller,GearType2,BearingFriction,GearType1,Motor,MechanicalStructure,RobotAxis,Robot6DOF,PathPlanning1,PathPlanning6
 

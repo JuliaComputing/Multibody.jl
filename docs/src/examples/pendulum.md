@@ -5,7 +5,7 @@ To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
 using Multibody, JuliaSimCompiler
-using OrdinaryDiffEq # Contains the ODE solver we will use
+using OrdinaryDiffEqRosenbrock # Contains the ODE solver we will use
 using Plots
 ```
 We then access the world frame and time variable from the Multibody module
@@ -57,7 +57,7 @@ This results in a simplified model with the minimum required variables and equat
 multibody
 ```
 
-We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
+We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEqRosenbrock.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
 ```@example pendulum
 D = Differential(t)
 defs = Dict() # We may specify the initial condition here
@@ -187,7 +187,7 @@ The systems we have modeled so far have all been _planar_ mechanisms. We now ext
 This pendulum, sometimes referred to as a _rotary pendulum_, has two joints, one in the "shoulder", which is typically configured to rotate around the gravitational axis, and one in the "elbow", which is typically configured to rotate around the axis of the upper arm. The upper arm is attached to the shoulder joint, and the lower arm is attached to the elbow joint. The tip of the pendulum is attached to the lower arm.
 
 ```@example pendulum
-using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
+using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEqRosenbrock, Plots
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Damper as RDamper
 import Multibody.Rotations
 
@@ -326,6 +326,7 @@ We will continue the pendulum theme and design an inverted pendulum on cart. The
 We start by putting the model together and control it in open loop using a simple periodic input signal:
 
 ```@example pendulum
+using OrdinaryDiffEqTsit5
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 import ModelingToolkitStandardLibrary.Blocks
 using Plots

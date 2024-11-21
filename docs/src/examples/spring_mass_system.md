@@ -14,7 +14,7 @@ using ModelingToolkit
 using Plots
 using JuliaSimCompiler
 using ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
-using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 
 t = Multibody.t
 D = Differential(t)
