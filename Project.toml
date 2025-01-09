@@ -30,7 +30,7 @@ URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
 
 [compat]
 CoordinateTransformations = "0.6"
-DataInterpolations = "5, 6"
+DataInterpolations = "7"
 FileIO = "1"
 Graphs = "1.0"
 JuliaFormatter = "1.0"
