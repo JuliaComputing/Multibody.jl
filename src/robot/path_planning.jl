@@ -185,9 +185,9 @@ function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
     q_vec, qd_vec, qdd_vec = point_to_point(time; q0 = q0, q1 = q1, qd_max, qdd_max)
 
     interp_eqs = map(1:nout) do i
-        qfun = CubicSpline(q_vec[:, i], time; extrapolate=true)
-        qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolate=true)
-        qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolate=true)
+        qfun = CubicSpline(q_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+        qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+        qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
         [q.u[i] ~ qfun(t) 
         qd.u[i] ~ qdfun(t)
         qdd.u[i] ~ qddfun(t)]
