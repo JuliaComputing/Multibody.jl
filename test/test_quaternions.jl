@@ -75,7 +75,7 @@ using OrdinaryDiffEq, Test
 
 t = Multibody.t
 @named joint = Multibody.FreeMotion(isroot = true, state=false)
-@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, quat=true, w_a=[1,0.5,0.2], neg_w=true)
+@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, quat=true, w_a=[1,0.5,0.2])
 
 # @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true)
 # @named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=false, w_a=[1,1,1])
@@ -149,7 +149,7 @@ end
     t = Multibody.t
     world = Multibody.world
 
-    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true, neg_w=true)
+    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true)
     @named body = Body(; m = 1, r_cm = [0.0, 0, 0])
 
     connections = [connect(world.frame_b, joint.frame_a)
@@ -203,7 +203,7 @@ end
 
     @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
     @named rod = FixedTranslation(; r = [1, 0, 0])
-    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0, neg_w=true)
+    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0)
 
     # @named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
     # @named body = Body(; m = 1, r_cm = [1.0, 0, 0], isroot=false)
@@ -272,7 +272,7 @@ using Multibody.Rotations: params
 
     @named begin
         body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                        r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true, neg_w=true)
+                        r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true)
         bar2 = FixedTranslation(r = [0.8, 0, 0])
         spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
         spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
