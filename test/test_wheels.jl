@@ -13,7 +13,7 @@ using LinearAlgebra
                             I_long = 0.12,
                             x0 = 0.2,
                             z0 = 0.2,
-                            der_angles = [0, 5, 1])
+                            der_angles = [0, -5, -1])
     end
 end
 
@@ -78,7 +78,7 @@ defs = Dict([
     worldwheel.wheel.body.r_0[1] => 0.2;
     worldwheel.wheel.body.r_0[2] => 0.3;
     worldwheel.wheel.body.r_0[3] => 0.2;
-    collect(worldwheel.wheel.wheeljoint.der_angles) .=> [0, 5, 1];
+    collect(worldwheel.wheel.wheeljoint.der_angles) .=> [0, -5, -1];
     # collect(D.(cwheel.wheel.angles)) .=> [0, 5, 1]
 ])
 
@@ -135,7 +135,7 @@ import ModelingToolkitStandardLibrary.Blocks
                             x0 = 1,
                             z0 = 1,
                             iscut=true,
-                            der_angles = [0, 5, 0])
+                            der_angles = [0, -5, 0])
     end
     @equations begin
         connect(world.frame_b, prismatic.frame_a)

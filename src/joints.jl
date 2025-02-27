@@ -181,7 +181,6 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
                    phid = 0,
                    d = 0,
-                   neg_w = true,
                    phidd = 0,
                    color = [1, 1, 0, 1],
                    radius = 0.1,
@@ -224,7 +223,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 
     if state
         if quat
-            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel; neg_w))
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel))
             # append!(eqs, collect(w_rel) .~ angularVelocity2(Rrel))
         else
             @variables begin
@@ -485,7 +484,6 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                     state_priority = 4,
                     phid = 0,
                     phidd = 0,
-                    neg_w = true,
                     w_rel_b = 0,
                     r_rel_a = 0,
                     v_rel_a = 0,
@@ -546,14 +544,14 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
 
         if quat
-            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b; neg_w))
+            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
 
         else
             append!(eqs,
                     [phid .~ D.(phi)
                     phidd .~ D.(phid)
                     Rrel ~ axes_rotations(sequence, phi, phid)
-                    w_rel_b .~ (neg_w ? -1 : 1) * angular_velocity2(Rrel)])
+                    w_rel_b .~ angular_velocity2(Rrel)])
         end
 
     else

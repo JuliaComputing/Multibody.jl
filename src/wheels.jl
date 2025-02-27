@@ -117,7 +117,7 @@ this frame.
     @named frame_a = Frame(varw=true)
     Ra = ori(frame_a, true)
 
-    Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
+    Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = if surface === nothing
         [ # Road description
@@ -400,7 +400,7 @@ plot!(
     @named frame_a = Frame(varw=state)
     Ra = ori(frame_a, state)
 
-    Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
+    Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = if surface === nothing
         [ # Road description
