@@ -436,7 +436,7 @@ function get_frame(sol, frame, t)
     [R tr; 0 0 0 1]
 end
 
-function nonunit_quaternion_equations(R, w; neg_w = true)
+function nonunit_quaternion_equations(R, w)
     @variables Q(t)[1:4]=[1,0,0,0], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
     @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
     @variables Q̂d(t)[1:4]=[0,0,0,0], [state_priority=1000]
@@ -452,9 +452,6 @@ function nonunit_quaternion_equations(R, w; neg_w = true)
     # where angularVelocity2(Q, der(Q)) = 2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
     # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
-    if neg_w
-        Ω = Ω'
-    end
 
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     QR = from_Q(Q̂ ./ sqrt(n), w)
