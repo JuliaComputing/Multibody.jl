@@ -262,7 +262,7 @@ function from_Q(Q2, w; normalize=false)
         Q2 = Q2 / _norm(Q2)
     end
     q = Rotations.QuatRotation(Q2, false)
-    R = RotMatrix(q)
+    R = RotMatrix(q)'
     RotationMatrix(R, w)
 end
 
@@ -313,11 +313,11 @@ Returns a `RotationMatrix` object.
 """
 function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
-        return RotationMatrix(Rotations.RotX(angle), zeros(3))
+        return RotationMatrix(Rotations.RotX(angle)', zeros(3))
     elseif sequence == 2
-        return RotationMatrix(Rotations.RotY(angle), zeros(3))
+        return RotationMatrix(Rotations.RotY(angle)', zeros(3))
     elseif sequence == 3
-        return RotationMatrix(Rotations.RotZ(angle), zeros(3))
+        return RotationMatrix(Rotations.RotZ(angle)', zeros(3))
     else
         error("Invalid sequence $sequence")
     end
