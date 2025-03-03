@@ -67,7 +67,7 @@ t = Multibody.t
 D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, -1, 0], quat=true, neg_w=true) # This time the body isroot since there is no joint containing state
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, -1, 0], quat=true) # This time the body isroot since there is no joint containing state
     @named spring = Multibody.Spring(c = 1)
 
     connections = [connect(world.frame_b, spring.frame_a)
@@ -960,7 +960,16 @@ prob = ODEProblem(ssys, [
     collect(body.w_a) .=> [1,1,1];
     collect(body.v_0) .=> [10,10,10]
 ], (0, 10))
-@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
+@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ [-0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        0.5, 0.5, 0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        0.5, 0.5, 0.5,
+                                                                                        -0.5, -0.5, -0.5]); 
 @test SciMLBase.successful_retcode(sol)
 if false
     import GLMakie
@@ -979,7 +988,7 @@ end
 
 systems = @named begin
     joint = Spherical(state=true, isroot=true, phi = [π/2, 0, 0], d = 0.3)
-    bar = FixedTranslation(r = [0, -1, 0])
+    bar = FixedTranslation(r = [0, 1, 0])
     body = Body(; m = 1, isroot = false)
 
 
@@ -1153,7 +1162,7 @@ world = Multibody.world
 
 @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
-@named body = Body(; m = 1, isroot=true, quat=true, neg_w=true)
+@named body = Body(; m = 1, isroot=true, quat=true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
@@ -1172,7 +1181,7 @@ sol1 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol1)
 
 ## quat in joint
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=true, neg_w=true)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1193,7 +1202,7 @@ sol2 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol2)
 
 ## euler
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=false, neg_w=true)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
