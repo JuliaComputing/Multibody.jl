@@ -264,12 +264,15 @@ function default_scene(x,y,z; lookat=Vec3f(0,0,0),up=Vec3f(0,1,0),show_axis=fals
         # scene = LScene(fig[1, 1], scenekw = (lights = [DirectionalLight(RGBf(1, 1, 1), Vec3f(-1, 0, 0))],)).scene # This causes a black background for CairoMakie, issue link above
         scene = LScene(fig[1, 1])#.scene
     # end
-    cam3d!(scene, center=false)
+    # cam3d!(scene, center=true)
+    @info "Setting up camera"
+    cam3d!(scene, center=true, projectiontype=Makie.Orthographic)
+
     # scene.scene.camera.view[] = [
     #     R [x,y,z]; 0 0 0 1
     # ]
-    camc = cameracontrols(scene.scene)
-    update_cam!(scene.scene, camc, Vec3f(x, y, z), Vec3f(lookat), Vec3f(up))
+    # camc = cameracontrols(scene.scene)
+    # update_cam!(scene.scene, camc, Vec3f(x, y, z), Vec3f(lookat), Vec3f(up))
     fig.current_axis.x.show_axis[] = show_axis
     scene, fig
 end
@@ -511,36 +514,28 @@ end
 
 function render!(scene, ::typeof(Frame), sys, sol, t)
     sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
-    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
     length = sol(sol.t[1], idxs=sys.length) |> Float32
     T = get_frame_fun(sol, sys)
 
-    thing = @lift begin
+    axes_data = @lift begin
         Ti = T($t)
+
+        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
+
+        #
         Rx = Ti[:, 1]
-        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
-        x = O .+ Point3f(length*Rx)
-        Makie.GeometryBasics.Cylinder(O, x, radius)
-    end
-    mesh!(scene, thing, color=:red)
+        x = O .+ Point3f(length * Rx)
 
-    thing = @lift begin
-        Ti = T($t)
         Ry = Ti[:, 2]
-        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
-        y = O .+ Point3f(length*Ry)
-        Makie.GeometryBasics.Cylinder(O, y, radius)
-    end
-    mesh!(scene, thing, color=:green)
+        y = O .+ Point3f(length * Ry)
 
-    thing = @lift begin
-        Ti = T($t)
         Rz = Ti[:, 3]
-        O = Point3f(Ti[1:3, 4]) # Assume world is never moving
-        z = O .+ Point3f(length*Rz)
-        Makie.GeometryBasics.Cylinder(O, z, radius)
+        z = O .+ Point3f(length * Rz)
+
+        # Return the segments
+        [O => x, O => y, O => z]
     end
-    mesh!(scene, thing, color=:blue)
+    linesegments!(axes_data, color = [:red, :green, :blue], linewidth = 3 * length)
 
     true
 end
