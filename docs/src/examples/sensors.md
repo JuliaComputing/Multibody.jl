@@ -6,7 +6,7 @@ The example below adds a force and a torque sensor to the pivot point of a pendu
 ```@example sensor
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra

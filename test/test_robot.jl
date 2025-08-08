@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using JuliaSimCompiler
+# using JuliaSimCompiler
 t = Multibody.t
 D = Differential(t)
 using OrdinaryDiffEq

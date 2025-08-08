@@ -25,7 +25,7 @@ using ModelingToolkit
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using Test
 
 t = Multibody.t

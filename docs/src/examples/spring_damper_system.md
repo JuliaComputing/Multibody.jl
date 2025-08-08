@@ -12,7 +12,7 @@ This example has two parallel spring-mass parts, the first body (`body1`) is att
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

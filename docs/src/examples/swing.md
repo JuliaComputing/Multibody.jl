@@ -11,7 +11,7 @@ We start by defining a single rope component and attach it to a body in order to
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

@@ -53,7 +53,7 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
+@component function Body(; name, m, I, r = nothing, v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
     @named frame_a = Frame()
     pars = @parameters begin
         m = m, [description = "Mass of the body"]

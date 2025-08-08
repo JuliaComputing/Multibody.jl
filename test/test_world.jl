@@ -1,4 +1,4 @@
-using Multibody, ModelingToolkit, JuliaSimCompiler, Test
+using Multibody, ModelingToolkit, Test, OrdinaryDiffEq
 @mtkmodel FallingBody begin
     @components begin
         my_world = World(g = 1, n = [0, 1, 0])

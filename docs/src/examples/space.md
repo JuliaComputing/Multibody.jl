@@ -18,7 +18,7 @@ In this example, we set ``\mu = 1``, `point_gravity = true` and let two masses o
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

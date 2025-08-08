@@ -15,7 +15,7 @@ We start by simulating a stiff rope that is attached to the world in one end and
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 t = Multibody.t

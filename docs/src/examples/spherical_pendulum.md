@@ -9,7 +9,7 @@ This example models a spherical pendulum. The pivot point is modeled using a [`S
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

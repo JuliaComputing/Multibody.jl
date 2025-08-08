@@ -10,7 +10,7 @@ The [`GearConstraint`](@ref) has two rotational axes which do not have to be par
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

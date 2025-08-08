@@ -5,7 +5,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 # using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
-using JuliaSimCompiler
+# using JuliaSimCompiler
 
 world = Multibody.world
 

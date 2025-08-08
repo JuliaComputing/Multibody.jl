@@ -3,8 +3,9 @@
 using ModelingToolkit, OrdinaryDiffEq, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
+import Multibody: IRSystem
 import Multibody.PlanarMechanics as Pl
-using JuliaSimCompiler
+# using JuliaSimCompiler
 
 tspan = (0.0, 3.0)
 g = -9.80665
@@ -51,8 +52,7 @@ end
     ssys = structural_simplify(IRSystem(model))
 
     @test length(unknowns(ssys)) == 2
-    unset_vars = setdiff(unknowns(ssys), keys(ModelingToolkit.defaults(ssys)))
-    prob = ODEProblem(ssys, unset_vars .=> 0.0, tspan)
+    prob = ODEProblem(ssys, [ssys.body.phi => 0, ssys.body.w => 0], tspan)
 
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
@@ -77,8 +77,7 @@ end
     ssys = structural_simplify(IRSystem(model))
 
     @test length(unknowns(ssys)) == 2
-    unset_vars = setdiff(unknowns(ssys), keys(ModelingToolkit.defaults(ssys)))
-    prob = ODEProblem(ssys, unset_vars .=> 0.0, tspan)
+    prob = ODEProblem(ssys, [ssys.rod.body.phi => 0, ssys.rod.body.w => 0], tspan)
 
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)

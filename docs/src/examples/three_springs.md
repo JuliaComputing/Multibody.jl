@@ -11,7 +11,7 @@ The example connects three springs together in a single point. The springs are a
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

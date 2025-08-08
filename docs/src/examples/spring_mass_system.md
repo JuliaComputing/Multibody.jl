@@ -12,7 +12,7 @@ This example mirrors that of the [modelica spring-mass system](https://doc.model
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 using OrdinaryDiffEq
 

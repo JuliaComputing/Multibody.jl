@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using LinearAlgebra
 isdefined(Main, :t) || (t = Multibody.t)
@@ -462,7 +462,7 @@ end
 # https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.ThreeSprings.html
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 
@@ -602,7 +602,7 @@ sol = solve(prob, Rodas4())
 using Multibody
 using ModelingToolkit
 # using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 @testset "Spherical-joint pendulum" begin
@@ -686,7 +686,7 @@ end
 
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 @testset "GearConstraint" begin
@@ -860,7 +860,7 @@ end
 ## Actuated joint
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using ModelingToolkitStandardLibrary.Blocks
 import ModelingToolkitStandardLibrary.Mechanical.Rotational

@@ -29,7 +29,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
-using JuliaSimCompiler
+# using JuliaSimCompiler
 
 t = Multibody.t
 D = Differential(t)

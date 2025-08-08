@@ -261,7 +261,7 @@ end
 using Multibody
 using ModelingToolkit
 # using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Multibody.Rotations: params
 

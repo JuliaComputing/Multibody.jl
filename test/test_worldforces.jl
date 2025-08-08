@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 doplot() = false
 world = Multibody.world

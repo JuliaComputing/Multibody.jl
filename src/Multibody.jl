@@ -5,7 +5,6 @@ module Multibody
 # foreach(println, sort(unknowns(IRSystem(model)), by=string))
 using LinearAlgebra
 using ModelingToolkit
-using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 import ModelingToolkitStandardLibrary.Blocks
@@ -15,6 +14,12 @@ export Rotational, Translational
 
 export render, render!
 export subs_constants
+
+
+## JuliaSimCompiler transition helpers
+export IRSystem
+IRSystem(x) = x
+
 
 """
 A helper function that calls `collect` on all parameters in a vector of parameters in a smart way

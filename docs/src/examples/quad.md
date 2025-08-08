@@ -12,7 +12,7 @@ using ModelingToolkit
 using ModelingToolkitStandardLibrary.Blocks
 using LinearAlgebra
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 t = Multibody.t
