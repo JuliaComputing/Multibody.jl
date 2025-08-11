@@ -242,9 +242,9 @@ Linear 2D translational spring
     end
 
     @variables begin
-        s_relx(t) = 0
-        s_rely(t) = 0
-        phi_rel(t) = 0
+        s_relx(t)
+        s_rely(t)
+        phi_rel(t)
         f_x(t)
         f_y(t)
     end
@@ -296,12 +296,12 @@ Linear (velocity dependent) damper
     end
 
     @variables begin
-        r0x(t) = 0
-        r0y(t) = 0
-        d0x(t) = 0
-        d0y(t) = 0
-        vx(t) = 0
-        vy(t) = 0
+        r0x(t)
+        r0y(t)
+        d0x(t)
+        d0y(t)
+        vx(t)
+        vy(t)
         v(t)
         f(t)
     end
@@ -384,10 +384,10 @@ Linear 2D translational spring damper model
     @variables begin
         v_relx(t)
         v_rely(t)
-        w_rel(t) = 0
+        w_rel(t)
         s_relx(t)
         s_rely(t)
-        phi_rel(t) = 0
+        phi_rel(t)
         f_x(t)
         f_y(t)
         tau(t)

@@ -440,8 +440,7 @@ end
 end
 
 @component function AbsoluteVelocity(; name, resolve_in_frame = :frame_a)
-    @named partial_abs_sensor = PartialAbsoluteSensor()
-    @unpack frame_a, = partial_abs_sensor
+    @named frame_a = Frame()
 
     @named v_x = RealOutput()
     @named v_y = RealOutput()
@@ -684,8 +683,7 @@ end
 end
 
 @component function AbsoluteAcceleration(; name, resolve_in_frame = :frame_a)
-    @named partial_abs_sensor = PartialAbsoluteSensor()
-    @unpack frame_a, = partial_abs_sensor
+    @named frame_a = Frame()
 
     @named a_x = RealOutput()
     @named a_y = RealOutput()
@@ -730,7 +728,7 @@ end
                 zero_pos1.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return System(eqs, t; name, systems)
 end
 
 @component function RelativeAcceleration(; name, resolve_in_frame = :frame_a)

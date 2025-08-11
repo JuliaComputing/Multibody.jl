@@ -15,7 +15,7 @@ struct IsFrame2D end
         radius = radius, [description = "Radius of each axis in animations"]
     end
 
-    ODESystem(Equation[], t, vars, pars; name, metadata = Dict(IsFrame2D => true))
+    System(Equation[], t, vars, pars; name, metadata = Dict(IsFrame2D => true))
 end
 Base.@doc """
     Frame(;name)

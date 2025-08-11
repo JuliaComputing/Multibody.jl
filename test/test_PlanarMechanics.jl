@@ -14,7 +14,7 @@ g = -9.80665
     m = 2
     I = 1
     @named body = Pl.Body(; m, I)
-    @named model = ODESystem(Equation[],
+    @named model = System(Equation[],
         t,
         [],
         [],
@@ -45,7 +45,7 @@ end
         connect(rod.frame_b, body.frame_a)
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         systems = [body, revolute, rod, ceiling])
     model = complete(model)
@@ -70,7 +70,7 @@ end
         connect(revolute.frame_b, rod.frame_a),
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         systems = [revolute, rod, ceiling])
     model = complete(model)
@@ -92,12 +92,11 @@ end
 
 @testset "AbsoluteAccCentrifugal" begin
     m = 1
-    I = 0.1
     w = 10
     resolve_in_frame = :world
 
     # components
-    @named body = Pl.Body(; m, I, gy = 0.0)
+    @named body = Pl.Body(; m, I=0.1, gy = 0.0)
     @named fixed_translation = Pl.FixedTranslation(; r = [10, 0])
     @named fixed = Pl.Fixed()
     @named revolute = Pl.Revolute()#constant_w = w)
@@ -113,7 +112,7 @@ end
         # connect(body.frame_a, abs_v_sensor.frame_a)
     ]
 
-    @named model = ODESystem(eqs,
+    @named model = System(eqs,
         t,
         [],
         [],
@@ -125,7 +124,7 @@ end
             abs_v_sensor
         ])
     model = complete(model)
-    @test_skip begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
+    begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
         ssys = structural_simplify(IRSystem(model))
         prob = ODEProblem(ssys, [model.body.w => w], tspan)
         sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
@@ -142,7 +141,7 @@ end
 
         # instantaneous linear acceleration
         a_signal(t) = -w^3 * cos.(w .* t)
-        @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.ax))
+        @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.a[1]))
     end
 end
 
@@ -201,7 +200,7 @@ end
     #     connect(body2.frame_a, rel_a_sensor2.frame_b),
     # ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         [],
         [],
@@ -260,7 +259,7 @@ end
 end
 
 @testset "Measure Demo" begin
-    @named body = Pl.Body(; m = 1, I = 0.1)
+    @named body = Pl.Body(; m = 1, I = 0.1, phi=0)
     @named fixed_translation = Pl.FixedTranslation(;)
     @named fixed = Pl.Fixed()
     @named body1 = Pl.Body(; m = 0.4, I = 0.02)
@@ -291,10 +290,8 @@ end
         Pl.connect_sensor(body1.frame_a, abs_a_sensor.frame_a)...        # Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,        # Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
-        [],
-        [],
         systems = [
             fixed_translation,
             body,
@@ -304,14 +301,12 @@ end
             revolute1,
             revolute2,
             abs_pos_sensor
-        ])
-    @test_skip begin # Yingbo: BoundsError again
-        sys = structural_simplify(IRSystem(model))
-        unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-        prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5))
-        sol = solve(prob, Rodas5P())
-        @test SciMLBase.successful_retcode(sol)
-    end
+    ])
+    sys = structural_simplify(IRSystem(model))
+    # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
+    prob = ODEProblem(sys, [], (0, 5))
+    sol = solve(prob, Rodas5P())
+    @test SciMLBase.successful_retcode(sol)
 end
 
 @testset "SpringDamper" begin
@@ -333,7 +328,7 @@ end
         connect(fixed_translation.frame_b, spring_damper.frame_a),
         connect(spring_damper.frame_b, body.frame_a)
     ]
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         [],
         [],
@@ -344,8 +339,8 @@ end
             fixed_translation
         ])
     sys = structural_simplify(IRSystem(model))
-    unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5))
+    # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
+    prob = ODEProblem(sys, [], (0, 5))
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
 end
@@ -366,7 +361,7 @@ end
         connect(prismatic.frame_b, spring.frame_b)
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         [],
         [],
