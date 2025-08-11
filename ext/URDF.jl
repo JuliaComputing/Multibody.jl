@@ -308,7 +308,7 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
 
     s = if extras
         """
-        using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
+        using ModelingToolkit, Multibody, OrdinaryDiffEq, Plots
         import ModelingToolkit: t_nounits as t, D_nounits as D
         """
     else 

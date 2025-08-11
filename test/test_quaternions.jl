@@ -148,7 +148,7 @@ end
 # ============================================================
 
 @testset "Quaternions and state in free motion" begin
-    using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+    using LinearAlgebra, ModelingToolkit, Multibody
     t = Multibody.t
     world = Multibody.world
 
@@ -200,7 +200,7 @@ end
 # ============================================================
 
 # @testset "Spherical joint with quaternion state" begin
-    using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+    using LinearAlgebra, ModelingToolkit, Multibody
     world = Multibody.world
 
 

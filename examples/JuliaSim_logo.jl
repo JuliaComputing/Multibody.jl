@@ -1,5 +1,5 @@
 using ModelingToolkit
-using Multibody, JuliaSimCompiler
+using Multibody
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 t = Multibody.t

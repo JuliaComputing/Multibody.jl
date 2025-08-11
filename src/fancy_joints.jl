@@ -487,10 +487,13 @@ end
     Rrel = planar_rotation(e, angle, D(angle))
     Rb = absolute_rotation(ori(frame_a), Rrel)
 
-    IR = JuliaSimCompiler
-    e_array = IR.make_array((3,), e...)
-    r_a_array = IR.make_array((3,), r_a...)
-    r_b_array = IR.make_array((3,), r_b...)
+    # IR = JuliaSimCompiler
+    # e_array = IR.make_array((3,), e...)
+    # r_a_array = IR.make_array((3,), r_a...)
+    # r_b_array = IR.make_array((3,), r_b...)
+    e_array = collect(e)
+    r_a_array = collect(r_a)
+    r_b_array = collect(r_b)
 
     eqs = [
         collect(r_a) .~ collect(position_a.u)

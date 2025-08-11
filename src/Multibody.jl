@@ -99,7 +99,9 @@ If this optimization is to be performed repeatedly for several simulations of th
 """
 function subs_constants(model, c=[0, 1]; ssys = structural_simplify(IRSystem(model)), kwargs...)
     inds = find_defaults_with_val(model, c; ssys, kwargs...)
-    ssys = JuliaSimCompiler.freeze_parameters(ssys, inds)
+    # ssys = JuliaSimCompiler.freeze_parameters(ssys, inds)
+    @error "JuliaSimCompiler.freeze_parameters is no longer available. This optimization is currently disabled."
+    return ssys
 end
 
 function find_defaults_with_val(model, c=[0, 1]; defs = defaults(model), ssys = structural_simplify(IRSystem(model)))
@@ -229,7 +231,7 @@ Translate a URDF file into a Multibody model. Only available if LightXML.jl, Gra
 
 Example usage:
 ```
-using Multibody, ModelingToolkit, JuliaSimCompiler, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
+using Multibody, ModelingToolkit, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
 urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf"), extras=true, out="/tmp/urdf_import.jl")
 ```
 

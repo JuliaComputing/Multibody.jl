@@ -4,7 +4,7 @@ This beginners tutorial will start by modeling a pendulum pivoted around the ori
 To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
-using Multibody, JuliaSimCompiler
+using Multibody
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 ```
@@ -41,7 +41,7 @@ nothing # hide
 
 With all components and connections defined, we can create an `ODESystem` like so:
 ```@example pendulum
-@named model = ODESystem(connections, t, systems=[world, joint, body])
+@named model = System(connections, t, systems=[world, joint, body])
 model = complete(model)
 nothing # hide
 ```
@@ -187,7 +187,7 @@ The systems we have modeled so far have all been _planar_ mechanisms. We now ext
 This pendulum, sometimes referred to as a _rotary pendulum_, has two joints, one in the "shoulder", which is typically configured to rotate around the gravitational axis, and one in the "elbow", which is typically configured to rotate around the axis of the upper arm. The upper arm is attached to the shoulder joint, and the lower arm is attached to the elbow joint. The tip of the pendulum is attached to the lower arm.
 
 ```@example pendulum
-using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
+using ModelingToolkit, Multibody, OrdinaryDiffEq, Plots
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Damper as RDamper
 import Multibody.Rotations
 

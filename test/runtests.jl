@@ -1147,7 +1147,7 @@ end
 
 ##
 
-using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq
+using LinearAlgebra, ModelingToolkit, Multibody, OrdinaryDiffEq
 using Multibody.Rotations: RotXYZ
 world = Multibody.world
 
