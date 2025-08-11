@@ -141,9 +141,9 @@ Perform validity checks on the model, such as the precense of exactly one world 
 function multibody(model, level=0)
     found_world = false
     found_planar = false
-    for subsys in model.systems
+    for subsys in getfield(model, :systems)
         system_type = get_systemtype(subsys)
-        subsys_ns = getproperty(model, subsys.name)
+        subsys_ns = getproperty(model, getfield(subsys, :name))
         isworld = system_type == World
         isplanar = system_type !== nothing && parentmodule(system_type) == PlanarMechanics
         found_world = found_world || isworld

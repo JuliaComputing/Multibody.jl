@@ -36,7 +36,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
         render = render, [description = "render the joint in animations"]
     end
-    @variables tau(t)=0 [
+    @variables tau(t) [
         connect = Flow,
         # state_priority = 2,
         description = "Driving torque in direction of axis of rotation",
@@ -273,7 +273,7 @@ end
 
 
 """
-    Universal(; name, n_a, n_b, phi_a = 0, phi_b = 0, w_a = 0, w_b = 0, a_a = 0, a_b = 0, state_priority=10)
+    Universal(; name, n_a, n_b, phi_a = 0, phi_b = 0, w_a = 0, w_b = 0, a_a = nothing, a_b = nothing, state_priority=10)
 
 Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and `frame_b` rotates around axis `n_b` which is fixed in `frame_b`. The two frames coincide when `revolute_a.phi=0` and `revolute_b.phi=0`. This joint has the following potential states;
 
@@ -287,8 +287,8 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
                    state_priority = 10,
                    w_a = 0,
                    w_b = 0,
-                   a_a = 0,
-                   a_b = 0,
+                   a_a = nothing,
+                   a_b = nothing,
                    radius = 0.05f0,
                    length = radius, 
                    color = [1,0,0,1]
@@ -415,13 +415,13 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
             state_priority = 10,
             description = "Relative angular velocity of revolute joint at frame_b",
         ]
-        (a_b(t) = 0),
+        (a_b(t)),
         [
             state_priority = 10,
             description = "Relative angular acceleration of revolute joint at frame_b",
         ]
 
-        (totalPower(t) = 0), [description = "Total power flowing into this element"]
+        (totalPower(t)), [description = "Total power flowing into this element"]
     end
 
     eqs = [phi_b ~ actuatedRevolute_b.phi
@@ -484,12 +484,12 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                     iscut = false,
                     state_priority = 4,
                     phid = 0,
-                    phidd = 0,
+                    phidd = nothing,
                     neg_w = true,
                     w_rel_b = 0,
                     r_rel_a = 0,
                     v_rel_a = 0,
-                    a_rel_a = 0)
+                    a_rel_a = nothing)
     @named begin
         frame_a = Frame()
         frame_b = Frame()
@@ -735,9 +735,9 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         (v_x(t) = 0), [state_priority = 3.0, description = "Relative velocity along first prismatic joint"]
         (v_y(t) = 0), [state_priority = 3.0, description = "Relative velocity along second prismatic joint"]
         (w(t) = 0), [state_priority = 3.0, description = "Relative angular velocity around revolute joint"]
-        (a_x(t) = 0), [description = "Relative acceleration along first prismatic joint"]
-        (a_y(t) = 0), [description = "Relative acceleration along second prismatic joint"]
-        (wd(t) = 0), [description = "Relative angular acceleration around revolute joint"]
+        (a_x(t)), [description = "Relative acceleration along first prismatic joint"]
+        (a_y(t)), [description = "Relative acceleration along second prismatic joint"]
+        (wd(t)), [description = "Relative angular acceleration around revolute joint"]
     end
     @equations begin
         s_x ~ prismatic_x.s
@@ -789,8 +789,8 @@ end
         (phi(t) = 0), [state_priority = 200, description = "Relative rotation angle from frame_a to frame_b"]
         (v(t) = 0), [state_priority = 200, description = "First derivative of s (relative velocity)"]
         (w(t) = 0), [state_priority = 200, description = "First derivative of angle phi (relative angular velocity)"]
-        (a(t) = 0), [description = "Second derivative of s (relative acceleration)"]
-        (wd(t) = 0), [description = "Second derivative of angle phi (relative angular acceleration)"]
+        (a(t)), [description = "Second derivative of s (relative acceleration)"]
+        (wd(t)), [description = "Second derivative of angle phi (relative angular acceleration)"]
     end
 
     @equations begin

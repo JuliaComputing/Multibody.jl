@@ -10,7 +10,7 @@ end
 model = complete(model)
 ssys = structural_simplify(IRSystem(model))
 prob = ODEProblem(ssys, [], (0, 1))
-sol = solve(prob, Tsit5())
+sol = solve(prob, Rodas5P())
 
 tv = 0:0.1:1
 @test iszero(sol(tv, idxs=model.body.r_0[1]))
@@ -20,14 +20,14 @@ tv = 0:0.1:1
 
 # Change g
 prob = ODEProblem(ssys, [model.my_world.g .=> 2], (0, 1))
-sol = solve(prob, Tsit5())
+sol = solve(prob, Rodas5P())
 @test iszero(sol(tv, idxs=model.body.r_0[1]))
 @test sol(tv, idxs=model.body.r_0[2]) ≈ 2*tv.^2 ./ 2 atol=1e-6
 @test iszero(sol(tv, idxs=model.body.r_0[3]))
 
 # Change n
 prob = ODEProblem(ssys, collect(model.my_world.n) .=> [1, 0, 0], (0, 1))
-sol = solve(prob, Tsit5())
+sol = solve(prob, Rodas5P())
 @test sol(tv, idxs=model.body.r_0[1]) ≈ tv.^2 ./ 2 atol=1e-6
 @test iszero(sol(tv, idxs=model.body.r_0[2]))
 @test iszero(sol(tv, idxs=model.body.r_0[3]))

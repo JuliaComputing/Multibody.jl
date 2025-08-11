@@ -1,3 +1,5 @@
+struct IsFrame2D end
+
 @connector function Frame(; name, render=false, length=1.0, radius=0.1)
     vars = @variables begin
         x(t), [state_priority = -1, description = "x position"]
@@ -13,7 +15,7 @@
         radius = radius, [description = "Radius of each axis in animations"]
     end
 
-    ODESystem(Equation[], t, vars, pars; name, metadata = Dict(:frame_2d => true))
+    ODESystem(Equation[], t, vars, pars; name, metadata = Dict(IsFrame2D => true))
 end
 Base.@doc """
     Frame(;name)

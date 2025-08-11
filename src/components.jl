@@ -2,10 +2,12 @@ using LinearAlgebra
 using ModelingToolkit: get_metadata
 import ModelingToolkitStandardLibrary
 
+struct IsRoot end
+
 function isroot(sys)
     md = get_metadata(sys)
     md isa Dict || return false
-    get(md, :isroot, false)
+    get(md, IsRoot, false)
 end
 
 purple = [0.5019608f0,0.0f0,0.5019608f0,1.0f0]
@@ -21,7 +23,7 @@ If `varw = true`, the angular velocity variables `w` of the frame is also includ
 """
 function ori(sys, varw = false)
     md = get_metadata(sys)
-    if md isa Dict && (O = get(md, :orientation, nothing)) !== nothing
+    if md isa AbstractDict && (O = get(md, ModelingToolkit.FrameOrientation, nothing)) !== nothing
         R = collect(O.R)
         # Since we are using this function instead of sys.ori, we need to handle namespacing properly as well
         ns = nameof(sys)
@@ -34,7 +36,7 @@ function ori(sys, varw = false)
         end
         RotationMatrix(R, w)
     else
-        error("System $(sys.name) does not have an orientation object.")
+        error("System $(getfield(sys, :name)) does not have an orientation object.")
     end
 end
 
@@ -503,7 +505,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
-    sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(:isroot => isroot), systems = [frame_a])
+    sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(IsRoot => isroot), systems = [frame_a])
     add_params(sys, [radius; cylinder_radius; color; length_fraction; render]; name)
 end
 
@@ -519,7 +521,8 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 
 See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with predefined shapes and automatically computed inertial properties based on geometry and density.
 """
-@component function BodyShape(; name, m = 1, r = [0, 0, 0], r_cm = 0.5*r, r_0 = 0, radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1,
+@component function BodyShape(; name, state=false, m = 1, r = [0, 0, 0], r_cm = 0.5*r,
+    radius = 0.08, color=purple, shapefile="", shape_transform = I(4), shape_scale = 1,
     height = 0.1_norm(r), width = height, shape = "cylinder",
     I_11 = 0.001,
     I_22 = 0.001,
@@ -541,14 +544,14 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     systems = @named begin
         translation = FixedTranslation(r = r, render=false)
         translation_cm = FixedTranslation(r = r_cm, render=false)
-        body = Body(; m, r_cm, r_0, I_11, I_22, I_33, I_21, I_31, I_32, render=false, kwargs...)
+        body = Body(; m, r_cm, I_11, I_22, I_33, I_21, I_31, I_32, render=false, kwargs...)
         frame_a = Frame()
         frame_b = Frame()
         frame_cm = Frame()
     end
 
     # NOTE: these parameters should be defined before the `systems` block above, but due to bugs in MTK/JSC with higher-order array parameters we cannot do that. We still define the parameters so that they are available to make animations
-    @variables r_0(t)[1:3]=r_0 [
+    @variables r_0(t)[1:3] [
         state_priority = 2,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
@@ -836,15 +839,15 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
     end
 
     @variables begin
-        r_0(t)[1:3]=0, [
+        r_0(t)[1:3], [
             state_priority = 2,
             description = "Position vector from origin of world frame to origin of frame_a",
         ]
-        v_0(t)[1:3]=0, [
+        v_0(t)[1:3], [
             state_priority = 2,
             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
         ]
-        a_0(t)[1:3]=0, [
+        a_0(t)[1:3], [
             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
         ]
     end
@@ -969,15 +972,15 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
     end
 
     @variables begin
-        r_0(t)[1:3]=zeros(3), [
+        r_0(t)[1:3], [
             state_priority = 2,
             description = "Position vector from origin of world frame to origin of frame_a",
         ]
-        v_0(t)[1:3]=zeros(3), [
+        v_0(t)[1:3], [
             state_priority = 2,
             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
         ]
-        a_0(t)[1:3]=zeros(3), [
+        a_0(t)[1:3], [
             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
         ]
     end

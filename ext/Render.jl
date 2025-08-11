@@ -101,7 +101,7 @@ end
 
 function get_all_vars(model, sol, vars = Multibody.collect_all(unknowns(model)))
     @parameters render
-    nsrender = Multibody.ModelingToolkit.renamespace(model.name, render)
+    nsrender = Multibody.ModelingToolkit.renamespace(getfield(model, :name), render)
     dorender = try
         Bool(sol.prob.ps[nsrender])
     catch
@@ -110,10 +110,10 @@ function get_all_vars(model, sol, vars = Multibody.collect_all(unknowns(model)))
     for sys in model.systems
         if ModelingToolkit.isframe(sys)
             dorender || continue
-            newvars = Multibody.ModelingToolkit.renamespace.(model.name, Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
+            newvars = Multibody.ModelingToolkit.renamespace.(getfield(model, :name), Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
             append!(vars, newvars)
         else
-            subsys_ns = getproperty(model, sys.name)
+            subsys_ns = getproperty(model, getfield(sys, :name))
             get_all_vars(subsys_ns, sol, vars)
         end
     end
@@ -286,7 +286,7 @@ end
 
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
-    filename = "multibody_$(model.name).mp4",
+    filename = "multibody_$(getfield(model, :name)).mp4",
     framerate = default_framerate(filename),
     x = 2,
     y = 0.5,
@@ -433,7 +433,7 @@ function recursive_render!(scene, model, sol, t)
     for subsys in model.systems
         system_type = get_systemtype(subsys)
         # did_render = render!(scene, system_type, subsys, sol, t)
-        subsys_ns = getproperty(model, subsys.name)
+        subsys_ns = getproperty(model, getfield(subsys, :name))
         did_render = render!(scene, system_type, subsys_ns, sol, t)
         if !something(did_render, false)
             recursive_render!(scene, subsys_ns, sol, t)

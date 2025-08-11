@@ -18,7 +18,7 @@ It is not possible to connect other components, such as a body with mass propert
 - `color`: Color of the joint in animations (RGBA)
 """
 @component function SphericalSpherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
-                    r_0 = [0,0,0],
+                    r_0 = state ? [0,0,0] : nothing,
                    color = [1, 1, 0, 1],
                    m = 0,
                    radius = 0.1,
@@ -461,7 +461,7 @@ end
         length = length, [description = "length of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
     end
-    @variables tau(t)=0 [
+    @variables tau(t) [
         connect = Flow,
         description = "Driving torque in direction of axis of rotation",
     ]
