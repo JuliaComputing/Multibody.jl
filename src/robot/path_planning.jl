@@ -21,7 +21,7 @@ function PathPlanning1(; name, q0deg = 0, q1deg = 1, time = 0:0.01:10, speed_max
            connect(path.qdd, pathToAxis1.qdd)
            #    connect(path.moving, pathToAxis1.moving)
            connect(pathToAxis1.axisControlBus, controlBus.axisControlBus1)]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
@@ -75,7 +75,7 @@ function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
            connect(pathToAxis5.axisControlBus, controlBus.axisControlBus5)
            connect(pathToAxis6.axisControlBus, controlBus.axisControlBus6)]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 "Map path planning to one axis control bus"
@@ -106,7 +106,7 @@ function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
            (qdd_axisUsed.output.u ~ axisControlBus.acceleration_ref)
            (qd_axisUsed.output.u ~ axisControlBus.speed_ref)
            (q_axisUsed.output.u ~ axisControlBus.angle_ref)]
-    ODESystem(eqs, t; systems, name)
+    System(eqs, t; systems, name)
 end
 
 """
@@ -193,7 +193,7 @@ function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
         qdd.u[i] ~ qddfun(t)]
     end
     eqs = reduce(vcat, interp_eqs)
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 
@@ -233,7 +233,7 @@ function Kinematic5(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0,
 
     end
     eqs = reduce(vcat, interp_eqs)
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 """
@@ -249,5 +249,5 @@ Pass a Real signal through without modification
     @named siso = Blocks.SISO()
     @unpack u, y = siso
     eqs = [y ~ u]
-    extend(ODESystem(eqs, t; name), siso)
+    extend(System(eqs, t; name), siso)
 end

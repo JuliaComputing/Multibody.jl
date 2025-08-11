@@ -77,7 +77,7 @@ A revolute joint
     end
 
 
-    return compose(ODESystem(eqs, t, vars, pars; name = name),
+    return compose(System(eqs, t, vars, pars; name = name),
         systems...)
 end
 
@@ -178,5 +178,5 @@ A prismatic joint
         # actutation torque
         push!(eqs, f ~ 0)
     end
-    return extend(ODESystem(eqs, t, vars, pars; name, systems), partial_frames)
+    return extend(System(eqs, t, vars, pars; name, systems), partial_frames)
 end

@@ -141,7 +141,7 @@ Measure absolute position and orientation (same as Sensors.AbsolutePosition, but
         frame_a.tau ~ 0
     ]
 
-    return compose(ODESystem(eqs, t, [], []; name = name),
+    return compose(System(eqs, t, [], []; name = name),
         x, y, phi, frame_a, frame_resolve)
 end
 
@@ -189,7 +189,7 @@ Measure absolute position and orientation of the origin of frame connector
         push!(eqs, connect(zero_position.frame_resolve, pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 """
@@ -253,7 +253,7 @@ Measure relative position and orientation between the origins of two frame conne
         frame_b.tau ~ 0
     ]
 
-    return compose(ODESystem(eqs, t, [], []; name = name),
+    return compose(System(eqs, t, [], []; name = name),
         rel_x, rel_y, rel_phi, frame_a, frame_b, frame_resolve)
 end
 
@@ -300,7 +300,7 @@ Measure relative position and orientation between the origins of two frame conne
         push!(eqs, connect(zero_position.frame_resolve, pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name),
+    return compose(System(eqs, t, [], []; name = name),
         systems...)
 end
 
@@ -391,7 +391,7 @@ end
         end
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function TransformAbsoluteVector(;
@@ -436,7 +436,7 @@ end
             connect(zero_pos.frame_resolve, basic_transform_vector.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function AbsoluteVelocity(; name, resolve_in_frame = :frame_a)
@@ -484,7 +484,7 @@ end
                 zero_pos1.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function BasicTransformRelativeVector(;
@@ -569,7 +569,7 @@ end
         ])
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function TransformRelativeVector(;
@@ -624,7 +624,7 @@ end
         push!(systems, zero_pos)
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function RelativeVelocity(; name, resolve_in_frame = :frame_a)
@@ -679,7 +679,7 @@ end
                 zero_pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function AbsoluteAcceleration(; name, resolve_in_frame = :frame_a)
@@ -785,7 +785,7 @@ end
                 zero_pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 function connect_sensor(component_frame, sensor_frame)

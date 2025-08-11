@@ -73,7 +73,7 @@ connections = [
     connect(j2.support, damper2.flange_b)
     
 ]
-@named fourbar = ODESystem(connections, t, systems = [world; systems])
+@named fourbar = System(connections, t, systems = [world; systems])
 fourbar = complete(fourbar)
 ssys = structural_simplify(multibody(fourbar))
 prob = ODEProblem(ssys, [fourbar.j1.phi => 0.1], (0.0, 10.0))
@@ -144,7 +144,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b0.frame_a, world.frame_b)
                connect(b0.frame_b, j2.frame_a)
                ]
-@named fourbar2 = ODESystem(connections, t, systems = [world; systems])
+@named fourbar2 = System(connections, t, systems = [world; systems])
 fourbar2 = complete(fourbar2)
 ssys = structural_simplify(multibody(fourbar2))
 
@@ -185,7 +185,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b3.frame_b, j2.frame_a)
 ]
 
-@named fourbar_analytic = ODESystem(connections, t, systems = [world; systems])
+@named fourbar_analytic = System(connections, t, systems = [world; systems])
 fourbar_analytic = complete(fourbar_analytic)
 ssys_analytic = structural_simplify(multibody(fourbar_analytic))
 prob = ODEProblem(ssys_analytic, [], (0.0, 1.4399)) 

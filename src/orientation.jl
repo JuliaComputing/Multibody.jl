@@ -12,7 +12,7 @@ abstract type Orientation end
 
 A struct representing a 3D orientation as a rotation matrix.
 
-If `ODESystem` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
+If `System` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
 
 # Fields:
 - `R::R3`: The rotation 3×3 matrix ∈ SO(3)
@@ -56,7 +56,7 @@ end
 
 nullrotation() = RotationMatrix()
 
-function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
+function ModelingToolkit.System(RM::RotationMatrix; name)
     # @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R,w = collect.((R,w))
@@ -65,7 +65,7 @@ function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     w = at_variables_t(:w, 1:3)
 
     defaults = Dict(R .=> RM)
-    ODESystem(Equation[], t, [vec(R); w], []; name, defaults)
+    System(Equation[], t, [vec(R); w], []; name, defaults)
 end
 
 Base.:*(R1::RotationMatrix, x::AbstractArray) = R1.R * x
@@ -133,12 +133,12 @@ r_wb = resolve1(ori(frame_a), r_ab)
 """
 resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 
-resolve1(sys::ODESystem, v) = resolve1(ori(sys), v)
-resolve2(sys::ODESystem, v) = resolve2(ori(sys), v)
+resolve1(sys::System, v) = resolve1(ori(sys), v)
+resolve2(sys::System, v) = resolve2(ori(sys), v)
 
 function resolve_relative(v1, R1, R2)
-    R1 isa ODESystem && (R1 = ori(R1))
-    R2 isa ODESystem && (R2 = ori(R2))
+    R1 isa System && (R1 = ori(R1))
+    R2 isa System && (R2 = ori(R2))
     v2 = resolve2(R2, resolve1(R1, v1))
 end
 
@@ -171,21 +171,21 @@ function absolute_rotation(R1, Rrel)
     # R2 = Rrel.R*R1.R
     # w = resolve2(Rrel, R1.w) + Rrel.w
     # RotationMatrix(R2, w)
-    R1 isa ODESystem && (R1 = ori(R1))
-    Rrel isa ODESystem && (Rrel = ori(Rrel))
+    R1 isa System && (R1 = ori(R1))
+    Rrel isa System && (Rrel = ori(Rrel))
     Rrel * R1
 end
 
 function relative_rotation(R1, R2)
-    R1 isa ODESystem && (R1 = ori(R1))
-    R2 isa ODESystem && (R2 = ori(R2))
+    R1 isa System && (R1 = ori(R1))
+    R2 isa System && (R2 = ori(R2))
     R = R2'R1
     w = R2.w - resolve2(R2, resolve1(R1, R1.w))
     RotationMatrix(R.R, w)
 end
 
 function inverse_rotation(R)
-    R isa ODESystem && (R = ori(R))
+    R isa System && (R = ori(R))
     Ri = R.R'
     wi = -resolve1(R, R.w)
     RotationMatrix(Ri, wi)
@@ -232,8 +232,8 @@ orientation_constraint(R1, R2) = orientation_constraint(R1'R2)
 
 function residue(R1, R2)
     # https://github.com/modelica/ModelicaStandardLibrary/blob/master/Modelica/Mechanics/MultiBody/Frames/Orientation.mo
-    R1 isa ODESystem && (R1 = ori(R1))
-    R2 isa ODESystem && (R2 = ori(R2))
+    R1 isa System && (R1 = ori(R1))
+    R2 isa System && (R2 = ori(R2))
     R1 = R1.R
     R2 = R2.R
     [atan(cross(R1[1, :], R1[2, :]) ⋅ R2[2, :], R1[1, :] ⋅ R2[1, :])

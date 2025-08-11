@@ -33,7 +33,7 @@ D = Differential(t)
         (motorAngle(t)), [guess=0.0,output = true, description = "Angle of motor flange"]
         (motorSpeed(t)), [guess=0.0,output = true, description = "Speed of motor flange"]
     end
-    ODESystem(Equation[], t, vars, []; name)
+    System(Equation[], t, vars, []; name)
 end
 
 @connector function ControlBus(; name)
@@ -45,7 +45,7 @@ end
         axisControlBus5 = AxisControlBus()
         axisControlBus6 = AxisControlBus()
     end
-    ODESystem(Equation[], t; systems, name)
+    System(Equation[], t; systems, name)
 end
 
 """
@@ -66,7 +66,7 @@ Ideal rotational sensor to measure the absolute flange angular acceleration
            a.u ~ D(w)
            flange.tau ~ 0
            ]
-    return ODESystem(eqs, t, [], []; name = name, systems = [flange, a])
+    return System(eqs, t, [], []; name = name, systems = [flange, a])
 end
 
 RotationalFlange = Rotational.Flange
@@ -135,7 +135,7 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
            (accSensor.a.u/ratio ~ axisControlBus.acceleration)
            connect(controller.axisControlBus, axisControlBus)]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 
@@ -170,7 +170,7 @@ function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1
         connect(controller.axisControlBus, axisControlBus)
     ]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
@@ -201,7 +201,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
            (add3.input3.u ~ axisControlBus.motorSpeed)
            (PI.ctr_output.u ~ axisControlBus.current_ref)]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 function GearType2(; name, i = -99,
@@ -244,7 +244,7 @@ function GearType2(; name, i = -99,
         # connect(bearingFriction.flange_b, flange_b)
         # connect(bearingFriction.flange_a, flange_a)
     ]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Flange as fl
@@ -295,7 +295,7 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
            connect(bearingFriction.flange_b, spring.flange_a)
            connect(gear.flange_b, flange_b)
            connect(bearingFriction.flange_a, flange_a)]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
@@ -384,7 +384,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
            (convert2.y ~ Vs.v)
            connect(emf.flange, Jmotor.flange_a)]
 
-    compose(ODESystem(eqs, t; name), systems)
+    compose(System(eqs, t; name), systems)
 end
 
 robot_orange = [1, 0.51, 0, 1]
@@ -546,5 +546,5 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
            connect(r6.axis, axis6)
            connect(r6.frame_b, b6.frame_a)]
 
-    compose(ODESystem(eqs, t; name), systems)
+    compose(System(eqs, t; name), systems)
 end

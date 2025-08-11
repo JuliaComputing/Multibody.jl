@@ -36,7 +36,7 @@ connections = [
     connect(trans.frame_b, body2.frame_a)
 ]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
+@named model = System(connections, t, systems = [world; systems])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 

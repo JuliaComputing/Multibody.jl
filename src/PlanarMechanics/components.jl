@@ -90,7 +90,7 @@ Body component with mass and inertia
         I * α ~ frame_a.tau
     ]
 
-    return compose(ODESystem(eqs, t, vars, pars; name),
+    return compose(System(eqs, t, vars, pars; name),
         frame_a)
 end
 
@@ -732,7 +732,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
         f_lat ~ [frame_a.fy, -frame_a.fx]'e0
     ]
 
-    return ODESystem(equations, t, vars, pars; name, systems)
+    return System(equations, t, vars, pars; name, systems)
     
 end
 

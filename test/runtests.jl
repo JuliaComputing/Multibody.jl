@@ -73,7 +73,7 @@ D = Differential(t)
     connections = [connect(world.frame_b, spring.frame_a)
                 connect(spring.frame_b, body.frame_a)]
 
-    @named model = ODESystem(connections, t, systems = [world, spring, body])
+    @named model = System(connections, t, systems = [world, spring, body])
 
     # ssys = structural_simplify(model, allow_parameter = false)
 
@@ -125,7 +125,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(forcesensor.frame_b, powersensor.frame_a)
                connect(powersensor.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, torksensor, forcesensor, powersensor, damper])
 # ssys = structural_simplify(model, allow_parameter = false)
 
@@ -212,7 +212,7 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rev.support, damper.flange_a)
                connect(body.frame_a, rev.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, rev, body, damper])
+@named model = System(connections, t, systems = [world, rev, body, damper])
 # ssys = structural_simplify(model, allow_parameter = false)
 
 irsys = multibody(model)
@@ -247,7 +247,7 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rev.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
+@named model = System(connections, t, systems = [world, rev, body, damper, rod])
 # modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
@@ -281,7 +281,7 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rev.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
+@named model = System(connections, t, systems = [world, rev, body, damper, rod])
 
 # ssys = structural_simplify(model)#, allow_parameter = false)
 ssys = structural_simplify(multibody(model))
@@ -322,7 +322,7 @@ connections = [connect(damper1.flange_b, rev1.axis)
                connect(rev2.frame_b, rod2.frame_a)
                connect(rod2.frame_b, body2.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [
                              world,
                              rev1,
@@ -371,7 +371,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.support, damper.flange_a, spring.flange_a)
                connect(body.frame_a, joint.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, body, damper, spring])
+@named model = System(connections, t, systems = [world, joint, body, damper, spring])
 ssys = structural_simplify(multibody(model))#, allow_parameter = false)
 
 prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0],
@@ -419,7 +419,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(springdamper.frame_b, body3.frame_a)
        ]
 
-@named model = ODESystem(eqs, t; systems)
+@named model = System(eqs, t; systems)
 # ssys = structural_simplify(model, allow_parameter = false)
 ssys = structural_simplify(multibody(model))#, alias_eliminate = false)
 
@@ -490,7 +490,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(spring3.frame_b, spring1.frame_b)
        connect(spring2.frame_a, spring1.frame_b)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [
                              world,
                              body1,
@@ -535,7 +535,7 @@ eqs = [connect(bar2.frame_a, world.frame_b)
        connect(spring1.frame_a, world.frame_b)
        connect(body.frame_b, spring2.frame_b)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [
                              world,
                              body,
@@ -620,7 +620,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, bar.frame_a)
                connect(bar.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+@named model = System(connections, t, systems = [world, joint, bar, body])
 # ssys = structural_simplify(model, allow_parameters = false)
 ssys = structural_simplify(multibody(model))
 @test length(unknowns(ssys)) == 6
@@ -661,7 +661,7 @@ end
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, bar.frame_a)
                connect(bar.frame_b, body.frame_a)]
-@named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+@named model = System(connections, t, systems = [world, joint, bar, body])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 
@@ -723,7 +723,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(mounting1D.flange_b, torque2.support)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
+@named model = System(eqs, t, systems = [world; systems])
 cm = complete(model)
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [
@@ -755,7 +755,7 @@ world = Multibody.world
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
@@ -779,7 +779,7 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
@@ -799,7 +799,7 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 world = Multibody.world
 @named body = Body(m = 1, isroot = true)
 
-@named model = ODESystem([], t,
+@named model = System([], t,
                          systems = [world;
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
@@ -830,7 +830,7 @@ world = Multibody.world
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
@@ -919,7 +919,7 @@ number_of_links = 6
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named stiff_rope = ODESystem(connections, t, systems = [world, body, rope])
+@named stiff_rope = System(connections, t, systems = [world, body, rope])
 # ssys = structural_simplify(model, allow_parameter = false)
 
 @time "Simplify stiff rope pendulum" ssys = structural_simplify(multibody(stiff_rope))
@@ -949,7 +949,7 @@ number_of_links = 3
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named flexible_rope = ODESystem(connections, t, systems = [world, body, rope])
+@named flexible_rope = System(connections, t, systems = [world, body, rope])
 # ssys = structural_simplify(model, allow_parameter = false)
 
 @time "Simplify flexible rope pendulum" ssys = structural_simplify(multibody(flexible_rope))
@@ -1003,7 +1003,7 @@ connections = [connect(world.frame_b, joint.frame_a)
             connect(damper.flange_b, joint2.axis)
             ]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
+@named model = System(connections, t, systems = [world; systems])
 ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [
@@ -1036,7 +1036,7 @@ end
     connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
                 connect(chain.frame_b, fixed.frame_b)]
 
-    @named mounted_chain = ODESystem(connections, t, systems = [systems; world])
+    @named mounted_chain = System(connections, t, systems = [systems; world])
 
     ssys = structural_simplify(multibody(mounted_chain))
     prob = ODEProblem(ssys, [
@@ -1159,7 +1159,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, rod])
 irsys = multibody(model)
 ssys = structural_simplify(irsys)
@@ -1180,7 +1180,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, rod])
 irsys = multibody(model)
 ssys = structural_simplify(irsys)
@@ -1201,7 +1201,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, rod])
 irsys = multibody(model)
 ssys = structural_simplify(irsys)

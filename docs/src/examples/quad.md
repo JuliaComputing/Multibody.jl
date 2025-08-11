@@ -183,7 +183,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         end
 
     end
-    @named model = ODESystem(connections, t; systems)
+    @named model = System(connections, t; systems)
     complete(model)
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)

@@ -8,7 +8,7 @@ function PartialRelativeBaseSensor(; name)
                  frame_a.tau .~ zeros(3) |> collect
                  frame_b.f .~ zeros(3) |> collect
                  frame_b.tau .~ zeros(3) |> collect]
-    compose(ODESystem(equations, t; name), frame_a, frame_b)
+    compose(System(equations, t; name), frame_a, frame_b)
 end
 
 function BasicRelativePosition(; name, resolve_frame)
@@ -29,7 +29,7 @@ function BasicRelativePosition(; name, resolve_frame)
         error("resolve_frame must be :world, :frame_a or :frame_b, you provided $resolve_frame, which makes me sad.")
     end
 
-    extend(compose(ODESystem(eqs, t; name), r_rel), prb)
+    extend(compose(System(eqs, t; name), r_rel), prb)
 end
 
 function RelativePosition(; name, resolve_frame = :frame_a)
@@ -46,7 +46,7 @@ function RelativePosition(; name, resolve_frame = :frame_a)
         connect(relativePosition.frame_b, frame_b)
         connect(relativePosition.r_rel, r_rel)
     ]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b, r_rel, relativePosition)
+    compose(System(eqs, t; name), frame_a, frame_b, r_rel, relativePosition)
 end
 
 function PartialAbsoluteSensor(; name, n_out)
@@ -55,7 +55,7 @@ function PartialAbsoluteSensor(; name, n_out)
         y = Blocks.RealOutput(nout = n_out)
     end
     equations = []
-    compose(ODESystem(equations, t; name), frame_a, y)
+    compose(System(equations, t; name), frame_a, y)
 end
 
 """
@@ -73,7 +73,7 @@ function PartialCutForceBaseSensor(; name, resolve_frame = :frame_a)
                  ori(frame_a) ~ ori(frame_b)
                  zeros(3) .~ frame_a.f + frame_b.f |> collect
                  zeros(3) .~ frame_a.tau + frame_b.tau |> collect]
-    compose(ODESystem(equations, t; name), frame_a, frame_b)
+    compose(System(equations, t; name), frame_a, frame_b)
 end
 
 """
@@ -94,7 +94,7 @@ function CutTorque(; name, resolve_frame = :frame_a)
     else
         error("resolve_frame must be :world or :frame_a")
     end
-    extend(compose(ODESystem(eqs, t; name), torque), pcfbs)
+    extend(compose(System(eqs, t; name), torque), pcfbs)
 end
 
 """
@@ -115,7 +115,7 @@ function CutForce(; name, resolve_frame = :frame_a)
     else
         error("resolve_frame must be :world or :frame_a")
     end
-    extend(compose(ODESystem(eqs, t; name), force), pcfbs)
+    extend(compose(System(eqs, t; name), force), pcfbs)
 end
 
 function RelativeAngles(; name, sequence = [1, 2, 3])
@@ -131,7 +131,7 @@ function RelativeAngles(; name, sequence = [1, 2, 3])
            frame_b.tau .~ zeros(3) |> collect
            Rrel ~ relative_rotation(frame_a, frame_b)
            angles .~ axes_rotationangles(Rrel, sequence, guessAngle1)]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
+    compose(System(eqs, t; name), frame_a, frame_b, angles)
 end
 
 function AbsoluteAngles(; name, sequence = [1, 2, 3])
@@ -144,7 +144,7 @@ function AbsoluteAngles(; name, sequence = [1, 2, 3])
     eqs = [collect(frame_a.f .~ 0)
            collect(frame_a.tau .~ 0)
            angles.u .~ axes_rotationangles(ori(frame_a), [1, 2, 3])]
-    extend(compose(ODESystem(eqs, t; name)), pas)
+    extend(compose(System(eqs, t; name)), pas)
 end
 
 
@@ -170,5 +170,5 @@ function Power(; name)
         power.u ~ collect(frame_a.f)'resolve2(frame_a, D.(frame_a.r_0)) +
                     collect(frame_a.tau)'angular_velocity2(ori(frame_a))
     ]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end

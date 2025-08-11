@@ -39,13 +39,13 @@ connections = [
 nothing # hide
 ```
 
-With all components and connections defined, we can create an `ODESystem` like so:
+With all components and connections defined, we can create an `System` like so:
 ```@example pendulum
 @named model = System(connections, t, systems=[world, joint, body])
 model = complete(model)
 nothing # hide
 ```
-The `ODESystem` is the fundamental model type in ModelingToolkit used for multibody-type models.
+The `System` is the fundamental model type in ModelingToolkit used for multibody-type models.
 
 Before we can simulate the system, we must perform model check using the function [`multibody`](@ref) and compilation using [`structural_simplify`](@ref)
 ```@example pendulum
@@ -92,7 +92,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.support, damper.flange_a)
                connect(body.frame_a, joint.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, body, damper])
+@named model = System(connections, t, systems = [world, joint, body, damper])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 
@@ -125,7 +125,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.support, damper.flange_a, spring.flange_a)
                connect(body_0.frame_a, joint.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, body_0, damper, spring])
+@named model = System(connections, t, systems = [world, joint, body_0, damper, spring])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 
@@ -152,7 +152,7 @@ In the example above, we introduced a prismatic joint to model the oscillating m
 connections = [connect(world.frame_b, multibody_spring.frame_a)
                 connect(root_body.frame_a, multibody_spring.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body])
+@named model = System(connections, t, systems = [world, multibody_spring, root_body])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 
@@ -170,7 +170,7 @@ Internally, the [`Multibody.Spring`](@ref) contains a `Translational.Spring`, at
 push!(connections, connect(multibody_spring.spring2d.flange_a, damper.flange_a))
 push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
-@named model = ODESystem(connections, t, systems = [world, multibody_spring, root_body, damper])
+@named model = System(connections, t, systems = [world, multibody_spring, root_body, damper])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, defs, (0, 10))
@@ -426,7 +426,7 @@ lsys = named_ss(multibody(cp), inputs, outputs; op) # identical to linearize, bu
 ### LQR and LQG Control design
 With a linear statespace object in hand, we can proceed to design an LQR or LQG controller. We will design both an LQR and an LQG controller in order to demonstrate two possible workflows.
 
-The LQR controller is designed using the function `ControlSystemsBase.lqr`, and it takes the two cost matrices `Q1` and `Q2` penalizing state deviation and control action respectively. The LQG controller is designed using [`RobustAndOptimalControl.LQGProblem`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#LQG-design), and this function additionally takes the covariance matrices `r1, R2` for a Kalman filter. Before we call `LQGProblem` we partition the linearized system into an [`ExtendedStateSpace`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.ExtendedStateSpace) object, this indicates which inputs of the system are available for control and which are considered disturbances, and which outputs of the system are available for measurement. In this case, we assume that we have access to the cart position and the pendulum angle, and we control the cart position. The remaining two outputs are still important for the performance, but we cannot measure them and will rely on the Kalman filter to estimate them. When we call [`extended_controller`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.extended_controller) we get a linear system that represents the combined state estimator and state feedback controller. This linear system is then converted to an `ODESystem` by the function `LQGSystem`.
+The LQR controller is designed using the function `ControlSystemsBase.lqr`, and it takes the two cost matrices `Q1` and `Q2` penalizing state deviation and control action respectively. The LQG controller is designed using [`RobustAndOptimalControl.LQGProblem`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/#LQG-design), and this function additionally takes the covariance matrices `r1, R2` for a Kalman filter. Before we call `LQGProblem` we partition the linearized system into an [`ExtendedStateSpace`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.ExtendedStateSpace) object, this indicates which inputs of the system are available for control and which are considered disturbances, and which outputs of the system are available for measurement. In this case, we assume that we have access to the cart position and the pendulum angle, and we control the cart position. The remaining two outputs are still important for the performance, but we cannot measure them and will rely on the Kalman filter to estimate them. When we call [`extended_controller`](https://juliacontrol.github.io/RobustAndOptimalControl.jl/dev/api/#RobustAndOptimalControl.extended_controller) we get a linear system that represents the combined state estimator and state feedback controller. This linear system is then converted to an `System` by the function `LQGSystem`.
 
 Since the function `lqr` operates on the state vector, and we have access to the specified output vector, we make use of the system ``C`` matrix to reformulate the problem in terms of the outputs. This relies on the ``C`` matrix being full rank, which is the case here since our outputs include a complete state realization of the system. This is of no concern when using the `LQGProblem` structure since we penalize outputs rather than the state in this case. 
 
@@ -449,7 +449,7 @@ z = [:x] # The output for which we want to have unit static gain
 Ce, cl = extended_controller(lqg, z = RobustAndOptimalControl.names2indices(z, Pn.y))
 dc_gain_compensation = inv((Pn[:x, :].C*dcgain(cl)')[]) # Multiplier that makes the static gain from references to cart position unity
 
-LQGSystem(args...; kwargs...) = ODESystem(Ce; kwargs...)
+LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
 
 @mtkmodel CartWithFeedback begin
     @components begin

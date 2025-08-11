@@ -94,7 +94,7 @@ If a connection to the world is needed in a component model, use [`Fixed`](@ref)
         render_inner ~ render
         point_gravity_inner ~ point_gravity
     ]
-    ODESystem(eqs, t, [n_inner; g_inner; mu_inner; render_inner; point_gravity_inner], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
+    System(eqs, t, [n_inner; g_inner; mu_inner; render_inner; point_gravity_inner], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
 end
 
 """
@@ -128,7 +128,7 @@ A component rigidly attached to the world frame with translation `r` between the
     end
     eqs = [collect(frame_b.r_0 .~ r)
            ori(frame_b) ~ nullrotation()]
-    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    sys = compose(System(eqs, t; name=:nothing), systems...)
     add_params(sys, [render]; name)
 end
 
@@ -163,7 +163,7 @@ See also [`Pose`](@ref) for a component that allows for forced orientation as we
     if fixed_orientation
         append!(eqs, ori(frame_b) ~ nullrotation())
     end
-    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    sys = compose(System(eqs, t; name=:nothing), systems...)
     add_params(sys, [render]; name)
 end
 
@@ -215,7 +215,7 @@ See also [`Position`](@ref) for a component that allows for only forced translat
             error("Either R or q must be provided. If you only want to specify the position, use the `Position` component instead.")
         end
     ]
-    sys = compose(ODESystem(eqs, t; name=:nothing), systems...)
+    sys = compose(System(eqs, t; name=:nothing), systems...)
     add_params(sys, [render]; name)
 end
 
@@ -239,7 +239,7 @@ end
     eqs = [(collect(housing_tau) .~ collect(-n * flange_b.tau));
            (flange_b.phi ~ phi0);
            connect(housing_frame_a, frame_a)]
-    compose(ODESystem(eqs, t; name), systems...)
+    compose(System(eqs, t; name), systems...)
 end
 
 """
@@ -271,7 +271,7 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
                    (0 .~ taua + taub + cross(r, fb))]
     pars = [r; radius; color; render]
     vars = []
-    compose(ODESystem(eqs, t, vars, pars; name), frame_a, frame_b)
+    compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
 end
 
 """
@@ -334,7 +334,7 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
     eqs = collect(eqs)
     append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))
 
-    compose(ODESystem(eqs, t, [], pars; name), frame_a, frame_b)
+    compose(System(eqs, t, [], pars; name), frame_a, frame_b)
 end
 
 """
@@ -505,7 +505,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
-    sys = ODESystem(eqs, t; name=:nothing, metadata = Dict(IsRoot => isroot), systems = [frame_a])
+    sys = System(eqs, t; name=:nothing, metadata = Dict(IsRoot => isroot), systems = [frame_a])
     add_params(sys, [radius; cylinder_radius; color; length_fraction; render]; name)
 end
 
@@ -591,7 +591,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
            connect(frame_a, body.frame_a)
            connect(frame_cm, translation_cm.frame_b)
            ]
-    ODESystem(eqs, t, [r_0; v_0; a_0], pars; name, systems)
+    System(eqs, t, [r_0; v_0; a_0], pars; name, systems)
 end
 
 
@@ -674,7 +674,7 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         push!(eqs, connect(links[i].frame_b, joints[i+1].frame_a))
     end
 
-    ODESystem(eqs, t; name, systems = [systems; links; joints])
+    System(eqs, t; name, systems = [systems; links; joints])
 end
 
 # @component function BodyCylinder(; name, m = 1, r = [0.1, 0, 0], r_0 = 0, r_shape=zeros(3), length = _norm(r - r_shape), kwargs...)
@@ -763,8 +763,8 @@ end
 #     #     dir; length; diameter; inner_diameter; density
 #     # ] 
 #     # vars = [r_0; v_0; a_0]
-#     # ODESystem(eqs, t, vars, pars; name, systems)
-#     ODESystem(eqs, t; name, systems)
+#     # System(eqs, t, vars, pars; name, systems)
+#     System(eqs, t; name, systems)
 # end
 
 """
@@ -1127,5 +1127,5 @@ end
 #         connect(frame_b, translation.frame_b)
 #         connect(frame_a, body.frame_a)
 #     ]
-#     ODESystem(equations, t, vars, pars; name, systems)
+#     System(equations, t, vars, pars; name, systems)
 # end

@@ -46,7 +46,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(mounting1D.flange_b, torque2.support)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
+@named model = System(eqs, t, systems = [world; systems])
 cm = complete(model)
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [

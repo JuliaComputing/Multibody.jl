@@ -179,7 +179,7 @@ this frame.
                  zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                  zeros(3) .~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
-    sys = compose(ODESystem(equations, t; name=:nothing), frame_a)
+    sys = compose(System(equations, t; name=:nothing), frame_a)
     add_params(sys, [color;]; name)
 end
 
@@ -264,7 +264,7 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
                          collect(wheeljoint.der_angles) .~ collect(der_angles)
                          connect(body.frame_a, frame_a)
                          connect(wheeljoint.frame_a, frame_a)]
-    compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
+    compose(System(equations, t; name), frame_a, wheeljoint, body)
 end
 
 
@@ -493,7 +493,7 @@ plot!(
                 #     v_slip~mu_A
                 #     v_slip~mu_S
                 # ]
-    compose(ODESystem(equations, t; name), frame_a)
+    compose(System(equations, t; name), frame_a)
 end
 
 
@@ -566,7 +566,7 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
                             collect(wheeljoint.der_angles) .~ collect(der_angles)]
         )
     end
-    compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
+    compose(System(equations, t; name), frame_a, wheeljoint, body)
 end
 
 """
@@ -660,7 +660,7 @@ function RollingConstraintVerticalWheel(;
         zeros(3) .~ collect(frame_a.f) + resolve2(ori(frame_a), f_wheel_0)
         zeros(3) .~ collect(frame_a.tau) + resolve2(ori(frame_a), cross(rContact_0, f_wheel_0))
     ]
-    ODESystem(equations, t; name, systems = [frame_a])
+    System(equations, t; name, systems = [frame_a])
 end
 
 
@@ -800,7 +800,7 @@ function RollingWheelSetJoint(;
         connect(frame_middle, mounting1D.frame_a)
         connect(mounting1D.flange_b, support)
     ]
-    sys = ODESystem(equations, t; name=:nothing, systems)
+    sys = System(equations, t; name=:nothing, systems)
     add_params(sys, [width_wheel]; name)
 end
 
@@ -933,7 +933,7 @@ function RollingWheelSet(;
         connect(wheelSetJoint.frame_middle, frame_middle)
     ]
 
-    sys = ODESystem(equations, t, sts, pars; name, systems)
+    sys = System(equations, t, sts, pars; name, systems)
 
 end
 

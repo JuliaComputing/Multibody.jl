@@ -1,6 +1,6 @@
 function add_params(sys, params; name)
     params isa AbstractVector || (params = [params...])
-    extend(ODESystem(Equation[], t, [], params; name), sys)
+    extend(System(Equation[], t, [], params; name), sys)
 end
 
 """
@@ -77,13 +77,13 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         push!(eqs, axis.phi ~ phi)
         push!(eqs, axis.tau ~ tau)
         # push!(eqs, connect(internalAxis.flange, axis))
-        ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b, axis, support, fixed])
+        System(eqs, t; name=:nothing, systems=[frame_a, frame_b, axis, support, fixed])
     else
         # Modelica Revolute uses a ConstantTorque as well as internalAxis = Rotational.InternalSupport(tau=tau), but it seemed more complicated than required and I couldn't get it to work, likely due to the `input` semantics of modelica not having an equivalent in MTK, so the (tau=tau) input argument caused problems.
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         push!(eqs, tau ~ 0)
-        ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b])
+        System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
     end
     add_params(sys, pars; name)
 end
@@ -100,7 +100,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 - `axis`: 1-dim. translational flange that drives the joint
 - `support`: 1-dim. translational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 
-The function returns an ODESystem representing the prismatic joint.
+The function returns an System representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
                    s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
@@ -155,10 +155,10 @@ The function returns an ODESystem representing the prismatic joint.
         push!(eqs, connect(fixed.flange, support))
         push!(eqs, axis.s ~ s)
         push!(eqs, axis.f ~ f)
-        compose(ODESystem(eqs, t; name=:nothing), frame_a, frame_b, axis, support, fixed)
+        compose(System(eqs, t; name=:nothing), frame_a, frame_b, axis, support, fixed)
     else
         push!(eqs, f ~ 0)
-        compose(ODESystem(eqs, t; name=:nothing), frame_a, frame_b)
+        compose(System(eqs, t; name=:nothing), frame_a, frame_b)
     end
     add_params(sys, pars; name)
 end
@@ -267,7 +267,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         end
     end
 
-    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    sys = extend(System(eqs, t; name=:nothing), ptf)
     add_params(sys, pars; name)
 end
 
@@ -350,7 +350,7 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
            connect(frame_a, revolute_a.frame_a)
            connect(revolute_b.frame_b, frame_b)
            connect(revolute_a.frame_b, revolute_b.frame_a)]
-    extend(ODESystem(eqs, t; name, systems = [revolute_a, revolute_b]), ptf)
+    extend(System(eqs, t; name, systems = [revolute_a, revolute_b]), ptf)
 end
 
 """
@@ -447,7 +447,7 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
                            bearing.tau'angular_velocity2(bearing))
     end
 
-    extend(ODESystem(eqs, t; name, systems), ptf)
+    extend(System(eqs, t; name, systems), ptf)
 end
 
 
@@ -564,11 +564,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
     end
     if state && !isroot
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
+        compose(System(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
     elseif state
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, )
+        compose(System(eqs, t; name), frame_a, frame_b, Rrel_f, )
     else
-        compose(ODESystem(eqs, t; name), frame_a, frame_b)
+        compose(System(eqs, t; name), frame_a, frame_b)
     end
 end
 
@@ -642,7 +642,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f)
         collect(n) .~ n0
     ]
-    sys = ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b])
+    sys = System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
     add_params(sys, pars; name)
 end
 
@@ -843,7 +843,7 @@ end
             connect(support, rev.support)
         ]
     end
-    ODESystem(connections, t; systems, name)
+    System(connections, t; systems, name)
 end
 
 @component function URDFPrismatic(; name, r, R, axisflange = false, kwargs...)
@@ -882,7 +882,7 @@ end
             connect(support, rev.support)
         ]
     end
-    ODESystem(connections, t; systems, name)
+    System(connections, t; systems, name)
 end
 
 @mtkmodel NullJoint begin

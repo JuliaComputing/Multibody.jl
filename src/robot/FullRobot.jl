@@ -66,7 +66,7 @@ function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, q0 = 0,
         connect(pathPlanning.controlBus, controlBus),
         connect(controlBus.axisControlBus1, axis.axisControlBus),
     ]
-    ODESystem(eqs, t; systems, name)
+    System(eqs, t; systems, name)
 end
 
 
@@ -262,5 +262,5 @@ function Robot6DOF(; name, kwargs...)
            connect(controlBus.axisControlBus5, axis5.axisControlBus)
            connect(controlBus.axisControlBus6, axis6.axisControlBus)]
 
-    ODESystem(eqs, t; systems, name)
+    System(eqs, t; systems, name)
 end

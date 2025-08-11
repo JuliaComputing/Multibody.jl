@@ -124,7 +124,7 @@ It is not possible to connect other components, such as a body with mass propert
     ]
 
 
-    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    sys = extend(System(eqs, t; name=:nothing), ptf)
     add_params(sys, pars; name)
 end
 
@@ -195,7 +195,7 @@ In complex multibody systems with closed loops this may help to simplify the sys
         zeros(3) .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
     ]
 
-    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    sys = extend(System(eqs, t; name=:nothing), ptf)
     add_params(sys, pars; name)
 end
 
@@ -259,7 +259,7 @@ In systems without closed loops the use of this implicit joint does not make sen
 
     Main.eqs = eqs
 
-    sys = extend(ODESystem(eqs, t, collect(r_rel_a), pars; name), ptf)
+    sys = extend(System(eqs, t, collect(r_rel_a), pars; name), ptf)
 end
 
 
@@ -436,7 +436,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         residue === :external || error("Unknown value for constraint_residue, expected nothing or :external")
     end
 
-    sys = ODESystem(eqs, t; name=:nothing, systems)
+    sys = System(eqs, t; name=:nothing, systems)
     add_params(sys, pars; name)
 end
 
@@ -520,7 +520,7 @@ end
         end
     ]
 
-    sys = ODESystem(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
+    sys = System(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
     
     add_params(sys, pars; name)
 end
@@ -666,7 +666,7 @@ The rest of this joint aggregation is defined by the following parameters:
         connect(relative_position.r_rel, revolute.position_a)
         connect(revolute.bearing, bearing)
     ]
-    ODESystem(eqs, t; name, systems=[systems; more_systems])
+    System(eqs, t; name, systems=[systems; more_systems])
 
 end
 
@@ -777,7 +777,7 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
         connect(jointUSR.bearing, bearing)
     ]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 

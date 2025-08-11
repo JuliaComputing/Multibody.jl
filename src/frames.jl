@@ -21,7 +21,7 @@
 
     R = NumRotationMatrix(; name, varw, state_priority=-1)
 
-    ODESystem(Equation[], t, [r_0; f; tau; vec(R.R)], pars; name,
+    System(Equation[], t, [r_0; f; tau; vec(R.R)], pars; name,
               metadata = Dict(ModelingToolkit.FrameOrientation => R, ModelingToolkit.IsFrame => true))
 end
 

@@ -44,7 +44,7 @@ eqs = [
     connect(spring1.flange_a, p1.support)
 ]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
+@named model = System(eqs, t, systems = [world; systems])
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys,[], (0, 5))
 

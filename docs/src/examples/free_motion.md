@@ -18,7 +18,7 @@ world = Multibody.world
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
@@ -60,7 +60,7 @@ eqs = [connect(bar2.frame_a, world.frame_b)
        connect(spring1.frame_a, world.frame_b)
        connect(body.frame_b, spring2.frame_b)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [
                              world,
                              body,

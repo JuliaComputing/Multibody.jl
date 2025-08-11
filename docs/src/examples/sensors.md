@@ -29,7 +29,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(torquesensor.frame_b, forcesensor.frame_a)
                connect(forcesensor.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, torquesensor, forcesensor])
 ssys = structural_simplify(multibody(model))
 
