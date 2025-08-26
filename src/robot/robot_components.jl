@@ -66,7 +66,7 @@ Ideal rotational sensor to measure the absolute flange angular acceleration
            a.u ~ D(w)
            flange.tau ~ 0
            ]
-    return System(eqs, t, [], []; name = name, systems = [flange, a])
+    return System(eqs, t; name = name, systems = [flange, a])
 end
 
 RotationalFlange = Rotational.Flange

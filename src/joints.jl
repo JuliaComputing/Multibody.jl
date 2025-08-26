@@ -205,7 +205,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     # @parameters begin # Currently not using parameters due to these appearing in if statements
     #     sequence[1:3] = sequence
     # end
-    @variables begin (w_rel(t)[1:3] = zeros(3)),
+    @variables begin (w_rel(t)[1:3] = state ? zeros(3) : nothing),
                      [
                          description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
                      ] end
