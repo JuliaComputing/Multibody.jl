@@ -107,7 +107,7 @@ function get_all_vars(model, sol, vars = Multibody.collect_all(unknowns(model)))
     catch
         true
     end
-    for sys in model.systems
+    for sys in getfield(model, :systems)
         if ModelingToolkit.isframe(sys)
             dorender || continue
             newvars = Multibody.ModelingToolkit.renamespace.(getfield(model, :name), Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
@@ -430,7 +430,7 @@ end
 Internal function: Recursively render all subsystem components of a multibody system. If a particular component returns `true` from its `render!` method, indicating that the component performaed rendering, the recursion stops.
 """
 function recursive_render!(scene, model, sol, t)
-    for subsys in model.systems
+    for subsys in getfield(model, :systems)
         system_type = get_systemtype(subsys)
         # did_render = render!(scene, system_type, subsys, sol, t)
         subsys_ns = getproperty(model, getfield(subsys, :name))

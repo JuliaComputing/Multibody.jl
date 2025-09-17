@@ -29,7 +29,7 @@ function BasicRelativePosition(; name, resolve_frame)
         error("resolve_frame must be :world, :frame_a or :frame_b, you provided $resolve_frame, which makes me sad.")
     end
 
-    extend(compose(System(eqs, t; name), r_rel), prb)
+    extend(compose(System(collect(eqs), t; name), r_rel), prb)
 end
 
 function RelativePosition(; name, resolve_frame = :frame_a)
