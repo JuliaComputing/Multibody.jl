@@ -302,7 +302,7 @@ function render(model, sol,
     size = (600,450),
     kwargs...
     )
-    ModelingToolkit.iscomplete(model) || (model = complete(model))
+    ModelingToolkit.iscomplete(model) || (model = complete(model, flatten=false))
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
         return render(model, sol, 0; x, y, z, lookat, up, show_axis, kwargs...)[1]
@@ -316,7 +316,7 @@ function render(model, sol,
 
     t = Observable(timevec[1])
 
-    recursive_render!(scene, complete(model), sol, t)
+    recursive_render!(scene, model, sol, t)
 
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
@@ -365,11 +365,12 @@ function render(model, sol, time::Real;
     z = 2,
     cache = true,
     size = (1200,1000),
+    slider = !(sol isa Union{ODEProblem, FakeSol}),
     kwargs...,
     )
 
-    ModelingToolkit.iscomplete(model) || (model = complete(model))
-    slider = !(sol isa Union{ODEProblem, FakeSol})
+    ModelingToolkit.iscomplete(model) || (model = complete(model, flatten=false))
+    # model = ModelingToolkit.toggle_namespacing(model, false)
 
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
@@ -391,7 +392,7 @@ function render(model, sol, time::Real;
     else
         t = Observable(time)
     end
-    recursive_render!(scene, complete(model), sol, t)
+    recursive_render!(scene, model, sol, t)
 
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
@@ -864,7 +865,7 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
         sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     catch
     end
-    frameinds = findall(ModelingToolkit.isframe, collect(sys.systems))
+    frameinds = findall(ModelingToolkit.isframe, collect(getfield(sys, :systems)))
     length(frameinds) == 2 || return false
 
     nameof(sys.systems[frameinds[1]]) ∈ (:frame_a, :frame_b) || return false
