@@ -187,8 +187,8 @@ A fixed translation between two components (rigid rod)
         phi ~ frame_a.phi
         w ~ D(phi)
         # rigidly connect positions
-        frame_a.x + r0[1] ~ frame_b.x
-        frame_a.y + r0[2] ~ frame_b.y
+        [frame_a.x  
+        frame_a.y] + r0 .~ [frame_b.x, frame_b.y]
         frame_a.phi ~ frame_b.phi
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0

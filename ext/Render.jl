@@ -430,14 +430,21 @@ end
 """
 Internal function: Recursively render all subsystem components of a multibody system. If a particular component returns `true` from its `render!` method, indicating that the component performaed rendering, the recursion stops.
 """
-function recursive_render!(scene, model, sol, t)
+function recursive_render!(scene, model, sol, t, first=true)
+    # Render the model itself
+    if first
+        did_render = render!(scene, get_systemtype(model), model, sol, t)
+        if did_render === true
+            return
+        end
+    end
     for subsys in getfield(model, :systems)
         system_type = get_systemtype(subsys)
         # did_render = render!(scene, system_type, subsys, sol, t)
         subsys_ns = getproperty(model, getfield(subsys, :name))
         did_render = render!(scene, system_type, subsys_ns, sol, t)
         if !something(did_render, false)
-            recursive_render!(scene, subsys_ns, sol, t)
+            recursive_render!(scene, subsys_ns, sol, t, false)
         end
     end
 end
