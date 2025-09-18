@@ -197,6 +197,29 @@ A fixed translation between two components (rigid rod)
     end
 end
 
+@mtkmodel FixedRotation begin
+    @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
+
+    @parameters begin
+        alpha = 0, [description = "Fixed rotation angle between frame_a and frame_b"]
+        render = true, [description = "Render the rotation in animations"]
+    end
+
+    @equations begin
+        # Positions are the same
+        frame_a.x ~ frame_b.x
+        frame_a.y ~ frame_b.y
+
+        # Fixed rotation offset
+        frame_a.phi + alpha ~ frame_b.phi
+
+        # Force balance
+        frame_a.fx + frame_b.fx ~ 0
+        frame_a.fy + frame_b.fy ~ 0
+        frame_a.tau + frame_b.tau ~ 0
+    end
+end
+
 """
     Spring(; name, c_x = 1, c_y = 1, c_phi = 1e5, s_relx0 = 0, s_rely0 = 0, phi_rel0 = 0, s_small = 1.e-10)
 
