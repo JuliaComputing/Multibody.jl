@@ -11,6 +11,9 @@ export render, loop_render
 using MeshIO, FileIO
 using StaticArrays
 
+
+import Multibody: get_rot_fun, get_fun, get_frame_fun, get_color, get_shapefile, get_shape
+
 """
 This struct is used to mimic a solution object such that a model can be rendered without having an actual solution
 """
@@ -323,9 +326,9 @@ function render(model, sol,
         for frame in traces
             md = get_metadata(frame)
             (md !== nothing) || error("Only frames can be traced in animations.")
-            if get(md, :frame, false)
+            if get(md, Multibody.ModelingToolkit.IsFrame, false)
                 points = get_trans(sol, frame, tvec) |> Matrix
-            elseif get(md, :frame_2d, false)
+            elseif get(md, Multibody.PlanarMechanics.IsFrame2D, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
                 error("Got fishy frame metadata")
