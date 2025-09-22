@@ -355,6 +355,15 @@ include("robot/FullRobot.jl")
 export PlanarMechanics
 include("PlanarMechanics/PlanarMechanics.jl")
 
+
+# These are extended in the render module
+function get_rot_fun end
+function get_fun end
+function get_frame_fun end
+function get_color end
+function get_shapefile end
+function get_shape end
+
 export SphereVisualizer, CylinderVisualizer, BoxVisualizer
 include("visualizers.jl")
 

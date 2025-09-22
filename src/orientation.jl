@@ -373,6 +373,16 @@ function resolve_dyade2(R, D1)
     R*D1*R'
 end
 
+function is_frame(x)
+    md = get_metadata(frame)
+    get(md, Multibody.ModelingToolkit.IsFrame, false)
+end
+
+function is_frame_2d(x)
+    md = get_metadata(frame)
+    get(md, Multibody.PlanarMechanics.IsFrame2D, false)
+end
+
 """
     R_W_F = get_rot(sol, frame, t)
 
@@ -389,7 +399,14 @@ The columns of ``R_W_F`` indicate are the basis vectors of the frame ``F`` expre
 See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_rot(sol, frame, t)
-    Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
+    if is_frame(frame)
+        Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
+    elseif is_frame_2d(frame)
+        phi = sol(t, idxs = frame.phi)
+        Rotations.RotMatrix2(ori_2d(phi)')
+    else
+        error("$frame is not a multibody frame")
+    end
 end
 
 """

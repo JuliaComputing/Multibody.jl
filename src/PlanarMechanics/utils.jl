@@ -37,8 +37,16 @@ All variables are resolved in the planar world frame.
 - `radius`: [m] Radius of each axis in animations
 """ Frame
 
-function ori_2d(frame)
-    phi = frame.phi
+ori_2d(frame::System) = ori_2d(frame.phi)
+
+
+"""
+    ori_2d(frame)
+    ori_2d(phi)
+
+2D orientation matrix from angle phi (in radians). This is the inverse of [`get_rot`](@ref).
+"""
+function ori_2d(phi)
     return [cos(phi) -sin(phi); sin(phi) cos(phi)]
 end
 
