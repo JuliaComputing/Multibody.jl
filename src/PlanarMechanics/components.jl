@@ -116,6 +116,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @structural_parameters begin
         r = [1,0]
         r_cm = 0.5*r
+        state_priority = 2
     end
     @parameters begin
         gy = -9.80665
@@ -130,7 +131,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     @components begin
         translation = FixedTranslation(; r)
         translation_cm = FixedTranslation(; r=r_cm)
-        body = Body(; I, m, gy)
+        body = Body(; I, m, gy, state_priority)
         frame_a = Frame()
         frame_b = Frame()
     end
