@@ -412,7 +412,7 @@ function render(model, sol, time::Real;
             Makie.lines!(scene, points)
         end
     end
-    fig, t
+    fig, t, scene
 end
 
 function Multibody.loop_render(model, sol; timescale = 1.0, framerate = 30, max_loop = 5, kwargs...)
