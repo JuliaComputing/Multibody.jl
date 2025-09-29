@@ -331,7 +331,7 @@ function render(model, sol,
             elseif get(md, Multibody.PlanarMechanics.IsFrame2D, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
-                error("Got fishy frame metadata")
+                error("Got fishy frame metadata", md)
             end
             Makie.lines!(scene, points)
         end
@@ -402,12 +402,12 @@ function render(model, sol, time::Real;
         for frame in traces
             md = get_metadata(frame)
             (md !== nothing) || error("Only frames can be traced in animations.")
-            if get(md, :frame, false)
+            if get(md, Multibody.ModelingToolkit.IsFrame, false)
                 points = get_trans(sol, frame, tvec) |> Matrix
-            elseif get(md, :frame_2d, false)
+            elseif get(md, Multibody.PlanarMechanics.IsFrame2D, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
-                error("Got fishy frame metadata")
+                error("Got fishy frame metadata", md)
             end
             Makie.lines!(scene, points)
         end
