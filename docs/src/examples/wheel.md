@@ -32,8 +32,11 @@ using Test
 t = Multibody.t
 D = Differential(t)
 
-@mtkmodel WheelInWorld begin
-    @components begin
+@component function WheelInWorld(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         world = World()
         wheel = RollingWheel(
             radius = 0.3,
@@ -45,6 +48,13 @@ D = Differential(t)
             der_angles = [0, 5, 1],
         )
     end
+
+    vars = @variables begin
+    end
+
+    equations = []
+
+    return System(equations, t; name, systems)
 end
 
 @named worldwheel = WheelInWorld()
@@ -101,8 +111,11 @@ The slip velocity is defined such that when the wheel is moving with positive ve
 
 
 ```@example WHEEL
-@mtkmodel SlipWheelInWorld begin
-    @components begin
+@component function SlipWheelInWorld(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         world = World()
         wheel = SlippingWheel(
             radius = 0.3,
@@ -120,6 +133,13 @@ The slip velocity is defined such that when the wheel is moving with positive ve
             vSlide_min = 0.15,      # Minimum sliding velocity
         )
     end
+
+    vars = @variables begin
+    end
+
+    equations = []
+
+    return System(equations, t; name, systems)
 end
 
 @named worldwheel = SlipWheelInWorld()
@@ -154,8 +174,11 @@ In this animation, we render also the connector frame of the wheel to make it ea
 ## Wheel set
 A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common axis through their axis of rotation. 
 ```@example WHEEL
-@mtkmodel DrivingWheelSet begin
-    @components begin
+@component function DrivingWheelSet(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         sine1 = Blocks.Sine(frequency=1, amplitude=2)
         sine2 = Blocks.Sine(frequency=1, amplitude=2, phase=pi/2)
         torque1 = Rotational.Torque()
@@ -165,14 +188,20 @@ A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common a
         body = Body(m=0.01, state_priority=1)
         world = World()
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         connect(sine1.output, torque1.tau)
         connect(sine2.output, torque2.tau)
         connect(torque1.flange, wheels.axis1)
         connect(torque2.flange, wheels.axis2)
         connect(wheels.frame_middle, bar.frame_a)
         connect(bar.frame_b, body.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = DrivingWheelSet()
@@ -205,16 +234,13 @@ wheel_d = 2
 wheel_radius = 0.25
 tire_black = [0.1, 0.1, 0.1, 1]
 
-@mtkmodel Car begin
-    @structural_parameters begin
-        l=4
-        m=108
-    end
-    @parameters begin
+@component function Car(; name, l=4, m=108)
+    pars = @parameters begin
         I=10
         g=0
     end
-    @components begin
+
+    systems = @named begin
         world = World()
 
         sine1 = Blocks.Sine(frequency=1, amplitude=150)
@@ -229,19 +255,25 @@ tire_black = [0.1, 0.1, 0.1, 1]
 
         body = BodyShape(; m, r = [l, 0, 0], I_22 = I, radius=0.3)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         connect(sine1.output, torque1.tau)
         connect(sine2.output, torque2.tau)
         connect(torque1.flange, front_wheels.axis1)
         connect(torque2.flange, front_wheels.axis2)
         connect(front_wheels.frame_middle, steering_joint.frame_a)
 
-        connect(steering_joint.frame_b, body.frame_a)        
+        connect(steering_joint.frame_b, body.frame_a)
         connect(rear_wheels.frame_middle, body.frame_b)
 
         connect(prefer_straight_ahead.flange_a, steering_joint.axis)
         connect(prefer_straight_ahead.flange_b, steering_joint.support)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = Car()
 model = complete(model)
@@ -264,8 +296,11 @@ We will use the component [`PlanarMechanics.SimpleWheel`](@ref), together with a
 ```@example WHEEL
 import Multibody.PlanarMechanics as Pl
 
-@mtkmodel TestWheel begin
-    @components begin
+@component function TestWheel(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
         revolute = Pl.Revolute()
         wheel1 = Pl.SimpleWheel(color=tire_black)
@@ -273,7 +308,11 @@ import Multibody.PlanarMechanics as Pl
         thrust_input1 = Blocks.Constant(k=1)
         thrust_input2 = Blocks.Constant(k=0)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         connect(body.frame_a, revolute.frame_a)
         connect(revolute.frame_b, wheel1.frame_a)
         connect(thrust_input1.output, wheel1.thrust)
@@ -281,7 +320,9 @@ import Multibody.PlanarMechanics as Pl
         revolute.phi ~ deg2rad(50)*sin(2pi*0.2*t)
 
         connect(wheel2.frame_a, body.frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = TestWheel()
 model = complete(model)
@@ -316,8 +357,11 @@ t = Multibody.t
 D = Differential(t)
 tire_black = [0.1, 0.1, 0.1, 1]
 
-@mtkmodel TestSlipBasedWheel begin
-    @components begin
+@component function TestSlipBasedWheel(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         slipBasedWheelJoint = Pl.SlipBasedWheelJoint(
             radius = 0.3,
             r = [1,0],              # Driving direction at angle phi = 0
@@ -338,7 +382,11 @@ tire_black = [0.1, 0.1, 0.1, 1]
         inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
         constant = Blocks.Constant(k = 0)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         connect(fixed.frame_b, revolute.frame_a)
         connect(revolute.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, body.frame_a)
@@ -346,7 +394,9 @@ tire_black = [0.1, 0.1, 0.1, 1]
         connect(slipBasedWheelJoint.flange_a, inertia.flange_b)
         connect(constant.output, slipBasedWheelJoint.dynamicLoad)
         connect(engineTorque.flange, inertia.flange_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = TestSlipBasedWheel()
@@ -380,8 +430,11 @@ plot(sol, idxs=[
 ## Planar two-track model
 A more elaborate example with 4 wheels.
 ```@example WHEEL
-@mtkmodel TwoTrackWithDifferentialGear begin
-    @components begin
+@component function TwoTrackWithDifferentialGear(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         body = Pl.Body(m = 100, I = 1, gy = 0)
         body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0,)
         body2 = Pl.Body(m = 100, I = 1, gy = 0,)
@@ -449,8 +502,10 @@ A more elaborate example with 4 wheels.
         dynamic_load = Blocks.Constant(k=0)
     end
 
+    vars = @variables begin
+    end
 
-    @equations begin
+    equations = [
         connect(wheelJoint2.flange_a, inertia1.flange_b)
         connect(inertia.flange_b, wheelJoint1.flange_a)
         connect(fixedTranslation2.frame_b, fixedTranslation1.frame_a)
@@ -476,7 +531,9 @@ A more elaborate example with 4 wheels.
         connect(revolute.frame_a, rightTrail.frame_a)
         connect(revolute.frame_b, fixedTranslation5.frame_a)
         connect(dynamic_load.output, wheelJoint1.dynamicLoad, wheelJoint2.dynamicLoad, wheelJoint3.dynamicLoad, wheelJoint4.dynamicLoad)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = TwoTrackWithDifferentialGear()
