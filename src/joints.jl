@@ -885,12 +885,21 @@ end
     System(connections, t; systems, name)
 end
 
-@mtkmodel NullJoint begin
-    @components begin
+@component function NullJoint(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
-    @equations begin
-        connect(frame_a, frame_b)
+
+    vars = @variables begin
     end
+
+    equations = [
+        connect(frame_a, frame_b)
+    ]
+
+    return System(equations, t; name, systems)
 end
