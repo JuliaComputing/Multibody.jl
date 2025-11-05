@@ -811,20 +811,27 @@ According to the overall convention, the positive direction of all vectors, espe
 - `carrier` (Rotational.Flange) Planet carrier
 - `ring` (Rotational.Flange) Ring wheel
 """
-@mtkmodel IdealPlanetary begin
-    @parameters begin
-        ratio = 2, [description="Number of ring_teeth/sun_teeth"]
+@component function IdealPlanetary(; name, ratio = 2)
+    pars = @parameters begin
+        ratio = ratio, [description = "Number of ring_teeth/sun_teeth"]
     end
-    @components begin
+
+    systems = @named begin
         sun = Rotational.Flange()
         carrier = Rotational.Flange()
         ring = Rotational.Flange()
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         (1 + ratio)*carrier.phi ~ sun.phi + ratio*ring.phi
         ring.tau ~ ratio*sun.tau
         carrier.tau ~ -(1 + ratio)*sun.tau
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -837,16 +844,25 @@ A 1D-rotational component that is a variant of a planetary gear and can be used 
 - `flange_left` (Rotational.Flange) Flange for the left output torque
 - `flange_right` (Rotational.Flange) Flange for the right output torque
 """
-@mtkmodel DifferentialGear begin
-    @components begin
+@component function DifferentialGear(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         ideal_planetary = IdealPlanetary(ratio=-2)
         flange_b = Rotational.Flange()
         flange_left = Rotational.Flange()
         flange_right = Rotational.Flange()
     end
-    @equations begin
-        connect(flange_b, ideal_planetary.ring) 
-        connect(ideal_planetary.carrier, flange_right) 
-        connect(ideal_planetary.sun, flange_left)
+
+    vars = @variables begin
     end
+
+    equations = [
+        connect(flange_b, ideal_planetary.ring)
+        connect(ideal_planetary.carrier, flange_right)
+        connect(ideal_planetary.sun, flange_left)
+    ]
+
+    return System(equations, t; name, systems)
 end
