@@ -59,7 +59,9 @@ Body component with mass and inertia
   - `frame`: 2-dim. Coordinate system
 """
 @component function Body(; name, m, I, r = nothing, v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
-    @named frame_a = Frame()
+    systems = @named begin
+        frame_a = Frame()
+    end
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
         I = I, [description = "Inertia of the body with respect to the origin of frame_a along the z-axis of frame_a"]
@@ -95,8 +97,7 @@ Body component with mass and inertia
         I * α ~ frame_a.tau
     ]
 
-    return compose(System(eqs, t, vars, pars; name),
-        frame_a)
+    return System(eqs, t, vars, pars; name, systems)
 end
 
 """
@@ -201,7 +202,7 @@ A fixed translation between two components (rigid rod)
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
-        frame_a.tau + frame_b.tau + r0' * [frame_b.fy, -frame_b.fx] ~ 0
+        frame_a.tau + frame_b.tau + dot(r0, [frame_b.fy, -frame_b.fx]) ~ 0
     ]
 
     return System(equations, t; name, systems)

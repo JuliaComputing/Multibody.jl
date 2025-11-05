@@ -4,6 +4,7 @@ Library to model planar mechanical multi-body systems inspired by https://github
 
 module PlanarMechanics
 
+using LinearAlgebra
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 import ModelingToolkitStandardLibrary.Blocks

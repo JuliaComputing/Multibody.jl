@@ -77,8 +77,7 @@ A revolute joint
     end
 
 
-    return compose(System(eqs, t, vars, pars; name = name),
-        systems...)
+    return System(eqs, t, vars, pars; name = name, systems)
 end
 
 """
