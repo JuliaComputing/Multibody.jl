@@ -1,9 +1,20 @@
 using Multibody, ModelingToolkit, Test, OrdinaryDiffEq
-@mtkmodel FallingBody begin
-    @components begin
+@component function FallingBody(; name)
+    systems = @named begin
         my_world = World(g = 1, n = [0, 1, 0])
         body = Body(isroot=true)
     end
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = [
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = FallingBody()
@@ -35,12 +46,23 @@ sol = solve(prob, Rodas5P())
 
 ## World in more than one place
 # This should result in too many equations
-@mtkmodel FallingBodyOuter begin
-    @components begin
+@component function FallingBodyOuter(; name)
+    systems = @named begin
         inner_model = FallingBody()
         my_world_outer = World(g = 2, n = [0, 1, 0])
         body = Body(isroot=true)
     end
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = [
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = FallingBodyOuter()
