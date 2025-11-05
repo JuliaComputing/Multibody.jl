@@ -341,7 +341,7 @@ end
         ])
     sys = structural_simplify(IRSystem(model))
     # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, [], (0, 5))
+    prob = ODEProblem(sys, [sys.body.r => zeros(2); sys.body.v => zeros(2); sys.body.phi => 0.0; sys.body.w => 0.0], (0, 5))
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
 end

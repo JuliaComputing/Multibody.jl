@@ -149,7 +149,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
         connect(translation_cm.frame_b, body.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 """

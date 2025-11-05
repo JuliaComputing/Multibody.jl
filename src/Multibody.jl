@@ -1,5 +1,8 @@
 # Find variables that are both array form and scalarized / collected
 # foreach(println, sort(unknowns(IRSystem(model)), by=string))
+
+# Problem: ERROR: Could not evaluate value of parameter rod₊body₊I. Missing values for variables in expression rod₊I.
+# solution: explicitly pass I in pars to System constructor
 module Multibody
 # Find variables that are both array form and scalarized / collected
 # foreach(println, sort(unknowns(IRSystem(model)), by=string))
