@@ -133,6 +133,24 @@ function find_defaults_with_val(model, c=[0, 1]; defs = defaults(model), ssys = 
 end
 
 
+"""
+    guesses_for_all_parameters(ssys, guesses = Dict{Any, Any}())
+
+Generate a dictionary of NaN guesses for all parameters that do not already have a guess specified in `guesses` or a default guess in the system `ssys`. This is useful as a debugging tool when parameter initialization or optimization is not giving the expected results.
+"""
+function guesses_for_all_parameters(ssys, guesses = Dict{Any, Any}())
+    guesses = Dict(deepcopy(guesses))
+    for p in ModelingToolkit.parameters(ssys)
+        haskey(guesses, p) && continue
+        ModelingToolkit.hasguess(p) && continue
+        ModelingToolkit.symtype(p) <: Number || continue
+        guesses[p] = NaN
+    end
+    return guesses
+end
+
+
+
 export multibody
 
 """
