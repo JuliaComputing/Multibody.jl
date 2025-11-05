@@ -688,47 +688,30 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
 - `radius`: (structural) Radius of the revolute cylinder
 - `render`: Enable rendering of the joint in animations
 """
-@mtkmodel Planar begin
-    @structural_parameters begin
-        state_priority = 1#, [description = "Priority used to choose whether the joint state variables are selected"]
-        n
-        n_x
-        radius = 0.05
-        cylindercolor = [1, 0, 1, 1]
-        boxcolor = [0, 0, 1, 1]
+@component function Planar(; name, state_priority = 1, n, n_x, radius = 0.05,
+                           cylindercolor = [1, 0, 1, 1], boxcolor = [0, 0, 1, 1],
+                           cylinderlength = 0.1, cylinderdiameter = 0.05,
+                           boxwidth = 0.3*cylinderdiameter, boxheight = boxwidth, render = true)
+    pars = @parameters begin
+        cylinderlength = cylinderlength, [description = "Length of revolute cylinder"]
+        cylinderdiameter = cylinderdiameter, [description = "Diameter of revolute cylinder"]
+        boxwidth = boxwidth, [description = "Width of prismatic joint boxes"]
+        boxheight = boxheight, [description = "Height of prismatic joint boxes"]
+        render = render, [description = "Enable rendering of the joint in animations"]
     end
-    begin
-    end
-    @parameters begin
-        # (n[1:3]), [description = "Axis orthogonal to unconstrained plane, resolved in frame_a (= same as in frame_b)"]
-        # (n_x[1:3]), [description = "Vector in direction of x-axis of plane, resolved in frame_a (n_x shall be orthogonal to n)"]
-        cylinderlength = 0.1, [description = "Length of revolute cylinder"]
-        cylinderdiameter = 0.05, [description = "Diameter of revolute cylinder"]
-        # cylindercolor[1:4] = cylindercolordefault, [description = "Color of revolute cylinder"] # Endless bugs with array parameters
-        boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
-        boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
-        # boxcolor[1:4] = boxcolordefault, [description = "Color of prismatic joint boxes"]
-        render = true, [description = "Enable rendering of the joint in animations"]
-    end
-    begin
-        n = collect(n)
-        n_x = collect(n_x)
-    end
-    # @defaults begin
-    #     n .=> [0, 0, 1]
-    #     n_x .=> [1, 0, 0]
-    #     cylindercolor .=> [1, 0, 1, 1]
-    #     boxcolor .=> [0, 0, 1, 1]
-    # end
 
-    @components begin
+    # n = collect(n)
+    # n_x = collect(n_x)
+
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor, radius)
         prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor, radius)
         revolute = Revolute(; state_priority=2.1, n, isroot=false, color=cylindercolor, radius)
     end
-    @variables begin
+
+    vars = @variables begin
         (s_x(t) = 0), [state_priority = 3.0, description = "Relative distance along first prismatic joint starting at frame_a"]
         (s_y(t) = 0), [state_priority = 3.0, description = "Relative distance along second prismatic joint starting at first prismatic joint"]
         (phi(t) = 0), [state_priority = 3.0, description = "Relative rotation angle from frame_a to frame_b"]
@@ -739,7 +722,8 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         (a_y(t)), [description = "Relative acceleration along second prismatic joint"]
         (wd(t)), [description = "Relative angular acceleration around revolute joint"]
     end
-    @equations begin
+
+    equations = [
         s_x ~ prismatic_x.s
         s_y ~ prismatic_y.s
         phi ~ revolute.phi
@@ -753,38 +737,30 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         connect(prismatic_x.frame_b, prismatic_y.frame_a)
         connect(prismatic_y.frame_b, revolute.frame_a)
         connect(revolute.frame_b, frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@mtkmodel Cylindrical begin
-    begin
-        n_def = [1, 0, 0] # Workaround for mtkmodel bug
-        cylinder_color_def = [1, 0, 1, 1]
+@component function Cylindrical(; name, n = [1, 0, 0], cylinder_color = [1, 0, 1, 1],
+                                cylinder_diameter = 0.05, render = true)
+    pars = @parameters begin
+        n[1:3] = n, [description = "Cylinder axis resolved in frame_a (= same as in frame_b)"]
+        cylinder_diameter = cylinder_diameter, [description = "Diameter of cylinder"]
+        render = render, [description = "Enable rendering of the joint in animations"]
     end
 
-    @structural_parameters begin
-        # _state_priority = 2 # mtkmodel bug prevents this from being any form of parameter at all :/
-        cylinder_color = [1, 0, 1, 1]#, [description = "Color of cylinder"]
-    end
+    # n = collect(n)
+    # cylinder_color = collect(cylinder_color)
 
-    @parameters begin
-        n[1:3] = n_def, [description = "Cylinder axis resolved in frame_a (= same as in frame_b)"]
-        cylinder_diameter = 0.05, [description = "Diameter of cylinder"]
-        render = true, [description = "Enable rendering of the joint in animations"]
-    end
-    begin
-        n = collect(n)
-        cylinder_color = collect(cylinder_color)
-    end
-
-    @components begin
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         prismatic = Prismatic(; n, state_priority=1, render = false)
         revolute = Revolute(; n, state_priority=1, color = cylinder_color, radius = cylinder_diameter/2)
     end
 
-    @variables begin
+    vars = @variables begin
         (s(t) = 0), [state_priority = 200, description = "Relative distance between frame_a and frame_b"]
         (phi(t) = 0), [state_priority = 200, description = "Relative rotation angle from frame_a to frame_b"]
         (v(t) = 0), [state_priority = 200, description = "First derivative of s (relative velocity)"]
@@ -793,7 +769,7 @@ end
         (wd(t)), [description = "Second derivative of angle phi (relative angular acceleration)"]
     end
 
-    @equations begin
+    equations = [
         phi ~ revolute.phi
         w ~ D(phi)
         wd ~ D(w)
@@ -803,8 +779,9 @@ end
         connect(frame_a, prismatic.frame_a)
         connect(prismatic.frame_b, revolute.frame_a)
         connect(revolute.frame_b, frame_b)
-    end
+    ]
 
+    return System(equations, t; name, systems)
 end
 
 @component function URDFRevolute(; name, r, R=I(3), axisflange = false, kwargs...)
