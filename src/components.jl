@@ -787,82 +787,48 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
 - `v_0`: Absolute velocity of `frame_a`, resolved in world frame (= D(r_0))
 - `a_0`: Absolute acceleration of `frame_a` resolved in world frame (= D(v_0))
 """
-@mtkmodel BodyCylinder begin
-
-    @structural_parameters begin
-        r = [1, 0, 0]
-        r_shape = [0, 0, 0]
-        isroot = false
-        state = false
-        quat = false
-        sequence = [1,2,3]
-        neg_w = true
+@component function BodyCylinder(; name, r = [1, 0, 0], r_shape = [0, 0, 0], isroot = false,
+                                 state = false, quat = false, sequence = [1, 2, 3], neg_w = true,
+                                 diameter = 1, inner_diameter = 0, density = 7700, color = purple)
+    pars = @parameters begin
+        dir[1:3] = r - r_shape, [description = "Vector in length direction of cylinder, resolved in frame_a"]
+        length = _norm(r - r_shape), [description = "Length of cylinder"]
+        length2 = _norm(r - r_shape), [description = "Length of cylinder"]  # NOTE: strange bug in JSCompiler workaround
+        diameter = diameter, [description = "Diameter of cylinder"]
+        inner_diameter = inner_diameter, [description = "Inner diameter of cylinder (0 <= inner_diameter <= diameter)"]
+        density = density, [description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800) [kg/m³]"]
+        color[1:4] = color, [description = "Color of cylinder in animations"]
     end
 
-    @parameters begin
-        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
-        #     description = "Vector from frame_a to frame_b resolved in frame_a",
-        # ]
-        # r_shape[1:3]=zeros(3), [
-        #     description = "Vector from frame_a to cylinder origin, resolved in frame_a",
-        # ]
-        dir[1:3] = r - r_shape, [
-            description = "Vector in length direction of cylinder, resolved in frame_a",
-        ]
-        length = _norm(r - r_shape), [
-            description = "Length of cylinder",
-        ]
-        length2 = _norm(r - r_shape), [ # NOTE: strange bug in JSCompiler when both I and r_cm that are parameters of Body depend on the same paramter length. Introducing a dummy parameter with the same value works around the issue. This is not ideal though, since the two parameters must have the same value.
-            description = "Length of cylinder",
-        ]
-        diameter = 1, [#length/5, [
-            description = "Diameter of cylinder",
-        ]
-        inner_diameter = 0, [
-            description = "Inner diameter of cylinder (0 <= inner_diameter <= diameter)",
-        ]
-        density = 7700, [
-            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800) [kg/m³]",
-        ]
-        color[1:4] = purple, [description = "Color of cylinder in animations"]
-    end
-    begin
-        radius = diameter/2
-        innerRadius = inner_diameter/2
-        mo = density*pi*length*radius^2
-        mi = density*pi*length*innerRadius^2
-        I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
-        m = mo - mi
-        R = from_nxy(r, [0, 1, 0]) 
-        r_cm = r_shape + _normalize(dir)*length2/2
-        I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22])) 
-    end
+    # Calculations from begin blocks
+    radius = diameter/2
+    innerRadius = inner_diameter/2
+    mo = density*pi*length*radius^2
+    mi = density*pi*length*innerRadius^2
+    I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
+    m = mo - mi
+    R = from_nxy(r, [0, 1, 0])
+    r_cm = r_shape + _normalize(dir)*length2/2
+    I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22]))
 
-    @variables begin
-        r_0(t)[1:3], [
-            state_priority = 2,
-            description = "Position vector from origin of world frame to origin of frame_a",
-        ]
-        v_0(t)[1:3], [
-            state_priority = 2,
-            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
-        ]
-        a_0(t)[1:3], [
-            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
-        ]
-    end
-    begin
-        r_0 = collect(r_0)
-        r_cm = collect(r_cm)
-    end
-    @components begin
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w, sparse_I=true)
     end
 
-    @equations begin
+    vars = @variables begin
+        r_0(t)[1:3], [state_priority = 2, description = "Position vector from origin of world frame to origin of frame_a"]
+        v_0(t)[1:3], [state_priority = 2, description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
+        a_0(t)[1:3], [description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
+    end
+
+    # Additional calculations from second begin block
+    r_0 = collect(r_0)
+    r_cm = collect(r_cm)
+
+    equations = [
         r_0[1] ~ ((frame_a.r_0)[1])
         r_0[2] ~ ((frame_a.r_0)[2])
         r_0[3] ~ ((frame_a.r_0)[3])
@@ -875,7 +841,9 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         connect(frame_a, translation.frame_a)
         connect(frame_b, translation.frame_b)
         connect(frame_a, body.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -896,103 +864,58 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
 - `density = 7700`: Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)
 - `color`: Color of box in animations
 """
-@mtkmodel BodyBox begin
-    @structural_parameters begin
-        r = [1, 0, 0]
-        r_shape = [0, 0, 0]
-        width_dir = [0,1,0] # https://github.com/SciML/ModelingToolkit.jl/issues/2810
-        length_dir = _normalize(r - r_shape)
-        length = _norm(r - r_shape)
-        isroot = false
-        state = false
-        quat = false
-    end
-    begin
-        iszero(r_shape) || error("non-zero r_shape not supported")
-        width_dir = collect(width_dir)
-        length_dir = collect(length_dir)
-    end
+@component function BodyBox(; name, r = [1, 0, 0], r_shape = [0, 0, 0], width_dir = [0, 1, 0],
+                            length_dir = _normalize(r - r_shape), length = _norm(r - r_shape),
+                            isroot = false, state = false, quat = false,
+                            width = 0.3*length, height = width, inner_width = 0, inner_height = inner_width,
+                            density = 7700, color = purple)
+    # Validation from first begin block
+    iszero(r_shape) || error("non-zero r_shape not supported")
+    width_dir = collect(width_dir)
+    length_dir = collect(length_dir)
 
-    @parameters begin
-        # r[1:3]=r, [ # MTKs symbolic language is too weak to handle this as a symbolic parameter in from_nxy
-        #     description = "Vector from frame_a to frame_b resolved in frame_a",
-        # ]
-        # r_shape[1:3]=zeros(3), [
-        #     description = "Vector from frame_a to box origin, resolved in frame_a",
-        # ]
-        # length = _norm(r - r_shape), [
-        #     description = "Length of box",
-        # ]
-        # length_dir[1:3] = _norm(r - r_shape), [
-        #     description = "Vector in length direction of box, resolved in frame_a",
-        # ]
-
-        # width_dir[1:3] = width_dir0, [ 
-        #     description = "Vector in width direction of box, resolved in frame_a",
-        # ]
-
+    pars = @parameters begin
         # NOTE: these are workarounds to allow rendering of this component. Unfortunately, MTK/JSCompiler cannot handle parameter arrays well enough to let these be actual parameters
-        render_r[1:3]=r, [description="For internal use only"]
-        render_r_shape[1:3]=r_shape, [description="For internal use only"]
-        render_length = length, [description="For internal use only"]
-        render_length_dir[1:3] = length_dir, [description="For internal use only"]
-        render_width_dir[1:3] = width_dir, [description="For internal use only"]
+        render_r[1:3] = r, [description = "For internal use only"]
+        render_r_shape[1:3] = r_shape, [description = "For internal use only"]
+        render_length = length, [description = "For internal use only"]
+        render_length_dir[1:3] = length_dir, [description = "For internal use only"]
+        render_width_dir[1:3] = width_dir, [description = "For internal use only"]
 
-
-        width = 0.3*length, [
-            description = "Width of box",
-        ]
-        height = width, [
-            description = "Height of box",
-        ]
-
-        inner_width = 0, [
-            description = "Width of inner box surface (0 <= inner_width <= width)",
-        ]
-        inner_height = inner_width, [
-            description = "Height of inner box surface (0 <= inner_height <= height)",
-        ]
-        density = 7700, [
-            description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
-        ]
-        color[1:4] = purple, [description = "Color of box in animations"]
-    end
-    begin
-        mo = density*length*width*height
-        mi = density*length*inner_width*inner_height
-        m = mo - mi
-        R = from_nxy(r, width_dir) 
-        r_cm = r_shape + _normalize(length_dir)*length/2
-        r_cm = collect(r_cm)
-
-        I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
-        I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
-        I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
-        I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12)) 
+        width = width, [description = "Width of box"]
+        height = height, [description = "Height of box"]
+        inner_width = inner_width, [description = "Width of inner box surface (0 <= inner_width <= width)"]
+        inner_height = inner_height, [description = "Height of inner box surface (0 <= inner_height <= height)"]
+        density = density, [description = "Density of cylinder (e.g., steel: 7700 .. 7900, wood : 400 .. 800)"]
+        color[1:4] = color, [description = "Color of box in animations"]
     end
 
-    @variables begin
-        r_0(t)[1:3], [
-            state_priority = 2,
-            description = "Position vector from origin of world frame to origin of frame_a",
-        ]
-        v_0(t)[1:3], [
-            state_priority = 2,
-            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
-        ]
-        a_0(t)[1:3], [
-            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
-        ]
-    end
+    mo = density*length*width*height
+    mi = density*length*inner_width*inner_height
+    m = mo - mi
+    R = from_nxy(r, width_dir)
+    r_cm = r_shape + _normalize(length_dir)*length/2
+    r_cm = collect(r_cm)
 
-    @components begin
+    I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
+    I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
+    I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
+    I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12))
+
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sparse_I = true)
     end
 
-    @equations begin
+    vars = @variables begin
+        r_0(t)[1:3], [state_priority = 2, description = "Position vector from origin of world frame to origin of frame_a"]
+        v_0(t)[1:3], [state_priority = 2, description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
+        a_0(t)[1:3], [description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
+    end
+
+    equations = [
         r_0[1] ~ ((frame_a.r_0)[1])
         r_0[2] ~ ((frame_a.r_0)[2])
         r_0[3] ~ ((frame_a.r_0)[3])
@@ -1005,7 +928,9 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         connect(frame_a, translation.frame_a)
         connect(frame_b, translation.frame_b)
         connect(frame_a, body.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 # function BodyBox2(;
