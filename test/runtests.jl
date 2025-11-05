@@ -9,7 +9,7 @@ isdefined(Main, :D) || (D = Differential(t))
 doplot() = false
 world = Multibody.world
 
-
+@testset "initial" begin
 @testset "world" begin
     @info "Testing world"
     include("test_world.jl")
@@ -48,6 +48,7 @@ end
 @testset "PlanarMechanics" begin
     @info "Testing PlanarMechanics"
     include("test_PlanarMechanics.jl")
+end
 end
 
 # ==============================================================================

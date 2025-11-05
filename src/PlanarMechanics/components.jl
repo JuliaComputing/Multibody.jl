@@ -25,8 +25,8 @@ Frame fixed in the planar world frame at a given position and orientation
     end
 
     equations = Equation[
-        frame_b.x ~ r[1]
-        frame_b.y ~ r[2]
+        [frame_b.x
+        frame_b.y] ~ r
         frame_b.phi ~ phi
     ]
 
@@ -82,16 +82,16 @@ Body component with mass and inertia
 
     eqs = [
         # velocity is the time derivative of position
-        r .~ [frame_a.x, frame_a.y]
-        v .~ D.(r)
+        r ~ [frame_a.x, frame_a.y]
+        v ~ D(r)
         phi ~ frame_a.phi
-        w .~ D.(phi)
+        w ~ D(phi)
         # acceleration is the time derivative of velocity
-        a .~ D.(v)
-        α .~ D.(w)
+        a ~ D(v)
+        α ~ D(w)
         # newton's law
-        f .~ [frame_a.fx, frame_a.fy]
-        f + [0, m*gy] .~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
+        f ~ [frame_a.fx, frame_a.fy]
+        f + [0, m*gy] ~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
         I * α ~ frame_a.tau
     ]
 
@@ -186,7 +186,7 @@ A fixed translation between two components (rigid rod)
     end
 
     # Calculations from begin blocks
-    r = collect(r)
+    # r = collect(r)
     R = [cos(phi) -sin(phi);
          sin(phi) cos(phi)]
     r0 = R * r
@@ -196,7 +196,7 @@ A fixed translation between two components (rigid rod)
         w ~ D(phi)
         # rigidly connect positions
         [frame_a.x
-         frame_a.y] + r0 .~ [frame_b.x, frame_b.y]
+         frame_a.y] + r0 ~ [frame_b.x, frame_b.y]
         frame_a.phi ~ frame_b.phi
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0
