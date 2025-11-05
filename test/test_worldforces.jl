@@ -29,7 +29,7 @@ D = Differential(t)
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(b.frame_a, forcea.frame_b, forceb.frame_b)
         forcea.force.u ~ f
         forceb.force.u ~ -f
@@ -66,7 +66,7 @@ sol = solve(prob, Tsit5())
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         # connect(world.frame_b, body.frame_a)
         connect(force.frame_b, body.frame_a)
         force.force.u ~ f
@@ -111,7 +111,7 @@ sol = solve(prob, Tsit5())
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         # connect(world.frame_b, body.frame_a)
         connect(forcea.frame_b, body.frame_a)
         connect(forceb.frame_b, body.frame_b)
@@ -157,7 +157,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, body.frame_a)
         connect(forceb.frame_b, body.frame_b)
         forcea.force.u ~ f
@@ -201,7 +201,7 @@ sol = solve(prob, Tsit5(), reltol=1e-8)
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, body.frame_a)
         connect(forceb.frame_b, body.frame_b)
         forcea.force.u ~ f
@@ -248,7 +248,7 @@ using LinearAlgebra
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, body.frame_a, b0.frame_a)
         connect(forceb.frame_b, body.frame_b)
         forcea.force.u ~ f
@@ -296,7 +296,7 @@ sol = solve(prob, Rodas4(), reltol=1e-8)
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, body.frame_a, b0.frame_a)
         connect(forceb.frame_b, body.frame_b)
         forcea.force.u ~ f
@@ -347,7 +347,7 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forceb.frame_b, forcea.frame_b, b1.frame_a, b0.frame_a)
         forcea.force.u ~ f
         forceb.force.u ~ -f
@@ -389,7 +389,7 @@ reshape(sol(1, idxs = [testwf.forceb.frame_b.f; testwf.forcea.frame_b.f; testwf.
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, body.frame_a, b0.frame_a)
         connect(forceb.frame_b, body.frame_a)
         forcea.force.u ~ f
@@ -427,7 +427,7 @@ sol = solve(prob, Tsit5())
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, body.frame_a)
         connect(forceb.frame_b, body.frame_a)
         forcea.force.u ~ f
@@ -469,7 +469,7 @@ sol = solve(prob, Tsit5())
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(forcea.frame_b, b0.frame_a, tr.frame_a)
         connect(forceb.frame_b, body.frame_a, tr.frame_b)
         forcea.force.u ~ f
@@ -528,7 +528,7 @@ sol(1, idxs=testwf.b0.w_a)
 
     f = collect(f)
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, freemotion.frame_a)
         connect(forcea.frame_b, b0.frame_a, tr.frame_a, freemotion.frame_b)
         connect(forceb.frame_b, body.frame_a, tr.frame_b)

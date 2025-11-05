@@ -77,7 +77,7 @@ t5 = 19.84 |> deg2rad
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # Main loop
         connect(A, r123.frame_a)
         connect(r123.frame_b, b1.frame_b)
@@ -122,7 +122,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(wheel.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
     ]
@@ -147,7 +147,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(prescribed_motion.frame_b, excited_suspension.chassis_frame, mass.frame_a)
     ]
 

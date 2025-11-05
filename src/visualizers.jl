@@ -11,7 +11,7 @@
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         frame_a.f ~ zeros(3)
         frame_a.tau ~ zeros(3)
     ]
@@ -32,7 +32,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
     ]
 
     return extend(System(equations, t; name, systems), v)
@@ -54,7 +54,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
     ]
 
     return extend(System(equations, t; name, systems), v)
@@ -80,7 +80,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
     ]
 
     return extend(System(equations, t; name, systems), v)

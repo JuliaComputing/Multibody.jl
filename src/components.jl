@@ -828,7 +828,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
     r_0 = collect(r_0)
     r_cm = collect(r_cm)
 
-    equations = [
+    equations = Equation[
         r_0[1] ~ ((frame_a.r_0)[1])
         r_0[2] ~ ((frame_a.r_0)[2])
         r_0[3] ~ ((frame_a.r_0)[3])
@@ -915,7 +915,7 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         a_0(t)[1:3], [description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
     end
 
-    equations = [
+    equations = Equation[
         r_0[1] ~ ((frame_a.r_0)[1])
         r_0[2] ~ ((frame_a.r_0)[2])
         r_0[3] ~ ((frame_a.r_0)[3])
@@ -1038,7 +1038,7 @@ end
 #         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
 #     end
 
-#     equations = [
+#     equations = Equation[
 #         r_0[1] ~ ((frame_a.r_0)[1])
 #         r_0[2] ~ ((frame_a.r_0)[2])
 #         r_0[3] ~ ((frame_a.r_0)[3])

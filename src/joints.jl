@@ -723,7 +723,7 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         (wd(t)), [description = "Relative angular acceleration around revolute joint"]
     end
 
-    equations = [
+    equations = Equation[
         s_x ~ prismatic_x.s
         s_y ~ prismatic_y.s
         phi ~ revolute.phi
@@ -769,7 +769,7 @@ end
         (wd(t)), [description = "Second derivative of angle phi (relative angular acceleration)"]
     end
 
-    equations = [
+    equations = Equation[
         phi ~ revolute.phi
         w ~ D(phi)
         wd ~ D(w)
@@ -874,7 +874,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(frame_a, frame_b)
     ]
 

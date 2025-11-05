@@ -28,7 +28,7 @@ world = Multibody.world
         damper = Damper(d = 50.0, radius=0.05, length_fraction=0.1)
     end
 
-    equations = [
+    equations = Equation[
         connect(frame_a, joint1.frame_a)
         connect(joint1.frame_b, rope.frame_a)
 
@@ -51,7 +51,7 @@ end
         damper = Damper(d=10.0)
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, upper_trans1.frame_a)
         connect(rope1.frame_a, upper_trans1.frame_b)
         # connect(world.frame_b, rope1.frame_a)
@@ -114,7 +114,7 @@ Next, we create the full swing assembly
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # Rope assembly
         connect(world.frame_b, upper_trans1.frame_a, upper_trans2.frame_a)
         connect(rope1.frame_a, rope2.frame_a, upper_trans1.frame_b)

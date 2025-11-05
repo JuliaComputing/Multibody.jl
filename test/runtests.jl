@@ -587,7 +587,7 @@ using LinearAlgebra
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, planar.frame_a, force.frame_a)
         connect(planar.frame_b, body.frame_a, force.frame_b)
         force.force.u[1] ~ sin(t)
@@ -907,7 +907,7 @@ BSine = Blocks.Sine
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, joint.frame_a)
         connect(joint.frame_b, body.frame_a)
         connect(torque_signal.output, torque.tau)
@@ -1099,7 +1099,7 @@ using LinearAlgebra
         vars = @variables begin
         end
 
-        equations = [
+        equations = Equation[
             connect(world.frame_b, joint.frame_a)
             connect(joint.frame_b, body.frame_a)
         ]
@@ -1156,7 +1156,7 @@ using LinearAlgebra
         vars = @variables begin
         end
 
-        equations = [
+        equations = Equation[
             connect(world.frame_b, joint.frame_a)
             connect(joint.frame_b, body.frame_a)
         ]
@@ -1282,7 +1282,7 @@ sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, ss.frame_a, trans.frame_a)
         connect(ss.frame_b, ss2.frame_a)
         connect(ss2.frame_b, s.frame_a)
@@ -1324,7 +1324,7 @@ sol = solve(prob, Rodas4())
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, ss.frame_a, trans.frame_a)
         connect(ss.frame_b, ss2.frame_a)
         connect(ss2.frame_b, s.frame_a)
@@ -1373,7 +1373,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # connect(world.frame_b, cyl.frame_a, spring.frame_a)
         # connect(cyl.frame_b, spring.frame_b, body.frame_a)
 
@@ -1463,7 +1463,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
     A = chassis.frame_b
     D = chassis.frame_a
 
-    equations = [
+    equations = Equation[
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
@@ -1590,7 +1590,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
     A = chassis.frame_b
     D = chassis.frame_a
 
-    equations = [
+    equations = Equation[
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 

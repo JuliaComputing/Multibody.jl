@@ -64,7 +64,7 @@ t5 = 19.84 |> deg2rad
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # Main loop
         connect(A, r123.frame_a)
         connect(r123.frame_b, b1.frame_b)
@@ -110,7 +110,7 @@ mirror = false
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
@@ -143,7 +143,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, body_upright.frame_a)
         connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
     ]
@@ -218,7 +218,7 @@ In the example below, we extend the previous example to a half-car model with tw
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, body_upright.frame_a)
 
         connect(body_upright.frame_b, body_upright2.frame_a)
@@ -316,7 +316,7 @@ using ModelingToolkitStandardLibrary.Mechanical.Rotational
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(wheel.frame_a, wheel_rotation.frame_b)
         connect(wheel_rotation.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
@@ -345,7 +345,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, body_upright.frame_a)
         connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
     ]
@@ -397,7 +397,7 @@ nothing # hide
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, body_upright.frame_a)
         connect(body_upright.frame_b, body_upright2.frame_a)
         connect(body_upright2.frame_b, mass.frame_cm)
@@ -479,7 +479,7 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(back_front.frame_a, front_axle.frame_cm)
         connect(back_front.frame_b, back_axle.frame_cm)
 

@@ -4,7 +4,7 @@ function PartialRelativeBaseSensor(; name)
         frame_b = Frame()
     end
 
-    equations = [frame_a.f .~ zeros(3) |> collect
+    equations = Equation[frame_a.f .~ zeros(3) |> collect
                  frame_a.tau .~ zeros(3) |> collect
                  frame_b.f .~ zeros(3) |> collect
                  frame_b.tau .~ zeros(3) |> collect]
@@ -69,7 +69,7 @@ function PartialCutForceBaseSensor(; name, resolve_frame = :frame_a)
         frame_b = Frame()
     end
 
-    equations = [frame_a.r_0 .~ frame_b.r_0 |> collect
+    equations = Equation[frame_a.r_0 .~ frame_b.r_0 |> collect
                  ori(frame_a) ~ ori(frame_b)
                  zeros(3) .~ frame_a.f + frame_b.f |> collect
                  zeros(3) .~ frame_a.tau + frame_b.tau |> collect]

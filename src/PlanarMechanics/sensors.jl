@@ -16,7 +16,7 @@ Partial absolute sensor model for sensors defined by components
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # TODO: assert the number of connections
     ]
 
@@ -44,7 +44,7 @@ Partial relative sensor model for sensors defined by components
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # TODO: assert the number of connections
     ]
 
@@ -71,7 +71,7 @@ Partial absolute sensor models for sensors defined by equations (frame_resolve m
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # TODO: assert the number of connections
 
         frame_a.fx ~ 0
@@ -107,7 +107,7 @@ Partial relative sensor models for sensors defined by equations (frame_resolve m
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # TODO: assert the number of connections
 
 

@@ -328,7 +328,7 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
         vars = @variables begin
         end
 
-        equations = [
+        equations = Equation[
             $(join(connections, "\n"))
             $(join(extra_connections, "\n"))
         ]

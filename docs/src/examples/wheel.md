@@ -192,7 +192,7 @@ A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common a
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(sine1.output, torque1.tau)
         connect(sine2.output, torque2.tau)
         connect(torque1.flange, wheels.axis1)
@@ -259,7 +259,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(sine1.output, torque1.tau)
         connect(sine2.output, torque2.tau)
         connect(torque1.flange, front_wheels.axis1)
@@ -312,7 +312,7 @@ import Multibody.PlanarMechanics as Pl
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(body.frame_a, revolute.frame_a)
         connect(revolute.frame_b, wheel1.frame_a)
         connect(thrust_input1.output, wheel1.thrust)
@@ -386,7 +386,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(fixed.frame_b, revolute.frame_a)
         connect(revolute.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, body.frame_a)
@@ -505,7 +505,7 @@ A more elaborate example with 4 wheels.
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(wheelJoint2.flange_a, inertia1.flange_b)
         connect(inertia.flange_b, wheelJoint1.flange_a)
         connect(fixedTranslation2.frame_b, fixedTranslation1.frame_a)

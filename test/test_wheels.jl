@@ -161,7 +161,7 @@ import ModelingToolkitStandardLibrary.Blocks
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, world_axis.frame_a)
         connect(world_axis.frame_b, bar.frame_a)
@@ -202,7 +202,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(sine1.output, torque1.tau)
         connect(sine2.output, torque2.tau)
         connect(torque1.flange, wheels.axis1)

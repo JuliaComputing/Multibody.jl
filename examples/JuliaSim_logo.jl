@@ -33,7 +33,7 @@ radius_large = length_scale*0.3
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(revl.frame_a, world.frame_b)
 
         connect(revl.frame_b, barl.frame_a)

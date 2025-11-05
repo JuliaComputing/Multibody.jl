@@ -30,7 +30,7 @@ D = Differential(t)
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, j1.frame_a, fixed.frame_a)
         connect(fixed.frame_b, p1.frame_a)
         connect(p1.frame_b, j1.frame_b)
@@ -70,7 +70,7 @@ sol = solve(prob, FBDF(autodiff=true))
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, j1.frame_a, fixed.frame_a)
         connect(fixed.frame_b, p1.frame_a)
         connect(p1.frame_b, j1.frame_b)

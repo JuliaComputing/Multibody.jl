@@ -11,7 +11,7 @@ using Multibody, ModelingToolkit, Test, OrdinaryDiffEq
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
     ]
 
     return System(equations, t; name, systems)
@@ -59,7 +59,7 @@ sol = solve(prob, Rodas5P())
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
     ]
 
     return System(equations, t; name, systems)

@@ -346,7 +346,7 @@ end
             description = "Line force acting on frame_a and on frame_b (positive, if acting on frame_b and directed from frame_a to frame_b)",
         ]
     end
-    equations = [
+    equations = Equation[
                  # Determine relative position vector between the two frames
                  collect(r_rel_a) .~ resolve2(frame_a, r_rel_0)
                  collect(e_a) .~ collect(r_rel_a ./ s)

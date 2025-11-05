@@ -158,7 +158,7 @@ end WorldForce;
     end
     # R = [cos(phi) -sin(phi); sin(phi) cos(phi)]
 
-    equations = [
+    equations = Equation[
         if resolve_frame === :world
             phi ~ 0
         else

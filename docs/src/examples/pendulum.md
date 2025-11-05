@@ -204,7 +204,7 @@ import Multibody.Rotations
         damper2 = RDamper(d = 0.07)
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, shoulder_joint.frame_a)
         connect(shoulder_joint.frame_b, upper_arm.frame_a)
         connect(upper_arm.frame_b, elbow_joint.frame_a)
@@ -357,7 +357,7 @@ gray = [0.5, 0.5, 0.5, 1]
         w(t)
     end
 
-    equations = [
+    equations = Equation[
         connect(fixed.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, cart.frame_a, mounting_point.frame_a)
         connect(mounting_point.frame_b, revolute.frame_a)
@@ -381,7 +381,7 @@ end
         input = Blocks.Cosine(frequency=1, amplitude=1)
     end
 
-    equations = [
+    equations = Equation[
         connect(input.output, :u, cartpole.motor.f)
     ]
 
@@ -469,7 +469,7 @@ LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
 
     namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
 
-    equations = [
+    equations = Equation[
         controller.input.u[1] ~ 0
         controller.input.u[2] ~ reference.output.u * dc_gain_compensation
         controller.input.u[3] ~ 0
@@ -537,7 +537,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
         switching_condition(t)::Bool, [description = "Switching condition that indicates when stabilizing controller is active"]
     end
 
-    equations = [
+    equations = Equation[
         phi ~ normalize_angle(cartpole.phi)
         w ~ cartpole.w
         E ~ energy(cartpole.pendulum.body, w) + energy(cartpole.tip, w)

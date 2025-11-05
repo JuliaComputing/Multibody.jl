@@ -401,7 +401,7 @@ end
         vars = @variables begin
         end
 
-        equations = [
+        equations = Equation[
             connect(body.frame_a, revolute.frame_a)
             connect(revolute.frame_b, wheel1.frame_a)
             connect(input.output, wheel1.thrust)
@@ -474,7 +474,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
         vars = @variables begin
         end
 
-        equations = [
+        equations = Equation[
             connect(prismatic.frame_a, revolute.frame_b)
             connect(revolute.frame_a, fixed.frame_b)
             connect(engineTorque.flange, inertia.flange_a)
@@ -586,7 +586,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(wheelJoint2.flange_a, inertia1.flange_b)
         connect(inertia.flange_b, wheelJoint1.flange_a)
         connect(fixedTranslation2.frame_b, fixedTranslation1.frame_a)

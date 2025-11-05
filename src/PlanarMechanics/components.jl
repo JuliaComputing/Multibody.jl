@@ -24,7 +24,7 @@ Frame fixed in the planar world frame at a given position and orientation
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         frame_b.x ~ r[1]
         frame_b.y ~ r[2]
         frame_b.phi ~ phi
@@ -142,7 +142,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
         connect(translation_cm.frame_b, body.frame_a)
@@ -191,7 +191,7 @@ A fixed translation between two components (rigid rod)
          sin(phi) cos(phi)]
     r0 = R * r
 
-    equations = [
+    equations = Equation[
         phi ~ frame_a.phi
         w ~ D(phi)
         # rigidly connect positions
@@ -221,7 +221,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # Positions are the same
         frame_a.x ~ frame_b.x
         frame_a.y ~ frame_b.y
@@ -298,7 +298,7 @@ Linear 2D translational spring
     l = sqrt(r_rel_0' * r_rel_0)
     e_rel_0 = r_rel_0 / max(l, s_small)
 
-    equations = [
+    equations = Equation[
         phi_rel ~ frame_b.phi - frame_a.phi
         frame_a.tau ~ 0
         frame_b.tau ~ 0
@@ -355,7 +355,7 @@ Linear (velocity dependent) damper
     r0 = [r0x, r0y]
     l = sqrt(r0' * r0)
 
-    equations = [
+    equations = Equation[
         frame_a.x + r0x ~ frame_b.x
         frame_a.y + r0y ~ frame_b.y
         D(frame_a.x) + vx ~ D(frame_b.x)
@@ -447,7 +447,7 @@ Linear 2D translational spring damper model
     l = sqrt(r_rel_0' * r_rel_0)
     e_rel_0 = r_rel_0 / max(l, s_small)
 
-    equations = [
+    equations = Equation[
         s_relx ~ frame_b.x - frame_a.x
         s_rely ~ frame_b.y - frame_a.y
         phi_rel ~ frame_b.phi - frame_a.phi
@@ -522,7 +522,7 @@ Simple wheel model with viscous lateral friction and a driving torque
     feqs = R_W_F'*[frame_a.fx, frame_a.fy] #~ [Fx, Fy]
 
 
-    equations = [
+    equations = Equation[
         θ ~ frame_a.phi
 
         # road friction
@@ -761,7 +761,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
 
     R = ori_2d(frame_a)
 
-    equations = [
+    equations = Equation[
         e0 .~ R * e
         v .~ D.([frame_a.x, frame_a.y])
 
@@ -825,7 +825,7 @@ According to the overall convention, the positive direction of all vectors, espe
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         (1 + ratio)*carrier.phi ~ sun.phi + ratio*ring.phi
         ring.tau ~ ratio*sun.tau
         carrier.tau ~ -(1 + ratio)*sun.tau
@@ -858,7 +858,7 @@ A 1D-rotational component that is a variant of a planetary gear and can be used 
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(flange_b, ideal_planetary.ring)
         connect(ideal_planetary.carrier, flange_right)
         connect(ideal_planetary.sun, flange_left)

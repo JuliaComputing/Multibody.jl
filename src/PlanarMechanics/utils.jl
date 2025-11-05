@@ -64,7 +64,7 @@ FrameResolve = Frame
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
     ]
 
     return System(equations, t; name, systems)
@@ -97,7 +97,7 @@ Set zero position vector and orientation object of frame_resolve
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         frame_resolve.x ~ 0
         frame_resolve.y ~ 0
         frame_resolve.phi ~ 0

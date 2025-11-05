@@ -136,7 +136,7 @@ this frame.
         ]
      end
 
-    equations = [
+    equations = Equation[
                 equations;
                 connect_orientation(Ra, Rarot; iscut)   # Ra ~ Rarot
                 Ra.w ~ Rarot.w
@@ -420,7 +420,7 @@ plot!(
     end
 
 
-    equations = [
+    equations = Equation[
                 equations;
 
                 if state
@@ -914,7 +914,7 @@ function RollingWheelSet(;
         (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority]
     end
 
-    equations = [
+    equations = Equation[
         wheelSetJoint.x ~ x
         wheelSetJoint.z ~ z
         wheelSetJoint.phi ~ phi

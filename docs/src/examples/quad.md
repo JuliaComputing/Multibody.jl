@@ -63,7 +63,7 @@ Tdpitch = 1
         ut(t), [state_priority=1000]
     end
 
-    equations = [
+    equations = Equation[
         thrust3d.force.u[1] ~ 0
         thrust3d.force.u[2] ~ thrust.u
         thrust3d.force.u[3] ~ 0

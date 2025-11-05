@@ -260,7 +260,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational.Flange as fl
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(flange_a, flange_b)
     ]
 

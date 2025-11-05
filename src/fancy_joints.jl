@@ -682,7 +682,7 @@ end
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         output.u[1] ~ k[1]
         output.u[2] ~ k[2]
         output.u[3] ~ k[3]

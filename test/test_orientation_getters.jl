@@ -19,7 +19,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(world.frame_b, shoulder_joint.frame_a)
         connect(shoulder_joint.frame_b, upper_arm.frame_a)
         connect(upper_arm.frame_b, elbow_joint.frame_a)

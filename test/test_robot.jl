@@ -42,7 +42,7 @@ mytorque(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotatio
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # connect(motor.flange_motor, fixed.flange)
         connect(motor.flange_motor, inertia.flange_a)
         constant.output.u ~ motor.axisControlBus.current_ref
@@ -81,7 +81,7 @@ doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         constant.output.u ~ motor.axisControlBus.current_ref
         connect(motor.flange_motor, gear.flange_a)
         connect(gear.flange_b, inertia.flange_a)
@@ -117,7 +117,7 @@ doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         connect(gear2.flange_a, fixed.flange)
     ]
 
@@ -144,7 +144,7 @@ m = structural_simplify(IRSystem(gearTest))
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         constant1.output.u ~ controller.axisControlBus.motorAngle
         constant2.output.u ~ controller.axisControlBus.speed_ref
         constant3.output.u ~ controller.axisControlBus.angle_ref
@@ -181,7 +181,7 @@ m = structural_simplify(IRSystem(controllerTest))
     vars = @variables begin
     end
 
-    equations = [
+    equations = Equation[
         # connect(axis2.flange, fixed.flange)
         connect(axis2.flange, inertia.flange_a)
         # constant1.output.u ~ motor.axisControlBus.current_ref # This is connected to the controller output
