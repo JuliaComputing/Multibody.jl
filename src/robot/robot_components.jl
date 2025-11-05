@@ -248,14 +248,23 @@ function GearType2(; name, i = -99,
 end
 
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Flange as fl
-@mtkmodel BearingFriction begin
-    @components begin
+@component function BearingFriction(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         flange_a = fl()
         flange_b = fl()
     end
-    @equations begin
-        connect(flange_a, flange_b)
+
+    vars = @variables begin
     end
+
+    equations = [
+        connect(flange_a, flange_b)
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 

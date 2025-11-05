@@ -315,16 +315,25 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
         ""
     end
     s = s * """
-    @mtkmodel $(modelname) begin
-        @components begin
+    @component function $(modelname)(; name)
+        pars = @parameters begin
+        end
+
+        systems = @named begin
             world = World()
             $(join(bodies, "\n"))
             $(join(joints, "\n"))
         end
-        @equations begin
+
+        vars = @variables begin
+        end
+
+        equations = [
             $(join(connections, "\n"))
             $(join(extra_connections, "\n"))
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
     """
     if extras

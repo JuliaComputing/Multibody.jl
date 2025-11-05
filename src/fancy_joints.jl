@@ -670,18 +670,25 @@ The rest of this joint aggregation is defined by the following parameters:
 
 end
 
-@mtkmodel Constant3 begin
-    @components begin
-        output = Blocks.RealOutput(nout=3)
-    end
-    @parameters begin
+@component function Constant3(; name)
+    pars = @parameters begin
         k[1:3] = zeros(3), [description = "Constant output value of block"]
     end
-    @equations begin
+
+    systems = @named begin
+        output = Blocks.RealOutput(nout=3)
+    end
+
+    vars = @variables begin
+    end
+
+    equations = [
         output.u[1] ~ k[1]
         output.u[2] ~ k[2]
         output.u[3] ~ k[3]
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
