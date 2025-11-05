@@ -11,21 +11,26 @@ Frame fixed in the planar world frame at a given position and orientation
 # Connectors:
 - `frame_b`: 2-dim. Coordinate system
 """
-@mtkmodel Fixed begin
-    @parameters begin
-        (r[1:2] = [0, 0]), [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
-        phi = 0, [description = "Fixed angle"]
+@component function Fixed(; name, r = [0.0, 0.0], phi = 0.0)
+    pars = @parameters begin
+        r[1:2] = r, [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
+        phi = phi, [description = "Fixed angle"]
     end
 
-    @components begin
+    systems = @named begin
         frame_b = Frame()
     end
 
-    @equations begin
+    vars = @variables begin
+    end
+
+    equations = [
         frame_b.x ~ r[1]
         frame_b.y ~ r[2]
         frame_b.phi ~ phi
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -112,34 +117,38 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `frame_a`
 - `frame_b`
 """
-@mtkmodel BodyShape begin
-    @structural_parameters begin
-        r = [1,0]
-        r_cm = 0.5*r
-        state_priority = 2
+@component function BodyShape(; name, r = [1, 0], r_cm = 0.5*r, state_priority = 2,
+                                gy = -9.80665, m = 1, I = 0.1, radius = 0.1,
+                                render = true, color = purple)
+    pars = @parameters begin
+        r[1:2] = r, [description = "Vector from frame_a to frame_b resolved in frame_a"]
+        r_cm[1:2] = r_cm, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
+        gy = gy, [description = "Gravity field acting on the mass in the y-direction"]
+        m = m, [description = "Mass of the body"]
+        I = I, [description = "Inertia of the body with respect to the center of mass"]
+        radius = radius, [description = "Radius of the body in animations"]
+        render = render, [description = "Render the body in animations"]
+        color[1:4] = color, [description = "Color of the body in animations"]
     end
-    @parameters begin
-        gy = -9.80665
-        # r[1:2] = [1,0], [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
-        # r_cm[1:2] = 0.5*r, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
-        m = 1, [description = "mass of the body"]
-        I = 0.1, [description = "inertia of the body with respect to the center of mass"]
-        radius = 0.1, [description = "Radius of the body in animations"]
-        render = true, [description = "Render the body in animations"]
-        (color[1:4] = purple), [description = "Color of the body in animations", guess=ones(4)]
-    end
-    @components begin
+
+    systems = @named begin
         translation = FixedTranslation(; r)
         translation_cm = FixedTranslation(; r=r_cm)
         body = Body(; I, m, gy, state_priority)
         frame_a = Frame()
         frame_b = Frame()
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
         connect(translation_cm.frame_b, body.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -159,43 +168,43 @@ A fixed translation between two components (rigid rod)
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
 """
-@mtkmodel FixedTranslation begin
-    @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
+@component function FixedTranslation(; name, r = [1.0, 0], radius = 0.1, render = true)
+    pars = @parameters begin
+        r[1:2] = r, [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
+        radius = radius, [description = "Radius of the rod in animations"]
+        render = render, [description = "Render the rod in animations"]
+    end
 
-    @parameters begin
-        r[1:2] = [1.0, 0],
-        [
-            description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"
-        ]
-        radius = 0.1, [description = "Radius of the rod in animations"]
-        render = true, [description = "Render the rod in animations"]
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
     end
-    begin
-        r = collect(r)
-    end
-    @variables begin
+
+    vars = @variables begin
         phi(t), [state_priority=1, description = "Angle"]
         w(t), [state_priority=1, description = "Angular velocity"]
     end
 
-    begin
-        R = [cos(phi) -sin(phi);
-             sin(phi) cos(phi)]
-        r0 = R * r
-    end
+    # Calculations from begin blocks
+    r = collect(r)
+    R = [cos(phi) -sin(phi);
+         sin(phi) cos(phi)]
+    r0 = R * r
 
-    @equations begin
+    equations = [
         phi ~ frame_a.phi
         w ~ D(phi)
         # rigidly connect positions
-        [frame_a.x  
-        frame_a.y] + r0 .~ [frame_b.x, frame_b.y]
+        [frame_a.x
+         frame_a.y] + r0 .~ [frame_b.x, frame_b.y]
         frame_a.phi ~ frame_b.phi
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
         frame_a.tau + frame_b.tau + r0' * [frame_b.fy, -frame_b.fx] ~ 0
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @mtkmodel FixedRotation begin

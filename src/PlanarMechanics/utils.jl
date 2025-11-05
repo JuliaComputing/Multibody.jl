@@ -52,11 +52,22 @@ end
 
 FrameResolve = Frame
 
-@mtkmodel PartialTwoFrames begin
-    @components begin
+@component function PartialTwoFrames(; name)
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = [
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 Base.@doc """
@@ -75,14 +86,22 @@ Set zero position vector and orientation object of frame_resolve
 # Connectors:
 - `frame_resolve` [FrameResolve](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
-@mtkmodel ZeroPosition begin
-    @components begin
+@component function ZeroPosition(; name)
+    systems = @named begin
         frame_resolve = FrameResolve()
     end
 
-    @equations begin
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = [
         frame_resolve.x ~ 0
         frame_resolve.y ~ 0
         frame_resolve.phi ~ 0
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
