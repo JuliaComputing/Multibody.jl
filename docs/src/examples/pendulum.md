@@ -191,8 +191,8 @@ using ModelingToolkit, Multibody, OrdinaryDiffEq, Plots
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Damper as RDamper
 import Multibody.Rotations
 
-@mtkmodel FurutaPendulum begin
-    @components begin
+@component function FurutaPendulum(; name)
+    systems = @named begin
         world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1)
@@ -203,7 +203,8 @@ import Multibody.Rotations
         damper1 = RDamper(d = 0.07)
         damper2 = RDamper(d = 0.07)
     end
-    @equations begin
+
+    equations = [
         connect(world.frame_b, shoulder_joint.frame_a)
         connect(shoulder_joint.frame_b, upper_arm.frame_a)
         connect(upper_arm.frame_b, elbow_joint.frame_a)
@@ -215,8 +216,9 @@ import Multibody.Rotations
 
         connect(elbow_joint.axis, damper2.flange_a)
         connect(elbow_joint.support, damper2.flange_b)
+    ]
 
-    end
+    return System(equations, t; name, systems)
 end
 
 @named model = FurutaPendulum()
@@ -330,16 +332,13 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 import ModelingToolkitStandardLibrary.Blocks
 using Plots
 gray = [0.5, 0.5, 0.5, 1]
-@mtkmodel Cartpole begin
-    @structural_parameters begin
-        use_world = false
-    end
-    @components begin
+@component function Cartpole(; name, use_world = false)
+    systems = @named begin
         if use_world
             fixed = World()
         else
             # In case we wrap this model in an outer model below, we place the world there instead
-            fixed = Fixed() 
+            fixed = Fixed()
         end
         cart = BodyShape(m = 1, r = [0.2, 0, 0], color=[0.2, 0.2, 0.2, 1], shape="box")
         mounting_point = FixedTranslation(r = [0.1, 0, 0])
@@ -349,14 +348,16 @@ gray = [0.5, 0.5, 0.5, 1]
         motor = TranslationalModelica.Force(use_support = true)
         tip = Body(m = 0.05)
     end
-    @variables begin
+
+    vars = @variables begin
         u(t) = 0
         x(t)
         v(t)
         phi(t)
         w(t)
     end
-    @equations begin
+
+    equations = [
         connect(fixed.frame_b, prismatic.frame_a)
         connect(prismatic.frame_b, cart.frame_a, mounting_point.frame_a)
         connect(mounting_point.frame_b, revolute.frame_a)
@@ -369,17 +370,22 @@ gray = [0.5, 0.5, 0.5, 1]
         v ~ prismatic.v
         phi ~ revolute.phi
         w ~ revolute.w
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
-@mtkmodel CartWithInput begin
-    @components begin
+@component function CartWithInput(; name)
+    systems = @named begin
         world = World()
         cartpole = Cartpole()
         input = Blocks.Cosine(frequency=1, amplitude=1)
     end
-    @equations begin
+
+    equations = [
         connect(input.output, :u, cartpole.motor.f)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = CartWithInput()
 model = complete(model)
@@ -451,8 +457,8 @@ dc_gain_compensation = inv((Pn[:x, :].C*dcgain(cl)')[]) # Multiplier that makes 
 
 LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
 
-@mtkmodel CartWithFeedback begin
-    @components begin
+@component function CartWithFeedback(; name)
+    systems = @named begin
         world = World()
         cartpole = Cartpole()
         reference = Blocks.Step(start_time = 5, height=0.5)
@@ -460,10 +466,10 @@ LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
         # controller = Blocks.MatrixGain(K = Lmat) # uncomment to use LQR controller instead
         controller = LQGSystem()
     end
-    begin
-        namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
-    end
-    @equations begin
+
+    namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
+
+    equations = [
         controller.input.u[1] ~ 0
         controller.input.u[2] ~ reference.output.u * dc_gain_compensation
         controller.input.u[3] ~ 0
@@ -473,7 +479,9 @@ LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
 
         connect(controller.output, control_saturation.input)
         connect(control_saturation.output, cartpole.motor.f)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = CartWithFeedback()
 model = complete(model)
@@ -507,27 +515,29 @@ end
 
 normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 
-@mtkmodel CartWithSwingup begin
-    @components begin
+@component function CartWithSwingup(; name)
+    systems = @named begin
         world = World()
         cartpole = Cartpole()
         L = Blocks.MatrixGain(K = Lmat) # Here we use the LQR controller instead
         control_saturation = Blocks.Limiter(y_max = 12) # To limit the control signal magnitude
     end
-    @variables begin
+
+    namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
+
+    pars = @parameters begin
+        Er = 3.825676486352941 # Total energy of the cartpole at the top equilibrium position
+    end
+
+    vars = @variables begin
         phi(t)
         w(t)
         E(t), [description = "Total energy of the pendulum"]
         u_swing(t), [description = "Swing-up control signal"]
         switching_condition(t)::Bool, [description = "Switching condition that indicates when stabilizing controller is active"]
     end
-    @parameters begin
-        Er = 3.825676486352941 # Total energy of the cartpole at the top equilibrium position
-    end
-    begin
-        namespaced_outputs = ModelingToolkit.renamespace.(:cartpole, outputs) # Give outputs correct namespace, they are variables in the cartpole system
-    end
-    @equations begin
+
+    equations = [
         phi ~ normalize_angle(cartpole.phi)
         w ~ cartpole.w
         E ~ energy(cartpole.pendulum.body, w) + energy(cartpole.tip, w)
@@ -540,7 +550,9 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
         switching_condition ~ abs(phi) < 0.4
         control_saturation.input.u ~ ifelse(switching_condition, L.output.u, u_swing)
         connect(control_saturation.output, cartpole.motor.f)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = CartWithSwingup()
 model = complete(model)

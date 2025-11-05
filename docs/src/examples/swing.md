@@ -18,8 +18,8 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@mtkmodel SwingRope begin
-    @components begin
+@component function SwingRope(; name)
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         joint1 = Spherical(isroot=true, state=true, d=0.001, color=[0.7, 0.7, 0.7, 0.7])
@@ -27,36 +27,41 @@ world = Multibody.world
         spring = Spring(c = inv(0.04/60), m=0.01, radius=0.06)
         damper = Damper(d = 50.0, radius=0.05, length_fraction=0.1)
     end
-    @equations begin
+
+    equations = [
         connect(frame_a, joint1.frame_a)
         connect(joint1.frame_b, rope.frame_a)
 
         connect(rope.frame_b, spring.frame_a, damper.frame_a)
         connect(spring.frame_b, damper.frame_b, frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@mtkmodel SimpleSwing begin
-    @structural_parameters begin
-        h = 2
-        w = 0.4
+@component function SimpleSwing(; name, h = 2, w = 0.4)
+    pars = @parameters begin
     end
-    @components begin
+
+    systems = @named begin
         world = World()
         upper_trans1 = FixedTranslation(r=[-w/2, 0, 0])
         rope1 = SwingRope(rope.r=[-w/2, h, -w/2])
         body  = Body(m=6, isroot=true, I_11=0.1, I_22=0.1, I_33=0.1)
         damper = Damper(d=10.0)
     end
-    @equations begin
+
+    equations = [
         connect(world.frame_b, upper_trans1.frame_a)
         connect(rope1.frame_a, upper_trans1.frame_b)
         # connect(world.frame_b, rope1.frame_a)
         connect(rope1.frame_b, body.frame_a)
-        
+
         connect(world.frame_b, damper.frame_a)
         connect(body.frame_a, damper.frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = SimpleSwing()
 model = complete(model)
@@ -83,12 +88,11 @@ This makes for a rather interesting-looking springy pendulum!
 Next, we create the full swing assembly
 
 ```@example SWING
-@mtkmodel Swing begin
-    @structural_parameters begin
-        h = 2
-        w = 0.4
+@component function Swing(; name, h = 2, w = 0.4)
+    pars = @parameters begin
     end
-    @components begin
+
+    systems = @named begin
         world = World()
         upper_trans1 = FixedTranslation(r=[-w/2, 0, 0])
         upper_trans2 = FixedTranslation(r=[ w/2, 0, 0])
@@ -106,7 +110,11 @@ Next, we create the full swing assembly
 
         damper = Damper(d=0.5)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = [
         # Rope assembly
         connect(world.frame_b, upper_trans1.frame_a, upper_trans2.frame_a)
         connect(rope1.frame_a, rope2.frame_a, upper_trans1.frame_b)
@@ -122,7 +130,9 @@ Next, we create the full swing assembly
         # World damping (damps swing motion)
         connect(world.frame_b, damper.frame_a)
         connect(body.frame_a, damper.frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = Swing()
