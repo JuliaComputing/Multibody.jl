@@ -386,15 +386,22 @@ end
 @testset "SimpleWheel" begin
     @info "Testing SimpleWheel"
     gray = [0.1, 0.1, 0.1, 1]
-    @mtkmodel TestWheel begin
-        @components begin
+    @component function TestWheel(; name)
+        systems = @named begin
             body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
             revolute = Pl.Revolute()
             wheel1 = Pl.SimpleWheel(color=gray)
             wheel2 = Pl.SimpleWheel(color=gray, μ=.5)
             input = Blocks.Constant(k=1)
         end
-        @equations begin
+
+        pars = @parameters begin
+        end
+
+        vars = @variables begin
+        end
+
+        equations = [
             connect(body.frame_a, revolute.frame_a)
             connect(revolute.frame_b, wheel1.frame_a)
             connect(input.output, wheel1.thrust)
@@ -402,7 +409,9 @@ end
             wheel2.thrust.u ~ 0
 
             connect(wheel2.frame_a, body.frame_b)
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
     @named model = TestWheel()
     model = complete(model)
@@ -436,8 +445,8 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 @testset "SlipBasedWheel" begin
     @info "Testing SlipBasedWheel"
 
-    @mtkmodel TestSlipBasedWheel begin
-        @components begin
+    @component function TestSlipBasedWheel(; name)
+        systems = @named begin
             slipBasedWheelJoint = Pl.SlipBasedWheelJoint(
                 radius = 0.3,
                 r = [1,0],
@@ -458,7 +467,14 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
             constant = Blocks.Constant(k = 0)
         end
-        @equations begin
+
+        pars = @parameters begin
+        end
+
+        vars = @variables begin
+        end
+
+        equations = [
             connect(prismatic.frame_a, revolute.frame_b)
             connect(revolute.frame_a, fixed.frame_b)
             connect(engineTorque.flange, inertia.flange_a)
@@ -466,7 +482,9 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             connect(slipBasedWheelJoint.frame_a, prismatic.frame_b)
             connect(slipBasedWheelJoint.flange_a, inertia.flange_b)
             connect(constant.output, slipBasedWheelJoint.dynamicLoad)
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
 
     @named model = TestSlipBasedWheel()
@@ -493,8 +511,8 @@ end
 
 @testset "TwoTrackModel" begin
     @info "Testing TwoTrackModel"
-@mtkmodel TwoTrackWithDifferentialGear begin
-    @components begin
+@component function TwoTrackWithDifferentialGear(; name)
+    systems = @named begin
         body = Pl.Body(m = 100, I = 1, gy = 0)
         body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0)
         body2 = Pl.Body(m = 100, I = 1, gy = 0)
@@ -562,8 +580,13 @@ end
         dynamic_load = Blocks.Constant(k=0)
     end
 
+    pars = @parameters begin
+    end
 
-    @equations begin
+    vars = @variables begin
+    end
+
+    equations = [
         connect(wheelJoint2.flange_a, inertia1.flange_b)
         connect(inertia.flange_b, wheelJoint1.flange_a)
         connect(fixedTranslation2.frame_b, fixedTranslation1.frame_a)
@@ -589,7 +612,9 @@ end
         connect(revolute.frame_a, rightTrail.frame_a)
         connect(revolute.frame_b, fixedTranslation5.frame_a)
         connect(dynamic_load.output, wheelJoint1.dynamicLoad, wheelJoint2.dynamicLoad, wheelJoint3.dynamicLoad, wheelJoint4.dynamicLoad)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = TwoTrackWithDifferentialGear()
