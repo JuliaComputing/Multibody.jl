@@ -51,7 +51,7 @@ D = Differential(t)
     end
 
 
-    equations = []
+    equations = Equation[]
 
     return System(equations, t; name, systems)
 end

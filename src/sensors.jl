@@ -54,7 +54,7 @@ function PartialAbsoluteSensor(; name, n_out)
         frame_a = Frame()
         y = Blocks.RealOutput(nout = n_out)
     end
-    equations = []
+    equations = Equation[]
     compose(System(equations, t; name), frame_a, y)
 end
 

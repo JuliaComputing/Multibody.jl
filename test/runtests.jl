@@ -186,7 +186,7 @@ end
     vars = @variables begin
     end
 
-    equations = []
+    equations = Equation[]
 
     return System(equations, t; name, systems)
 end

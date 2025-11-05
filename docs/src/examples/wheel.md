@@ -52,7 +52,7 @@ D = Differential(t)
     vars = @variables begin
     end
 
-    equations = []
+    equations = Equation[]
 
     return System(equations, t; name, systems)
 end
@@ -137,7 +137,7 @@ The slip velocity is defined such that when the wheel is moving with positive ve
     vars = @variables begin
     end
 
-    equations = []
+    equations = Equation[]
 
     return System(equations, t; name, systems)
 end
