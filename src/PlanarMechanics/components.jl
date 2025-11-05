@@ -126,7 +126,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
         I = 0.1, [description = "inertia of the body with respect to the center of mass"]
         radius = 0.1, [description = "Radius of the body in animations"]
         render = true, [description = "Render the body in animations"]
-        (color[1:4] = purple), [description = "Color of the body in animations"]
+        (color[1:4] = purple), [description = "Color of the body in animations", guess=ones(4)]
     end
     @components begin
         translation = FixedTranslation(; r)
