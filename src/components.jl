@@ -378,9 +378,9 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               sequence = [1,2,3],
               phi0 = zeros(3),
               phid0 = zeros(3),
-              r_0 = state || isroot ? 0 : nothing,
-              v_0 = state || isroot ? 0 : nothing,
-              w_a = state || isroot ? 0 : nothing,
+              r_0 = state || isroot ? zeros(3) : nothing,
+              v_0 = state || isroot ? zeros(3) : nothing,
+              w_a = state || isroot ? zeros(3) : nothing,
               radius = 0.05,
               cylinder_radius = radius/2,
               length_fraction = 1,
@@ -397,19 +397,19 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         state_priority = state_priority+isroot,
         description = "Position vector from origin of world frame to origin of frame_a",
     ]
-    @variables v_0(t)[1:3]=v_0 [guess = 0, 
+    @variables v_0(t)[1:3]=v_0 [ 
         state_priority = state_priority+isroot,
         description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
     ]
-    @variables a_0(t)[1:3] [guess = 0, 
+    @variables a_0(t)[1:3] [ 
         description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
     ]
-    @variables g_0(t)[1:3] [guess = 0, description = "gravity acceleration"]
-    @variables w_a(t)[1:3]=w_a [guess = 0, 
+    @variables g_0(t)[1:3] [ description = "gravity acceleration"]
+    @variables w_a(t)[1:3]=w_a [ 
         state_priority = isroot ? quat ? state_priority : -1 : 0,
         description = "Absolute angular velocity of frame_a resolved in frame_a",
     ]
-    @variables z_a(t)[1:3] [guess = 0, 
+    @variables z_a(t)[1:3] [ 
         description = "Absolute angular acceleration of frame_a resolved in frame_a",
     ]
     # 6*3 potential variables + Frame: 2*3 flow + 3 potential + 3 residual = 24 equations + 2*3 flow
@@ -444,7 +444,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         I = I.*Isparsity
     end
 
-    r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
+    # r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
 
     # DRa = D(Ra)
 
@@ -462,7 +462,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3] [state_priority = 0]
-            phi, phid, phidd = collect.((phi, phid, phidd))
+            # phi, phid, phidd = collect.((phi, phid, phidd))
             ar = axes_rotations(sequence, phi, phid)
             Equation[
                     phid .~ D.(phi)
@@ -478,24 +478,24 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         Ra = ori(frame_a)
         # This branch has never proven to be incorrect
         # This equation is defined here and not in the Rotation component since the branch above might use another equation
-        collect(w_a .~ angular_velocity2(Ra))
-        # collect(w_a .~ get_w(Ra))
+        (w_a ~ angular_velocity2(Ra))
+        # (w_a ~ get_w(Ra))
     end
 
-    eqs = [eqs;
-           collect(r_0 .~ frame_a.r_0)
-           collect(g_0 .~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
-           collect(v_0 .~ D.(r_0))
-           collect(a_0 .~ D.(v_0))
-           collect(z_a .~ D.(w_a))
+    eqs = Equation[eqs;
+           (r_0 ~ frame_a.r_0)
+           (g_0 ~ gravity_acceleration(frame_a.r_0 .+ resolve1(Ra, r_cm)))
+           (v_0 ~ D(r_0))
+           (a_0 ~ D(v_0))
+           (z_a ~ D(w_a))
            if air_resistance > 0
-                collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0 + air_resistance*_norm(v_0)*v_0) + cross(z_a, r_cm) +
+                (frame_a.f ~ m * (resolve2(Ra, a_0 - g_0 + air_resistance*_norm(v_0)*v_0) + cross(z_a, r_cm) +
                                         cross(w_a, cross(w_a, r_cm))))
            else
-                collect(frame_a.f .~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
+                (frame_a.f ~ m * (resolve2(Ra, a_0 - g_0) + cross(z_a, r_cm) +
                                         cross(w_a, cross(w_a, r_cm))))
            end
-           collect(frame_a.tau .~ I * z_a + cross(w_a, I * w_a) + cross(r_cm, frame_a.f))]
+           (frame_a.tau ~ I * z_a + cross(w_a, collect(I * w_a)) + cross(r_cm, frame_a.f))]
 
     # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
     
