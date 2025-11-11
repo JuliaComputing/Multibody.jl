@@ -293,7 +293,7 @@ end
 Emulates the `@variables` macro but does never creates array variables. Also never introuces the variable names into the calling scope.
 """
 function at_variables_t(args...; default = nothing, state_priority = nothing)
-    xs = Symbolics.variables(args...; T = Symbolics.FnType)
+    xs = Symbolics.variables(args...; T = Symbolics.FnType{Tuple, Real, Nothing})
     xs = map(x -> x(t), xs)
     if default !== nothing
         xs = Symbolics.setdefaultval.(xs, default)
