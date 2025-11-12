@@ -90,8 +90,8 @@ connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
 mounted_chain = complete(mounted_chain)
 ssys = structural_simplify(multibody(mounted_chain))
 prob = ODEProblem(ssys, [
-    collect(chain.link_8.body.w_a) .=> [0,0,0]; 
-    collect(chain.link_8.frame_b.r_0) .=> [x_dist,0,0]; 
+    chain.link_8.body.w_a .=> [0,0,0];
+    chain.link_8.frame_b.r_0 .=> [x_dist,0,0];
 ], (0, 4))
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)

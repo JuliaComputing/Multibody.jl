@@ -162,7 +162,6 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
             @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
 
             uc = Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
-            uc = collect(uc)
             append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
 
             append!(connections, [
@@ -195,7 +194,7 @@ ssys = structural_simplify(multibody(model))
 op = [
     model.body.v_0[1] => 0;
     model.Calt.int.x => 4;
-    collect(model.cable.joint_2.phi) .=> 0.1;
+    model.cable.joint_2.phi .=> 0.1;
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
@@ -271,11 +270,11 @@ op = [
     model.body.r_0[2] => 1e-3
     model.body.r_0[3] => 1e-3
     model.body.r_0[1] => 1e-3
-    collect(model.cable.joint_2.phi) .=> 1 # Usa a larger initial cable bend since this controller is more robust
+    model.cable.joint_2.phi .=> 1 # Usa a larger initial cable bend since this controller is more robust
     model.world.g => 9.81;
-    collect(model.body.phid) .=> 0;
-    collect(D.(model.body.phi)) .=> 0;
-    collect(model.feedback_gain.input.u) .=> 0;
+    model.body.phid .=> 0;
+    D(model.body.phi) .=> 0;
+    model.feedback_gain.input.u .=> 0;
     model.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
 prob = ODEProblem(ssys, op, (0, 20))
@@ -294,11 +293,11 @@ The observant reader may have noticed that we linearized the quadrotor without t
 
 ```@example QUAD
 linop = merge(op, Dict([
-    collect(model.cable.joint_2.phi) .=> 0
-    collect(model.body.r_0) .=> 1e-32
-    collect(model.body.v_0) .=> 1e-32 # To avoid singularity in linearization
-    collect(model.system_outputs.u) .=> 1e-32
-    collect(model.feedback_gain.input.u) .=> 1e-32
+    model.cable.joint_2.phi .=> 0
+    model.body.r_0 .=> 1e-32
+    model.body.v_0 .=> 1e-32 # To avoid singularity in linearization
+    model.system_outputs.u .=> 1e-32
+    model.feedback_gain.input.u .=> 1e-32
     ]))
 @time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 S = minreal(S, 1e-6)
