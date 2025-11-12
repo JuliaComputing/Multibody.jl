@@ -86,7 +86,7 @@ If a connection to the world is needed in a component model, use [`Fixed`](@ref)
 
     O = ori(frame_b)
     eqs = Equation[
-        collect(frame_b.r_0) .~ 0;
+        frame_b.r_0 ~ zeros(3)
         O ~ nullrotation()
         n_inner .~ n
         g_inner ~ g
@@ -126,7 +126,7 @@ A component rigidly attached to the world frame with translation `r` between the
         r[1:3] = r, [description = "Position vector from world frame to frame_b, resolved in world frame"]
         render = render, [description = "Render the component in animations"]
     end
-    eqs = [collect(frame_b.r_0 .~ r)
+    eqs = [frame_b.r_0 ~ r
            ori(frame_b) ~ nullrotation()]
     sys = compose(System(eqs, t; name=:nothing), systems...)
     add_params(sys, [render]; name)
@@ -155,10 +155,10 @@ See also [`Pose`](@ref) for a component that allows for forced orientation as we
         a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
     end
     eqs = [
-        collect(frame_b.r_0 .~ r)[[x_locked, y_locked, z_locked]]
-        collect(frame_b.r_0 .~ p)
-        collect(v .~ D.(p))
-        collect(a .~ D.(v))
+        (frame_b.r_0 .~ r)[[x_locked, y_locked, z_locked]]
+        frame_b.r_0 ~ p
+        v ~ D(p)
+        a ~ D(v)
         ]
     if fixed_orientation
         append!(eqs, ori(frame_b) ~ nullrotation())
@@ -203,10 +203,10 @@ See also [`Position`](@ref) for a component that allows for only forced translat
         a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
     end
     eqs = [
-        collect(frame_b.r_0 .~ r)[[x_locked, y_locked, z_locked]]
-        collect(frame_b.r_0 .~ p)
-        collect(v .~ D.(p))
-        collect(a .~ D.(v))
+        (frame_b.r_0 .~ r)[[x_locked, y_locked, z_locked]]
+        frame_b.r_0 ~ p
+        v ~ D(p)
+        a ~ D(v)
         if R !== nothing
             ori(frame_b).R ~ R
         elseif q !== nothing
@@ -236,8 +236,8 @@ end
     @variables begin (housing_tau(t)[1:3]), [
                          description = "Torque",
                      ] end
-    eqs = [(collect(housing_tau) .~ collect(-n * flange_b.tau));
-           (flange_b.phi ~ phi0);
+    eqs = [housing_tau ~ -n * flange_b.tau
+           flange_b.phi ~ phi0
            connect(housing_frame_a, frame_a)]
     compose(System(eqs, t; name), systems...)
 end
@@ -252,23 +252,22 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
 @component function FixedTranslation(; name, r, radius=0.02f0, color = purple, render = true)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r[1:3]=collect(r) [
+    @parameters r[1:3]=r [
         description = "position vector from frame_a to frame_b, resolved in frame_a",
     ]
-    r = collect(r)
     @parameters begin
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations (RGBA)"]
         render = render, [description = "Render the component in animations"]
     end
-    fa = frame_a.f |> collect
-    fb = frame_b.f |> collect
-    taua = frame_a.tau |> collect
-    taub = frame_b.tau |> collect
-    eqs = Equation[(collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), r))
-                   (ori(frame_b) ~ ori(frame_a))
-                   collect(0 .~ fa + fb)
-                   (0 .~ taua + taub + cross(r, fb))]
+    fa = frame_a.f
+    fb = frame_b.f
+    taua = frame_a.tau
+    taub = frame_b.tau
+    eqs = Equation[frame_b.r_0 ~ frame_a.r_0 + resolve1(ori(frame_a), r)
+                   ori(frame_b) ~ ori(frame_a)
+                   0 ~ fa + fb
+                   0 ~ taua + taub + cross(r, fb)]
     pars = [r; radius; color; render]
     vars = []
     compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
@@ -311,10 +310,10 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
 
     pars = [r; n; angle; render]
 
-    fa = frame_a.f |> collect
-    fb = frame_b.f |> collect
-    taua = frame_a.tau |> collect
-    taub = frame_b.tau |> collect
+    fa = frame_a.f
+    fb = frame_b.f
+    taua = frame_a.tau
+    taub = frame_b.tau
 
     # Relationships between quantities of frame_a and frame_b 
 
@@ -331,8 +330,7 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
                zeros(3) ~ taub + resolve1(Rrel_inv, taua) +
                            cross(resolve1(Rrel_inv, r), fb)]
     end
-    eqs = collect(eqs)
-    append!(eqs, collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(frame_a, r))
+    append!(eqs, frame_b.r_0 ~ frame_a.r_0 + resolve1(frame_a, r))
 
     compose(System(eqs, t, [], pars; name), frame_a, frame_b)
 end
@@ -575,11 +573,9 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
 
     pars = collect_all([pars; more_pars])
 
-    r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
-
-    eqs = [r_0 .~ collect(frame_a.r_0)
-           v_0 .~ D.(r_0)
-           a_0 .~ D.(v_0)
+    eqs = [r_0 ~ frame_a.r_0
+           v_0 ~ D(r_0)
+           a_0 ~ D(v_0)
            connect(frame_a, translation.frame_a, translation_cm.frame_a)
            connect(frame_b, translation.frame_b)
            connect(frame_a, body.frame_a)
@@ -819,19 +815,11 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
     end
 
     # Additional calculations from second begin block
-    r_0 = collect(r_0)
-    r_cm = collect(r_cm)
 
     equations = Equation[
-        r_0[1] ~ ((frame_a.r_0)[1])
-        r_0[2] ~ ((frame_a.r_0)[2])
-        r_0[3] ~ ((frame_a.r_0)[3])
-        v_0[1] ~ D(r_0[1])
-        v_0[2] ~ D(r_0[2])
-        v_0[3] ~ D(r_0[3])
-        a_0[1] ~ D(v_0[1])
-        a_0[2] ~ D(v_0[2])
-        a_0[3] ~ D(v_0[3])
+        r_0 ~ frame_a.r_0
+        v_0 ~ D(r_0)
+        a_0 ~ D(v_0)
         connect(frame_a, translation.frame_a)
         connect(frame_b, translation.frame_b)
         connect(frame_a, body.frame_a)
@@ -865,8 +853,6 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
                             density = 7700, color = purple)
     # Validation from first begin block
     iszero(r_shape) || error("non-zero r_shape not supported")
-    width_dir = collect(width_dir)
-    length_dir = collect(length_dir)
 
     pars = @parameters begin
         # NOTE: these are workarounds to allow rendering of this component. Unfortunately, MTK/JSCompiler cannot handle parameter arrays well enough to let these be actual parameters
@@ -889,7 +875,6 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
     m = mo - mi
     R = from_nxy(r, width_dir)
     r_cm = r_shape + _normalize(length_dir)*length/2
-    r_cm = collect(r_cm)
 
     I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
     I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
@@ -910,15 +895,9 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
     end
 
     equations = Equation[
-        r_0[1] ~ ((frame_a.r_0)[1])
-        r_0[2] ~ ((frame_a.r_0)[2])
-        r_0[3] ~ ((frame_a.r_0)[3])
-        v_0[1] ~ D(r_0[1])
-        v_0[2] ~ D(r_0[2])
-        v_0[3] ~ D(r_0[3])
-        a_0[1] ~ D(v_0[1])
-        a_0[2] ~ D(v_0[2])
-        a_0[3] ~ D(v_0[3])
+        r_0 ~ frame_a.r_0
+        v_0 ~ D(r_0)
+        a_0 ~ D(v_0)
         connect(frame_a, translation.frame_a)
         connect(frame_b, translation.frame_b)
         connect(frame_a, body.frame_a)
