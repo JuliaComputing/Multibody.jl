@@ -61,9 +61,9 @@ ssys = structural_simplify(multibody(model))
 defs = [
     model.world.mu => 1
     model.world.point_gravity => true # The gravity model is selected here
-    collect(model.body1.w_a) .=> 0
-    collect(model.body2.w_a) .=> 0
-    
+    model.body1.w_a .=> 0
+    model.body2.w_a .=> 0
+
 ]
 prob = ODEProblem(ssys, defs, (0, 5))
 sol = solve(prob, Rodas4())

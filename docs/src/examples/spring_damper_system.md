@@ -57,8 +57,8 @@ ssys = structural_simplify(multibody(model))
 
 prob = ODEProblem(ssys, [
     damper1.d => 2;
-    collect(body1.v_0) .=> 0;
-    collect(body1.w_a) .=> 0;
+    body1.v_0 .=> 0;
+    body1.w_a .=> 0;
 ], (0, 5))
 
 sol = solve(prob, Rodas4())

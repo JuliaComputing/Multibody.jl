@@ -41,7 +41,7 @@ using OrdinaryDiffEq
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs = [collect(forcesensor.force.u); collect(joint.frame_a.f)])
+plot(sol, idxs = [forcesensor.force.u; joint.frame_a.f])
 ```
 
 Note how the force sensor measures a force that appears to equal the cut-force in the joint in magnitude, but the orientation appears to differ. Frame cut forces and toques are resolved in the world frame by default, while the force sensor measures the force in the frame of the sensor. We can choose which frame to resolve the measurements in by using hte keyword argument `@named forcesensor = CutForce(; resolve_frame = :world)`. If we do this, the traces in the plot above will overlap.

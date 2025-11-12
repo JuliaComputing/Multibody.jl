@@ -67,8 +67,8 @@ end
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [
-    collect(model.body.v_0) .=> 0;
-    collect(model.body.w_a) .=> 0;
+    model.body.v_0 .=> 0;
+    model.body.w_a .=> 0;
 ], (0, 4))
 sol = solve(prob, ImplicitEuler(autodiff=false), reltol=5e-3)
 @assert SciMLBase.successful_retcode(sol)
@@ -142,10 +142,10 @@ ssys = structural_simplify(multibody(model))
 d = 10
 dj = 0.01
 prob = ODEProblem(ssys, [
-    collect(model.body.r_0) .=> [0, -2, 0.0];
-    collect(model.body_right.body.r_0) .=> [0, -2, 0.5];
-    collect(model.body_left.body.r_0) .=> [0, -2, -0.5];
-    collect(model.body.v_0) .=> [0, 0, 5];
+    model.body.r_0 .=> [0, -2, 0.0];
+    model.body_right.body.r_0 .=> [0, -2, 0.5];
+    model.body_left.body.r_0 .=> [0, -2, -0.5];
+    model.body.v_0 .=> [0, 0, 5];
     model.damper.d => 1;
     model.rope1.damper.d => d;
     model.rope2.damper.d => d;
