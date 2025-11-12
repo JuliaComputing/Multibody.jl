@@ -1,27 +1,26 @@
 using Rotations
+import ModelingToolkit.RotationMatrix
 
 _norm(x) = sqrt(sum(abs2(x) for x in x)) # Workaround for buggy symbolic arrays
 _normalize(x) = x ./ _norm(x)
 
 const R3{T} = RotMatrix{3, T}
 
-abstract type Orientation end
+# """
+#     RotationMatrix
 
-"""
-    RotationMatrix
+# A struct representing a 3D orientation as a rotation matrix.
 
-A struct representing a 3D orientation as a rotation matrix.
+# If `System` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
 
-If `System` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
-
-# Fields:
-- `R::R3`: The rotation 3×3 matrix ∈ SO(3)
-- `w`: The angular velocity vector
-"""
-struct RotationMatrix <: Orientation
-    R::R3
-    w::Any
-end
+# # Fields:
+# - `R::R3`: The rotation 3×3 matrix ∈ SO(3)
+# - `w`: The angular velocity vector
+# """
+# struct RotationMatrix <: Orientation
+#     R::R3
+#     w::Any
+# end
 
 RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
@@ -71,7 +70,7 @@ end
 Base.:*(R1::RotationMatrix, x::AbstractArray) = R1.R * x
 Base.:*(x::AbstractArray, R2::RotationMatrix) = x * R2.R
 function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
-    RotationMatrix(R1.R.mat * R2.R.mat, R1 * collect(R2.w) + collect(R1.w))
+    RotationMatrix(R1.R * R2.R, R1 * collect(R2.w) + collect(R1.w))
 end
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
@@ -192,9 +191,9 @@ function inverse_rotation(R)
 end
 
 function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
-    # [vec(R1.R.mat .~ R2.R.mat);
+    # [vec(R1.R .~ R2.R);
     #     R1.w .~ R2.w]
-    vec(R1.R.mat .~ R2.R.mat)
+    vec(R1.R .~ R2.R)
 end
 
 """
@@ -400,7 +399,7 @@ See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions]
 """
 function get_rot(sol, frame, t)
     if is_frame(frame)
-        Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
+        Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R')), 3, 3))
     elseif is_frame_2d(frame)
         phi = sol(t, idxs = frame.phi)
         Rotations.RotMatrix2(ori_2d(phi)')
