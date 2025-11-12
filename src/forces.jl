@@ -19,30 +19,29 @@ function BasicTorque(; name, resolve_frame = :world)
         (t_b_0(t)[1:3]), [
             description = "frame_b.tau resolved in world frame"]
     end
-    r_0, t_b_0 = collect.((r_0, t_b_0))
 
-    eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
-           collect(frame_a.f .~ zeros(3))
-           collect(frame_b.f .~ zeros(3))
+    eqs = [r_0 ~ frame_b.r_0 - frame_a.r_0
+           frame_a.f ~ zeros(3)
+           frame_b.f ~ zeros(3)
            # torque balance
-           zeros(3) .~ collect(frame_a.tau) + resolve2(frame_a, t_b_0)]
+           zeros(3) ~ frame_a.tau + resolve2(frame_a, t_b_0)]
 
     if resolve_frame == :frame_a
         append!(eqs,
-                [t_b_0 .~ -resolve1(frame_a, torque.u)
-                 collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
+                [t_b_0 ~ -resolve1(frame_a, torque.u)
+                 frame_b.tau ~ resolve2(frame_b, t_b_0)])
     elseif resolve_frame == :frame_b
         append!(eqs,
-                [t_b_0 .~ -resolve1(frame_b, torque.u)
-                 collect(frame_b.tau) .~ collect(-torque.u)])
+                [t_b_0 ~ -resolve1(frame_b, torque.u)
+                 frame_b.tau ~ -torque.u])
     elseif resolve_frame == :world
         append!(eqs,
-                [t_b_0 .~ collect(-torque.u)
-                 collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
+                [t_b_0 ~ -torque.u
+                 frame_b.tau ~ resolve2(frame_b, t_b_0)])
     else
         error("Unknown value of argument resolve_frame")
-        append!(eqs, [t_b_0 .~ zeros(3)
-                      collect(frame_b.tau) .~ zeros(3)])
+        append!(eqs, [t_b_0 ~ zeros(3)
+                      frame_b.tau ~ zeros(3)])
     end
 
     extend(System(eqs, t, name = name, systems = [torque]), ptf)
@@ -79,13 +78,13 @@ end
     @named torque = Blocks.RealInput(; nin = 3)
     @named frame_b = Frame()
     eqs = if resolve_frame == :world
-        collect(frame_b.tau) .~ -resolve2(ori(frame_b), collect(torque.u))
+        frame_b.tau ~ -resolve2(ori(frame_b), torque.u)
     elseif resolve_frame == :frame_b
-        collect(frame_b.tau) .~ -torque.u
+        frame_b.tau ~ -torque.u
     else
-        collect(frame_b.tau) .~ zeros(3)
-    end |> collect
-    append!(eqs, collect(frame_b.f) .~ zeros(3))
+        frame_b.tau ~ zeros(3)
+    end
+    append!(eqs, frame_b.f ~ zeros(3))
     System(eqs, t; name, systems = [torque, frame_b])
 end
 
@@ -134,25 +133,24 @@ end
         (f_b_0(t)[1:3]), [
             description = "frame_b.f resolved in world frame"]
     end
-    r_0, f_b_0 = collect.((r_0, f_b_0))
 
-    eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
-           collect(frame_b.tau) .~ 0
-           0 .~ collect(frame_a.f) + resolve2(frame_a, f_b_0)
-           0 .~ collect(frame_a.tau) + resolve2(frame_a, cross(r_0, f_b_0))]
+    eqs = [r_0 ~ frame_b.r_0 - frame_a.r_0
+           frame_b.tau ~ 0
+           0 ~ frame_a.f + resolve2(frame_a, f_b_0)
+           0 ~ frame_a.tau + resolve2(frame_a, cross(r_0, f_b_0))]
 
     if resolve_frame == :frame_a
         append!(eqs,
-                [f_b_0 .~ -resolve1(frame_a, force.u)
-                 collect(frame_b.f) .~ resolve2(frame_b, f_b_0)])
+                [f_b_0 ~ -resolve1(frame_a, force.u)
+                 frame_b.f ~ resolve2(frame_b, f_b_0)])
     elseif resolve_frame == :frame_b
         append!(eqs,
-                [f_b_0 .~ -resolve1(frame_b, force.u)
-                 collect(frame_b.f) .~ collect(-force.u)])
+                [f_b_0 ~ -resolve1(frame_b, force.u)
+                 frame_b.f ~ -force.u])
     elseif resolve_frame == :world
         append!(eqs,
-                [f_b_0 .~ collect(-force.u)
-                 collect(frame_b.f) .~ resolve2(frame_b, f_b_0)])
+                [f_b_0 ~ -force.u
+                 frame_b.f ~ resolve2(frame_b, f_b_0)])
     else
         error("Unknown value of argument resolve_frame")
     end
@@ -164,13 +162,13 @@ end
     @named force = Blocks.RealInput(; nin = 3)
     @named frame_b = Frame()
     eqs = if resolve_frame == :world
-        collect(frame_b.f) .~ -resolve2(ori(frame_b), collect(force.u))
+        frame_b.f ~ -resolve2(ori(frame_b), force.u)
     elseif resolve_frame == :frame_b
-        collect(frame_b.f) .~ -force.u
+        frame_b.f ~ -force.u
     else
-        collect(frame_b.f) .~ zeros(3)
-    end |> collect
-    append!(eqs, collect(frame_b.tau) .~ zeros(3))
+        frame_b.f ~ zeros(3)
+    end
+    append!(eqs, frame_b.tau ~ zeros(3))
     System(eqs, t; name, systems = [force, frame_b])
 end
 
@@ -252,10 +250,10 @@ end
         description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
     ]
 
-    eqs = [collect(r_rel_0 .~ frame_b.r_0 .- frame_a.r_0);
+    eqs = [r_rel_0 ~ frame_b.r_0 - frame_a.r_0
            length ~ _norm(r_rel_0)
            s ~ max(length, s_small)
-           collect(e_rel_0 .~ r_rel_0 ./ s)]
+           e_rel_0 ~ r_rel_0 / s]
 
     # Modelica stdlib has the option to inser special equations when two line forces are connected, this option does not yet exisst here https://github.com/modelica/ModelicaStandardLibrary/blob/10238e9927e2078571e41b53cda128c5207f69f7/Modelica/Mechanics/MultiBody/Interfaces/LineForceBase.mo#L49
 
@@ -295,9 +293,6 @@ end
         bounds = (0, 1),
     ]
 
-    r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0 = collect.((r_rel_0, e_rel_0, r_CM_0, v_CM_0,
-                                                          ag_CM_0))
-
     eqs = [flange_a.s ~ 0
            flange_b.s ~ length]
 
@@ -309,20 +304,20 @@ end
     # NOTE, both frames are assumed to be connected, while modelica has special handling if they aren't
     if m0 > 0
         eqs = [eqs
-               collect(r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthfraction)
-               v_CM_0 .~ D.(r_CM_0)
-               ag_CM_0 .~ D.(v_CM_0) - gravity_acceleration(r_CM_0)
-               frame_a.f .~ resolve2(ori(frame_a),
+               r_CM_0 ~ frame_a.r_0 + r_rel_0 * lengthfraction
+               v_CM_0 ~ D(r_CM_0)
+               ag_CM_0 ~ D(v_CM_0) - gravity_acceleration(r_CM_0)
+               frame_a.f ~ resolve2(ori(frame_a),
                                      (m * (1 - lengthfraction)) * ag_CM_0 - e_rel_0 * fa)
-               frame_b.f .~ resolve2(ori(frame_b),
+               frame_b.f ~ resolve2(ori(frame_b),
                                      (m * lengthfraction) * ag_CM_0 - e_rel_0 * fb)]
     else
         eqs = [eqs
-               r_CM_0 .~ zeros(3)
-               v_CM_0 .~ zeros(3)
-               ag_CM_0 .~ zeros(3)
-               frame_a.f .~ -resolve2(ori(frame_a), e_rel_0 * fa)
-               frame_b.f .~ -resolve2(ori(frame_b), e_rel_0 * fb)]
+               r_CM_0 ~ zeros(3)
+               v_CM_0 ~ zeros(3)
+               ag_CM_0 ~ zeros(3)
+               frame_a.f ~ -resolve2(ori(frame_a), fa*e_rel_0)
+               frame_b.f ~ -resolve2(ori(frame_b), fb*e_rel_0)]
     end
 
     extend(System(eqs, t; name, systems = [flange_a, flange_b]), lfb)
@@ -348,12 +343,12 @@ end
     end
     equations = Equation[
                  # Determine relative position vector between the two frames
-                 collect(r_rel_a) .~ resolve2(frame_a, r_rel_0)
-                 collect(e_a) .~ collect(r_rel_a ./ s)
+                 r_rel_a ~ resolve2(frame_a, r_rel_0)
+                 e_a ~ r_rel_a / s
 
                  # Determine forces and torques at frame_a and frame_b
-                 collect(frame_a.f) .~ collect(-e_a * f)
-                 collect(frame_b.f) .~ -resolve2(relative_rotation(frame_a, frame_b),
+                 frame_a.f ~ -e_a * f
+                 frame_b.f ~ -resolve2(relative_rotation(frame_a, frame_b),
                                                  frame_a.f)]
     extend(System(equations, t; name), lfb)
 end
@@ -436,13 +431,13 @@ See also [`SpringDamperParallel`](@ref)
     ]
 
     eqs = [D(s) ~ v
-           r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
-           e_a .~ r_rel_a / s
+           r_rel_a ~ resolve2(ori(frame_a), r_rel_0)
+           e_a ~ r_rel_a / s
            f ~ spring2d.f
            length ~ lineforce.length
            s ~ lineforce.s
-           r_rel_0 .~ lineforce.r_rel_0
-           e_rel_0 .~ lineforce.e_rel_0
+           r_rel_0 ~ lineforce.r_rel_0
+           e_rel_0 ~ lineforce.e_rel_0
            connect(lineforce.frame_a, frame_a)
            connect(lineforce.frame_b, frame_b)
            connect(spring2d.flange_b, lineforce.flange_b)

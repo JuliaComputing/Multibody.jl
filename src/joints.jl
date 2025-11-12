@@ -63,7 +63,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
     end
     moreeqs = [frame_a.r_0 ~ frame_b.r_0
                D(phi) ~ w
-               tau ~ -frame_b.tau'n]
+               tau ~ -dot(frame_b.tau,n)]
     append!(eqs, moreeqs)
     sys = if axisflange
         # @named internalAxis = Rotational.InternalSupport(tau=tau)
