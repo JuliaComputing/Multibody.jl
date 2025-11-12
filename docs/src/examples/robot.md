@@ -108,7 +108,7 @@ nothing # hide
 The coordinates of any point on the mechanism may be obtained in the world coordinate frame by either
 
 ```@example robot
-output = collect(robot.mechanics.b6.frame_b.r_0)
+output = robot.mechanics.b6.frame_b.r_0
 fkine = build_explicit_observed_function(ssys, output)
 fkine(prob.u0, prob.p, 0)
 ```

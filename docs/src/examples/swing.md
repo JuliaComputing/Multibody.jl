@@ -162,7 +162,7 @@ prob = ODEProblem(ssys, [
 @time sol = solve(prob, ImplicitEuler(autodiff=false), reltol=1e-2)
 @assert SciMLBase.successful_retcode(sol)
 
-Plots.plot(sol, idxs = [collect(model.body.r_0);])
+Plots.plot(sol, idxs = model.body.r_0)
 ```
 
 ```@example SWING

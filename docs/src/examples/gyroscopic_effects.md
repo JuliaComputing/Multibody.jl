@@ -45,8 +45,8 @@ prob = ODEProblem(ssys, [model.world.g => 9.80665, model.revolute.w => 10], (0, 
 sol = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8);
 @assert SciMLBase.successful_retcode(sol)
 using Test # hide
-@test sol(5, idxs=collect(model.body2.r_0[1:3])) ≈ [-0.0357364, -0.188245, 0.02076935] atol=1e-3 # hide
-# plot(sol, idxs=collect(model.body2.r_0)) # hide
+@test sol(5, idxs=model.body2.r_0[1:3]) ≈ [-0.0357364, -0.188245, 0.02076935] atol=1e-3 # hide
+# plot(sol, idxs=model.body2.r_0) # hide
 
 import GLMakie
 Multibody.render(model, sol; x=1, z=1, filename = "gyro.gif") # Use "gyro.mp4" for a video file
