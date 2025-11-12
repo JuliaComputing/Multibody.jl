@@ -47,14 +47,6 @@ It is not possible to connect other components, such as a body with mass propert
     @variables f_cm_e(t)[1:3], [description="Dummy if m==0, or projection of f_cm_a onto eRod_a, resolved in frame_a";]
     @variables f_b_a1(t)[1:3], [description="Force acting at frame_b, but without force in rod, resolved in frame_a";]
 
-    rRod_0 = collect(rRod_0)
-    rRod_a = collect(rRod_a)
-    eRod_a = collect(eRod_a)
-    r_cm_0 = collect(r_cm_0)
-    v_cm_0 = collect(v_cm_0)
-    f_cm_a = collect(f_cm_a)
-    f_cm_e = collect(f_cm_e)
-    f_b_a1 = collect(f_b_a1)
     rodlength = _norm(r_0)
     constraint_residue = rRod_0'rRod_0 - rodlength^2
 
@@ -62,21 +54,21 @@ It is not possible to connect other components, such as a body with mass propert
     eqs = [
         # Determine relative position vector between the two frames
   if kinematic_constraint
-    rRod_0 .~ transpose(ori(frame_b).R)*(ori(frame_b)*collect(frame_b.r_0)) - transpose(ori(frame_a).R)*(ori(frame_a)*collect(frame_a.r_0))
+    rRod_0 ~ transpose(ori(frame_b).R)*(ori(frame_b)*frame_b.r_0) - transpose(ori(frame_a).R)*(ori(frame_a)*frame_a.r_0)
   else
-    rRod_0 .~ frame_b.r_0 - frame_a.r_0
+    rRod_0 ~ frame_b.r_0 - frame_a.r_0
   end
 
   #rRod_0 = frame_b.r_0 - frame_a.r_0;
-  rRod_a .~ resolve2(ori(frame_a), rRod_0)
-  eRod_a .~ rRod_a/rodlength
+  rRod_a ~ resolve2(ori(frame_a), rRod_0)
+  eRod_a ~ rRod_a/rodlength
 
   # Constraint equation
   constraint_residue ~ 0
 
   # Cut-torques at frame_a and frame_b
-  frame_a.tau .~ zeros(3)
-  frame_b.tau .~ zeros(3)
+  frame_a.tau ~ zeros(3)
+  frame_b.tau ~ zeros(3)
 
   #= Force and torque balance of rod
      - Kinematics for center of mass CM of mass point
@@ -102,23 +94,23 @@ It is not possible to connect other components, such as a body with mass propert
 
     # f_b_a1 is needed in aggregation joints to solve kinematic loops analytically
   if m > 0
-    [r_cm_0 .~ frame_a.r_0 + rRod_0/2;
-    v_cm_0 .~ D.(r_cm_0);
-    f_cm_a .~ m*resolve2(ori(frame_a), D.(v_cm_0) - gravity_acceleration(r_cm_0))
-    f_cm_e .~ (f_cm_a'eRod_a)*eRod_a
-    frame_a.f .~ (f_cm_a - f_cm_e)./2 + f_rod*eRod_a
-    f_b_a1 .~ (f_cm_a + f_cm_e)./2
-    frame_b.f .~ resolve_relative(f_b_a1 - f_rod*eRod_a, ori(frame_a),
+    [r_cm_0 ~ frame_a.r_0 + rRod_0/2;
+    v_cm_0 ~ D(r_cm_0);
+    f_cm_a ~ m*resolve2(ori(frame_a), D(v_cm_0) - gravity_acceleration(r_cm_0))
+    f_cm_e ~ (f_cm_a'eRod_a)*eRod_a
+    frame_a.f ~ (f_cm_a - f_cm_e)./2 + f_rod*eRod_a
+    f_b_a1 ~ (f_cm_a + f_cm_e)./2
+    frame_b.f ~ resolve_relative(f_b_a1 - f_rod*eRod_a, ori(frame_a),
       ori(frame_b));
     ]
   else
-    [r_cm_0 .~ zeros(3);
-    v_cm_0 .~ zeros(3);
-    f_cm_a .~ zeros(3);
-    f_cm_e .~ zeros(3);
-    f_b_a1 .~ zeros(3);
-    frame_a.f .~ f_rod*eRod_a;
-    frame_b.f .~ -resolve_relative(frame_a.f, ori(frame_a), ori(frame_b));
+    [r_cm_0 ~ zeros(3);
+    v_cm_0 ~ zeros(3);
+    f_cm_a ~ zeros(3);
+    f_cm_e ~ zeros(3);
+    f_b_a1 ~ zeros(3);
+    frame_a.f ~ f_rod*eRod_a;
+    frame_b.f ~ -resolve_relative(frame_a.f, ori(frame_a), ori(frame_b));
     ]
   end
     ]
@@ -189,10 +181,10 @@ In complex multibody systems with closed loops this may help to simplify the sys
         else
             frame_a.f[3] ~ 0
         end
-        r_rel_a .~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0);
-        zeros(3) .~ collect(frame_b.tau);
-        collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f);
-        zeros(3) .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
+        r_rel_a ~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0);
+        zeros(3) ~ frame_b.tau;
+        frame_b.f ~ -resolve2(Rrel, frame_a.f);
+        zeros(3) ~ frame_a.tau + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
     ]
 
     sys = extend(System(eqs, t; name=:nothing), ptf)
@@ -250,11 +242,11 @@ In systems without closed loops the use of this implicit joint does not make sen
         else
             frame_a.f[3] ~ 0
         end
-        r_rel_a .~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0)
-        zeros(3) .~ collect(frame_a.tau) .+ resolve1(Rrel, frame_b.tau) .+ cross(r_rel_a, resolve1(Rrel, frame_b.f))
-        zeros(3) .~ resolve1(Rrel, frame_b.f) + collect(frame_a.f)
-        # orientation_constraint(ori(frame_a), ori(frame_b)) .~ 0
-        residue(ori(frame_a), ori(frame_b)) .~ 0
+        r_rel_a ~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0)
+        zeros(3) ~ frame_a.tau + resolve1(Rrel, frame_b.tau) + cross(r_rel_a, resolve1(Rrel, frame_b.f))
+        zeros(3) ~ resolve1(Rrel, frame_b.f) + frame_a.f
+        # orientation_constraint(ori(frame_a), ori(frame_b)) ~ 0
+        residue(ori(frame_a), ori(frame_b)) ~ 0
     ]
 
     Main.eqs = eqs
@@ -366,14 +358,9 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         # R_rel_ia(t), [description="Rotation from frame_a to frame_ia"]
     end
 
-    n1_a, rRod_ia = collect.((n1_a, rRod_ia))
-
     eRod_ia = normalize(rRod_ia)
     e2_ia = cross(n1_a, eRod_ia)
     e3_ia = cross(eRod_ia, e2_ia)
-    # rodLength = _norm(rRod_ia)
-
-    eRod_ia,e2_ia,e3_ia,f_b_a1,eRod_a,rRod_0,rRod_a,f_b_a,f_ia_a,t_ia_a,n2_a,e2_a,e3_a,der_rRod_a_L,w_rel_ia1 = collect.((eRod_ia,e2_ia,e3_ia,f_b_a1,eRod_a,rRod_0,rRod_a,f_b_a,f_ia_a,t_ia_a,n2_a,e2_a,e3_a,der_rRod_a_L,w_rel_ia1))
 
 
     R_rel_ia1 = RotationMatrix(transpose([eRod_a e2_a e3_a]), w_rel_ia1)
@@ -389,44 +376,44 @@ This joint aggregation can be used in cases where in reality a rod with spherica
     eqs = [
 
         if kinematic_constraint
-            rRod_0 .~ ori(frame_b).R.mat'*(ori(frame_b).R.mat*collect(frame_b.r_0)) - Ra.R.mat'*(Ra.R.mat*collect(frame_a.r_0))
+            rRod_0 ~ ori(frame_b).R.mat'*(ori(frame_b).R.mat*frame_b.r_0) - Ra.R.mat'*(Ra.R.mat*frame_a.r_0)
         else
-            rRod_0 .~ frame_b.r_0 - frame_a.r_0
+            rRod_0 ~ frame_b.r_0 - frame_a.r_0
         end
 
-        rRod_a .~ resolve2(Ra, rRod_0)
+        rRod_a ~ resolve2(Ra, rRod_0)
 
         constraint_residue ~ 0
 
-        eRod_a .~ rRod_a/rodLength
-        n2_a .~ cross(n1_a, eRod_a)
+        eRod_a ~ rRod_a/rodLength
+        n2_a ~ cross(n1_a, eRod_a)
         length2_n2_a ~ n2_a'n2_a
 
         # assert(length2_n2_a > 1e-10, "A MultiBody.Joints.UniversalSpherical joint (consisting of a universal joint and a spherical joint connected together by a rigid rod) is in the singular configuration of the universal joint. This means that axis 1 of the universal joint defined via parameter \"n1_a\" is parallel to vector \"rRod_ia\" that is directed from the origin of frame_a to the origin of frame_b. You may try to use another \"n1_a\" vector. If this fails, use instead MultiBody.Joints.SphericalSpherical, if this is possible, because this joint aggregation does not have a singular configuration.")
 
         length_n2_a ~ sqrt(length2_n2_a)
-        e2_a .~ n2_a/length_n2_a
-        e3_a .~ cross(eRod_a, e2_a)
+        e2_a ~ n2_a/length_n2_a
+        e3_a ~ cross(eRod_a, e2_a)
 
-        der_rRod_a_L .~ (resolve2(Ra, D.(rRod_0)) - cross(Ra.w, rRod_a))/rodLength
-        w_rel_ia1 .~ [e3_a'cross(n1_a, der_rRod_a_L)/length_n2_a, -(e3_a'der_rRod_a_L), e2_a'der_rRod_a_L]
+        der_rRod_a_L ~ (resolve2(Ra, D(rRod_0)) - cross(Ra.w, rRod_a))/rodLength
+        w_rel_ia1 ~ [e3_a'cross(n1_a, der_rRod_a_L)/length_n2_a, -(e3_a'der_rRod_a_L), e2_a'der_rRod_a_L]
 
         # R_rel_ia ~ Rrelia# absolute_rotation(R_rel_ia1, R_rel_ia2)
         # R_rel_ia.w ~ Rrelia.w
 
-        frame_ia.r_0 .~ frame_a.r_0
+        frame_ia.r_0 ~ frame_a.r_0
         ori(frame_ia) ~ Ria # absolute_rotation(frame_a, R_rel_ia)
-        # ori(frame_ia).w .~ Ria.w
+        # ori(frame_ia).w ~ Ria.w
 
-        f_ia_a .~ resolve1(R_rel_ia, frame_ia.f)
-        t_ia_a .~ resolve1(R_rel_ia, frame_ia.tau)
+        f_ia_a ~ resolve1(R_rel_ia, frame_ia.f)
+        t_ia_a ~ resolve1(R_rel_ia, frame_ia.tau)
 
-        f_b_a1 .~ -e2_a*((n1_a't_ia_a)/(rodLength*(n1_a'e3_a))) + e3_a*((e2_a't_ia_a)/rodLength)
-        f_b_a .~ -f_rod*eRod_a + f_b_a1
-        frame_b.f .~ resolve_relative(f_b_a, Ra, ori(frame_b))
-        frame_b.tau .~ 0
-        0 .~ collect(frame_a.f) + f_b_a + f_ia_a
-        0 .~ collect(frame_a.tau) + t_ia_a + cross(rRod_a, f_b_a)
+        f_b_a1 ~ -e2_a*((n1_a't_ia_a)/(rodLength*(n1_a'e3_a))) + e3_a*((e2_a't_ia_a)/rodLength)
+        f_b_a ~ -f_rod*eRod_a + f_b_a1
+        frame_b.f ~ resolve_relative(f_b_a, Ra, ori(frame_b))
+        frame_b.tau ~ 0
+        0 ~ frame_a.f + f_b_a + f_ia_a
+        0 ~ frame_a.tau + t_ia_a + cross(rRod_a, f_b_a)
     ]
 
     if residue === nothing
@@ -452,7 +439,6 @@ end
         position_b = RealInput(nin=3)
     end
     @parameters e[1:3] = _normalize(n) [description = "normalized axis of rotation"]
-    e = collect(e)
     # @parameters n[1:3]=n [description = "axis of rotation"] # Can't have this as parameter since e = _normalize(n) does not work :/
     @parameters phi_offset = phi_offset, [description = "offset of the joint in animations"]
     @parameters length_constraint = length_constraint, [description = "Fixed length of length constraint"]
@@ -476,8 +462,6 @@ end
     @variables r_a(t)[1:3], [description = "Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint"]
     @variables r_b(t)[1:3], [description = "Position vector from frame_b to frame_b side of length constraint, resolved in frame_b of revolute joint"]
 
-    n, r_a, r_b = collect.((n, r_a, r_b))
-
     # vars = [tau; phi; angle; r_a; r_b]
     # pars = [collect(e); phi_offset; length_constraint]
 
@@ -491,29 +475,26 @@ end
     # e_array = IR.make_array((3,), e...)
     # r_a_array = IR.make_array((3,), r_a...)
     # r_b_array = IR.make_array((3,), r_b...)
-    e_array = collect(e)
-    r_a_array = collect(r_a)
-    r_b_array = collect(r_b)
 
     eqs = [
-        collect(r_a) .~ collect(position_a.u)
-        collect(r_b) .~ collect(position_b.u)
+        r_a ~ position_a.u
+        r_b ~ position_b.u
 
         axis.tau ~ tau
         axis.phi ~ phi
         bearing.phi ~ 0
         angle ~ phi + phi_offset
-        collect(frame_b.r_0) .~ collect(frame_a.r_0)
+        frame_b.r_0 ~ frame_a.r_0
 
         ori(frame_b) ~ Rb
-        # ori(frame_b).w .~ Rb.w
+        # ori(frame_b).w ~ Rb.w
 
-        0 .~ collect(frame_a.f .+ resolve1(Rrel, frame_b.f))
-        0 .~ collect(frame_a.tau .+ resolve1(Rrel, frame_b.tau))
+        0 ~ frame_a.f + resolve1(Rrel, frame_b.f)
+        0 ~ frame_a.tau + resolve1(Rrel, frame_b.tau)
 
         if use_arrays
-            angle ~ compute_angle2(length_constraint, e_array, r_a_array, r_b_array, positive_branch)[1]
-            # angle ~ Symbolics.term(compute_angle2, length_constraint, e_array, r_a_array, r_b_array, positive_branch, type=Real)
+            angle ~ compute_angle2(length_constraint, e, r_a, r_b, positive_branch)[1]
+            # angle ~ Symbolics.term(compute_angle2, length_constraint, e, r_a, r_b, positive_branch, type=Real)
         else
             # angle ~ Symbolics.term(compute_angle, length_constraint, e..., r_a..., r_b..., positive_branch, type=Real)
             angle ~ compute_angle(length_constraint, e, r_a, r_b, positive_branch)
@@ -599,7 +580,6 @@ The rest of this joint aggregation is defined by the following parameters:
         # render = render, [description = "Whether or not to render the joint in animations"]
     end
 
-    n1_a, n_b, rRod1_ia, rRod2_ib = collect.((n1_a, n_b, rRod1_ia, rRod2_ib))
 
 
     @variables begin
@@ -641,14 +621,13 @@ The rest of this joint aggregation is defined by the following parameters:
     )
     push!(more_systems, revolute)
 
-    re = collect(revolute.e)
     eqs = [
-        aux ~ cross(re, rRod2_ib)'resolve_relative(rod1.eRod_a, ori(rod1.frame_a), ori(rod1.frame_b))
+        aux ~ cross(revolute.e, rRod2_ib)'resolve_relative(rod1.eRod_a, ori(rod1.frame_a), ori(rod1.frame_b))
         f_rod ~ (
-            -revolute.tau - re'*collect(frame_ib.tau + frame_im.tau + 
+            -revolute.tau - dot(revolute.e, (frame_ib.tau + frame_im.tau +
                 cross(rRod2_ib, frame_im.f) -
                 cross(rRod2_ib, resolve_relative(rod1.f_b_a1, ori(rod1.frame_a), ori(rod1.frame_b)))
-            )
+            ))
         )/max(abs(aux), 1e-10)
 
         rod1.constraint_residue ~ rod1.f_rod - f_rod # Externally provided residue
