@@ -79,7 +79,7 @@ D = Differential(t)
     # ssys = structural_simplify(model, allow_parameter = false)
 
     irsys = multibody(model)
-    ssys = structural_simplify(irsys)
+    ssys = mtkcompile(irsys, inline_linear_sccs = true, analytical_linear_scc_limit = 10, reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 10))
     D = Differential(t)
 
     # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
