@@ -374,11 +374,12 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               isroot = false,
               state = false,
               sequence = [1,2,3],
-              phi0 = zeros(3),
-              phid0 = zeros(3),
+              quat = false,
+              phi0 = state || isroot ? zeros(3) : nothing,
+              phid0 = state || isroot ? zeros(3) : nothing,
               r_0 = state || isroot ? zeros(3) : nothing,
               v_0 = state || isroot ? zeros(3) : nothing,
-              w_a = state || isroot ? zeros(3) : nothing,
+              w_a = (state || isroot) && quat ? zeros(3) : nothing,
               radius = 0.05,
               cylinder_radius = radius/2,
               length_fraction = 1,
@@ -386,7 +387,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               color = [1,0,0,1],
               state_priority = 2,
               render = true,
-              quat=false,)
+              )
     if state
         # @warn "Make the body have state variables by using isroot=true rather than state=true"
         isroot = true
