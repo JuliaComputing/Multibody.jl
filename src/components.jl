@@ -266,8 +266,8 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
     taub = frame_b.tau
     eqs = Equation[frame_b.r_0 ~ frame_a.r_0 + resolve1(ori(frame_a), r)
                    ori(frame_b) ~ ori(frame_a)
-                   0 ~ fa + fb
-                   0 ~ taua + taub + cross(r, fb)]
+                   zeros(3) ~ fa + fb
+                   zeros(3) ~ taua + taub + cross(r, fb)]
     pars = [r; radius; color; render]
     vars = []
     compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
