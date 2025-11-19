@@ -9,6 +9,8 @@ isdefined(Main, :D) || (D = Differential(t))
 doplot() = false
 world = Multibody.world
 
+
+linsys = (; allow_symbolic = true, inline_linear_sccs = true, analytical_linear_scc_limit = 10, reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 10))
 @testset "initial" begin
 @testset "world" begin
     @info "Testing world"
@@ -79,7 +81,7 @@ D = Differential(t)
     # ssys = structural_simplify(model, allow_parameter = false)
 
     irsys = multibody(model)
-    ssys = mtkcompile(irsys, inline_linear_sccs = true, analytical_linear_scc_limit = 10, reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 10))
+    ssys = mtkcompile(irsys; linsys...)
     D = Differential(t)
 
     # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
@@ -88,10 +90,10 @@ D = Differential(t)
     # @test_skip begin # Yingbo: instability
     prob = ODEProblem(ssys, [
         collect(body.r_0) .=> [0, -1e-5, 0]; # To make sure the spring has non-zero extent
-        collect(body.w_a) .=> 0.00;
+        collect(body.w_a) .=> 0.01;
         collect(body.v_0) .=> 0;
     ], (0, 10))
-    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 0*1e-5 .* randn.())
+    sol = solve(prob, Rodas5P())#, u0 = prob.u0 .+ 0*1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
     @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
@@ -131,7 +133,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 # ssys = structural_simplify(model, allow_parameter = false)
 
 irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = structural_simplify(irsys; linsys...)
 
 D = Differential(t)
 defs = Dict()
@@ -193,12 +195,12 @@ end
 end
 @named model = PointGrav()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = structural_simplify(multibody(model); linsys...)
 defs = [
     model.world.mu => 1
     model.world.point_gravity => true
-    collect(model.body1.w_a) .=> 0
-    collect(model.body2.w_a) .=> 0
+    # collect(model.body1.w_a) .=> 0
+    # collect(model.body2.w_a) .=> 0
     
 ]
 prob = ODEProblem(ssys, defs, (0, 5))
