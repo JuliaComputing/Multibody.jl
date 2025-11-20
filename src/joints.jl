@@ -46,17 +46,18 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         description = "Relative rotation angle from frame_a to frame_b",
     ]
     @variables w(t)=w0 [state_priority = state_priority, description = "angular velocity (rad/s)"]
-    Rrel0 = planar_rotation(n, phi0, w0)
-    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
-
-
+    # Rrel0 = planar_rotation(n, phi0, w0)
+    # @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
+    
     if isroot
-        eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
+        Rrel = planar_rotation(n, phi, w)
+        eqs = Equation[#Rrel ~ planar_rotation(n, phi, w)
                     connect_orientation(ori(frame_b), absolute_rotation(ori(frame_a), Rrel); iscut)
                     frame_a.f ~ -resolve1(Rrel, frame_b.f)
                     frame_a.tau ~ -resolve1(Rrel, frame_b.tau)]
     else
-        eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
+        Rrel = planar_rotation(-n, phi, w)
+        eqs = Equation[#Rrel ~ planar_rotation(-n, phi, w)
                     connect_orientation(ori(frame_a), absolute_rotation(ori(frame_b), Rrel); iscut)
                     frame_b.f ~ -resolve1(Rrel, frame_a.f)
                     frame_b.tau ~ -resolve1(Rrel, frame_a.tau)]
