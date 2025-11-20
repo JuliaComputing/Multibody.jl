@@ -229,10 +229,9 @@ connections = [connect(world.frame_b, rev.frame_a)
 # ssys = structural_simplify(model, allow_parameter = false)
 
 irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = structural_simplify(irsys; linsys...)
 D = Differential(t)
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                  (0, 40))
+prob = ODEProblem(ssys, [], (0, 40))
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 # @test all(isfinite, du)
@@ -264,7 +263,7 @@ connections = [connect(world.frame_b, rev.frame_a)
 # modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-ssys = structural_simplify(multibody(model))#, alias_eliminate = false)
+ssys = structural_simplify(multibody(model); linsys...)#, alias_eliminate = false)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],

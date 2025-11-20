@@ -40,7 +40,7 @@ Never call this function directly from a component constructor, instead call `f 
 """
 function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name=:R, varw = false, state_priority=nothing)
     # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
-    R = at_variables_t(:R, 1:3, 1:3)#; default = R, state_priority) #[description="Orientation rotation matrix ∈ SO(3)"]
+    R = at_variables_t(:R, 1:3, 1:3; state_priority)#; default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
