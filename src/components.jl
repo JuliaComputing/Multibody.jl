@@ -826,7 +826,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         connect(frame_a, body.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 """
@@ -904,7 +904,7 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
         connect(frame_a, body.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 # function BodyBox2(;
