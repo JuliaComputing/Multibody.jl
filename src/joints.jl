@@ -103,7 +103,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an System representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
+                   s0 = nothing, v0 = nothing, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
     if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Prismatic axis of motion must be a unit vector, got norm(n) = $(norm(n))")
     end
@@ -125,11 +125,10 @@ The function returns an System representing the prismatic joint.
         state_priority = state_priority,
         description = "Relative velocity between frame_a and frame_b",
     ]
-    @variables a(t)=0 [
+    @variables a(t) [
         description = "Relative acceleration between frame_a and frame_b",
     ]
-    @variables f(t)=0 [
-        connect = Flow,
+    @variables f(t) [
         description = "Actuation force in direction of joint axis",
     ]
 
@@ -137,7 +136,7 @@ The function returns an System representing the prismatic joint.
            a ~ D(v)
 
            # relationships between kinematic quantities of frame_a and of frame_b
-           frame_b.r_0 ~ frame_a.r_0 + resolve1(ori(frame_a), n * s)
+           frame_b.r_0 ~ frame_a.r_0 .+ resolve1(ori(frame_a), n * s)
            connect_orientation(ori(frame_b), ori(frame_a); iscut)
 
            # Force and torque balance
@@ -145,7 +144,7 @@ The function returns an System representing the prismatic joint.
            zeros(3) ~ frame_a.tau + frame_b.tau + cross(n * s, frame_b.f)
 
            # d'Alemberts principle
-           f ~ -(n'frame_b.f)[]]
+           f ~ -dot(n,frame_b.f)]
 
     sys = if axisflange
         @named fixed = Translational.Fixed(s0=0)
