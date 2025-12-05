@@ -5,11 +5,22 @@ Partial absolute sensor model for sensors defined by components
 
   - `frame: 2-dim. Coordinate system
 """
-@mtkmodel PartialAbsoluteSensor begin
-    @components begin
+@component function PartialAbsoluteSensor(; name)
+    systems = @named begin
         frame_a = Frame()
     end
-    # TODO: assert the number of connections
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
+        # TODO: assert the number of connections
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -21,12 +32,23 @@ Partial relative sensor model for sensors defined by components
   - `frame_a`: Coordinate system a
   - `frame_b`: Coordinate system b
 """
-@mtkmodel PartialRelativeSensor begin
-    @components begin
+@component function PartialRelativeSensor(; name)
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
-    # TODO: assert the number of connections
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
+        # TODO: assert the number of connections
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -37,13 +59,19 @@ Partial absolute sensor models for sensors defined by equations (frame_resolve m
   - `frame_a`: 2-dim. Coordinate system from which kinematic quantities are measured
   - `frame_resolve`: 2-dim. Coordinate system in which vector is optionally resolved
 """
-@mtkmodel PartialAbsoluteBaseSensor begin
-    @components begin
+@component function PartialAbsoluteBaseSensor(; name)
+    systems = @named begin
         frame_a = Frame()
         frame_resolve = FrameResolve()
     end
 
-    @equations begin
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         # TODO: assert the number of connections
 
         frame_a.fx ~ 0
@@ -52,7 +80,9 @@ Partial absolute sensor models for sensors defined by equations (frame_resolve m
         frame_resolve.fx ~ 0
         frame_resolve.fy ~ 0
         frame_resolve.tau ~ 0
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -60,18 +90,24 @@ end
 Partial relative sensor models for sensors defined by equations (frame_resolve must be connected exactly once)
 
 # Connectors:
-  - `frame_a`: 
-  - `frame_b`: 
-  - `frame_resolve`: 
+  - `frame_a`:
+  - `frame_b`:
+  - `frame_resolve`:
 """
-@mtkmodel PartialRelativeBaseSensor begin
-    @components begin
+@component function PartialRelativeBaseSensor(; name)
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         frame_resolve = FrameResolve()
     end
 
-    @equations begin
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         # TODO: assert the number of connections
 
 
@@ -84,7 +120,9 @@ Partial relative sensor models for sensors defined by equations (frame_resolve m
         frame_resolve.fx ~ 0
         frame_resolve.fy ~ 0
         frame_resolve.tau ~ 0
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -141,7 +179,7 @@ Measure absolute position and orientation (same as Sensors.AbsolutePosition, but
         frame_a.tau ~ 0
     ]
 
-    return compose(ODESystem(eqs, t, [], []; name = name),
+    return compose(System(eqs, t, [], []; name = name),
         x, y, phi, frame_a, frame_resolve)
 end
 
@@ -189,7 +227,7 @@ Measure absolute position and orientation of the origin of frame connector
         push!(eqs, connect(zero_position.frame_resolve, pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 """
@@ -253,7 +291,7 @@ Measure relative position and orientation between the origins of two frame conne
         frame_b.tau ~ 0
     ]
 
-    return compose(ODESystem(eqs, t, [], []; name = name),
+    return compose(System(eqs, t, [], []; name = name),
         rel_x, rel_y, rel_phi, frame_a, frame_b, frame_resolve)
 end
 
@@ -300,7 +338,7 @@ Measure relative position and orientation between the origins of two frame conne
         push!(eqs, connect(zero_position.frame_resolve, pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name),
+    return compose(System(eqs, t, [], []; name = name),
         systems...)
 end
 
@@ -391,7 +429,7 @@ end
         end
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function TransformAbsoluteVector(;
@@ -436,12 +474,11 @@ end
             connect(zero_pos.frame_resolve, basic_transform_vector.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function AbsoluteVelocity(; name, resolve_in_frame = :frame_a)
-    @named partial_abs_sensor = PartialAbsoluteSensor()
-    @unpack frame_a, = partial_abs_sensor
+    @named frame_a = Frame()
 
     @named v_x = RealOutput()
     @named v_y = RealOutput()
@@ -485,7 +522,7 @@ end
                 zero_pos1.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function BasicTransformRelativeVector(;
@@ -570,7 +607,7 @@ end
         ])
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function TransformRelativeVector(;
@@ -625,7 +662,7 @@ end
         push!(systems, zero_pos)
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function RelativeVelocity(; name, resolve_in_frame = :frame_a)
@@ -680,12 +717,11 @@ end
                 zero_pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 @component function AbsoluteAcceleration(; name, resolve_in_frame = :frame_a)
-    @named partial_abs_sensor = PartialAbsoluteSensor()
-    @unpack frame_a, = partial_abs_sensor
+    @named frame_a = Frame()
 
     @named a_x = RealOutput()
     @named a_y = RealOutput()
@@ -730,7 +766,7 @@ end
                 zero_pos1.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return System(eqs, t; name, systems)
 end
 
 @component function RelativeAcceleration(; name, resolve_in_frame = :frame_a)
@@ -787,7 +823,7 @@ end
                 zero_pos.frame_resolve))
     end
 
-    return compose(ODESystem(eqs, t, [], []; name = name), systems...)
+    return compose(System(eqs, t, [], []; name = name), systems...)
 end
 
 function connect_sensor(component_frame, sensor_frame)

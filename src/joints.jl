@@ -1,6 +1,6 @@
 function add_params(sys, params; name)
     params isa AbstractVector || (params = [params...])
-    extend(ODESystem(Equation[], t, [], params; name), sys)
+    extend(System(Equation[], t, [], params; name), sys)
 end
 
 """
@@ -36,7 +36,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
         render = render, [description = "render the joint in animations"]
     end
-    @variables tau(t)=0 [
+    @variables tau(t) [
         connect = Flow,
         # state_priority = 2,
         description = "Driving torque in direction of axis of rotation",
@@ -77,13 +77,13 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         push!(eqs, axis.phi ~ phi)
         push!(eqs, axis.tau ~ tau)
         # push!(eqs, connect(internalAxis.flange, axis))
-        ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b, axis, support, fixed])
+        System(eqs, t; name=:nothing, systems=[frame_a, frame_b, axis, support, fixed])
     else
         # Modelica Revolute uses a ConstantTorque as well as internalAxis = Rotational.InternalSupport(tau=tau), but it seemed more complicated than required and I couldn't get it to work, likely due to the `input` semantics of modelica not having an equivalent in MTK, so the (tau=tau) input argument caused problems.
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         push!(eqs, tau ~ 0)
-        ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b])
+        System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
     end
     add_params(sys, pars; name)
 end
@@ -100,7 +100,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 - `axis`: 1-dim. translational flange that drives the joint
 - `support`: 1-dim. translational flange of the drive support (assumed to be fixed in the world frame, NOT in the joint)
 
-The function returns an ODESystem representing the prismatic joint.
+The function returns an System representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
                    s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
@@ -155,10 +155,10 @@ The function returns an ODESystem representing the prismatic joint.
         push!(eqs, connect(fixed.flange, support))
         push!(eqs, axis.s ~ s)
         push!(eqs, axis.f ~ f)
-        compose(ODESystem(eqs, t; name=:nothing), frame_a, frame_b, axis, support, fixed)
+        compose(System(eqs, t; name=:nothing), frame_a, frame_b, axis, support, fixed)
     else
         push!(eqs, f ~ 0)
-        compose(ODESystem(eqs, t; name=:nothing), frame_a, frame_b)
+        compose(System(eqs, t; name=:nothing), frame_a, frame_b)
     end
     add_params(sys, pars; name)
 end
@@ -205,7 +205,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
     # @parameters begin # Currently not using parameters due to these appearing in if statements
     #     sequence[1:3] = sequence
     # end
-    @variables begin (w_rel(t)[1:3] = zeros(3)),
+    @variables begin (w_rel(t)[1:3] = state ? zeros(3) : nothing),
                      [
                          description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
                      ] end
@@ -267,13 +267,13 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         end
     end
 
-    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    sys = extend(System(eqs, t; name=:nothing), ptf)
     add_params(sys, pars; name)
 end
 
 
 """
-    Universal(; name, n_a, n_b, phi_a = 0, phi_b = 0, w_a = 0, w_b = 0, a_a = 0, a_b = 0, state_priority=10)
+    Universal(; name, n_a, n_b, phi_a = 0, phi_b = 0, w_a = 0, w_b = 0, a_a = nothing, a_b = nothing, state_priority=10)
 
 Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and `frame_b` rotates around axis `n_b` which is fixed in `frame_b`. The two frames coincide when `revolute_a.phi=0` and `revolute_b.phi=0`. This joint has the following potential states;
 
@@ -287,8 +287,8 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
                    state_priority = 10,
                    w_a = 0,
                    w_b = 0,
-                   a_a = 0,
-                   a_b = 0,
+                   a_a = nothing,
+                   a_b = nothing,
                    radius = 0.05f0,
                    length = radius, 
                    color = [1,0,0,1]
@@ -350,7 +350,7 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
            connect(frame_a, revolute_a.frame_a)
            connect(revolute_b.frame_b, frame_b)
            connect(revolute_a.frame_b, revolute_b.frame_a)]
-    extend(ODESystem(eqs, t; name, systems = [revolute_a, revolute_b]), ptf)
+    extend(System(eqs, t; name, systems = [revolute_a, revolute_b]), ptf)
 end
 
 """
@@ -415,13 +415,13 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
             state_priority = 10,
             description = "Relative angular velocity of revolute joint at frame_b",
         ]
-        (a_b(t) = 0),
+        (a_b(t)),
         [
             state_priority = 10,
             description = "Relative angular acceleration of revolute joint at frame_b",
         ]
 
-        (totalPower(t) = 0), [description = "Total power flowing into this element"]
+        (totalPower(t)), [description = "Total power flowing into this element"]
     end
 
     eqs = [phi_b ~ actuatedRevolute_b.phi
@@ -447,7 +447,7 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
                            bearing.tau'angular_velocity2(bearing))
     end
 
-    extend(ODESystem(eqs, t; name, systems), ptf)
+    extend(System(eqs, t; name, systems), ptf)
 end
 
 
@@ -484,12 +484,12 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                     iscut = false,
                     state_priority = 4,
                     phid = 0,
-                    phidd = 0,
+                    phidd = nothing,
                     neg_w = true,
                     w_rel_b = 0,
                     r_rel_a = 0,
                     v_rel_a = 0,
-                    a_rel_a = 0)
+                    a_rel_a = nothing)
     @named begin
         frame_a = Frame()
         frame_b = Frame()
@@ -564,11 +564,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
     end
     if state && !isroot
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
+        compose(System(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
     elseif state
-        compose(ODESystem(eqs, t; name), frame_a, frame_b, Rrel_f, )
+        compose(System(eqs, t; name), frame_a, frame_b, Rrel_f, )
     else
-        compose(ODESystem(eqs, t; name), frame_a, frame_b)
+        compose(System(eqs, t; name), frame_a, frame_b)
     end
 end
 
@@ -642,7 +642,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f)
         collect(n) .~ n0
     ]
-    sys = ODESystem(eqs, t; name=:nothing, systems=[frame_a, frame_b])
+    sys = System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
     add_params(sys, pars; name)
 end
 
@@ -688,58 +688,42 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
 - `radius`: (structural) Radius of the revolute cylinder
 - `render`: Enable rendering of the joint in animations
 """
-@mtkmodel Planar begin
-    @structural_parameters begin
-        state_priority = 1#, [description = "Priority used to choose whether the joint state variables are selected"]
-        n
-        n_x
-        radius = 0.05
-        cylindercolor = [1, 0, 1, 1]
-        boxcolor = [0, 0, 1, 1]
+@component function Planar(; name, state_priority = 1, n, n_x, radius = 0.05,
+                           cylindercolor = [1, 0, 1, 1], boxcolor = [0, 0, 1, 1],
+                           cylinderlength = 0.1, cylinderdiameter = 0.05,
+                           boxwidth = 0.3*cylinderdiameter, boxheight = boxwidth, render = true)
+    pars = @parameters begin
+        cylinderlength = cylinderlength, [description = "Length of revolute cylinder"]
+        cylinderdiameter = cylinderdiameter, [description = "Diameter of revolute cylinder"]
+        boxwidth = boxwidth, [description = "Width of prismatic joint boxes"]
+        boxheight = boxheight, [description = "Height of prismatic joint boxes"]
+        render = render, [description = "Enable rendering of the joint in animations"]
     end
-    begin
-    end
-    @parameters begin
-        # (n[1:3]), [description = "Axis orthogonal to unconstrained plane, resolved in frame_a (= same as in frame_b)"]
-        # (n_x[1:3]), [description = "Vector in direction of x-axis of plane, resolved in frame_a (n_x shall be orthogonal to n)"]
-        cylinderlength = 0.1, [description = "Length of revolute cylinder"]
-        cylinderdiameter = 0.05, [description = "Diameter of revolute cylinder"]
-        # cylindercolor[1:4] = cylindercolordefault, [description = "Color of revolute cylinder"] # Endless bugs with array parameters
-        boxwidth = 0.3*cylinderdiameter, [description = "Width of prismatic joint boxes"]
-        boxheight = boxwidth, [description = "Height of prismatic joint boxes"]
-        # boxcolor[1:4] = boxcolordefault, [description = "Color of prismatic joint boxes"]
-        render = true, [description = "Enable rendering of the joint in animations"]
-    end
-    begin
-        n = collect(n)
-        n_x = collect(n_x)
-    end
-    # @defaults begin
-    #     n .=> [0, 0, 1]
-    #     n_x .=> [1, 0, 0]
-    #     cylindercolor .=> [1, 0, 1, 1]
-    #     boxcolor .=> [0, 0, 1, 1]
-    # end
 
-    @components begin
+    # n = collect(n)
+    # n_x = collect(n_x)
+
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor, radius)
         prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor, radius)
         revolute = Revolute(; state_priority=2.1, n, isroot=false, color=cylindercolor, radius)
     end
-    @variables begin
+
+    vars = @variables begin
         (s_x(t) = 0), [state_priority = 3.0, description = "Relative distance along first prismatic joint starting at frame_a"]
         (s_y(t) = 0), [state_priority = 3.0, description = "Relative distance along second prismatic joint starting at first prismatic joint"]
         (phi(t) = 0), [state_priority = 3.0, description = "Relative rotation angle from frame_a to frame_b"]
         (v_x(t) = 0), [state_priority = 3.0, description = "Relative velocity along first prismatic joint"]
         (v_y(t) = 0), [state_priority = 3.0, description = "Relative velocity along second prismatic joint"]
         (w(t) = 0), [state_priority = 3.0, description = "Relative angular velocity around revolute joint"]
-        (a_x(t) = 0), [description = "Relative acceleration along first prismatic joint"]
-        (a_y(t) = 0), [description = "Relative acceleration along second prismatic joint"]
-        (wd(t) = 0), [description = "Relative angular acceleration around revolute joint"]
+        (a_x(t)), [description = "Relative acceleration along first prismatic joint"]
+        (a_y(t)), [description = "Relative acceleration along second prismatic joint"]
+        (wd(t)), [description = "Relative angular acceleration around revolute joint"]
     end
-    @equations begin
+
+    equations = Equation[
         s_x ~ prismatic_x.s
         s_y ~ prismatic_y.s
         phi ~ revolute.phi
@@ -753,47 +737,39 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         connect(prismatic_x.frame_b, prismatic_y.frame_a)
         connect(prismatic_y.frame_b, revolute.frame_a)
         connect(revolute.frame_b, frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@mtkmodel Cylindrical begin
-    begin
-        n_def = [1, 0, 0] # Workaround for mtkmodel bug
-        cylinder_color_def = [1, 0, 1, 1]
+@component function Cylindrical(; name, n = [1, 0, 0], cylinder_color = [1, 0, 1, 1],
+                                cylinder_diameter = 0.05, render = true)
+    pars = @parameters begin
+        n[1:3] = n, [description = "Cylinder axis resolved in frame_a (= same as in frame_b)"]
+        cylinder_diameter = cylinder_diameter, [description = "Diameter of cylinder"]
+        render = render, [description = "Enable rendering of the joint in animations"]
     end
 
-    @structural_parameters begin
-        # _state_priority = 2 # mtkmodel bug prevents this from being any form of parameter at all :/
-        cylinder_color = [1, 0, 1, 1]#, [description = "Color of cylinder"]
-    end
+    # n = collect(n)
+    # cylinder_color = collect(cylinder_color)
 
-    @parameters begin
-        n[1:3] = n_def, [description = "Cylinder axis resolved in frame_a (= same as in frame_b)"]
-        cylinder_diameter = 0.05, [description = "Diameter of cylinder"]
-        render = true, [description = "Enable rendering of the joint in animations"]
-    end
-    begin
-        n = collect(n)
-        cylinder_color = collect(cylinder_color)
-    end
-
-    @components begin
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         prismatic = Prismatic(; n, state_priority=1, render = false)
         revolute = Revolute(; n, state_priority=1, color = cylinder_color, radius = cylinder_diameter/2)
     end
 
-    @variables begin
+    vars = @variables begin
         (s(t) = 0), [state_priority = 200, description = "Relative distance between frame_a and frame_b"]
         (phi(t) = 0), [state_priority = 200, description = "Relative rotation angle from frame_a to frame_b"]
         (v(t) = 0), [state_priority = 200, description = "First derivative of s (relative velocity)"]
         (w(t) = 0), [state_priority = 200, description = "First derivative of angle phi (relative angular velocity)"]
-        (a(t) = 0), [description = "Second derivative of s (relative acceleration)"]
-        (wd(t) = 0), [description = "Second derivative of angle phi (relative angular acceleration)"]
+        (a(t)), [description = "Second derivative of s (relative acceleration)"]
+        (wd(t)), [description = "Second derivative of angle phi (relative angular acceleration)"]
     end
 
-    @equations begin
+    equations = Equation[
         phi ~ revolute.phi
         w ~ D(phi)
         wd ~ D(w)
@@ -803,8 +779,9 @@ end
         connect(frame_a, prismatic.frame_a)
         connect(prismatic.frame_b, revolute.frame_a)
         connect(revolute.frame_b, frame_b)
-    end
+    ]
 
+    return System(equations, t; name, systems)
 end
 
 @component function URDFRevolute(; name, r, R=I(3), axisflange = false, kwargs...)
@@ -843,7 +820,7 @@ end
             connect(support, rev.support)
         ]
     end
-    ODESystem(connections, t; systems, name)
+    System(connections, t; systems, name)
 end
 
 @component function URDFPrismatic(; name, r, R, axisflange = false, kwargs...)
@@ -882,15 +859,24 @@ end
             connect(support, rev.support)
         ]
     end
-    ODESystem(connections, t; systems, name)
+    System(connections, t; systems, name)
 end
 
-@mtkmodel NullJoint begin
-    @components begin
+@component function NullJoint(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
-    @equations begin
-        connect(frame_a, frame_b)
+
+    vars = @variables begin
     end
+
+    equations = Equation[
+        connect(frame_a, frame_b)
+    ]
+
+    return System(equations, t; name, systems)
 end

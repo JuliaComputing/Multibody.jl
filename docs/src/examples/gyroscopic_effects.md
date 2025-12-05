@@ -11,7 +11,7 @@ The system consists of a pendulum suspended in a spherical joint, a joint withou
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -36,7 +36,7 @@ connections = [
     connect(trans.frame_b, body2.frame_a)
 ]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
+@named model = System(connections, t, systems = [world; systems])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 

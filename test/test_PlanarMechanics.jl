@@ -3,8 +3,10 @@
 using ModelingToolkit, OrdinaryDiffEq, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
+import Multibody
+import Multibody: IRSystem
 import Multibody.PlanarMechanics as Pl
-using JuliaSimCompiler
+# using JuliaSimCompiler
 
 tspan = (0.0, 3.0)
 g = -9.80665
@@ -13,7 +15,7 @@ g = -9.80665
     m = 2
     I = 1
     @named body = Pl.Body(; m, I)
-    @named model = ODESystem(Equation[],
+    @named model = System(Equation[],
         t,
         [],
         [],
@@ -44,15 +46,14 @@ end
         connect(rod.frame_b, body.frame_a)
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         systems = [body, revolute, rod, ceiling])
     model = complete(model)
     ssys = structural_simplify(IRSystem(model))
 
     @test length(unknowns(ssys)) == 2
-    unset_vars = setdiff(unknowns(ssys), keys(ModelingToolkit.defaults(ssys)))
-    prob = ODEProblem(ssys, unset_vars .=> 0.0, tspan)
+    prob = ODEProblem(ssys, [ssys.body.phi => 0, ssys.body.w => 0], tspan)
 
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
@@ -70,15 +71,14 @@ end
         connect(revolute.frame_b, rod.frame_a),
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         systems = [revolute, rod, ceiling])
     model = complete(model)
     ssys = structural_simplify(IRSystem(model))
 
     @test length(unknowns(ssys)) == 2
-    unset_vars = setdiff(unknowns(ssys), keys(ModelingToolkit.defaults(ssys)))
-    prob = ODEProblem(ssys, unset_vars .=> 0.0, tspan)
+    prob = ODEProblem(ssys, [ssys.rod.body.phi => 0, ssys.rod.body.w => 0], tspan)
 
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
@@ -93,12 +93,11 @@ end
 
 @testset "AbsoluteAccCentrifugal" begin
     m = 1
-    I = 0.1
     w = 10
     resolve_in_frame = :world
 
     # components
-    @named body = Pl.Body(; m, I, gy = 0.0)
+    @named body = Pl.Body(; m, I=0.1, gy = 0.0)
     @named fixed_translation = Pl.FixedTranslation(; r = [10, 0])
     @named fixed = Pl.Fixed()
     @named revolute = Pl.Revolute()#constant_w = w)
@@ -114,7 +113,7 @@ end
         # connect(body.frame_a, abs_v_sensor.frame_a)
     ]
 
-    @named model = ODESystem(eqs,
+    @named model = System(eqs,
         t,
         [],
         [],
@@ -126,7 +125,7 @@ end
             abs_v_sensor
         ])
     model = complete(model)
-    @test_skip begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
+    begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
         ssys = structural_simplify(IRSystem(model))
         prob = ODEProblem(ssys, [model.body.w => w], tspan)
         sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
@@ -143,7 +142,7 @@ end
 
         # instantaneous linear acceleration
         a_signal(t) = -w^3 * cos.(w .* t)
-        @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.ax))
+        @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.a[1]))
     end
 end
 
@@ -202,7 +201,7 @@ end
     #     connect(body2.frame_a, rel_a_sensor2.frame_b),
     # ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         [],
         [],
@@ -261,7 +260,7 @@ end
 end
 
 @testset "Measure Demo" begin
-    @named body = Pl.Body(; m = 1, I = 0.1)
+    @named body = Pl.Body(; m = 1, I = 0.1, phi=0)
     @named fixed_translation = Pl.FixedTranslation(;)
     @named fixed = Pl.Fixed()
     @named body1 = Pl.Body(; m = 0.4, I = 0.02)
@@ -292,10 +291,8 @@ end
         Pl.connect_sensor(body1.frame_a, abs_a_sensor.frame_a)...        # Pl.connect_sensor(body1.frame, abs_v_sensor.frame_a)...,        # Pl.connect_sensor(body1.frame, abs_pos_sensor.frame_a)...,
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
-        [],
-        [],
         systems = [
             fixed_translation,
             body,
@@ -305,14 +302,12 @@ end
             revolute1,
             revolute2,
             abs_pos_sensor
-        ])
-    @test_skip begin # Yingbo: BoundsError again
-        sys = structural_simplify(IRSystem(model))
-        unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-        prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5))
-        sol = solve(prob, Rodas5P())
-        @test SciMLBase.successful_retcode(sol)
-    end
+    ])
+    sys = structural_simplify(IRSystem(model))
+    # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
+    prob = ODEProblem(sys, [], (0, 5))
+    sol = solve(prob, Rodas5P())
+    @test SciMLBase.successful_retcode(sol)
 end
 
 @testset "SpringDamper" begin
@@ -334,7 +329,7 @@ end
         connect(fixed_translation.frame_b, spring_damper.frame_a),
         connect(spring_damper.frame_b, body.frame_a)
     ]
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         [],
         [],
@@ -345,8 +340,8 @@ end
             fixed_translation
         ])
     sys = structural_simplify(IRSystem(model))
-    unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5))
+    # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
+    prob = ODEProblem(sys, [sys.body.r => zeros(2); sys.body.v => zeros(2); sys.body.phi => 0.0; sys.body.w => 0.0], (0, 5))
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
 end
@@ -367,7 +362,7 @@ end
         connect(prismatic.frame_b, spring.frame_b)
     ]
 
-    @named model = ODESystem(connections,
+    @named model = System(connections,
         t,
         [],
         [],
@@ -391,15 +386,22 @@ end
 @testset "SimpleWheel" begin
     @info "Testing SimpleWheel"
     gray = [0.1, 0.1, 0.1, 1]
-    @mtkmodel TestWheel begin
-        @components begin
+    @component function TestWheel(; name)
+        systems = @named begin
             body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
             revolute = Pl.Revolute()
             wheel1 = Pl.SimpleWheel(color=gray)
             wheel2 = Pl.SimpleWheel(color=gray, μ=.5)
             input = Blocks.Constant(k=1)
         end
-        @equations begin
+
+        pars = @parameters begin
+        end
+
+        vars = @variables begin
+        end
+
+        equations = Equation[
             connect(body.frame_a, revolute.frame_a)
             connect(revolute.frame_b, wheel1.frame_a)
             connect(input.output, wheel1.thrust)
@@ -407,7 +409,9 @@ end
             wheel2.thrust.u ~ 0
 
             connect(wheel2.frame_a, body.frame_b)
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
     @named model = TestWheel()
     model = complete(model)
@@ -441,8 +445,8 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 @testset "SlipBasedWheel" begin
     @info "Testing SlipBasedWheel"
 
-    @mtkmodel TestSlipBasedWheel begin
-        @components begin
+    @component function TestSlipBasedWheel(; name)
+        systems = @named begin
             slipBasedWheelJoint = Pl.SlipBasedWheelJoint(
                 radius = 0.3,
                 r = [1,0],
@@ -463,7 +467,14 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
             constant = Blocks.Constant(k = 0)
         end
-        @equations begin
+
+        pars = @parameters begin
+        end
+
+        vars = @variables begin
+        end
+
+        equations = Equation[
             connect(prismatic.frame_a, revolute.frame_b)
             connect(revolute.frame_a, fixed.frame_b)
             connect(engineTorque.flange, inertia.flange_a)
@@ -471,7 +482,9 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
             connect(slipBasedWheelJoint.frame_a, prismatic.frame_b)
             connect(slipBasedWheelJoint.flange_a, inertia.flange_b)
             connect(constant.output, slipBasedWheelJoint.dynamicLoad)
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
 
     @named model = TestSlipBasedWheel()
@@ -498,8 +511,8 @@ end
 
 @testset "TwoTrackModel" begin
     @info "Testing TwoTrackModel"
-@mtkmodel TwoTrackWithDifferentialGear begin
-    @components begin
+@component function TwoTrackWithDifferentialGear(; name)
+    systems = @named begin
         body = Pl.Body(m = 100, I = 1, gy = 0)
         body1 = Pl.Body(m = 300, I = 0.1, r = [1, 1], v = [0, 0], phi = 0, w = 0, gy = 0)
         body2 = Pl.Body(m = 100, I = 1, gy = 0)
@@ -567,8 +580,13 @@ end
         dynamic_load = Blocks.Constant(k=0)
     end
 
+    pars = @parameters begin
+    end
 
-    @equations begin
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(wheelJoint2.flange_a, inertia1.flange_b)
         connect(inertia.flange_b, wheelJoint1.flange_a)
         connect(fixedTranslation2.frame_b, fixedTranslation1.frame_a)
@@ -594,7 +612,9 @@ end
         connect(revolute.frame_a, rightTrail.frame_a)
         connect(revolute.frame_b, fixedTranslation5.frame_a)
         connect(dynamic_load.output, wheelJoint1.dynamicLoad, wheelJoint2.dynamicLoad, wheelJoint3.dynamicLoad, wheelJoint4.dynamicLoad)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = TwoTrackWithDifferentialGear()

@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using JuliaSimCompiler
+# using JuliaSimCompiler
 t = Multibody.t
 D = Differential(t)
 using OrdinaryDiffEq
@@ -28,18 +28,27 @@ mytorque(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotatio
 
 ##
 
-@mtkmodel MotorTest begin
-    @components begin
+@component function MotorTest(; name)
+    systems = @named begin
         motor = Motor()
         # fixed = myfixed() # bug in @mtkmodel
         inertia = myinertia(J=1, phi=0, w=0)
         constant = Constant(k=1)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         # connect(motor.flange_motor, fixed.flange)
         connect(motor.flange_motor, inertia.flange_a)
         constant.output.u ~ motor.axisControlBus.current_ref
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named motorTest = MotorTest()
@@ -57,20 +66,29 @@ doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
 
 ##
 
-@mtkmodel GearTest begin
-    @components begin
+@component function GearTest(; name)
+    systems = @named begin
         motor = Motor()
         inertia = myinertia(J=1, phi=0, w=0)
         gear = GearType2()
         # fixed = myfixed() # bug in @mtkmodel
         constant = Constant(k=1)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         constant.output.u ~ motor.axisControlBus.current_ref
         connect(motor.flange_motor, gear.flange_a)
         connect(gear.flange_b, inertia.flange_a)
         # connect(gear2.flange_a, fixed.flange)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named gearTest = GearTest()
@@ -86,36 +104,54 @@ sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
 
 
-@mtkmodel GearTest begin
-    @components begin
+@component function GearTest1(; name)
+    systems = @named begin
         gear2 = GearType1()
         fixed = myfixed() # bug in @mtkmodel
         constant = Constant(k=1)
     end
-    @equations begin
-        connect(gear2.flange_a, fixed.flange)
+
+    pars = @parameters begin
     end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
+        connect(gear2.flange_a, fixed.flange)
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@named gearTest = GearTest()
+@named gearTest = GearTest1()
 m = structural_simplify(IRSystem(gearTest))
 
 ##
 
-@mtkmodel ControllerTest begin
-    @components begin
+@component function ControllerTest(; name)
+    systems = @named begin
         controller = Controller()
         constant1 = Constant(k=1)
         constant2 = Constant(k=1)
         constant3 = Constant(k=1)
         constant4 = Constant(k=1)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         constant1.output.u ~ controller.axisControlBus.motorAngle
         constant2.output.u ~ controller.axisControlBus.speed_ref
         constant3.output.u ~ controller.axisControlBus.angle_ref
         constant4.output.u ~ controller.axisControlBus.motorSpeed
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named controllerTest = ControllerTest()
@@ -126,8 +162,8 @@ m = structural_simplify(IRSystem(controllerTest))
 ## Test Axis
 
 
-@mtkmodel AxisTest2 begin
-    @components begin
+@component function AxisTest2(; name)
+    systems = @named begin
         axis2 = AxisType2()
         # fixed = myfixed() # bug in @mtkmodel
         # fixed = mytorque(tau_constant=1, use_support=true) # bug in @mtkmodel
@@ -138,7 +174,14 @@ m = structural_simplify(IRSystem(controllerTest))
         constant4 = Constant(k=1)
         constant5 = Constant(k=0)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         # connect(axis2.flange, fixed.flange)
         connect(axis2.flange, inertia.flange_a)
         # constant1.output.u ~ motor.axisControlBus.current_ref # This is connected to the controller output
@@ -147,7 +190,9 @@ m = structural_simplify(IRSystem(controllerTest))
         constant4.output.u ~ axis2.axisControlBus.motion_ref
         constant5.output.u ~ axis2.axisControlBus.acceleration_ref
         # axis2.motor.emf.support.phi ~ 0
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named axisTest = AxisTest2()

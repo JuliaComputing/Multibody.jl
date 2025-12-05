@@ -18,7 +18,7 @@ It is not possible to connect other components, such as a body with mass propert
 - `color`: Color of the joint in animations (RGBA)
 """
 @component function SphericalSpherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
-                    r_0 = [0,0,0],
+                    r_0 = state ? [0,0,0] : nothing,
                    color = [1, 1, 0, 1],
                    m = 0,
                    radius = 0.1,
@@ -124,7 +124,7 @@ It is not possible to connect other components, such as a body with mass propert
     ]
 
 
-    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    sys = extend(System(eqs, t; name=:nothing), ptf)
     add_params(sys, pars; name)
 end
 
@@ -195,7 +195,7 @@ In complex multibody systems with closed loops this may help to simplify the sys
         zeros(3) .~ collect(frame_a.tau) + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
     ]
 
-    sys = extend(ODESystem(eqs, t; name=:nothing), ptf)
+    sys = extend(System(eqs, t; name=:nothing), ptf)
     add_params(sys, pars; name)
 end
 
@@ -259,7 +259,7 @@ In systems without closed loops the use of this implicit joint does not make sen
 
     Main.eqs = eqs
 
-    sys = extend(ODESystem(eqs, t, collect(r_rel_a), pars; name), ptf)
+    sys = extend(System(eqs, t, collect(r_rel_a), pars; name), ptf)
 end
 
 
@@ -436,7 +436,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         residue === :external || error("Unknown value for constraint_residue, expected nothing or :external")
     end
 
-    sys = ODESystem(eqs, t; name=:nothing, systems)
+    sys = System(eqs, t; name=:nothing, systems)
     add_params(sys, pars; name)
 end
 
@@ -461,7 +461,7 @@ end
         length = length, [description = "length of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
     end
-    @variables tau(t)=0 [
+    @variables tau(t) [
         connect = Flow,
         description = "Driving torque in direction of axis of rotation",
     ]
@@ -487,10 +487,13 @@ end
     Rrel = planar_rotation(e, angle, D(angle))
     Rb = absolute_rotation(ori(frame_a), Rrel)
 
-    IR = JuliaSimCompiler
-    e_array = IR.make_array((3,), e...)
-    r_a_array = IR.make_array((3,), r_a...)
-    r_b_array = IR.make_array((3,), r_b...)
+    # IR = JuliaSimCompiler
+    # e_array = IR.make_array((3,), e...)
+    # r_a_array = IR.make_array((3,), r_a...)
+    # r_b_array = IR.make_array((3,), r_b...)
+    e_array = collect(e)
+    r_a_array = collect(r_a)
+    r_b_array = collect(r_b)
 
     eqs = [
         collect(r_a) .~ collect(position_a.u)
@@ -517,7 +520,7 @@ end
         end
     ]
 
-    sys = ODESystem(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
+    sys = System(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
     
     add_params(sys, pars; name)
 end
@@ -663,22 +666,29 @@ The rest of this joint aggregation is defined by the following parameters:
         connect(relative_position.r_rel, revolute.position_a)
         connect(revolute.bearing, bearing)
     ]
-    ODESystem(eqs, t; name, systems=[systems; more_systems])
+    System(eqs, t; name, systems=[systems; more_systems])
 
 end
 
-@mtkmodel Constant3 begin
-    @components begin
-        output = Blocks.RealOutput(nout=3)
-    end
-    @parameters begin
+@component function Constant3(; name)
+    pars = @parameters begin
         k[1:3] = zeros(3), [description = "Constant output value of block"]
     end
-    @equations begin
+
+    systems = @named begin
+        output = Blocks.RealOutput(nout=3)
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         output.u[1] ~ k[1]
         output.u[2] ~ k[2]
         output.u[3] ~ k[3]
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -774,7 +784,7 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
         connect(jointUSR.bearing, bearing)
     ]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 

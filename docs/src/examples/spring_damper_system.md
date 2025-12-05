@@ -12,7 +12,7 @@ This example has two parallel spring-mass parts, the first body (`body1`) is att
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -40,7 +40,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(damper1.frame_b, body1.frame_a)
        connect(spring1.frame_b, body1.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [
                              world,
                              body1,

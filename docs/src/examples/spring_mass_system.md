@@ -12,7 +12,7 @@ This example mirrors that of the [modelica spring-mass system](https://doc.model
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 using OrdinaryDiffEq
 
@@ -44,7 +44,7 @@ eqs = [
     connect(spring1.flange_a, p1.support)
 ]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
+@named model = System(eqs, t, systems = [world; systems])
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys,[], (0, 5))
 

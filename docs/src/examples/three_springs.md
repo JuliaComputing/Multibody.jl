@@ -11,7 +11,7 @@ The example connects three springs together in a single point. The springs are a
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -36,7 +36,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(spring3.frame_b, spring1.frame_b)
        connect(spring2.frame_a, spring1.frame_b)]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
+@named model = System(eqs, t, systems = [world; systems])
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [], (0, 10))
 

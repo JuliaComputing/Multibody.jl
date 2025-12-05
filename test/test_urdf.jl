@@ -9,7 +9,7 @@ include("doublependulum.jl")
 
 
 
-using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq#, Plots
+using ModelingToolkit, Multibody, OrdinaryDiffEq#, Plots
 import ModelingToolkit: t_nounits as t, D_nounits as D
 
 @named model = DoublePendulum()

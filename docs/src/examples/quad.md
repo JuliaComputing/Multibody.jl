@@ -12,7 +12,7 @@ using ModelingToolkit
 using ModelingToolkitStandardLibrary.Blocks
 using LinearAlgebra
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 t = Multibody.t
@@ -46,24 +46,24 @@ kpitch = 0.2
 Tipitch = 100
 Tdpitch = 1
 
-@mtkmodel Thruster begin
-    @structural_parameters begin
-        clockwise = true
+@component function Thruster(; name, clockwise = true)
+    pars = @parameters begin
+        torque_constant = 1, [description="Thrust force to torque conversion factor [Nm/N]"]
     end
-    @components begin
+
+    systems = @named begin
         frame_b = Frame()
         thrust3d = WorldForce(resolve_frame = :frame_b, scale=0.1, radius=0.02) # The thrust force is resolved in the local frame of the thruster.
         torque3d = WorldTorque(resolve_frame = :frame_b, scale=0.1, radius=0.02) # Using the thruster also causes a torque around the force axis.
         thrust = RealInput()
     end
-    @parameters begin
-        torque_constant = 1, [description="Thrust force to torque conversion factor [Nm/N]"]
-    end
-    @variables begin
+
+    vars = @variables begin
         u(t), [state_priority=1000]
         ut(t), [state_priority=1000]
     end
-    @equations begin
+
+    equations = Equation[
         thrust3d.force.u[1] ~ 0
         thrust3d.force.u[2] ~ thrust.u
         thrust3d.force.u[3] ~ 0
@@ -74,7 +74,9 @@ Tdpitch = 1
         ut ~ torque_constant*u
         connect(frame_b, thrust3d.frame_b)
         connect(frame_b, torque3d.frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = nothing, pid=false)
@@ -183,7 +185,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         end
 
     end
-    @named model = ODESystem(connections, t; systems)
+    @named model = System(connections, t; systems)
     complete(model)
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)

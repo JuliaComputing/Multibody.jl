@@ -4,7 +4,7 @@ using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 using OrdinaryDiffEq
 using LinearAlgebra
-using JuliaSimCompiler
+# using JuliaSimCompiler
 
 t = Multibody.t
 D = Differential(t)
@@ -37,7 +37,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b0.frame_a, world.frame_b)
                connect(b0.frame_b, j2.frame_a)
                ]
-@named fourbar2 = ODESystem(connections, t, systems = [world; systems])
+@named fourbar2 = System(connections, t, systems = [world; systems])
 fourbar2 = complete(fourbar2)
 ssys = structural_simplify(multibody(fourbar2))
 
@@ -66,7 +66,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b3.frame_b, j2.frame_a)
 ]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
+@named model = System(connections, t, systems = [world; systems])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever

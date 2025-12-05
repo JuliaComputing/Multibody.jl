@@ -1,7 +1,10 @@
 using Test
+using Multibody, ModelingToolkit, OrdinaryDiffEq
 import Multibody.Rotations.QuatRotation as Quat
 import Multibody.Rotations
 import Multibody.Rotations: RotXYZ
+t = Multibody.t
+D = Multibody.D
 function get_R(sol, frame, t)
     reshape(sol(t, idxs=vec(ori(frame).R.mat)), 3, 3)
 end
@@ -24,7 +27,7 @@ using LinearAlgebra
 connections = [connect(world.frame_b, spring.frame_a)
                connect(spring.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, spring, body])
+@named model = System(connections, t, systems = [world, spring, body])
 model = complete(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
@@ -68,7 +71,7 @@ end
 # ==============================================================================
 ## Simple motion with quaternions===============================================
 # ==============================================================================
-using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+using LinearAlgebra, ModelingToolkit, Multibody
 using OrdinaryDiffEq, Test
 
 @testset "Simple motion with quaternions and state in Body" begin
@@ -87,7 +90,7 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, body.frame_a)]
 
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body])
 irsys = IRSystem(model)
 ssys = structural_simplify(irsys)
@@ -145,7 +148,7 @@ end
 # ============================================================
 
 @testset "Quaternions and state in free motion" begin
-    using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+    using LinearAlgebra, ModelingToolkit, Multibody
     t = Multibody.t
     world = Multibody.world
 
@@ -155,7 +158,7 @@ end
     connections = [connect(world.frame_b, joint.frame_a)
                 connect(joint.frame_b, body.frame_a)]
 
-    @named model = ODESystem(connections, t,
+    @named model = System(connections, t,
                             systems = [world, joint, body])
     irsys = IRSystem(model)
     ssys = structural_simplify(irsys)
@@ -197,7 +200,7 @@ end
 # ============================================================
 
 # @testset "Spherical joint with quaternion state" begin
-    using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+    using LinearAlgebra, ModelingToolkit, Multibody
     world = Multibody.world
 
 
@@ -213,7 +216,7 @@ end
                 connect(rod.frame_b, body.frame_a)]
 
 
-    @named model = ODESystem(connections, t,
+    @named model = System(connections, t,
                             systems = [world, joint, body, rod])
     irsys = IRSystem(model)
     ssys = structural_simplify(irsys)
@@ -261,7 +264,7 @@ end
 using Multibody
 using ModelingToolkit
 # using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Multibody.Rotations: params
 
@@ -284,7 +287,7 @@ using Multibody.Rotations: params
         connect(spring1.frame_a, world.frame_b)
         connect(body.frame_b, spring2.frame_b)]
 
-    @named model = ODESystem(eqs, t,
+    @named model = System(eqs, t,
                             systems = [
                                 world,
                                 body,

@@ -9,7 +9,6 @@ This example models a spherical pendulum. The pivot point is modeled using a [`S
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -25,11 +24,11 @@ connections = [connect(world.frame_b, joint.frame_a)
             connect(joint.frame_b, bar.frame_a)
             connect(bar.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
+@named model = System(connections, t, systems = [world; systems])
 model = complete(model)
 ssys = structural_simplify(multibody(model))
 
-prob = ODEProblem(ssys, [], (0, 5))
+prob = ODEProblem(ssys, [], (0, 5), guesses=unknowns(ssys).=>0.1)
 
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)

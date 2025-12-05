@@ -13,7 +13,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using Test
 
 t = Multibody.t
@@ -28,45 +28,43 @@ BP = 129.03 / 1000
 DE = 310.31 / 1000
 t5 = 19.84 |> deg2rad
 
-@mtkmodel QuarterCarSuspension begin
-    @structural_parameters begin
-        spring = true
-        (jc = [0.5, 0.5, 0.5, 0.7])#, [description = "Joint color"]
-        mirror = false
-    end
-    @parameters begin
+@component function QuarterCarSuspension(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7], mirror = false)
+    dir = mirror ? -1 : 1
+    rRod1_ia = AB*normalize([0, -0.1, 0.2dir])
+    rRod2_ib = BC*normalize([0, 0.2, 0dir])
+
+    pars = @parameters begin
         cs = 4000, [description = "Damping constant [Ns/m]"]
         ks = 44000, [description = "Spring constant [N/m]"]
         rod_radius = 0.02
         jr = 0.03, [description = "Radius of revolute joint"]
     end
-    begin
-        dir = mirror ? -1 : 1
-        rRod1_ia = AB*normalize([0, -0.1, 0.2dir])
-        rRod2_ib = BC*normalize([0, 0.2, 0dir])
-    end
-    @components begin
+
+    systems = @named begin
         r123 = JointRRR(n_a = n*dir, n_b = n*dir, rRod1_ia, rRod2_ib, rod_radius=0.018, rod_color=jc)
         r2 = Revolute(; n=n*dir, radius=jr, color=jc)
         b1 = FixedTranslation(radius = rod_radius, r = CD*normalize([0, -0.1, 0.3dir])) # CD
         chassis = FixedTranslation(r = DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=false)
         chassis_frame = Frame()
-        
+
         if spring
             springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius, num_windings=10)
         end
         if spring
-            spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false) 
+            spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false)
         end
         if spring
             spring_mount_E = FixedTranslation(r = 1.3DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=true)
         end
     end
-    begin
-        A = chassis.frame_b
-        D = chassis.frame_a
+
+    A = chassis.frame_b
+    D = chassis.frame_a
+
+    vars = @variables begin
     end
-    @equations begin
+
+    equations = Equation[
         # Main loop
         connect(A, r123.frame_a)
         connect(r123.frame_b, b1.frame_b)
@@ -74,32 +72,31 @@ t5 = 19.84 |> deg2rad
         connect(r2.frame_a, D)
 
         # Spring damper
-        if spring
+        (spring ? [
             connect(springdamper.frame_b, spring_mount_E.frame_b)
             connect(b1.frame_a, spring_mount_F.frame_a)
             connect(D, spring_mount_E.frame_a)
             connect(springdamper.frame_a, spring_mount_F.frame_b)
-        end
+        ] : [])...
 
         connect(chassis_frame, chassis.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 mirror = false
-@mtkmodel SuspensionWithExcitation begin
-    @structural_parameters begin
-        mirror = false
-    end
-    @parameters begin
+@component function SuspensionWithExcitation(; name, mirror = false)
+    dir = mirror ? -1 : 1
+
+    pars = @parameters begin
         ms = 1500, [description = "Mass of the car [kg]"]
         rod_radius = 0.02
         amplitude = 0.1, [description = "Amplitude of wheel displacement"]
         freq = 2, [description = "Frequency of wheel displacement"]
     end
-    begin
-        dir = mirror ? -1 : 1
-    end
-    @components begin
+
+    systems = @named begin
         fixed = Fixed()
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
@@ -108,9 +105,12 @@ mirror = false
         actuation_rod = SphericalSpherical(radius=rod_radius, r_0 = [0, BC, 0])
         actuation_position = FixedTranslation(r = [0, 0, CD*dir], render=false)
         wheel_position = Translational.Position(exact=true)
-
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
@@ -120,32 +120,35 @@ mirror = false
         connect(actuation_rod.frame_b, suspension.r123.frame_ib)
 
         connect(chassis_frame, suspension.chassis_frame)
-    end
+    ]
 
+    return System(equations, t; name, systems)
 end
 
-@mtkmodel SuspensionWithExcitationAndMass begin
-    @structural_parameters begin
-        mirror = false
-    end
-    @parameters begin
+@component function SuspensionWithExcitationAndMass(; name, mirror = false)
+    dir = mirror ? -1 : 1
+
+    pars = @parameters begin
         ms = 1500, [description = "Mass of the car [kg]"]
         rod_radius = 0.02
     end
-    begin
-        dir = mirror ? -1 : 1
-    end
-    @components begin
+
+    systems = @named begin
         world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)*dir]))
         excited_suspension = SuspensionWithExcitation(; suspension.spring=true, mirror, rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
     end
-    @equations begin
-        connect(world.frame_b, body_upright.frame_a)
-        connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
+
+    vars = @variables begin
     end
 
+    equations = Equation[
+        connect(world.frame_b, body_upright.frame_a)
+        connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = SuspensionWithExcitationAndMass()
@@ -190,15 +193,13 @@ Due to the high excitation frequency, we make use of the argument `timescale = 3
 In the example below, we extend the previous example to a half-car model with two wheels. We now model the car as a [`BodyShape`](@ref) and attach one suspension system on each side. This time, we let the car rotate around the x-axis to visualize roll effects due to uneven road surfaces. We excite each wheel with similar but slightly different frequencies to produce a beat.
 
 ```@example suspension
-@mtkmodel DoubleSuspensionWithExcitationAndMass begin
-    @structural_parameters begin
-        wheel_base = 1
-    end
-    @parameters begin
+@component function DoubleSuspensionWithExcitationAndMass(; name, wheel_base = 1)
+    pars = @parameters begin
         ms = 1500, [description = "Mass of the car [kg]"]
         rod_radius = 0.02
     end
-    @components begin
+
+    systems = @named begin
         world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = SuspensionWithExcitation(; suspension.spring=true, mirror=false, rod_radius,
@@ -213,7 +214,11 @@ In the example below, we extend the previous example to a half-car model with tw
         body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=1000, phi0=0, w0=0)
         # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=1000, radius=0.01)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, body_upright.frame_a)
 
         connect(body_upright.frame_b, body_upright2.frame_a)
@@ -223,8 +228,9 @@ In the example below, we extend the previous example to a half-car model with tw
 
         connect(excited_suspension_r.chassis_frame, mass.frame_a)
         connect(excited_suspension_l.chassis_frame, mass.frame_b)
-    end
+    ]
 
+    return System(equations, t; name, systems)
 end
 
 @named model = DoubleSuspensionWithExcitationAndMass()
@@ -279,20 +285,16 @@ We start by adding a wheel to the quarter-car setup and then to the half-car set
 ### Quarter car
 ```@example suspension
 using ModelingToolkitStandardLibrary.Mechanical.Rotational
-@mtkmodel ExcitedWheelAssembly begin
-    @structural_parameters begin
-        mirror = false
-        iscut = true
-    end
-    @parameters begin
+@component function ExcitedWheelAssembly(; name, mirror = false, iscut = true)
+    dir = mirror ? -1 : 1
+
+    pars = @parameters begin
         rod_radius = 0.02
         amplitude = 0.02, [description = "Amplitude of wheel displacement"]
         freq = 2, [description = "Frequency of wheel displacement"]
     end
-    begin
-        dir = mirror ? -1 : 1
-    end
-    @components begin
+
+    systems = @named begin
         chassis_frame = Frame()
         suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
         wheel_rotation = Revolute(n = [0, 0, dir], axisflange=true) # Wheel rotation axis
@@ -309,35 +311,46 @@ using ModelingToolkitStandardLibrary.Mechanical.Rotational
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
             surface = (x,z)->ParentScope(ParentScope(amplitude))*(sin(2pi*ParentScope(ParentScope(freq))*t)), # Excitation from a time-varying surface profile
         )
-
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(wheel.frame_a, wheel_rotation.frame_b)
         connect(wheel_rotation.frame_a, suspension.r123.frame_ib)
         connect(chassis_frame, suspension.chassis_frame)
 
         connect(rotational_losses.flange_a, wheel_rotation.axis)
         connect(rotational_losses.flange_b, wheel_rotation.support)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 
-@mtkmodel SuspensionWithExcitationAndMass begin
-    @parameters begin
+@component function SuspensionWithExcitationAndMass(; name)
+    pars = @parameters begin
         ms = 1500/4, [description = "Mass of the car [kg]"]
         rod_radius = 0.02
     end
-    @components begin
+
+    systems = @named begin
         world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)]))
         excited_suspension = ExcitedWheelAssembly(; rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
     end
-    @equations begin
-        connect(world.frame_b, body_upright.frame_a)
-        connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
+
+    vars = @variables begin
     end
 
+    equations = Equation[
+        connect(world.frame_b, body_upright.frame_a)
+        connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = SuspensionWithExcitationAndMass()
@@ -365,15 +378,13 @@ nothing # hide
 
 ### Half car
 ```@example suspension
-@mtkmodel HalfCar begin
-    @structural_parameters begin
-        wheel_base = 1
-    end
-    @parameters begin
+@component function HalfCar(; name, wheel_base = 1)
+    pars = @parameters begin
         ms = 1500, [description = "Mass of the car [kg]"]
         rod_radius = 0.02
     end
-    @components begin
+
+    systems = @named begin
         world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
         excited_suspension_r = ExcitedWheelAssembly(; mirror=false, rod_radius)
@@ -382,7 +393,11 @@ nothing # hide
         body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0, iscut=false)
         # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=100000, radius=0.01)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, body_upright.frame_a)
         connect(body_upright.frame_b, body_upright2.frame_a)
         connect(body_upright2.frame_b, mass.frame_cm)
@@ -391,8 +406,9 @@ nothing # hide
 
         connect(excited_suspension_r.chassis_frame, mass.frame_a)
         connect(excited_suspension_l.chassis_frame, mass.frame_b)
-    end
+    ]
 
+    return System(equations, t; name, systems)
 end
 
 @named model = HalfCar()
@@ -441,15 +457,13 @@ nothing # hide
 
 ```@example suspension
 transparent_gray = [0.4, 0.4, 0.4, 0.3]
-@mtkmodel FullCar begin
-    @structural_parameters begin
-        wheel_base = 1
-    end
-    @parameters begin
+@component function FullCar(; name, wheel_base = 1)
+    pars = @parameters begin
         ms = 1500, [description = "Mass of the car [kg]"]
         rod_radius = 0.02
     end
-    @components begin
+
+    systems = @named begin
         world = World()
         front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
         back_front = BodyShape(m=ms/2, r = [-2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
@@ -461,7 +475,11 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
         excited_suspension_br = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
         excited_suspension_bl = ExcitedWheelAssembly(; mirror=true, rod_radius, freq = 9.7)
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(back_front.frame_a, front_axle.frame_cm)
         connect(back_front.frame_b, back_axle.frame_cm)
 
@@ -470,8 +488,9 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
 
         connect(excited_suspension_br.chassis_frame, back_axle.frame_a)
         connect(excited_suspension_bl.chassis_frame, back_axle.frame_b)
-    end
+    ]
 
+    return System(equations, t; name, systems)
 end
 
 @named model = FullCar()

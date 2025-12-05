@@ -15,7 +15,7 @@ We start by simulating a stiff rope that is attached to the world in one end and
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 t = Multibody.t
@@ -28,7 +28,7 @@ number_of_links = 6
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named stiff_rope = ODESystem(connections, t, systems = [world, body, rope])
+@named stiff_rope = System(connections, t, systems = [world, body, rope])
 
 stiff_rope = complete(stiff_rope)
 ssys = structural_simplify(multibody(stiff_rope))
@@ -52,7 +52,7 @@ number_of_links = 6
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named flexible_rope = ODESystem(connections, t, systems = [world, body, rope])
+@named flexible_rope = System(connections, t, systems = [world, body, rope])
 
 flexible_rope = complete(flexible_rope)
 ssys = structural_simplify(multibody(flexible_rope))
@@ -86,7 +86,7 @@ connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
                connect(chain.frame_b, spring.frame_a)
                connect(spring.frame_b, fixed.frame_b)]
 
-@named mounted_chain = ODESystem(connections, t, systems = [systems; world])
+@named mounted_chain = System(connections, t, systems = [systems; world])
 mounted_chain = complete(mounted_chain)
 ssys = structural_simplify(multibody(mounted_chain))
 prob = ODEProblem(ssys, [

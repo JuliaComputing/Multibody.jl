@@ -11,6 +11,9 @@ export render, loop_render
 using MeshIO, FileIO
 using StaticArrays
 
+
+import Multibody: get_rot_fun, get_fun, get_frame_fun, get_color, get_shapefile, get_shape
+
 """
 This struct is used to mimic a solution object such that a model can be rendered without having an actual solution
 """
@@ -101,19 +104,19 @@ end
 
 function get_all_vars(model, sol, vars = Multibody.collect_all(unknowns(model)))
     @parameters render
-    nsrender = Multibody.ModelingToolkit.renamespace(model.name, render)
+    nsrender = Multibody.ModelingToolkit.renamespace(getfield(model, :name), render)
     dorender = try
         Bool(sol.prob.ps[nsrender])
     catch
         true
     end
-    for sys in model.systems
+    for sys in getfield(model, :systems)
         if ModelingToolkit.isframe(sys)
             dorender || continue
-            newvars = Multibody.ModelingToolkit.renamespace.(model.name, Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
+            newvars = Multibody.ModelingToolkit.renamespace.(getfield(model, :name), Multibody.Symbolics.unwrap.(vec(ori(sys).R)))
             append!(vars, newvars)
         else
-            subsys_ns = getproperty(model, sys.name)
+            subsys_ns = getproperty(model, getfield(sys, :name))
             get_all_vars(subsys_ns, sol, vars)
         end
     end
@@ -286,7 +289,7 @@ end
 
 function render(model, sol,
     timevec::Union{AbstractVector, Nothing} = nothing;
-    filename = "multibody_$(model.name).mp4",
+    filename = "multibody_$(getfield(model, :name)).mp4",
     framerate = default_framerate(filename),
     x = 2,
     y = 0.5,
@@ -302,7 +305,7 @@ function render(model, sol,
     size = (600,450),
     kwargs...
     )
-    ModelingToolkit.iscomplete(model) || (model = complete(model))
+    ModelingToolkit.iscomplete(model) || (model = complete(model, flatten=false))
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
         return render(model, sol, 0; x, y, z, lookat, up, show_axis, kwargs...)[1]
@@ -316,19 +319,19 @@ function render(model, sol,
 
     t = Observable(timevec[1])
 
-    recursive_render!(scene, complete(model), sol, t)
+    recursive_render!(scene, model, sol, t)
 
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
             md = get_metadata(frame)
             (md !== nothing) || error("Only frames can be traced in animations.")
-            if get(md, :frame, false)
+            if get(md, Multibody.ModelingToolkit.IsFrame, false)
                 points = get_trans(sol, frame, tvec) |> Matrix
-            elseif get(md, :frame_2d, false)
+            elseif get(md, Multibody.PlanarMechanics.IsFrame2D, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
-                error("Got fishy frame metadata")
+                error("Got fishy frame metadata", md)
             end
             Makie.lines!(scene, points)
         end
@@ -365,11 +368,12 @@ function render(model, sol, time::Real;
     z = 2,
     cache = true,
     size = (1200,1000),
+    slider = !(sol isa Union{ODEProblem, FakeSol}),
     kwargs...,
     )
 
-    ModelingToolkit.iscomplete(model) || (model = complete(model))
-    slider = !(sol isa Union{ODEProblem, FakeSol})
+    ModelingToolkit.iscomplete(model) || (model = complete(model, flatten=false))
+    # model = ModelingToolkit.toggle_namespacing(model, false)
 
     if sol isa ODEProblem
         sol = FakeSol(model, sol)
@@ -391,24 +395,24 @@ function render(model, sol, time::Real;
     else
         t = Observable(time)
     end
-    recursive_render!(scene, complete(model), sol, t)
+    recursive_render!(scene, model, sol, t)
 
     if traces !== nothing
         tvec = range(sol.t[1], stop=sol.t[end], length=500)
         for frame in traces
             md = get_metadata(frame)
             (md !== nothing) || error("Only frames can be traced in animations.")
-            if get(md, :frame, false)
+            if get(md, Multibody.ModelingToolkit.IsFrame, false)
                 points = get_trans(sol, frame, tvec) |> Matrix
-            elseif get(md, :frame_2d, false)
+            elseif get(md, Multibody.PlanarMechanics.IsFrame2D, false)
                 points = get_trans_2d(sol, frame, tvec) |> Matrix
             else
-                error("Got fishy frame metadata")
+                error("Got fishy frame metadata", md)
             end
             Makie.lines!(scene, points)
         end
     end
-    fig, t
+    fig, t, scene
 end
 
 function Multibody.loop_render(model, sol; timescale = 1.0, framerate = 30, max_loop = 5, kwargs...)
@@ -429,14 +433,21 @@ end
 """
 Internal function: Recursively render all subsystem components of a multibody system. If a particular component returns `true` from its `render!` method, indicating that the component performaed rendering, the recursion stops.
 """
-function recursive_render!(scene, model, sol, t)
-    for subsys in model.systems
+function recursive_render!(scene, model, sol, t, first=true)
+    # Render the model itself
+    if first
+        did_render = render!(scene, get_systemtype(model), model, sol, t)
+        if did_render === true
+            return
+        end
+    end
+    for subsys in getfield(model, :systems)
         system_type = get_systemtype(subsys)
         # did_render = render!(scene, system_type, subsys, sol, t)
-        subsys_ns = getproperty(model, subsys.name)
+        subsys_ns = getproperty(model, getfield(subsys, :name))
         did_render = render!(scene, system_type, subsys_ns, sol, t)
         if !something(did_render, false)
-            recursive_render!(scene, subsys_ns, sol, t)
+            recursive_render!(scene, subsys_ns, sol, t, false)
         end
     end
 end
@@ -864,7 +875,7 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
         sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     catch
     end
-    frameinds = findall(ModelingToolkit.isframe, collect(sys.systems))
+    frameinds = findall(ModelingToolkit.isframe, collect(getfield(sys, :systems)))
     length(frameinds) == 2 || return false
 
     nameof(sys.systems[frameinds[1]]) ∈ (:frame_a, :frame_b) || return false

@@ -1,11 +1,13 @@
 # Find variables that are both array form and scalarized / collected
 # foreach(println, sort(unknowns(IRSystem(model)), by=string))
+
+# Problem: ERROR: Could not evaluate value of parameter rod₊body₊I. Missing values for variables in expression rod₊I.
+# solution: explicitly pass I in pars to System constructor
 module Multibody
 # Find variables that are both array form and scalarized / collected
 # foreach(println, sort(unknowns(IRSystem(model)), by=string))
 using LinearAlgebra
 using ModelingToolkit
-using JuliaSimCompiler
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 import ModelingToolkitStandardLibrary.Blocks
@@ -15,6 +17,12 @@ export Rotational, Translational
 
 export render, render!
 export subs_constants
+
+
+## JuliaSimCompiler transition helpers
+export IRSystem
+IRSystem(x) = x
+
 
 """
 A helper function that calls `collect` on all parameters in a vector of parameters in a smart way
@@ -94,7 +102,9 @@ If this optimization is to be performed repeatedly for several simulations of th
 """
 function subs_constants(model, c=[0, 1]; ssys = structural_simplify(IRSystem(model)), kwargs...)
     inds = find_defaults_with_val(model, c; ssys, kwargs...)
-    ssys = JuliaSimCompiler.freeze_parameters(ssys, inds)
+    # ssys = JuliaSimCompiler.freeze_parameters(ssys, inds)
+    @error "JuliaSimCompiler.freeze_parameters is no longer available. This optimization is currently disabled."
+    return ssys
 end
 
 function find_defaults_with_val(model, c=[0, 1]; defs = defaults(model), ssys = structural_simplify(IRSystem(model)))
@@ -126,6 +136,24 @@ function find_defaults_with_val(model, c=[0, 1]; defs = defaults(model), ssys = 
 end
 
 
+"""
+    guesses_for_all_parameters(ssys, guesses = Dict{Any, Any}())
+
+Generate a dictionary of NaN guesses for all parameters that do not already have a guess specified in `guesses` or a default guess in the system `ssys`. This is useful as a debugging tool when parameter initialization or optimization is not giving the expected results.
+"""
+function guesses_for_all_parameters(ssys, guesses = Dict{Any, Any}())
+    guesses = Dict(deepcopy(guesses))
+    for p in ModelingToolkit.parameters(ssys)
+        haskey(guesses, p) && continue
+        ModelingToolkit.hasguess(p) && continue
+        ModelingToolkit.symtype(p) <: Number || continue
+        guesses[p] = NaN
+    end
+    return guesses
+end
+
+
+
 export multibody
 
 """
@@ -136,9 +164,9 @@ Perform validity checks on the model, such as the precense of exactly one world 
 function multibody(model, level=0)
     found_world = false
     found_planar = false
-    for subsys in model.systems
+    for subsys in getfield(model, :systems)
         system_type = get_systemtype(subsys)
-        subsys_ns = getproperty(model, subsys.name)
+        subsys_ns = getproperty(model, getfield(subsys, :name))
         isworld = system_type == World
         isplanar = system_type !== nothing && parentmodule(system_type) == PlanarMechanics
         found_world = found_world || isworld
@@ -224,7 +252,7 @@ Translate a URDF file into a Multibody model. Only available if LightXML.jl, Gra
 
 Example usage:
 ```
-using Multibody, ModelingToolkit, JuliaSimCompiler, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
+using Multibody, ModelingToolkit, LightXML, Graphs, MetaGraphsNext, JuliaFormatter
 urdf2multibody(joinpath(dirname(pathof(Multibody)), "..", "test/doublependulum.urdf"), extras=true, out="/tmp/urdf_import.jl")
 ```
 
@@ -347,6 +375,15 @@ include("robot/FullRobot.jl")
 
 export PlanarMechanics
 include("PlanarMechanics/PlanarMechanics.jl")
+
+
+# These are extended in the render module
+function get_rot_fun end
+function get_fun end
+function get_frame_fun end
+function get_color end
+function get_shapefile end
+function get_shape end
 
 export SphereVisualizer, CylinderVisualizer, BoxVisualizer
 include("visualizers.jl")

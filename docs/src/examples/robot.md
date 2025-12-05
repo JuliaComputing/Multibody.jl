@@ -6,7 +6,7 @@
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 
@@ -109,7 +109,7 @@ The coordinates of any point on the mechanism may be obtained in the world coord
 
 ```@example robot
 output = collect(robot.mechanics.b6.frame_b.r_0)
-fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+fkine = build_explicit_observed_function(ssys, output)
 fkine(prob.u0, prob.p, 0)
 ```
 
@@ -124,7 +124,7 @@ prob[output]
 
 or by building an explicit function `(state, parameters, time) -> output`
 ```@example robot
-fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+fkine = build_explicit_observed_function(ssys, output)
 fkine(prob.u0, prob.p, 0)
 ```
 !!! note

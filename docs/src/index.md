@@ -8,7 +8,7 @@ Documentation for [Multibody](https://github.com/JuliaComputing/Multibody.jl).
 
 ```@setup logo
 using ModelingToolkit
-using Multibody, JuliaSimCompiler
+using Multibody
 using OrdinaryDiffEq # Contains the ODE solver we will use
 using Plots
 t = Multibody.t
@@ -19,8 +19,8 @@ length_scale = 0.5 # This controls the frequency of the oscillations, smaller sc
 radius_small = length_scale*0.2
 radius_large = length_scale*0.3
 
-@mtkmodel Logo begin
-    @components begin
+@component function Logo(; name)
+    systems = @named begin
         world = World(render=false)
 
         # revl  = Revolute(; radius = radius_large, color=JULIASIM_PURPLE, axisflange=true)
@@ -42,7 +42,14 @@ radius_large = length_scale*0.3
         # damperl2 = Rotational.Damper(d=0.01)
         damperr  = Rotational.Damper(d=0.01)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, move_up.frame_a)
         connect(move_up.frame_b, revl.frame_a)
 
@@ -62,7 +69,9 @@ radius_large = length_scale*0.3
         # connect(revl.support, damperl.flange_b)
         # connect(revl2.support, damperl2.flange_b)
         connect(revr.support, damperr.flange_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named logo = Logo()
@@ -164,7 +173,7 @@ The following animations give a quick overview of simple mechanisms that can be 
 ## Installation
 To install this library, first follow the [installation instructions for JuliaSimCompiler](https://juliacomputing.github.io/JuliaSimCompiler.jl/stable/#Installing-and-Using-JuliaSimCompiler). In particular, you need to [add the JuliaHub Registry](https://help.juliahub.com/juliasim/dev/gettingstarted/juliahubregistry/). 
 
-After the registry is added and JuliaSimCompiler is installed, you may install this package using
+After the registry is added, you may install this package using
 ```julia
 import Pkg
 Pkg.add("Multibody")
