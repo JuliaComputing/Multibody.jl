@@ -1,7 +1,7 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
-authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 version = "0.3.2"
+authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
@@ -39,7 +39,7 @@ LightXML = "0.9"
 LinearAlgebra = "1.6"
 MeshIO = "0.4, 0.5"
 MetaGraphsNext = "0.7"
-ModelingToolkit = "10"
+ModelingToolkit = "10, 11"
 ModelingToolkitStandardLibrary = "2.7.2"
 OrdinaryDiffEqNonlinearSolve = "1.14.1"
 OrdinaryDiffEqRosenbrock = "1.17.0"
