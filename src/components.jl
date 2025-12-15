@@ -376,7 +376,6 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               isroot = false,
               state = false,
               sequence = [1,2,3],
-              neg_w = true,
               phi0 = zeros(3),
               phid0 = zeros(3),
               r_0 = state || isroot ? 0 : nothing,
@@ -456,7 +455,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         if quat
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
-            qeeqs = nonunit_quaternion_equations(Ra, w_a; neg_w)
+            qeeqs = nonunit_quaternion_equations(Ra, w_a)
         else
             @named frame_a = Frame(varw=true)
             Ra = ori(frame_a, true)
@@ -469,13 +468,8 @@ This component has a single frame, `frame_a`. To represent bodies with more than
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
                     Ra.w .~ ar.w
-                    if neg_w
-                        # w_a .~ -ar.w # This is required for FreeBody and ThreeSprings tests to pass, but the other one required for harmonic osciallator without joint to pass. FreeBody passes with quat=true so we use that instead
-                        collect(w_a .~ -angular_velocity2(ar))
-                    else
-                        collect(w_a .~ (angular_velocity2(ar)))
+                    collect(w_a .~ (angular_velocity2(ar)))
                         # w_a .~ ar.w # This one for most systems
-                    end
                     Ra ~ ar
                     ]
         end
@@ -788,7 +782,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
 - `a_0`: Absolute acceleration of `frame_a` resolved in world frame (= D(v_0))
 """
 @component function BodyCylinder(; name, r = [1, 0, 0], r_shape = [0, 0, 0], isroot = false,
-                                 state = false, quat = false, sequence = [1, 2, 3], neg_w = true,
+                                 state = false, quat = false, sequence = [1, 2, 3],
                                  diameter = 1, inner_diameter = 0, density = 7700, color = purple)
     pars = @parameters begin
         dir[1:3] = r - r_shape, [description = "Vector in length direction of cylinder, resolved in frame_a"]
@@ -815,7 +809,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
         frame_a = Frame()
         frame_b = Frame()
         translation = FixedTranslation(r = r)
-        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, neg_w, sparse_I=true)
+        body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2], state, quat, isroot, sequence, sparse_I=true)
     end
 
     vars = @variables begin
