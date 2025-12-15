@@ -133,8 +133,8 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     end
 
     systems = @named begin
-        translation = FixedTranslation(; r)
-        translation_cm = FixedTranslation(; r=r_cm)
+        translation = FixedTranslation(; r, render=false)
+        translation_cm = FixedTranslation(; r=r_cm, render=false)
         body = Body(; I, m, gy, state_priority)
         frame_a = Frame()
         frame_b = Frame()

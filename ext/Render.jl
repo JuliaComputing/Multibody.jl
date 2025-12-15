@@ -962,6 +962,34 @@ end
 get_trans_2d(sol, frame, t) = SVector{2}(sol(t, idxs = [frame.x, frame.y]))
 get_trans_2d(sol, frame, t::AbstractArray) = sol(t, idxs = [frame.x, frame.y])
 
+function render!(scene, ::typeof(P.Frame), sys, sol, t)
+    # sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    radius = 0.005f0# sol(sol.t[1], idxs=sys.radius) |> Float32
+    length = 0.1f0#sol(sol.t[1], idxs=sys.length) |> Float32
+    T = get_frame_fun_2d(sol, sys)
+
+    thing = @lift begin
+        Ti = T($t)
+        Rx = Ti[:, 1]
+        O = Point3f([Ti[1:2, 3]; 0]) # Assume world is never moving
+        x = O .+ Point3f([length*Rx; 0])
+        Makie.GeometryBasics.Cylinder(O, x, radius)
+    end
+    mesh!(scene, thing, color=:red)
+
+    thing = @lift begin
+        Ti = T($t)
+        Ry = Ti[:, 2]
+        O = Point3f([Ti[1:2, 3]; 0]) # Assume world is never moving
+        y = O .+ Point3f([length*Ry; 0])
+        Makie.GeometryBasics.Cylinder(O, y, radius)
+    end
+    mesh!(scene, thing, color=:green)
+
+
+    true
+end
+
 function render!(scene, ::typeof(P.Body), sys, sol, t)
     sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     color = get_color(sys, sol, :purple)
