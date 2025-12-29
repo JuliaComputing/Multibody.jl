@@ -89,6 +89,7 @@ D = Differential(t)
 
     # @test_skip begin # Yingbo: instability
     prob = ODEProblem(ssys, [
+        collect(body.Q̂) .=> [1, 0, 0, 0];
         collect(body.r_0) .=> [0, -1e-5, 0]; # To make sure the spring has non-zero extent
         collect(body.w_a) .=> 0.01;
         collect(body.v_0) .=> 0;
