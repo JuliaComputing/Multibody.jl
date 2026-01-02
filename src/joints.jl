@@ -176,10 +176,10 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `render = true`: Render the joint in animations
 """
 @component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
-                   z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
-                   phid = 0,
+                   z_rel_a_fixed = false, sequence = [1, 2, 3], phi = zeros(3),
+                   phid = zeros(3),
                    d = 0,
-                   phidd = 0,
+                   phidd = nothing,
                    color = [1, 1, 0, 1],
                    radius = 0.1,
                    quat = false,

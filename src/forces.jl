@@ -77,14 +77,14 @@ end
 @component function BasicWorldTorque(; name, resolve_frame = :world)
     @named torque = Blocks.RealInput(; nin = 3)
     @named frame_b = Frame()
-    eqs = if resolve_frame == :world
+    eq1 = if resolve_frame == :world
         frame_b.tau ~ -resolve2(ori(frame_b), torque.u)
     elseif resolve_frame == :frame_b
         frame_b.tau ~ -torque.u
     else
         frame_b.tau ~ zeros(3)
     end
-    append!(eqs, frame_b.f ~ zeros(3))
+    eqs = [eq1; frame_b.f ~ zeros(3)]
     System(eqs, t; name, systems = [torque, frame_b])
 end
 
@@ -161,14 +161,14 @@ end
 @component function BasicWorldForce(; name, resolve_frame = :world)
     @named force = Blocks.RealInput(; nin = 3)
     @named frame_b = Frame()
-    eqs = if resolve_frame == :world
+    eq1 = if resolve_frame == :world
         frame_b.f ~ -resolve2(ori(frame_b), force.u)
     elseif resolve_frame == :frame_b
         frame_b.f ~ -force.u
     else
         frame_b.f ~ zeros(3)
     end
-    append!(eqs, frame_b.tau ~ zeros(3))
+    eqs = [eq1; frame_b.tau ~ zeros(3)]
     System(eqs, t; name, systems = [force, frame_b])
 end
 
