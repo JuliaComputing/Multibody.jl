@@ -55,14 +55,13 @@ end
 m = multibody(motorTest)
 # @test length(unknowns(m)) == 3
     # D(motorTest.motor.gear.bearingFriction.w) => 0
-cm = complete(motorTest)
 
 prob = ODEProblem(m, [
-    D(D(cm.motor.Jmotor.phi)) => 0,
+    D(D(m.motor.Jmotor.phi)) => 0,
 ], (0.0, 5.0))
 sol = solve(prob, Rodas4())
 @test successful_retcode(sol)
-doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
+doplot() && plot(sol, idxs=m.motor.phi.phi.u)
 
 ##
 
@@ -93,16 +92,15 @@ end
 
 @named gearTest = GearTest()
 m = multibody(gearTest)
-cm = complete(gearTest)
 
 prob = ODEProblem(m, [
-    cm.motor.Rd4.i => 0,
-    cm.gear.gear.phi_b => 0,
-    D(cm.gear.gear.phi_b) => 0,
+    m.motor.Rd4.i => 0,
+    m.gear.gear.phi_b => 0,
+    D(m.gear.gear.phi_b) => 0,
 ], (0.0, 5.0))
 sol = solve(prob, Rodas4())
 @test successful_retcode(sol)
-doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
+doplot() && plot(sol, idxs=m.motor.phi.phi.u)
 
 
 @component function GearTest1(; name)
@@ -156,7 +154,6 @@ m = multibody(gearTest)
 end
 
 @named controllerTest = ControllerTest()
-m = structural_simplify(controllerTest)
 m = multibody(controllerTest)
 
 
@@ -200,35 +197,34 @@ end
 # m = structural_simplify(axisTest)
 m = multibody(axisTest)
 
-cm = complete(axisTest)
 tspan = (0.0, 5.0)
 prob = ODEProblem(m, [
     # ModelingToolkit.missing_variable_defaults(m);
-    # D(cm.axis2.gear.bearingFriction.w) => 0
-    cm.axis2.motor.flange_motor.phi => deg2rad(20) *  0,
-    D(cm.axis2.motor.flange_motor.phi) => 0,
-    cm.axis2.motor.Jmotor.phi => deg2rad(20) *  0,
-    cm.axis2.gear.gear.phi_b => 0,
-    D(cm.axis2.gear.gear.phi_b) => 0,
+    # D(m.axis2.gear.bearingFriction.w) => 0
+    m.axis2.motor.flange_motor.phi => deg2rad(20) *  0,
+    D(m.axis2.motor.flange_motor.phi) => 0,
+    m.axis2.motor.Jmotor.phi => deg2rad(20) *  0,
+    m.axis2.gear.gear.phi_b => 0,
+    D(m.axis2.gear.gear.phi_b) => 0,
 ], tspan)
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 
-@test sol(0.0, idxs=cm.axis2.motor.emf.phi) == 0
-# @test sol(tspan[2], idxs=cm.axis2.motor.emf.phi) == 0
+@test sol(0.0, idxs=m.axis2.motor.emf.phi) == 0
+# @test sol(tspan[2], idxs=m.axis2.motor.emf.phi) == 0
 
 doplot() && plot(sol, layout=length(unknowns(m)))
 doplot() && plot(sol, idxs=[
-    cm.axis2.gear.gear.phi_a
-    cm.axis2.gear.gear.phi_b
-    cm.axis2.gear.gear.flange_b.phi
-    # cm.axis2.gear.bearingFriction.flange_a.phi
-    cm.axis2.gear.flange_b.phi
-    cm.axis2.gear.gear.phi_support
-    cm.axis2.angleSensor.phi.u
-    cm.axis2.motor.phi.phi.u
+    m.axis2.gear.gear.phi_a
+    m.axis2.gear.gear.phi_b
+    m.axis2.gear.gear.flange_b.phi
+    # m.axis2.gear.bearingFriction.flange_a.phi
+    m.axis2.gear.flange_b.phi
+    m.axis2.gear.gear.phi_support
+    m.axis2.angleSensor.phi.u
+    m.axis2.motor.phi.phi.u
 ], layout=8, size=(800, 800))
-u = cm.axis2.controller.PI.ctr_output.u
+u = m.axis2.controller.PI.ctr_output.u
 @test abs(sol(prob.tspan[2], idxs=u)) < 1e-6 # test control output is zero at the end of simulation
 
 ##
