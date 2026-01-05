@@ -66,7 +66,7 @@ defs = Dict([
     worldwheel.wheel.body.r_0[3] => 0.2;
 ])
 
-ssys = structural_simplify(multibody(worldwheel))
+ssys = multibody(worldwheel)
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -154,7 +154,7 @@ defs = Dict([
     worldwheel.wheel.frame_a.radius => 0.01;
 ])
 
-ssys = structural_simplify(multibody(worldwheel))
+ssys = multibody(worldwheel)
 prob = ODEProblem(ssys, defs, (0, 3))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -206,7 +206,7 @@ end
 
 @named model = DrivingWheelSet()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 # display(unknowns(ssys))
 prob = ODEProblem(ssys, [
     model.wheels.wheelSetJoint.prismatic1.s => 0.1
@@ -277,7 +277,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
 end
 @named model = Car()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 6))
 sol = solve(prob, Tsit5())
@@ -326,7 +326,7 @@ import Multibody.PlanarMechanics as Pl
 end
 @named model = TestWheel()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 defs = Dict(unknowns(ssys) .=> 0)
 prob = ODEProblem(ssys, defs, (0.0, 10.0))
 sol = solve(prob, Rodas5P())
@@ -401,7 +401,7 @@ end
 
 @named model = TestSlipBasedWheel()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
     model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
@@ -538,7 +538,7 @@ end
 
 @named model = TwoTrackWithDifferentialGear()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 defs = merge(
     Dict(unknowns(ssys) .=> 0),
     ModelingToolkit.defaults(model),

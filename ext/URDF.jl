@@ -340,7 +340,7 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
         s = s * """
         @named model = $(modelname)()
         model = complete(model)
-        ssys = structural_simplify(multibody(model))
+        ssys = multibody(model)
         prob = ODEProblem(ssys, [], (0.0, 10.0))
         sol = solve(prob, $(solver)())
         plot(sol) |> display

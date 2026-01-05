@@ -1,27 +1,26 @@
 using Rotations
+import ModelingToolkit.RotationMatrix
 
 _norm(x) = sqrt(sum(abs2(x) for x in x)) # Workaround for buggy symbolic arrays
 _normalize(x) = x ./ _norm(x)
 
 const R3{T} = RotMatrix{3, T}
 
-abstract type Orientation end
+# """
+#     RotationMatrix
 
-"""
-    RotationMatrix
+# A struct representing a 3D orientation as a rotation matrix.
 
-A struct representing a 3D orientation as a rotation matrix.
+# If `System` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
 
-If `System` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
-
-# Fields:
-- `R::R3`: The rotation 3×3 matrix ∈ SO(3)
-- `w`: The angular velocity vector
-"""
-struct RotationMatrix <: Orientation
-    R::R3
-    w::Any
-end
+# # Fields:
+# - `R::R3`: The rotation 3×3 matrix ∈ SO(3)
+# - `w`: The angular velocity vector
+# """
+# struct RotationMatrix <: Orientation
+#     R::R3
+#     w::Any
+# end
 
 RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
@@ -41,7 +40,7 @@ Never call this function directly from a component constructor, instead call `f 
 """
 function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name=:R, varw = false, state_priority=nothing)
     # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
-    R = at_variables_t(:R, 1:3, 1:3)#; default = R, state_priority) #[description="Orientation rotation matrix ∈ SO(3)"]
+    R = at_variables_t(:R, 1:3, 1:3; state_priority)#; default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
@@ -71,7 +70,7 @@ end
 Base.:*(R1::RotationMatrix, x::AbstractArray) = R1.R * x
 Base.:*(x::AbstractArray, R2::RotationMatrix) = x * R2.R
 function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
-    RotationMatrix(R1.R.mat * R2.R.mat, R1 * collect(R2.w) + collect(R1.w))
+    RotationMatrix(R1.R * R2.R, R1 * collect(R2.w) + collect(R1.w))
 end
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
@@ -192,9 +191,9 @@ function inverse_rotation(R)
 end
 
 function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
-    # [vec(R1.R.mat .~ R2.R.mat);
+    # [vec(R1.R .~ R2.R);
     #     R1.w .~ R2.w]
-    vec(R1.R.mat .~ R2.R.mat)
+    vec(R1.R .~ R2.R)
 end
 
 """
@@ -400,7 +399,7 @@ See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions]
 """
 function get_rot(sol, frame, t)
     if is_frame(frame)
-        Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
+        Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R')), 3, 3))
     elseif is_frame_2d(frame)
         phi = sol(t, idxs = frame.phi)
         Rotations.RotMatrix2(ori_2d(phi)')
@@ -437,11 +436,11 @@ function get_frame(sol, frame, t)
 end
 
 function nonunit_quaternion_equations(R, w)
-    @variables Q(t)[1:4]=[1,0,0,0], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
-    @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
-    @variables Q̂d(t)[1:4]=[0,0,0,0], [state_priority=1000]
+    @variables Q(t)[1:4], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
+    @variables Q̂(t)[1:4], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+    @variables Q̂d(t)[1:4], [state_priority=1000]
     # NOTE: 
-    @variables n(t)=1 c(t)=0
+    @variables n(t) c(t)
     @parameters k = 0.1
     Q̂ = collect(Q̂)
     Q̂d = collect(Q̂d)

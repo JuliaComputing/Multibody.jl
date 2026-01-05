@@ -36,7 +36,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(torque1.frame_b, cyl1.frame_a)
        connect(torque1.frame_a, world.frame_b)
        # connect(sine.output, torque1.torque)
-       torque1.torque.u .~ [2sin(t), 0, 0]
+       torque1.torque.u ~ [2sin(t), 0, 0]
        connect(inertia1.flange_b, idealGear.flange_a)
        connect(idealGear.flange_b, inertia2.flange_a)
        connect(torque2.flange, inertia1.flange_a)
@@ -48,7 +48,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 
 @named model = System(eqs, t, systems = [world; systems])
 cm = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     D(cm.idealGear.phi_b) => 0
     cm.idealGear.phi_b => 0

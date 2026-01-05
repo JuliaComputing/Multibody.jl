@@ -46,25 +46,25 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         description = "Relative rotation angle from frame_a to frame_b",
     ]
     @variables w(t)=w0 [state_priority = state_priority, description = "angular velocity (rad/s)"]
-    Rrel0 = planar_rotation(n, phi0, w0)
-    @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
-    n = collect(n)
-
-
+    # Rrel0 = planar_rotation(n, phi0, w0)
+    # @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
+    
     if isroot
-        eqs = Equation[Rrel ~ planar_rotation(n, phi, w)
+        Rrel = planar_rotation(n, phi, w)
+        eqs = Equation[#Rrel ~ planar_rotation(n, phi, w)
                     connect_orientation(ori(frame_b), absolute_rotation(ori(frame_a), Rrel); iscut)
-                    collect(frame_a.f) .~ -resolve1(Rrel, frame_b.f)
-                    collect(frame_a.tau) .~ -resolve1(Rrel, frame_b.tau)]
+                    frame_a.f ~ -resolve1(Rrel, frame_b.f)
+                    frame_a.tau ~ -resolve1(Rrel, frame_b.tau)]
     else
-        eqs = Equation[Rrel ~ planar_rotation(-n, phi, w)
+        Rrel = planar_rotation(-n, phi, w)
+        eqs = Equation[#Rrel ~ planar_rotation(-n, phi, w)
                     connect_orientation(ori(frame_a), absolute_rotation(ori(frame_b), Rrel); iscut)
-                    collect(frame_b.f) .~ -resolve1(Rrel, frame_a.f)
-                    collect(frame_b.tau) .~ -resolve1(Rrel, frame_a.tau)]
+                    frame_b.f ~ -resolve1(Rrel, frame_a.f)
+                    frame_b.tau ~ -resolve1(Rrel, frame_a.tau)]
     end
-    moreeqs = [collect(frame_a.r_0 .~ frame_b.r_0)
+    moreeqs = [frame_a.r_0 ~ frame_b.r_0
                D(phi) ~ w
-               tau ~ -collect(frame_b.tau)'n]
+               tau ~ -dot(frame_b.tau,n)]
     append!(eqs, moreeqs)
     sys = if axisflange
         # @named internalAxis = Rotational.InternalSupport(tau=tau)
@@ -103,14 +103,13 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an System representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   s0 = 0, v0 = 0, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
+                   s0 = nothing, v0 = nothing, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
     if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Prismatic axis of motion must be a unit vector, got norm(n) = $(norm(n))")
     end
     @named frame_a = Frame()
     @named frame_b = Frame()
     @parameters n[1:3]=_normalize(n) [description = "axis of motion"]
-    n = collect(n)
 
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
@@ -126,11 +125,10 @@ The function returns an System representing the prismatic joint.
         state_priority = state_priority,
         description = "Relative velocity between frame_a and frame_b",
     ]
-    @variables a(t)=0 [
+    @variables a(t) [
         description = "Relative acceleration between frame_a and frame_b",
     ]
-    @variables f(t)=0 [
-        connect = Flow,
+    @variables f(t) [
         description = "Actuation force in direction of joint axis",
     ]
 
@@ -138,15 +136,15 @@ The function returns an System representing the prismatic joint.
            a ~ D(v)
 
            # relationships between kinematic quantities of frame_a and of frame_b
-           collect(frame_b.r_0) .~ collect(frame_a.r_0) + resolve1(ori(frame_a), n * s)
+           frame_b.r_0 ~ frame_a.r_0 .+ resolve1(ori(frame_a), n * s)
            connect_orientation(ori(frame_b), ori(frame_a); iscut)
 
            # Force and torque balance
-           zeros(3) .~ collect(frame_a.f + frame_b.f)
-           zeros(3) .~ collect(frame_a.tau + frame_b.tau + cross(n * s, frame_b.f))
+           zeros(3) ~ frame_a.f + frame_b.f
+           zeros(3) ~ frame_a.tau + frame_b.tau + cross(n * s, frame_b.f)
 
            # d'Alemberts principle
-           f ~ -(n'collect(frame_b.f))[]]
+           f ~ -dot(n,frame_b.f)]
 
     sys = if axisflange
         @named fixed = Translational.Fixed(s0=0)
@@ -178,10 +176,10 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `render = true`: Render the joint in animations
 """
 @component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
-                   z_rel_a_fixed = false, sequence = [1, 2, 3], phi = 0,
-                   phid = 0,
+                   z_rel_a_fixed = false, sequence = [1, 2, 3], phi = zeros(3),
+                   phid = zeros(3),
                    d = 0,
-                   phidd = 0,
+                   phidd = nothing,
                    color = [1, 1, 0, 1],
                    radius = 0.1,
                    quat = false,
@@ -211,14 +209,14 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 
     # torque balance
     if dnum <= 0
-        eqs = [zeros(3) .~ collect(frame_a.tau)
-            zeros(3) .~ collect(frame_b.tau)
-            collect(frame_b.r_0) .~ collect(frame_a.r_0)]
+        eqs = [zeros(3) ~ frame_a.tau
+            zeros(3) ~ frame_b.tau
+            frame_b.r_0 ~ frame_a.r_0]
     else
         fric = d*w_rel
-        eqs = [-fric .~ collect(frame_a.tau)
-        fric .~ resolve1(Rrel, collect(frame_b.tau))
-        collect(frame_b.r_0) .~ collect(frame_a.r_0)]
+        eqs = [-fric ~ frame_a.tau
+        fric ~ resolve1(Rrel, frame_b.tau)
+        frame_b.r_0 ~ frame_a.r_0]
     end
 
     if state
@@ -236,27 +234,27 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
             end
             append!(eqs,
                     [Rrel ~ axes_rotations(sequence, phi, phid)
-                    collect(w_rel) .~ angular_velocity2(Rrel)
-                    collect(phid .~ D.(phi))
-                    collect(phidd .~ D.(phid))])
+                    w_rel ~ angular_velocity2(Rrel)
+                    phid ~ D(phi)
+                    phidd ~ D(phid)])
         end
         if isroot
             append!(eqs,
                     [connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut)
-                     zeros(3) .~ collect(frame_a.f) + resolve1(Rrel, frame_b.f)])
+                     zeros(3) ~ frame_a.f + resolve1(Rrel, frame_b.f)])
         else
             # NOTE: this branch should never happen
             append!(eqs,
                     [connect_orientation(Rrel_inv, inverse_rotation(Rrel); iscut)
                      ori(frame_a) ~ absolute_rotation(frame_b, Rrel_inv)
-                     zeros(3) .~ collect(frame_b.f) + resolve2(Rrel, frame_a.f)])
+                     zeros(3) ~ frame_b.f + resolve2(Rrel, frame_a.f)])
         end
 
     else
         # Spherical joint does not have state
         append!(eqs,
                 #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
-                zeros(3) .~ collect(frame_a.f) +
+                zeros(3) ~ frame_a.f +
                             resolve_relative(frame_b.f, frame_b, frame_a))
         if w_rel_a_fixed || z_rel_a_fixed
             append!(w_rel .~ angular_velocity2(frame_b) - resolve2(frame_b,
@@ -438,9 +436,9 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
     # Measure power for test purposes
     if checkTotalPower
         push!(eqs,
-              totalPower ~ frame_a.f'resolve2(frame_a, D.(frame_a.r_0)) +
-                           frame_b.f'resolve2(frame_b, D.(frame_b.r_0)) +
-                           bearing.f'resolve2(bearing, D.(bearing.r_0)) +
+              totalPower ~ frame_a.f'resolve2(frame_a, D(frame_a.r_0)) +
+                           frame_b.f'resolve2(frame_b, D(frame_b.r_0)) +
+                           bearing.f'resolve2(bearing, D(bearing.r_0)) +
                            frame_a.tau'angular_velocity2(frame_a) +
                            frame_b.tau'angular_velocity2(frame_b) +
                            bearing.tau'angular_velocity2(bearing))
@@ -523,15 +521,15 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 
     eqs = [
            # Cut-forces and cut-torques are zero
-           frame_a.f .~ 0
-           frame_a.tau .~ 0
-           frame_b.f .~ 0
-           frame_b.tau .~ 0
-           D.(r_rel_a) .~ v_rel_a
-           D.(v_rel_a) .~ a_rel_a
+           frame_a.f ~ 0
+           frame_a.tau ~ 0
+           frame_b.f ~ 0
+           frame_b.tau ~ 0
+           D(r_rel_a) ~ v_rel_a
+           D(v_rel_a) ~ a_rel_a
 
            # Kinematic relationships
-           frame_b.r_0 .~ frame_a.r_0 .+ resolve1(frame_a, r_rel_a)]
+           frame_b.r_0 ~ frame_a.r_0 + resolve1(frame_a, r_rel_a)]
 
     if state
         if isroot
@@ -548,8 +546,8 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 
         else
             append!(eqs,
-                    [phid .~ D.(phi)
-                    phidd .~ D.(phid)
+                    [phid ~ D(phi)
+                    phidd ~ D(phid)
                     Rrel ~ axes_rotations(sequence, phi, phid)
                     w_rel_b .~ angular_velocity2(Rrel)])
         end
@@ -621,24 +619,18 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     varw = false
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw, state_priority = -1)
 
-    n = collect(n)
-    ey_a = collect(ey_a)
-    ex_a = collect(ex_a)
-    r_rel_a = collect(r_rel_a)
-    f_c = collect(f_c)
-
     Rb = ori(frame_b)
 
     eqs = [
         Rrel ~ relative_rotation(ori(frame_a), ori(frame_b))
-        r_rel_a .~ resolve2(ori(frame_a), collect(frame_b.r_0 - frame_a.r_0))
+        r_rel_a ~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0)
         0 ~ (ex_a'r_rel_a)[]
         0 ~ (ey_a'r_rel_a)[]
-        collect(frame_a.tau) .~ zeros(3)
-        collect(frame_b.tau) .~ zeros(3)
-        collect(frame_a.f) .~ vec([ex_a ey_a]*f_c)
-        collect(frame_b.f) .~ -resolve2(Rrel, frame_a.f)
-        collect(n) .~ n0
+        frame_a.tau ~ zeros(3)
+        frame_b.tau ~ zeros(3)
+        frame_a.f ~ vec([ex_a ey_a]*f_c)
+        frame_b.f ~ -resolve2(Rrel, frame_a.f)
+        n ~ n0
     ]
     sys = System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
     add_params(sys, pars; name)

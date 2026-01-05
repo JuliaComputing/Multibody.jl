@@ -1,7 +1,7 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
-authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 version = "0.3.2"
+authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
@@ -16,6 +16,7 @@ OrdinaryDiffEqRosenbrock = "43230ef6-c299-4910-a778-202eb28ce4ce"
 OrdinaryDiffEqTsit5 = "b1df2697-797e-41e3-8120-5422d3b24e4a"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StateSelection = "64909d44-ed92-46a8-bbd9-f047dfbdc84b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
@@ -31,21 +32,22 @@ URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
 
 [compat]
 CoordinateTransformations = "0.6"
-DataInterpolations = "8"
+DataInterpolations = "8.6.1"
 FileIO = "1"
 Graphs = "1.0"
-JuliaFormatter = "1.0"
+JuliaFormatter = "1.0, 2.0"
 LightXML = "0.9"
 LinearAlgebra = "1.6"
 MeshIO = "0.4, 0.5"
 MetaGraphsNext = "0.7"
-ModelingToolkit = "10"
-ModelingToolkitStandardLibrary = "2.7.2"
+ModelingToolkit = "11.4"
+ModelingToolkitStandardLibrary = "2.26"
 OrdinaryDiffEqNonlinearSolve = "1.14.1"
 OrdinaryDiffEqRosenbrock = "1.17.0"
 OrdinaryDiffEqTsit5 = "1.5.0"
 Rotations = "1.4"
 SparseArrays = "1"
+StateSelection = "1.1.1"
 StaticArrays = "1"
 julia = "1"
 

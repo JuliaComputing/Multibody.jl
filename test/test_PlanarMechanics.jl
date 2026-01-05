@@ -20,7 +20,7 @@ g = -9.80665
         [],
         [],
         systems = [body])
-    sys = structural_simplify(IRSystem(model))
+    sys = multibody(model)
     unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, unset_vars .=> 0.0, tspan)
 
@@ -50,7 +50,7 @@ end
         t,
         systems = [body, revolute, rod, ceiling])
     model = complete(model)
-    ssys = structural_simplify(IRSystem(model))
+    ssys = multibody(model)
 
     @test length(unknowns(ssys)) == 2
     prob = ODEProblem(ssys, [ssys.body.phi => 0, ssys.body.w => 0], tspan)
@@ -75,7 +75,7 @@ end
         t,
         systems = [revolute, rod, ceiling])
     model = complete(model)
-    ssys = structural_simplify(IRSystem(model))
+    ssys = multibody(model)
 
     @test length(unknowns(ssys)) == 2
     prob = ODEProblem(ssys, [ssys.rod.body.phi => 0, ssys.rod.body.w => 0], tspan)
@@ -126,7 +126,7 @@ end
         ])
     model = complete(model)
     begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
-        ssys = structural_simplify(IRSystem(model))
+        ssys = multibody(model)
         prob = ODEProblem(ssys, [model.body.w => w], tspan)
         sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
 
@@ -303,7 +303,7 @@ end
             revolute2,
             abs_pos_sensor
     ])
-    sys = structural_simplify(IRSystem(model))
+    sys = multibody(model)
     # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, [], (0, 5))
     sol = solve(prob, Rodas5P())
@@ -339,7 +339,7 @@ end
             fixed,
             fixed_translation
         ])
-    sys = structural_simplify(IRSystem(model))
+    sys = multibody(model)
     # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, [sys.body.r => zeros(2); sys.body.v => zeros(2); sys.body.phi => 0.0; sys.body.w => 0.0], (0, 5))
     sol = solve(prob, Rodas5P())
@@ -373,7 +373,7 @@ end
             damper,
             prismatic
         ])
-    sys = structural_simplify(IRSystem(model)) # Yingbo: fails with JSCompiler
+    sys = multibody(model) # Yingbo: fails with JSCompiler
     unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5), [])
     sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
@@ -489,7 +489,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 
     @named model = TestSlipBasedWheel()
     model = complete(model)
-    ssys = structural_simplify(IRSystem(model))
+    ssys = multibody(model)
     display(unknowns(ssys))
     defs = ModelingToolkit.defaults(model)
     prob = ODEProblem(ssys, [
@@ -679,7 +679,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
 #     @named model = PlanarKinematicLoop()
 #     model = complete(model)
-#     ssys = structural_simplify(IRSystem(model))
+#     ssys = multibody(model)
 #     @test length(unknowns(ssys)) <= 6 # ideally 4
 #     display(sort(unknowns(ssys), by=string))
 

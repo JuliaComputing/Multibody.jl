@@ -47,9 +47,9 @@ nothing # hide
 ```
 The `System` is the fundamental model type in ModelingToolkit used for multibody-type models.
 
-Before we can simulate the system, we must perform model check using the function [`multibody`](@ref) and compilation using [`structural_simplify`](@ref)
+Before we can simulate the system, we must perform model check and compilation using the function [`multibody`](@ref)
 ```@example pendulum
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 ```
 This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
 
@@ -94,7 +94,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = System(connections, t, systems = [world, joint, body, damper])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
 
@@ -127,7 +127,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = System(connections, t, systems = [world, joint, body_0, damper, spring])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -154,9 +154,9 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
 
 @named model = System(connections, t, systems = [world, multibody_spring, root_body])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
-defs = Dict(collect(root_body.r_0) .=> [0, 1e-3, 0]) # The spring has a singularity at zero length, so we start some distance away
+defs = Dict(root_body.r_0 .=> [0, 1e-3, 0]) # The spring has a singularity at zero length, so we start some distance away
 
 prob = ODEProblem(ssys, defs, (0, 10))
 
@@ -172,7 +172,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = System(connections, t, systems = [world, multibody_spring, root_body, damper])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
@@ -223,7 +223,7 @@ end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
@@ -278,7 +278,7 @@ rb1 = get_trans(sol, model.upper_arm.frame_b, 1)
 
 If we look at the variable `model.upper_arm.r`, we do not see this rotation!
 ```@example pendulum
-arm_r = sol(1, idxs=collect(model.upper_arm.r))
+arm_r = sol(1, idxs=model.upper_arm.r)
 ```
 The reason is that this variable is resolved in the local `frame_a` and not in the world frame. To transform this variable to the world frame, we may multiply with the rotation matrix of `frame_a` which is always resolved in the world frame:
 ```@example pendulum
@@ -303,13 +303,13 @@ get_trans(sol, model.lower_arm.frame_b, 12)
 
 If we rotate the vector of extent of the lower arm to the world frame, we indeed see that the only coordinate that is nonzero is the $y$ coordinate:
 ```@example pendulum
-get_rot(sol, model.lower_arm.frame_a, 12)*sol(12, idxs=collect(model.lower_arm.r))
+get_rot(sol, model.lower_arm.frame_a, 12)*sol(12, idxs=model.lower_arm.r)
 ```
 
 The reason that the latter vector differs from `get_trans(sol, model.lower_arm.frame_b, 12)` above is that `get_trans(sol, model.lower_arm.frame_b, 12)` has been _translated_ as well. To both translate and rotate `model.lower_arm.r` into the world frame, we must use the full transformation matrix $T_W^A \in SE(3)$:
 
 ```@example pendulum
-r_A = sol(12, idxs=collect(model.lower_arm.r))
+r_A = sol(12, idxs=model.lower_arm.r)
 r_A = [r_A; 1] # Homogeneous coordinates
 
 get_frame(sol, model.lower_arm.frame_a, 12)*r_A
@@ -389,7 +389,7 @@ end
 end
 @named model = CartWithInput()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.0, model.cartpole.revolute.phi => 0.1], (0, 10))
 sol = solve(prob, Tsit5())
 plot(sol, layout=4)
@@ -485,7 +485,7 @@ LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
 end
 @named model = CartWithFeedback()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 12))
 sol = solve(prob, Tsit5())
 cp = model.cartpole
@@ -556,7 +556,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 end
 @named model = CartWithSwingup()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 cp = model.cartpole
 prob = ODEProblem(ssys, [cp.prismatic.s => 0.0, cp.revolute.phi => 0.99pi], (0, 5))
 sol = solve(prob, Tsit5(), dt = 1e-2, adaptive=false)

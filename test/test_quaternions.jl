@@ -31,8 +31,7 @@ connections = [connect(world.frame_b, spring.frame_a)
 model = complete(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = IRSystem(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 @test length(unknowns(ssys)) == 13 # One extra due to quaternions
 D = Differential(t)
 
@@ -40,7 +39,7 @@ D = Differential(t)
 # @test all(isfinite, du)
 
 # prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
-prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 1, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 1, 0]); collect(body.Q̂ .=> [1, 0, 0, 0])], (0, 10))
 sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
 
 doplot() &&
@@ -92,8 +91,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = System(connections, t,
                          systems = [world, joint, body])
-irsys = IRSystem(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [collect(body.w_a) .=> [1,0,0];], (0, 2pi))
@@ -160,8 +158,7 @@ end
 
     @named model = System(connections, t,
                             systems = [world, joint, body])
-    irsys = IRSystem(model)
-    ssys = structural_simplify(irsys)
+    ssys = multibody(model)
 
     D = Differential(t)
     # q0 = randn(4); q0 ./= norm(q0)
@@ -218,8 +215,7 @@ end
 
     @named model = System(connections, t,
                             systems = [world, joint, body, rod])
-    irsys = IRSystem(model)
-    ssys = structural_simplify(irsys)
+    ssys = multibody(model)
 
 
     isdefined(Main, :D) || (D = Differential(t))
@@ -295,7 +291,7 @@ using Multibody.Rotations: params
                                 spring1,
                                 spring2,
                             ])
-    ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
+    ssys = multibody(model)
     # ssys = structural_simplify(model, allow_parameters = false)
     prob = ODEProblem(ssys,
                     [world.g => 9.80665;

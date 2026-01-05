@@ -39,7 +39,7 @@ defs = Dict([
     # collect(D.(cwheel.wheel.angles)) .=> [0, 5, 1]
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = multibody(worldwheel)
 prob = ODEProblem(ssys, defs, (0, 4))
 length(filter(x->occursin("world₊n", string(x)), parameters(worldwheel))) == 3
 # @test prob[collect(worldwheel.world.n)] == [0,0,-1]
@@ -99,7 +99,7 @@ defs = Dict([
     # collect(D.(cwheel.wheel.angles)) .=> [0, 5, 1]
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = multibody(worldwheel)
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol)
@@ -119,7 +119,7 @@ defs = Dict([
     collect(worldwheel.wheel.wheeljoint.der_angles) .=> [0, 0, 0];
 ])
 
-ssys = structural_simplify(IRSystem(worldwheel))
+ssys = multibody(worldwheel)
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
 # plot(sol)
@@ -173,7 +173,7 @@ import ModelingToolkitStandardLibrary.Blocks
 end
 @named model = WheelWithAxis()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [], (0, 4))
 @test_skip begin # Singular linear system
     sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
@@ -216,7 +216,7 @@ end
 
 @named model = DrivingWheelSet()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = multibody(model)
 # display(unknowns(ssys))
 prob = ODEProblem(ssys, [
     model.wheels.wheelSetJoint.prismatic1.s => 0.1

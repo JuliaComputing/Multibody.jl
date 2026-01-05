@@ -26,7 +26,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = System(connections, t, systems = [world; systems])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 5), guesses=unknowns(ssys).=>0.1)
 

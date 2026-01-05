@@ -45,7 +45,7 @@ eqs = [
 ]
 
 @named model = System(eqs, t, systems = [world; systems])
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys,[], (0, 5))
 
 sol = solve(prob, Rodas4())
