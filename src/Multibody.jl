@@ -77,7 +77,7 @@ function get_systemtype(sys)
 end
 
 """
-    subs_constants(model, c=[0, 1]; ssys = structural_simplify(IRSystem(model)), defs = defaults(model))
+    subs_constants(model, c=[0, 1]; ssys = multibody(model), defs = defaults(model))
 
 A value-dependent compile-time optimization. Replace parameters in the model that have a default value contained in `c` with their value.
 
@@ -87,27 +87,27 @@ This performance optimization is primarily beneficial when the runtime of the si
 
 # Drawbacks
 There are two main drawbacks to performing this optimization
-- Parameters that have been replaced **cannot be changed** after the optimization has been performed, without recompiling the model using `structural_simplify`.
+- Parameters that have been replaced **cannot be changed** after the optimization has been performed, without recompiling the model using `multibody`.
 - The value of the repalced parameters are no longer accessible in the solution object. This typically means that **3D animations cannot be rendered** for models with replaced parameters.
 
 # Example usage
 ```
 @named robot = Robot6DOF()
 robot = complete(robot)
-ssys = structural_simplify(IRSystem(robot))
+ssys = multibody(robot)
 ssys = Multibody.subs_constants(model, [0, 1]; ssys)
 ```
 
 If this optimization is to be performed repeatedly for several simulations of the same model, the indices of the substituted parameters can be stored and reused, call the lower-level function `Multibody.find_defaults_with_val` with the same signature as this function to obtain these indices, and then call `JuliaSimCompiler.freeze_parameters(ssys, inds)` with the indices to freeze the parameters.
 """
-function subs_constants(model, c=[0, 1]; ssys = structural_simplify(IRSystem(model)), kwargs...)
+function subs_constants(model, c=[0, 1]; ssys = multibody(model), kwargs...)
     inds = find_defaults_with_val(model, c; ssys, kwargs...)
     # ssys = JuliaSimCompiler.freeze_parameters(ssys, inds)
     @error "JuliaSimCompiler.freeze_parameters is no longer available. This optimization is currently disabled."
     return ssys
 end
 
-function find_defaults_with_val(model, c=[0, 1]; defs = defaults(model), ssys = structural_simplify(IRSystem(model)))
+function find_defaults_with_val(model, c=[0, 1]; defs = defaults(model), ssys = multibody(model))
     kvpairs = map(collect(pairs(defs))) do (key, val)
         if val isa AbstractArray
             string.(collect(key)) .=> collect(val)
