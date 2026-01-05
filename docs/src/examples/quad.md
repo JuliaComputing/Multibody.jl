@@ -76,7 +76,7 @@ Tdpitch = 1
         connect(frame_b, torque3d.frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = nothing, pid=false)
@@ -90,7 +90,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         ) for i = 1:num_arms
     ]
 
-    @variables begin
+    vars = @variables begin
         y_alt(t), [state_priority=2]
         y_roll(t), [state_priority=2]
         y_pitch(t), [state_priority=2]
@@ -153,9 +153,11 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
 
         if pid
             # Mixing matrices for the control signals
-            @parameters Galt[1:4] = ones(4) # The altitude controller affects all thrusters equally
-            @parameters Groll[1:4] = [-1,0,1,0]
-            @parameters Gpitch[1:4] = [0,1,0,-1]
+            pars = @parameters begin
+                Galt[1:4] = ones(4) # The altitude controller affects all thrusters equally
+                Groll[1:4] = [-1,0,1,0]
+                Gpitch[1:4] = [0,1,0,-1]
+            end
 
             @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
             @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
@@ -171,6 +173,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
             ])
             append!(systems, [Calt; Croll; Cpitch])
         else # LQR
+        pars = []
             @named feedback_gain = Blocks.MatrixGain(K = L)
             @named system_outputs = RealOutput(nout=length(outputs))
             @named system_inputs = RealInput(nin=num_arms)
@@ -184,7 +187,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         end
 
     end
-    @named model = System(connections, t; systems)
+    @named model = System(connections, t, vars, pars; systems)
     complete(model)
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)
@@ -194,7 +197,7 @@ ssys = multibody(model)
 op = [
     model.body.v_0[1] => 0;
     model.Calt.int.x => 4;
-    model.cable.joint_2.phi .=> 0.1;
+    collect(model.cable.joint_2.phi) .=> 0.1;
 ]
 
 prob = ODEProblem(ssys, op, (0, 20))
