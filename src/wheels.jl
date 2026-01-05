@@ -566,7 +566,7 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
                             collect(wheeljoint.der_angles) .~ collect(der_angles)]
         )
     end
-    compose(System(equations, t; name), frame_a, wheeljoint, body)
+    compose(System(equations, t, sts, pars; name), frame_a, wheeljoint, body)
 end
 
 """

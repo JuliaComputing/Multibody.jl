@@ -96,6 +96,7 @@ m = multibody(gearTest)
 cm = complete(gearTest)
 
 prob = ODEProblem(m, [
+    cm.motor.Rd4.i => 0,
     cm.gear.gear.phi_b => 0,
     D(cm.gear.gear.phi_b) => 0,
 ], (0.0, 5.0))

@@ -292,7 +292,6 @@ sol = solve(prob, Rodas4(), reltol=1e-8)
     vars = @variables begin
     end
 
-    f = collect(f)
 
     equations = Equation[
         connect(forcea.frame_b, body.frame_a, b0.frame_a)
@@ -301,7 +300,7 @@ sol = solve(prob, Rodas4(), reltol=1e-8)
         forceb.force.u ~ -f
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named testwf = TestWorldForce7()
@@ -342,7 +341,6 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
     vars = @variables begin
     end
 
-    f = collect(f)
 
     equations = Equation[
         connect(forceb.frame_b, forcea.frame_b, b1.frame_a, b0.frame_a)
@@ -350,7 +348,7 @@ sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
         forceb.force.u ~ -f
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named testwf = TestWorldForce8()

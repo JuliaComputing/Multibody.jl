@@ -14,15 +14,14 @@ g = -9.80665
 @testset "Free body" begin
     m = 2
     I = 1
-    @named body = Pl.Body(; m, I)
+    @named body = Pl.Body(; m, I, r=[0,0], v=[0,0], phi=0)
     @named model = System(Equation[],
         t,
         [],
         [],
         systems = [body])
     sys = multibody(model)
-    unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, unset_vars .=> 0.0, tspan)
+    prob = ODEProblem(sys, [], tspan)
 
     sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
     @test SciMLBase.successful_retcode(sol)
@@ -373,10 +372,9 @@ end
             damper,
             prismatic
         ])
-    sys = multibody(model) # Yingbo: fails with JSCompiler
-    unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, unset_vars .=> 0.0, (0, 5), [])
-    sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+    sys = multibody(model)
+    prob = ODEProblem(sys, [], (0, 5))
+    sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
 end
 
@@ -415,7 +413,7 @@ end
     end
     @named model = TestWheel()
     model = complete(model)
-    ssys = structural_simplify((model))
+    ssys = multibody(model)
     defs = Dict(unknowns(ssys) .=> 0)
     prob = ODEProblem(ssys, defs, (0.0, 10.0))
     sol = solve(prob, Rodas5P(), initializealg = BrownFullBasicInit())
@@ -491,7 +489,6 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
     model = complete(model)
     ssys = multibody(model)
     display(unknowns(ssys))
-    defs = ModelingToolkit.defaults(model)
     prob = ODEProblem(ssys, [
         model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
         model.revolute.frame_b.phi => 0,
