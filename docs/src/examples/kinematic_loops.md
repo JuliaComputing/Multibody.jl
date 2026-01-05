@@ -37,6 +37,7 @@ world = Multibody.world
 
 l = 1.5
 systems = @named begin
+    world = World()
     j1 = Revolute(axisflange=true) # We use an axis flange to attach a damper
     j2 = Revolute(axisflange=true)
     j3 = Revolute()
@@ -73,8 +74,7 @@ connections = [
     connect(j2.support, damper2.flange_b)
     
 ]
-@named fourbar = System(connections, t, systems = [world; systems])
-fourbar = complete(fourbar)
+@named fourbar = System(connections, t; systems)
 ssys = multibody(fourbar)
 prob = ODEProblem(ssys, [fourbar.j1.phi => 0.1], (0.0, 10.0))
 sol = solve(prob, FBDF(autodiff=true))

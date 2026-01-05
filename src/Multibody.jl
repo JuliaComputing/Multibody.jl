@@ -159,7 +159,7 @@ export multibody
 """
     multibody(model)
 
-Perform validity checks on the model, such as the precense of exactly one world component in the top level of the model, and transform the model into an `IRSystem` object for passing into `structural_simplify`.
+Perform validity checks on the model, such as the precense of exactly one world component in the top level of the model, and call `mtkcompile` with simplification options suitable for multibody systems.
 """
 function multibody(model, level=0; reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 1), kwargs...)
     found_world = false

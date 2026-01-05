@@ -42,7 +42,6 @@ nothing # hide
 With all components and connections defined, we can create an `System` like so:
 ```@example pendulum
 @named model = System(connections, t, systems=[world, joint, body])
-model = complete(model)
 nothing # hide
 ```
 The `System` is the fundamental model type in ModelingToolkit used for multibody-type models.
@@ -52,6 +51,9 @@ Before we can simulate the system, we must perform model check and compilation u
 ssys = multibody(model)
 ```
 This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
+
+!!! note
+    The function `multibody` internally calls `mtkcompile`, and the user should this not call `mtkcompile` manually for multibody systems.
 
 ```@docs
 multibody
