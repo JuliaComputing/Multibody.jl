@@ -244,7 +244,7 @@ using LinearAlgebra
     vars = @variables begin
     end
 
-    f = collect(f)
+    # f = collect(f)
 
     equations = Equation[
         connect(forcea.frame_b, body.frame_a, b0.frame_a)
@@ -253,7 +253,7 @@ using LinearAlgebra
         forceb.force.u ~ -f
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named testwf = TestWorldForce6()
