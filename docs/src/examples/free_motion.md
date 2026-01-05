@@ -22,7 +22,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
                          systems = [world;
                                     freeMotion;
                                     body])
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -69,7 +69,7 @@ eqs = [connect(bar2.frame_a, world.frame_b)
                              spring2,
                          ])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     body.body.v_0 .=> zeros(3);
     body.body.w_a .=> zeros(3);

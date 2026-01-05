@@ -38,7 +38,7 @@ end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1, model.world.g => 9.81], (0, 12))
 sol = solve(prob, Rodas5P())

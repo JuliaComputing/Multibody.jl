@@ -31,7 +31,7 @@ connections = [connect(world.frame_b, rope.frame_a)
 @named stiff_rope = System(connections, t, systems = [world, body, rope])
 
 stiff_rope = complete(stiff_rope)
-ssys = structural_simplify(multibody(stiff_rope))
+ssys = multibody(stiff_rope)
 prob = ODEProblem(ssys, [], (0, 5))
 sol = solve(prob, Rodas4(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
@@ -55,7 +55,7 @@ connections = [connect(world.frame_b, rope.frame_a)
 @named flexible_rope = System(connections, t, systems = [world, body, rope])
 
 flexible_rope = complete(flexible_rope)
-ssys = structural_simplify(multibody(flexible_rope))
+ssys = multibody(flexible_rope)
 prob = ODEProblem(ssys, [], (0, 8))
 sol = solve(prob, Rodas4(autodiff=false));
 @test SciMLBase.successful_retcode(sol)
@@ -88,7 +88,7 @@ connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
 
 @named mounted_chain = System(connections, t, systems = [systems; world])
 mounted_chain = complete(mounted_chain)
-ssys = structural_simplify(multibody(mounted_chain))
+ssys = multibody(mounted_chain)
 prob = ODEProblem(ssys, [
     chain.link_8.body.w_a .=> [0,0,0];
     chain.link_8.frame_b.r_0 .=> [x_dist,0,0];

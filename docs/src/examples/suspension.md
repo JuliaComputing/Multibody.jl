@@ -153,7 +153,7 @@ end
 
 @named model = SuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 defs = [
     model.body_upright.s => 0.17
@@ -235,7 +235,7 @@ end
 
 @named model = DoubleSuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 defs = [
     model.excited_suspension_r.amplitude => 0.05
@@ -355,7 +355,7 @@ end
 
 @named model = SuspensionWithExcitationAndMass()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [
@@ -413,7 +413,7 @@ end
 
 @named model = HalfCar()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 defs = [
     model.excited_suspension_r.amplitude => 0.015
@@ -495,7 +495,7 @@ end
 
 @named model = FullCar()
 model = complete(model)
-@time "simplification" ssys = structural_simplify(multibody(model))
+@time "simplification" ssys = multibody(model)
 
 defs = [
     model.excited_suspension_br.wheel.wheeljoint.v_small => 1e-3

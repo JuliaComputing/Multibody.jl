@@ -161,7 +161,7 @@ export multibody
 
 Perform validity checks on the model, such as the precense of exactly one world component in the top level of the model, and transform the model into an `IRSystem` object for passing into `structural_simplify`.
 """
-function multibody(model, level=0)
+function multibody(model, level=0; reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 1), kwargs...)
     found_world = false
     found_planar = false
     for subsys in getfield(model, :systems)
@@ -179,7 +179,7 @@ function multibody(model, level=0)
         @warn("World found in a non-top level component ($(nameof(model))) of the model, this may lead to extra equations. Consider using the component `Fixed` instead of `World` in component models.")
     end
     if level == 0
-        return IRSystem(model)
+        return mtkcompile(model; reassemble_alg, kwargs...)
     else
         return nothing
     end

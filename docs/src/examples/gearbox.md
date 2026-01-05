@@ -48,7 +48,7 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
 
 @named model = System(eqs, t, systems = [world; systems])
 cm = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     D(cm.idealGear.phi_b) => 0
     cm.idealGear.phi_b => 0

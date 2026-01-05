@@ -19,7 +19,7 @@ end
 
 @named model = FallingBody()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [], (0, 1))
 sol = solve(prob, Rodas5P())
 
@@ -67,5 +67,5 @@ end
 
 @named model = FallingBodyOuter()
 model = complete(model)
-@test_throws ModelingToolkit.ExtraEquationsSystemException structural_simplify(IRSystem(model))
+@test_throws ModelingToolkit.StateSelection.ExtraEquationsSystemException multibody(model)
 

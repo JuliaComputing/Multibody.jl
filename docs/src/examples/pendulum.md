@@ -47,9 +47,9 @@ nothing # hide
 ```
 The `System` is the fundamental model type in ModelingToolkit used for multibody-type models.
 
-Before we can simulate the system, we must perform model check using the function [`multibody`](@ref) and compilation using [`structural_simplify`](@ref)
+Before we can simulate the system, we must perform model check and compilation using the function [`multibody`](@ref)
 ```@example pendulum
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 ```
 This results in a simplified model with the minimum required variables and equations to be able to simulate the system efficiently. This step rewrites all `connect` statements into the appropriate equations, and removes any redundant variables and equations. To simulate the pendulum, we require two state variables, one for angle and one for angular velocity, we can see above that these state variables have indeed been chosen.
 
@@ -94,7 +94,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = System(connections, t, systems = [world, joint, body, damper])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 10))
 
@@ -127,7 +127,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 
 @named model = System(connections, t, systems = [world, joint, body_0, damper, spring])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 10))
 
@@ -154,7 +154,7 @@ connections = [connect(world.frame_b, multibody_spring.frame_a)
 
 @named model = System(connections, t, systems = [world, multibody_spring, root_body])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 defs = Dict(root_body.r_0 .=> [0, 1e-3, 0]) # The spring has a singularity at zero length, so we start some distance away
 
@@ -172,7 +172,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 
 @named model = System(connections, t, systems = [world, multibody_spring, root_body, damper])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, defs, (0, 10))
 
 sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
@@ -223,7 +223,7 @@ end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1], (0, 10))
 sol = solve(prob, Rodas4())
@@ -389,7 +389,7 @@ end
 end
 @named model = CartWithInput()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.0, model.cartpole.revolute.phi => 0.1], (0, 10))
 sol = solve(prob, Tsit5())
 plot(sol, layout=4)
@@ -485,7 +485,7 @@ LQGSystem(args...; kwargs...) = System(Ce; kwargs...)
 end
 @named model = CartWithFeedback()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [model.cartpole.prismatic.s => 0.1, model.cartpole.revolute.phi => 0.35], (0, 12))
 sol = solve(prob, Tsit5())
 cp = model.cartpole
@@ -556,7 +556,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
 end
 @named model = CartWithSwingup()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 cp = model.cartpole
 prob = ODEProblem(ssys, [cp.prismatic.s => 0.0, cp.revolute.phi => 0.99pi], (0, 5))
 sol = solve(prob, Tsit5(), dt = 1e-2, adaptive=false)

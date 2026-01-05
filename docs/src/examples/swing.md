@@ -65,7 +65,7 @@ end
 end
 @named model = SimpleSwing()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     model.body.v_0 .=> 0;
     model.body.w_a .=> 0;
@@ -137,7 +137,7 @@ end
 
 @named model = Swing()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 d = 10
 dj = 0.01

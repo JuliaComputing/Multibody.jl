@@ -57,7 +57,7 @@ D = Differential(t)
 end
 @named model = PointGrav()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 defs = [
     model.world.mu => 1
     model.world.point_gravity => true # The gravity model is selected here

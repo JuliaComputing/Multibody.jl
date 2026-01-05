@@ -189,7 +189,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 # display(unknowns(ssys))
 op = [
     model.body.v_0[1] => 0;
@@ -264,7 +264,7 @@ L
 ModelingToolkit.get_iv(i::IRSystem) = i.t
 model = RotorCraft(; closed_loop=true, addload=true, L=-L, outputs) # Negate L for negative feedback
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 op = [
     model.body.r_0[2] => 1e-3

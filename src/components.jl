@@ -799,7 +799,7 @@ Rigid body with cylinder shape. The mass properties of the body (mass, center of
     I22 = (mo*(length^2 + 3*radius^2) - mi*(length^2 + 3*innerRadius^2))/12
     m = mo - mi
     R = from_nxy(r, [0, 1, 0])
-    r_cm = r_shape + _normalize(dir)*length2/2
+    r_cm = r_shape .+ _normalize(dir)*length2/2
     I = resolve_dyade1(R, Diagonal([(mo*radius^2 - mi*innerRadius^2)/2, I22, I22]))
 
     systems = @named begin
