@@ -295,7 +295,7 @@ using Multibody.Rotations: params
                                 spring1,
                                 spring2,
                             ])
-    ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
+    ssys = multibody(model)
     # ssys = structural_simplify(model, allow_parameters = false)
     prob = ODEProblem(ssys,
                     [world.g => 9.80665;

@@ -14,7 +14,7 @@ import ModelingToolkit: t_nounits as t, D_nounits as D
 
 @named model = DoublePendulum()
 model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [], (0.0, 10.0))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)

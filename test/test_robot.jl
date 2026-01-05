@@ -52,7 +52,7 @@ mytorque(args...; kwargs...) = ModelingToolkitStandardLibrary.Mechanical.Rotatio
 end
 
 @named motorTest = MotorTest()
-m = structural_simplify(IRSystem(motorTest))
+m = multibody(motorTest)
 # @test length(unknowns(m)) == 3
     # D(motorTest.motor.gear.bearingFriction.w) => 0
 cm = complete(motorTest)
@@ -92,7 +92,7 @@ doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
 end
 
 @named gearTest = GearTest()
-m = structural_simplify(IRSystem(gearTest))
+m = multibody(gearTest)
 cm = complete(gearTest)
 
 prob = ODEProblem(m, [
@@ -125,7 +125,7 @@ doplot() && plot(sol, idxs=cm.motor.phi.phi.u)
 end
 
 @named gearTest = GearTest1()
-m = structural_simplify(IRSystem(gearTest))
+m = multibody(gearTest)
 
 ##
 
@@ -156,7 +156,7 @@ end
 
 @named controllerTest = ControllerTest()
 m = structural_simplify(controllerTest)
-m = structural_simplify(IRSystem(controllerTest))
+m = multibody(controllerTest)
 
 
 ## Test Axis
@@ -197,7 +197,7 @@ end
 
 @named axisTest = AxisTest2()
 # m = structural_simplify(axisTest)
-m = structural_simplify(IRSystem(axisTest)) # Yingbo: solution unstable with IRSystem simplification
+m = multibody(axisTest)
 
 cm = complete(axisTest)
 tspan = (0.0, 5.0)
@@ -271,7 +271,7 @@ u = cm.axis2.controller.PI.ctr_output.u
     # bodeplot(S)
 
 
-    ssys = structural_simplify(IRSystem(oneaxis)) # Yingbo: IRSystem does not handle the DataInterpolations.CubicSpline
+    ssys = multibody(oneaxis)
     # ssys = structural_simplify(oneaxis)
     # cm = oneaxis
     # prob = ODEProblem(ssys, [
@@ -308,7 +308,7 @@ end
     robot = complete(robot)
 
     @time "full robot" begin 
-        @time "structural_simplify" ssys = structural_simplify(IRSystem(robot))
+        @time "multibody" ssys = multibody(robot)
         @time "ODEProblem creation" prob = ODEProblem(ssys, [
             robot.mechanics.r1.phi => deg2rad(-60)
             robot.mechanics.r2.phi => deg2rad(20)
@@ -367,7 +367,7 @@ end
     @info "Testing subs constants"
     @named robot = Robot6DOF()
     robot = complete(robot)
-    ssys = structural_simplify(IRSystem(robot))
+    ssys = multibody(robot)
     ssys = Multibody.subs_constants(robot; ssys)
     prob = ODEProblem(ssys, [
         robot.mechanics.r1.phi => deg2rad(-60)

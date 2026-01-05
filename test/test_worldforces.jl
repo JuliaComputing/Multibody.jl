@@ -40,7 +40,7 @@ end
 
 @named testwf = TestWorldForce1()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -77,7 +77,7 @@ end
 
 @named testwf = TestWorldForce2()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -124,7 +124,7 @@ end
 
 @named testwf = TestWorldForce3()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -168,7 +168,7 @@ end
 
 @named testwf = TestWorldForce4()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -212,7 +212,7 @@ end
 
 @named testwf = TestWorldForce5()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -258,7 +258,7 @@ end
 
 @named testwf = TestWorldForce6()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -306,7 +306,7 @@ end
 
 @named testwf = TestWorldForce7()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -355,7 +355,7 @@ end
 
 @named testwf = TestWorldForce8()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -397,7 +397,7 @@ end
 
 @named testwf = TestWorldForce9()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
@@ -433,7 +433,7 @@ end
 
 @named testwf = TestWorldForce10()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -473,7 +473,7 @@ end
 
 @named testwf = TestWorldForce11()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
@@ -532,7 +532,7 @@ end
 
 @named testwf = TestWorldForce12()
 testwf = complete(testwf)
-ssys = structural_simplify(IRSystem(testwf))
+ssys = multibody(testwf)
 prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
