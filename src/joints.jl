@@ -29,25 +29,27 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
     end
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters n[1:3]=n [description = "axis of rotation"]
     pars = @parameters begin
+        n[1:3] = n, [description = "axis of rotation"]
         radius = radius, [description = "radius of the joint in animations"]
         length = length, [description = "length of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
         render = render, [description = "render the joint in animations"]
     end
-    @variables tau(t) [
-        connect = Flow,
-        # state_priority = 2,
-        description = "Driving torque in direction of axis of rotation",
-    ]
-    @variables phi(t)=phi0 [
-        state_priority = state_priority,
-        description = "Relative rotation angle from frame_a to frame_b",
-    ]
-    @variables w(t)=w0 [state_priority = state_priority, description = "angular velocity (rad/s)"]
-    # Rrel0 = planar_rotation(n, phi0, w0)
+    vars = @variables begin
+        tau(t), [
+            connect = Flow,
+            # state_priority = 2,
+            description = "Driving torque in direction of axis of rotation",
+        ]
+        phi(t)=phi0, [
+            state_priority = state_priority,
+            description = "Relative rotation angle from frame_a to frame_b",
+        ]
+        w(t)=w0, [state_priority = state_priority, description = "angular velocity (rad/s)"]
+        # Rrel0 = planar_rotation(n, phi0, w0)
     # @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
+    end
     
     if isroot
         Rrel = planar_rotation(n, phi, w)
@@ -77,15 +79,15 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
         push!(eqs, axis.phi ~ phi)
         push!(eqs, axis.tau ~ tau)
         # push!(eqs, connect(internalAxis.flange, axis))
-        System(eqs, t; name=:nothing, systems=[frame_a, frame_b, axis, support, fixed])
+        System(eqs, t, vars, pars; name, systems=[frame_a, frame_b, axis, support, fixed])
     else
         # Modelica Revolute uses a ConstantTorque as well as internalAxis = Rotational.InternalSupport(tau=tau), but it seemed more complicated than required and I couldn't get it to work, likely due to the `input` semantics of modelica not having an equivalent in MTK, so the (tau=tau) input argument caused problems.
         # @named constantTorque = Rotational.ConstantTorque(tau_constant=0, use_support=false) 
         # push!(eqs, connect(constantTorque.flange, internalAxis.flange))
         push!(eqs, tau ~ 0)
-        System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
+        System(eqs, t, vars, pars; name, systems=[frame_a, frame_b])
     end
-    add_params(sys, pars; name)
+    # add_params(sys, pars; name)
 end
 
 """
@@ -477,25 +479,21 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 """
 @component function FreeMotion(; name, state = true, sequence = [1, 2, 3], isroot = true,
                     quat = false,
-                    w_rel_a_fixed = false, z_rel_a_fixed = false, phi = 0,
+                    w_rel_a_fixed = false, z_rel_a_fixed = false,
                     iscut = false,
                     state_priority = 4,
-                    phid = 0,
+                    phi = state ? zeros(3) : nothing,
+                    phid = state ? zeros(3) : nothing,
                     phidd = nothing,
-                    w_rel_b = 0,
-                    r_rel_a = 0,
-                    v_rel_a = 0,
+                    w_rel_b = state ? zeros(3) : nothing,
+                    r_rel_a = state ? zeros(3) : nothing,
+                    v_rel_a = state ? zeros(3) : nothing,
                     a_rel_a = nothing)
     @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
-    @variables begin
-        (phi(t)[1:3] = phi),
-        [state_priority = state_priority, description = "3 angles to rotate frame_a into frame_b"]
-        (phid(t)[1:3] = phid), [state_priority = state_priority, description = "Derivatives of phi"]
-        (phidd(t)[1:3] = phidd),
-        [state_priority = state_priority, description = "Second derivatives of phi"]
+    vars = @variables begin
         (w_rel_b(t)[1:3] = w_rel_b),
         [
             state_priority = quat ? state_priority : 1.0,
@@ -521,10 +519,10 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 
     eqs = [
            # Cut-forces and cut-torques are zero
-           frame_a.f ~ 0
-           frame_a.tau ~ 0
-           frame_b.f ~ 0
-           frame_b.tau ~ 0
+           frame_a.f ~ zeros(3)
+           frame_a.tau ~ zeros(3)
+           frame_b.f ~ zeros(3)
+           frame_b.tau ~ zeros(3)
            D(r_rel_a) ~ v_rel_a
            D(v_rel_a) ~ a_rel_a
 
@@ -543,8 +541,13 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
 
         if quat
             append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
-
         else
+            morevars = @variables begin
+                (phi(t)[1:3] = phi), [state_priority = state_priority, description = "3 angles to rotate frame_a into frame_b"]
+                (phid(t)[1:3] = phid), [state_priority = state_priority, description = "Derivatives of phi"]
+                (phidd(t)[1:3] = phidd), [state_priority = state_priority, description = "Second derivatives of phi"]
+            end
+            append!(vars, morevars)
             append!(eqs,
                     [phid ~ D(phi)
                     phidd ~ D(phid)
@@ -560,11 +563,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
     end
     if state && !isroot
-        compose(System(eqs, t; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
+        compose(System(eqs, t, vars, []; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
     elseif state
-        compose(System(eqs, t; name), frame_a, frame_b, Rrel_f, )
+        compose(System(eqs, t, vars, []; name), frame_a, frame_b, Rrel_f, )
     else
-        compose(System(eqs, t; name), frame_a, frame_b)
+        compose(System(eqs, t, vars, []; name), frame_a, frame_b)
     end
 end
 
@@ -624,8 +627,8 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     eqs = [
         Rrel ~ relative_rotation(ori(frame_a), ori(frame_b))
         r_rel_a ~ resolve2(ori(frame_a), frame_b.r_0 - frame_a.r_0)
-        0 ~ (ex_a'r_rel_a)[]
-        0 ~ (ey_a'r_rel_a)[]
+        0 ~ dot(ex_a, r_rel_a)
+        0 ~ dot(ey_a, r_rel_a)
         frame_a.tau ~ zeros(3)
         frame_b.tau ~ zeros(3)
         frame_a.f ~ vec([ex_a ey_a]*f_c)

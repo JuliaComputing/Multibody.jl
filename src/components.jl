@@ -50,7 +50,7 @@ If a connection to the world is needed in a component model, use [`Fixed`](@ref)
 # Arguments
 - `name`: Name of the world component
 - `render`: Render the component in animations
-- `point_gravity`: If `true`, the gravity is always opinting towards a single point in space. If `false`, the gravity is always pointing in the same direction `n`.
+- `point_gravity`: If `true`, the gravity is always pointing towards a single point in space, the origin. If `false`, the gravity is always pointing in the same direction `n`.
 - `n`: Gravity direction unit vector, defaults to [0, -1, 0], only applicable if `point_gravity = false`
 - `g`: Gravitational acceleration, defaults to 9.80665
 - `mu`: Gravity field constant, defaults to 3.986004418e14, only applicable to point gravity
@@ -225,7 +225,7 @@ end
         frame_a = Frame()
         housing_frame_a = Frame()
     end
-    @parameters begin
+    pars = @parameters begin
         phi0 = phi0, [
                    description = "Fixed offset angle of housing"]
         n[1:3] = n,
@@ -233,13 +233,13 @@ end
                      description = "Axis of rotation = axis of support torque (resolved in frame_a)",
                  ]
     end
-    @variables begin (housing_tau(t)[1:3]), [
+    vars = @variables begin (housing_tau(t)[1:3]), [
                          description = "Torque",
                      ] end
     eqs = [housing_tau ~ -n * flange_b.tau
            flange_b.phi ~ phi0
            connect(housing_frame_a, frame_a)]
-    compose(System(eqs, t; name), systems...)
+    compose(System(eqs, t, vars, pars; name), systems...)
 end
 
 """
@@ -252,10 +252,10 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
 @component function FixedTranslation(; name, r, radius=0.02f0, color = purple, render = true)
     @named frame_a = Frame()
     @named frame_b = Frame()
-    @parameters r[1:3]=r [
-        description = "position vector from frame_a to frame_b, resolved in frame_a",
-    ]
-    @parameters begin
+    pars = @parameters begin
+        r[1:3]=r, [
+            description = "position vector from frame_a to frame_b, resolved in frame_a",
+        ]
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations (RGBA)"]
         render = render, [description = "Render the component in animations"]
@@ -268,7 +268,6 @@ Can be thought of as a massless rod. For a massive rod, see [`BodyShape`](@ref) 
                    ori(frame_b) ~ ori(frame_a)
                    zeros(3) ~ fa + fb
                    zeros(3) ~ taua + taub + cross(r, fb)]
-    pars = [r; radius; color; render]
     vars = []
     compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
 end
@@ -525,6 +524,10 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     I_32 = 0,
     kwargs...
     )
+
+
+    shapecode = encode(shapefile)
+    shape = encode(shape)
     pars = @parameters begin
         m = m, [description = "mass"]
         I_11=I_11, [description = "Element (1,1) of inertia tensor"]
@@ -533,32 +536,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         I_21=I_21, [description = "Element (2,1) of inertia tensor"]
         I_31=I_31, [description = "Element (3,1) of inertia tensor"]
         I_32=I_32, [description = "Element (3,2) of inertia tensor"]
-    end
-    systems = @named begin
-        translation = FixedTranslation(r = r, render=false)
-        translation_cm = FixedTranslation(r = r_cm, render=false)
-        body = Body(; m, r_cm, I_11, I_22, I_33, I_21, I_31, I_32, render=false, kwargs...)
-        frame_a = Frame()
-        frame_b = Frame()
-        frame_cm = Frame()
-    end
 
-    # NOTE: these parameters should be defined before the `systems` block above, but due to bugs in MTK/JSC with higher-order array parameters we cannot do that. We still define the parameters so that they are available to make animations
-    @variables r_0(t)[1:3] [
-        state_priority = 2,
-        description = "Position vector from origin of world frame to origin of frame_a",
-    ]
-    @variables v_0(t)[1:3] [ guess=0,
-        state_priority = 2,
-        description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
-    ]
-    @variables a_0(t)[1:3] [ guess=0,
-        description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
-    ]
-
-    shapecode = encode(shapefile)
-    shape = encode(shape)
-    more_pars = @parameters begin
         r[1:3]=r, [
             description = "Vector from frame_a to frame_b resolved in frame_a",
         ]
@@ -571,8 +549,30 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         height = height, [description = """Height of the body in animations (if shape = "box")"""]
         shape[1:length(shape)] = shape
     end
+    systems = @named begin
+        translation = FixedTranslation(r = r, render=false)
+        translation_cm = FixedTranslation(r = r_cm, render=false)
+        body = Body(; m, r_cm, I_11, I_22, I_33, I_21, I_31, I_32, render=false, kwargs...)
+        frame_a = Frame()
+        frame_b = Frame()
+        frame_cm = Frame()
+    end
 
-    pars = collect_all([pars; more_pars])
+    # NOTE: these parameters should be defined before the `systems` block above, but due to bugs in MTK/JSC with higher-order array parameters we cannot do that. We still define the parameters so that they are available to make animations
+    vars = @variables begin
+        r_0(t)[1:3], [
+            state_priority = 2,
+            description = "Position vector from origin of world frame to origin of frame_a",
+        ]
+        v_0(t)[1:3], [ guess=0,
+            state_priority = 2,
+            description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
+        ]
+        a_0(t)[1:3], [ guess=0,
+            description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
+        ]
+    end
+
 
     eqs = [r_0 ~ frame_a.r_0
            v_0 ~ D(r_0)
@@ -582,7 +582,7 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
            connect(frame_a, body.frame_a)
            connect(frame_cm, translation_cm.frame_b)
            ]
-    System(eqs, t, [r_0; v_0; a_0], pars; name, systems)
+    System(eqs, t, vars, pars; name, systems)
 end
 
 
@@ -906,125 +906,3 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
 
     return System(equations, t, vars, pars; name, systems)
 end
-
-# function BodyBox2(;
-#         r = [1, 0, 0],
-#         # r_shape = [0, 0, 0],
-#         width_dir = [0,1,0],
-#         # length_dir = _normalize(r - r_shape),
-#         # length = _norm(r - r_shape),
-
-#         # r,
-#         r_shape = nothing,
-#         length = nothing,
-#         length_dir = nothing,
-#         # width_dir = nothing,
-#         width = nothing,
-#         height = nothing,
-#         inner_width = nothing,
-#         inner_height = nothing,
-#         density = nothing,
-#         color = nothing,
-#         name,
-# )
-
-    
-#     # @parameters r[1:3]=something(r, [1,0,0]), [
-#     #         description = "Vector from frame_a to frame_b resolved in frame_a",
-#     #     ]
-#     r = collect(r)
-#     @parameters r_shape[1:3]=something(r_shape, zeros(3)), [
-#             description = "Vector from frame_a to box origin, resolved in frame_a",
-#         ]
-#     r_shape = collect(r_shape)
-#     @parameters length_dir[1:3] = something(length_dir, _norm(r - r_shape)), [
-#             description = "Vector in length direction of box, resolved in frame_a",
-#         ]
-#     length_dir = collect(length_dir)
-#     # @parameters width_dir[1:3] = something(width_dir, [0,1,0]), [ 
-#     #         description = "Vector in width direction of box, resolved in frame_a",
-#     #     ]
-#     width_dir = collect(width_dir)
-#     @parameters color[1:4] = something(color, purple), [
-#             description = "Color of box in animations"
-#         ]
-#     color = collect(color)
-#     pars = @parameters begin
-#         length = something(length, _norm(r - r_shape)), [
-#             description = "Length of box",
-#         ]
-#         width = something(width, 0.3*length), [
-#             description = "Width of box",
-#         ]
-#         height = something(height, width), [
-#             description = "Height of box",
-#         ]
-#         inner_width = something(inner_width, 0), [
-#             description = "Width of inner box surface (0 <= inner_width <= width)",
-#         ]
-#         inner_height = something(inner_height, inner_width), [
-#             description = "Height of inner box surface (0 <= inner_height <= height)",
-#         ]
-#         density = something(density, 7700), [
-#             description = "Density of box (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
-#         ]
-#     end
-#     pars = [
-#         pars; 
-#         # collect(r);
-#         collect(r_shape);
-#         collect(length_dir);
-#         # collect(width_dir);
-#         collect(color);
-#     ]
-#     mo = density*length*width*height
-#     mi = density*length*inner_width*inner_height
-#     m = mo - mi
-#     R = from_nxy(r, width_dir) 
-#     r_cm = r_shape + _normalize(length_dir)*length/2
-#     r_cm = collect(r_cm)
-
-#     I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
-#     I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
-#     I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
-#     I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12)) 
-
-#     @variables begin
-#         r_0(t)[1:3]=zeros(3), [
-#             state_priority = 2,
-#             description = "Position vector from origin of world frame to origin of frame_a",
-#         ]
-#         v_0(t)[1:3]=zeros(3), [
-#             state_priority = 2,
-#             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
-#         ]
-#         a_0(t)[1:3]=zeros(3), [
-#             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
-#         ]
-#     end
-#     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
-#     vars = [r_0; v_0; a_0]
-
-#     systems = @named begin
-#         frame_a = Frame()
-#         frame_b = Frame()
-#         translation = FixedTranslation(r = r)
-#         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
-#     end
-
-#     equations = Equation[
-#         r_0[1] ~ ((frame_a.r_0)[1])
-#         r_0[2] ~ ((frame_a.r_0)[2])
-#         r_0[3] ~ ((frame_a.r_0)[3])
-#         v_0[1] ~ D(r_0[1])
-#         v_0[2] ~ D(r_0[2])
-#         v_0[3] ~ D(r_0[3])
-#         a_0[1] ~ D(v_0[1])
-#         a_0[2] ~ D(v_0[2])
-#         a_0[3] ~ D(v_0[3])
-#         connect(frame_a, translation.frame_a)
-#         connect(frame_b, translation.frame_b)
-#         connect(frame_a, body.frame_a)
-#     ]
-#     System(equations, t, vars, pars; name, systems)
-# end
