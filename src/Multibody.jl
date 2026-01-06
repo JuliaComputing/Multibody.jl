@@ -348,7 +348,7 @@ include("frames.jl")
 export PartialTwoFrames
 include("interfaces.jl")
 
-export World, world, Mounting1D, Fixed, Position, Pose, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, BodyBox, Rope
+export World, world, Mounting1D, Fixed, Position, Pose, FixedTranslation, FixedRotation, Body, BodyShape, BodyCylinder, BodyBox, Rope, CraigBampton
 include("components.jl")
 
 export Revolute, Prismatic, Planar, Spherical, Universal,

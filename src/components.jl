@@ -907,6 +907,242 @@ Rigid body with box shape. The mass properties of the body (mass, center of mass
     return System(equations, t, vars, pars; name, systems)
 end
 
+"""
+    CraigBampton(; name, boundary_positions, M_BB, M_BI, M_II, K_BB, K_II, ζ, ω)
+
+A flexible body component using Craig-Bampton reduced-order modeling. This allows
+including reduced flexible body models derived from external FEM tools.
+
+The Craig-Bampton method reduces a FEM model by partitioning degrees of freedom into:
+- **Boundary DOFs (q_B)**: Interface nodes that connect to other multibody components
+- **Internal DOFs**: Reduced to modal coordinates η
+
+The reduced equations of motion are:
+```
+[M_BB  M_BI] [q̈_B]   [C_BB  0  ] [q̇_B]   [K_BB  0  ] [q_B]   [f_B]
+[M_IB  M_II] [η̈  ] + [0    C_II] [η̇  ] + [0    K_II] [η  ] = [f_I]
+```
+
+where `C_II = diag(2*ζ_i*ω_i*m_ii)` provides modal damping.
+
+# Arguments
+- `boundary_positions`: Vector of 3-element vectors, positions of boundary nodes in body reference frame.
+  The first boundary corresponds to `frame_a`, additional boundaries create `frame_b`, `frame_c`, etc.
+- `M_BB`: Boundary mass matrix `[6*n_boundaries × 6*n_boundaries]`
+- `M_BI`: Boundary-internal coupling mass matrix `[6*n_boundaries × n_modes]`
+- `M_II`: Internal/modal mass matrix `[n_modes × n_modes]` (often diagonal for mass-normalized modes)
+- `K_BB`: Boundary stiffness matrix `[6*n_boundaries × 6*n_boundaries]`
+- `K_II`: Internal/modal stiffness matrix `[n_modes × n_modes]` (diagonal = ω² for mass-normalized modes)
+- `ζ`: Vector of modal damping ratios `[n_modes]`
+- `ω`: Vector of modal frequencies in rad/s `[n_modes]`, used to compute damping matrix
+
+Each boundary has 6 DOFs: 3 translations + 3 rotations (small angle approximation).
+
+# Connectors
+- `frame_a`: Reference boundary frame (first boundary position)
+- `frame_b`, `frame_c`, ...: Additional boundary frames
+
+# State Variables
+- `η[1:n_modes]`: Modal amplitudes
+- `η̇[1:n_modes]`: Modal velocities
+- `q_B[7:6*n_boundaries]`: Boundary deformations for boundaries 2..n (relative to frame_a)
+- `q̇_B[7:6*n_boundaries]`: Boundary deformation velocities
+
+The first boundary (frame_a) serves as the reference with zero deformation. Body motion
+comes from how frame_a is connected externally (e.g., to joints or world).
+
+# Example
+```julia
+# Simple 2-boundary flexible beam (10 modes)
+n_modes = 10
+n_boundaries = 2
+n_bdof = 12  # 6 DOFs per boundary
+
+# Mass-normalized mode shapes give M_II = I, K_II = diag(ω²)
+M_BB = [...] # From FEM export
+M_BI = [...] # From FEM export
+M_II = diagm(ones(n_modes))
+K_II = diagm(ω.^2)
+ζ = 0.02 * ones(n_modes)  # 2% damping all modes
+ω = [10, 25, 40, ...]     # Modal frequencies (rad/s)
+
+@named flexible_beam = CraigBampton(
+    boundary_positions = [[0,0,0], [1,0,0]],  # Beam ends
+    M_BB = M_BB, M_BI = M_BI, M_II = M_II,
+    K_BB = zeros(n_bdof, n_bdof), K_II = K_II,
+    ζ = ζ, ω = ω
+)
+
+# Connect to world at frame_a, attach payload at frame_b
+connections = [
+    connect(world.frame_b, flexible_beam.frame_a)
+    connect(flexible_beam.frame_b, payload.frame_a)
+]
+```
+
+See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
+"""
+@component function CraigBampton(;
+    name,
+    boundary_positions,  # Vector of 3-vectors: [[x1,y1,z1], [x2,y2,z2], ...]
+    M_BB,               # Boundary mass matrix [6*n_b × 6*n_b]
+    M_BI,               # Boundary-internal coupling [6*n_b × n_modes]
+    M_II,               # Internal modal mass [n_modes × n_modes]
+    K_BB,               # Boundary stiffness [6*n_b × 6*n_b]
+    K_II,               # Internal modal stiffness [n_modes × n_modes]
+    ζ,                  # Modal damping ratios [n_modes]
+    ω,                  # Modal frequencies for computing damping [n_modes]
+    render = true,
+    color = [0.6, 0.6, 0.8, 1.0],
+)
+    n_boundaries = length(boundary_positions)
+    n_modes = size(M_II, 1)
+    n_bdof = 6 * n_boundaries  # 6 DOFs per boundary (3 trans + 3 rot)
+
+    @assert size(M_BB) == (n_bdof, n_bdof) "M_BB must be $(n_bdof)×$(n_bdof)"
+    @assert size(M_BI) == (n_bdof, n_modes) "M_BI must be $(n_bdof)×$(n_modes)"
+    @assert size(M_II) == (n_modes, n_modes) "M_II must be $(n_modes)×$(n_modes)"
+    @assert size(K_BB) == (n_bdof, n_bdof) "K_BB must be $(n_bdof)×$(n_bdof)"
+    @assert size(K_II) == (n_modes, n_modes) "K_II must be $(n_modes)×$(n_modes)"
+    @assert length(ζ) == n_modes "ζ must have length $(n_modes)"
+    @assert length(ω) == n_modes "ω must have length $(n_modes)"
+
+    # Compute modal damping matrix C_II = diag(2*ζ*ω*m_ii)
+    C_II_diag = 2 .* ζ .* ω .* diag(M_II)
+
+    # Create frames - frame_a is reference, then frame_b, frame_c, etc.
+    @named frame_a = Frame()
+    frames = Any[frame_a]
+    if n_boundaries >= 2
+        @named frame_b = Frame()
+        push!(frames, frame_b)
+    end
+    if n_boundaries >= 3
+        @named frame_c = Frame()
+        push!(frames, frame_c)
+    end
+    if n_boundaries >= 4
+        @named frame_d = Frame()
+        push!(frames, frame_d)
+    end
+    if n_boundaries >= 5
+        @named frame_e = Frame()
+        push!(frames, frame_e)
+    end
+    if n_boundaries >= 6
+        @named frame_f = Frame()
+        push!(frames, frame_f)
+    end
+    if n_boundaries > 6
+        error("CraigBampton currently supports at most 6 boundary frames")
+    end
+
+    # Store matrices as parameters
+    pars = @parameters begin
+        render = render, [description = "Render the component in animations"]
+        color[1:4] = color, [description = "Color in animations (RGBA)"]
+    end
+
+    # State variables - modal coordinates
+    @variables begin
+        η(t)[1:n_modes] = zeros(n_modes), [description = "Modal amplitudes"]
+        η̇(t)[1:n_modes] = zeros(n_modes), [description = "Modal velocities"]
+    end
+
+    # Boundary deformation variables for boundaries 2..n (boundary 1 = frame_a is reference)
+    # Each boundary has 6 DOFs: [ux, uy, uz, θx, θy, θz]
+    n_flex_dof = 6 * (n_boundaries - 1)  # DOFs for flexible deformations (excluding reference)
+
+    @variables begin
+        q_flex(t)[1:n_flex_dof] = zeros(n_flex_dof), [description = "Boundary deformations (boundaries 2..n)"]
+        q̇_flex(t)[1:n_flex_dof] = zeros(n_flex_dof), [description = "Boundary deformation velocities"]
+    end
+
+    # Reference frame orientation
+    R_a = ori(frame_a)
+
+    # Build equation arrays
+    eqs = Equation[]
+
+    # Kinematic equations for states
+    append!(eqs, D.(collect(η)) .~ collect(η̇))
+    if n_flex_dof > 0
+        append!(eqs, D.(collect(q_flex)) .~ collect(q̇_flex))
+    end
+
+    # Build full q_B vector: [zeros(6); q_flex] (frame_a deformation is zero)
+    # q_B represents deformations in the body frame (frame_a coordinates)
+    q_B_full = vcat(zeros(Num, 6), collect(q_flex))
+    q̇_B_full = vcat(zeros(Num, 6), collect(q̇_flex))
+
+    # Second derivatives for dynamics
+    η_ddot = D.(collect(η̇))
+    q̈_B_full = vcat(zeros(Num, 6), D.(collect(q̇_flex)))
+
+    # Modal dynamics equation:
+    # M_II * η̈ + C_II * η̇ + K_II * η = -M_BI' * q̈_B
+    # Note: M_IB = M_BI' (symmetric coupling)
+    modal_forcing = -M_BI' * q̈_B_full
+    for i in 1:n_modes
+        lhs = sum(M_II[i,j] * η_ddot[j] for j in 1:n_modes) +
+              C_II_diag[i] * η̇[i] +
+              sum(K_II[i,j] * η[j] for j in 1:n_modes)
+        push!(eqs, lhs ~ modal_forcing[i])
+    end
+
+    # Boundary force equations:
+    # The generalized forces at boundaries from CB dynamics:
+    # f_B = K_BB * q_B + M_BB * q̈_B + M_BI * η̈
+    f_B = K_BB * q_B_full + M_BB * q̈_B_full + M_BI * η_ddot
+
+    # Frame kinematics and force balance for each boundary
+    for i in 1:n_boundaries
+        frame_i = frames[i]
+        p_i = collect(boundary_positions[i])  # Undeformed position in body frame
+
+        # Index into q_B for this boundary's DOFs
+        idx_start = 6*(i-1) + 1
+        idx_end = 6*i
+
+        if i == 1
+            # frame_a is the reference - its deformation is zero
+            # Position equation: frame_a position is determined by external connections
+            # No additional position constraint needed for frame_a
+
+            # Force balance for frame_a
+            f_i = f_B[idx_start:idx_start+2]      # Forces in body frame
+            τ_i = f_B[idx_start+3:idx_end]        # Torques in body frame
+
+            # The reaction force at frame_a equals the internal CB forces (resolved to world frame)
+            append!(eqs, collect(frame_a.f) .~ resolve1(R_a, f_i))
+            append!(eqs, collect(frame_a.tau) .~ resolve1(R_a, τ_i))
+        else
+            # Other boundaries have position determined by deformation
+            flex_idx = 6*(i-2) + 1  # Index into q_flex
+            u_i = q_flex[flex_idx:flex_idx+2]      # Translation deformation
+            θ_i = q_flex[flex_idx+3:flex_idx+5]    # Rotation deformation (small angles)
+
+            # Position: r_i = r_a + R_a * (p_i + u_i)
+            r_rel = p_i + collect(u_i)  # Relative position in body frame
+            append!(eqs, collect(frame_i.r_0) .~ collect(frame_a.r_0) + resolve1(R_a, r_rel))
+
+            # Orientation: For small rotations, use same orientation as frame_a
+            # (Full small rotation: R_i = R_a * (I + skew(θ_i)), but for simplicity use R_a)
+            append!(eqs, ori(frame_i) ~ R_a)
+
+            # Force balance for this boundary
+            f_i = f_B[idx_start:idx_start+2]      # Forces in body frame
+            τ_i = f_B[idx_start+3:idx_end]        # Torques in body frame
+
+            # Include moment from offset for force balance
+            append!(eqs, collect(frame_i.f) .~ resolve1(R_a, f_i))
+            append!(eqs, collect(frame_i.tau) .~ resolve1(R_a, τ_i))
+        end
+    end
+
+    System(eqs, t, [η; η̇; q_flex; q̇_flex], pars; name, systems=frames)
+end
+
 # function BodyBox2(;
 #         r = [1, 0, 0],
 #         # r_shape = [0, 0, 0],
