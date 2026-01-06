@@ -1143,124 +1143,90 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
     System(eqs, t, [η; η̇; q_flex; q̇_flex], pars; name, systems=frames)
 end
 
-# function BodyBox2(;
-#         r = [1, 0, 0],
-#         # r_shape = [0, 0, 0],
-#         width_dir = [0,1,0],
-#         # length_dir = _normalize(r - r_shape),
-#         # length = _norm(r - r_shape),
+#=
+CB TODO
+The "simplified" version has these limitations:
 
-#         # r,
-#         r_shape = nothing,
-#         length = nothing,
-#         length_dir = nothing,
-#         # width_dir = nothing,
-#         width = nothing,
-#         height = nothing,
-#         inner_width = nothing,
-#         inner_height = nothing,
-#         density = nothing,
-#         color = nothing,
-#         name,
-# )
+  1. frame_a is the fixed reference - body motion comes entirely from external connections to frame_a
+  2. No rigid body dynamics - the CB component doesn't have its own mass/inertia for overall body motion
+  3. No coupling between rigid motion and flexible modes - Coriolis/centrifugal effects are ignored
 
-    
-#     # @parameters r[1:3]=something(r, [1,0,0]), [
-#     #         description = "Vector from frame_a to frame_b resolved in frame_a",
-#     #     ]
-#     r = collect(r)
-#     @parameters r_shape[1:3]=something(r_shape, zeros(3)), [
-#             description = "Vector from frame_a to box origin, resolved in frame_a",
-#         ]
-#     r_shape = collect(r_shape)
-#     @parameters length_dir[1:3] = something(length_dir, _norm(r - r_shape)), [
-#             description = "Vector in length direction of box, resolved in frame_a",
-#         ]
-#     length_dir = collect(length_dir)
-#     # @parameters width_dir[1:3] = something(width_dir, [0,1,0]), [ 
-#     #         description = "Vector in width direction of box, resolved in frame_a",
-#     #     ]
-#     width_dir = collect(width_dir)
-#     @parameters color[1:4] = something(color, purple), [
-#             description = "Color of box in animations"
-#         ]
-#     color = collect(color)
-#     pars = @parameters begin
-#         length = something(length, _norm(r - r_shape)), [
-#             description = "Length of box",
-#         ]
-#         width = something(width, 0.3*length), [
-#             description = "Width of box",
-#         ]
-#         height = something(height, width), [
-#             description = "Height of box",
-#         ]
-#         inner_width = something(inner_width, 0), [
-#             description = "Width of inner box surface (0 <= inner_width <= width)",
-#         ]
-#         inner_height = something(inner_height, inner_width), [
-#             description = "Height of inner box surface (0 <= inner_height <= height)",
-#         ]
-#         density = something(density, 7700), [
-#             description = "Density of box (e.g., steel: 7700 .. 7900, wood : 400 .. 800)",
-#         ]
-#     end
-#     pars = [
-#         pars; 
-#         # collect(r);
-#         collect(r_shape);
-#         collect(length_dir);
-#         # collect(width_dir);
-#         collect(color);
-#     ]
-#     mo = density*length*width*height
-#     mi = density*length*inner_width*inner_height
-#     m = mo - mi
-#     R = from_nxy(r, width_dir) 
-#     r_cm = r_shape + _normalize(length_dir)*length/2
-#     r_cm = collect(r_cm)
+  To lift these restrictions and create a floating frame of reference implementation:
 
-#     I11 = mo*(width^2 + height^2) - mi*(inner_width^2 + inner_height^2)
-#     I22 = mo*(length^2 + height^2) - mi*(length^2 + inner_height^2)
-#     I33 = mo*(length^2 + width^2) - mi*(length^2 + inner_width^2)
-#     I = resolve_dyade1(R, Diagonal([I11, I22, I33] ./ 12)) 
+  Key Changes Needed
 
-#     @variables begin
-#         r_0(t)[1:3]=zeros(3), [
-#             state_priority = 2,
-#             description = "Position vector from origin of world frame to origin of frame_a",
-#         ]
-#         v_0(t)[1:3]=zeros(3), [
-#             state_priority = 2,
-#             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
-#         ]
-#         a_0(t)[1:3]=zeros(3), [
-#             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
-#         ]
-#     end
-#     r_0, v_0, a_0 = collect.((r_0, v_0, a_0))
-#     vars = [r_0; v_0; a_0]
+  1. Add Rigid Body States
 
-#     systems = @named begin
-#         frame_a = Frame()
-#         frame_b = Frame()
-#         translation = FixedTranslation(r = r)
-#         body = Body(; m, r_cm, I_11 = I[1,1], I_22 = I[2,2], I_33 = I[3,3], I_21 = I[2,1], I_31 = I[3,1], I_32 = I[3,2])
-#     end
+  Like the Body component with isroot=true:
 
-#     equations = Equation[
-#         r_0[1] ~ ((frame_a.r_0)[1])
-#         r_0[2] ~ ((frame_a.r_0)[2])
-#         r_0[3] ~ ((frame_a.r_0)[3])
-#         v_0[1] ~ D(r_0[1])
-#         v_0[2] ~ D(r_0[2])
-#         v_0[3] ~ D(r_0[3])
-#         a_0[1] ~ D(v_0[1])
-#         a_0[2] ~ D(v_0[2])
-#         a_0[3] ~ D(v_0[3])
-#         connect(frame_a, translation.frame_a)
-#         connect(frame_b, translation.frame_b)
-#         connect(frame_a, body.frame_a)
-#     ]
-#     System(equations, t, vars, pars; name, systems)
-# end
+  @variables begin
+      # Body reference frame position/velocity in world
+      r_0(t)[1:3]      # Position of body frame origin
+      v_0(t)[1:3]      # Translational velocity
+
+      # Orientation (quaternions or Euler angles)
+      Q(t)[1:4]        # Quaternion orientation
+      # OR phi(t)[1:3] for Euler angles
+
+      w_a(t)[1:3]      # Angular velocity in body frame
+  end
+
+  2. Extended Mass Matrix
+
+  The full floating-frame CB equations are:
+
+  [M_rr  M_rf  M_rB] [q̈_r]   [h_r]   [f_r]
+  [M_fr  M_ff  M_fB] [η̈  ] + [h_f] = [f_f]  
+  [M_Br  M_Bf  M_BB] [q̈_B]   [h_B]   [f_B]
+
+  Where:
+  - q_r = rigid body DOFs (6: 3 translation + 3 rotation)
+  - M_rr = rigid body inertia (6×6) - total mass and inertia tensor
+  - M_rf = rigid-flexible coupling - how modes affect rigid body motion
+  - h = quadratic velocity terms (Coriolis, centrifugal)
+
+  3. New Input Parameters
+
+  CraigBampton(;
+      # ... existing parameters ...
+
+      # Floating frame parameters
+      floating = false,       # Enable floating frame
+      m_total,               # Total mass of flexible body
+      I_cm,                  # Inertia tensor at center of mass
+      r_cm,                  # Position of CM in body frame
+      M_rf,                  # Rigid-flexible coupling matrix [6 × n_modes]
+
+      # Optional
+      isroot = false,        # Whether this body provides root states
+      quat = true,           # Use quaternions for orientation
+  )
+
+  4. Frame Kinematics Changes
+
+  Currently frame_a is special (reference). With floating frame, all boundaries are equal:
+
+  # Current (simplified):
+  frame_i.r_0 = frame_a.r_0 + R_a * (p_i + u_i)
+
+  # Floating frame version:
+  frame_i.r_0 = r_0 + R_body * (p_i + u_i)  # All frames relative to body frame
+
+  5. Quadratic Velocity Terms
+
+  For rotating bodies, Coriolis and centrifugal forces couple rigid and flexible motion:
+
+  # Coriolis terms for flexible modes
+  h_f = -2 * M_rf' * [0; 0; 0; cross(w_a, w_a)]  # Simplified
+
+  # Centrifugal stiffening (geometric stiffness)
+  K_geo = f(w_a, stress)  # Stress-dependent stiffness
+
+  6. Gravity Distribution
+
+  Gravity must act on the distributed mass:
+
+  g_0 = gravity_acceleration(r_0 + R_body * r_cm)
+  f_gravity = m_total * g_0  # Applied at CM
+
+=#
