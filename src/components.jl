@@ -71,30 +71,12 @@ If a connection to the world is needed in a component model, use [`Fixed`](@ref)
     @parameters render=render
     @parameters point_gravity = point_gravity
 
-    @variables n_inner(t)[1:3]
-    @variables g_inner(t)
-    @variables mu_inner(t)
-    @variables render_inner(t)
-    @variables point_gravity_inner(t)
-
-    n = Symbolics.scalarize(n)
-    n_inner = GlobalScope.(Symbolics.scalarize(n_inner))
-    g_inner = GlobalScope(g_inner)
-    mu_inner = GlobalScope(mu_inner)
-    render_inner = GlobalScope(render_inner)
-    point_gravity_inner = GlobalScope(point_gravity_inner)
-
     O = ori(frame_b)
     eqs = Equation[
         frame_b.r_0 ~ zeros(3)
         O ~ nullrotation()
-        n_inner .~ n
-        g_inner ~ g
-        mu_inner ~ mu
-        render_inner ~ render
-        point_gravity_inner ~ point_gravity
     ]
-    System(eqs, t, [n_inner; g_inner; mu_inner; render_inner; point_gravity_inner], [n; g; mu; point_gravity; render]; name, systems = [frame_b])#, defaults=[n => n0; g => g0; mu => mu0])
+    System(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
 end
 
 """
@@ -104,7 +86,7 @@ const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 function gravity_acceleration(r)
-    inner_gravity(GlobalScope(world.point_gravity_inner), GlobalScope(world.mu_inner), GlobalScope(world.g_inner), GlobalScope.(collect(world.n_inner)), collect(r))
+    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g), GlobalScope.(collect(world.n)), collect(r))
 end
 
 function inner_gravity(point_gravity, mu, g, n, r)
