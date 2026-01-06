@@ -145,7 +145,6 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b0.frame_b, j2.frame_a)
                ]
 @named fourbar2 = System(connections, t, systems = [world; systems])
-fourbar2 = complete(fourbar2)
 ssys = multibody(fourbar2)
 
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
@@ -186,7 +185,6 @@ connections = [connect(j2.frame_b, b2.frame_a)
 ]
 
 @named fourbar_analytic = System(connections, t, systems = [world; systems])
-fourbar_analytic = complete(fourbar_analytic)
 ssys_analytic = multibody(fourbar_analytic)
 prob = ODEProblem(ssys_analytic, [], (0.0, 1.4399)) 
 sol2 = solve(prob, FBDF(autodiff=true)) # about 4x faster than the simulation above

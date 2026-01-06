@@ -376,7 +376,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
     eqs = [
 
         if kinematic_constraint
-            rRod_0 ~ ori(frame_b).R.mat'*(ori(frame_b).R.mat*frame_b.r_0) - Ra.R.mat'*(Ra.R.mat*frame_a.r_0)
+            rRod_0 ~ ori(frame_b).R'*(ori(frame_b).R*frame_b.r_0) - Ra.R'*(Ra.R*frame_a.r_0)
         else
             rRod_0 ~ frame_b.r_0 - frame_a.r_0
         end
@@ -387,7 +387,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
 
         eRod_a ~ rRod_a/rodLength
         n2_a ~ cross(n1_a, eRod_a)
-        length2_n2_a ~ n2_a'n2_a
+        length2_n2_a ~ dot(n2_a,n2_a)
 
         # assert(length2_n2_a > 1e-10, "A MultiBody.Joints.UniversalSpherical joint (consisting of a universal joint and a spherical joint connected together by a rigid rod) is in the singular configuration of the universal joint. This means that axis 1 of the universal joint defined via parameter \"n1_a\" is parallel to vector \"rRod_ia\" that is directed from the origin of frame_a to the origin of frame_b. You may try to use another \"n1_a\" vector. If this fails, use instead MultiBody.Joints.SphericalSpherical, if this is possible, because this joint aggregation does not have a singular configuration.")
 
@@ -396,7 +396,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         e3_a ~ cross(eRod_a, e2_a)
 
         der_rRod_a_L ~ (resolve2(Ra, D(rRod_0)) - cross(Ra.w, rRod_a))/rodLength
-        w_rel_ia1 ~ [e3_a'cross(n1_a, der_rRod_a_L)/length_n2_a, -(e3_a'der_rRod_a_L), e2_a'der_rRod_a_L]
+        w_rel_ia1 ~ [e3_a'cross(n1_a, der_rRod_a_L)/length_n2_a, -dot(e3_a,der_rRod_a_L), dot(e2_a,der_rRod_a_L)]
 
         # R_rel_ia ~ Rrelia# absolute_rotation(R_rel_ia1, R_rel_ia2)
         # R_rel_ia.w ~ Rrelia.w
@@ -408,16 +408,16 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         f_ia_a ~ resolve1(R_rel_ia, frame_ia.f)
         t_ia_a ~ resolve1(R_rel_ia, frame_ia.tau)
 
-        f_b_a1 ~ -e2_a*((n1_a't_ia_a)/(rodLength*(n1_a'e3_a))) + e3_a*((e2_a't_ia_a)/rodLength)
+        f_b_a1 ~ -e2_a*(dot(n1_a,t_ia_a)/(rodLength*dot(n1_a,e3_a))) + collect(e3_a)*(dot(e2_a,t_ia_a)/rodLength)
         f_b_a ~ -f_rod*eRod_a + f_b_a1
         frame_b.f ~ resolve_relative(f_b_a, Ra, ori(frame_b))
-        frame_b.tau ~ 0
-        0 ~ frame_a.f + f_b_a + f_ia_a
-        0 ~ frame_a.tau + t_ia_a + cross(rRod_a, f_b_a)
+        frame_b.tau ~ zeros(3)
+        zeros(3) ~ frame_a.f + f_b_a + f_ia_a
+        zeros(3) ~ frame_a.tau + t_ia_a + cross(rRod_a, f_b_a)
     ]
 
     if residue === nothing
-        push!(eqs, constraint_residue ~ rRod_0'rRod_0 - rodLength'rodLength)
+        push!(eqs, constraint_residue ~ dot(rRod_0,rRod_0) - dot(rodLength,rodLength))
     else
         # See implementation of JointUSR for how to use the constraint_residue=:external
         residue === :external || error("Unknown value for constraint_residue, expected nothing or :external")
