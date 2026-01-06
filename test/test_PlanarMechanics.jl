@@ -615,11 +615,10 @@ end
 end
 
 @named model = TwoTrackWithDifferentialGear()
-model = complete(model)
-ssys = structural_simplify(IRSystem(model))
+ssys = multibody(model)
 defs = merge(
-    Dict(unknowns(ssys) .=> 0),
-    ModelingToolkit.defaults(model),
+    # Dict(unknowns(ssys)[ModelingToolkit.is_diff_equation.(equations(ssys))] .=> 0),
+    # ModelingToolkit.defaults(model),
     Dict(model.body.w => 0),
 )
 prob = ODEProblem(ssys, defs, (0.0, 20.0))
