@@ -40,6 +40,11 @@ function ori(sys, varw = false)
     end
 end
 
+const WORLD_N = GlobalScope(only(@parameters n[1:3] [description = "gravity direction"]))
+const WORLD_G = GlobalScope(only(@parameters g [description = "gravitational acceleration of world"]))
+const WORLD_MU = GlobalScope(only(@parameters mu [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]))
+const WORLD_POINT_GRAVITY = GlobalScope(only(@parameters point_gravity))
+
 """
     World(; name, render=true, point_gravity=false, n = [0.0, -1.0, 0.0], g=9.80665, mu=3.986004418e14)
 
@@ -65,18 +70,14 @@ If a connection to the world is needed in a component model, use [`Fixed`](@ref)
     mu0 = mu
     @named frame_b = Frame()
 
-    @parameters n[1:3] = n0 [description = "gravity direction"]
-    @parameters g=g0 [description = "gravitational acceleration of world"]
-    @parameters mu=mu0 [description = "Gravity field constant [m³/s²] (default = field constant of earth)"]
     @parameters render=render
-    @parameters point_gravity = point_gravity
-
+    ics = Dict(WORLD_N => n0, WORLD_G => g0, WORLD_MU => mu0, WORLD_POINT_GRAVITY => point_gravity)
     O = ori(frame_b)
     eqs = Equation[
         frame_b.r_0 ~ zeros(3)
         O ~ nullrotation()
     ]
-    System(eqs, t, [], [n; g; mu; point_gravity; render]; name, systems = [frame_b])
+    System(eqs, t, [], [render]; initial_conditions = ics, name, systems = [frame_b])
 end
 
 """
@@ -86,14 +87,14 @@ const world = World(; name = :world)
 
 "Compute the gravity acceleration, resolved in world frame"
 function gravity_acceleration(r)
-    inner_gravity(GlobalScope(world.point_gravity), GlobalScope(world.mu), GlobalScope(world.g), GlobalScope.(collect(world.n)), collect(r))
+    inner_gravity(WORLD_POINT_GRAVITY, WORLD_MU, WORLD_G, collect(WORLD_N), collect(r))
 end
 
 function inner_gravity(point_gravity, mu, g, n, r)
     # This is slightly inefficient, producing three if statements, one for each array entry. The function registration for array-valued does not work properly so this is a workaround for now. Hitting, among other problems, https://github.com/SciML/ModelingToolkit.jl/issues/2808
     gvp = -(mu/(r'r))*(r/_norm(r))
     gvu = g * n
-    ifelse.(point_gravity==true, gvp, gvu)
+    [ifelse(point_gravity == true, gvp[i], gvu[i]) for i in 1:3]
 end
 
 
