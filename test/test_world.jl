@@ -18,7 +18,6 @@ using Multibody, ModelingToolkit, Test, OrdinaryDiffEq
 end
 
 @named model = FallingBody()
-model = complete(model)
 ssys = multibody(model)
 prob = ODEProblem(ssys, [], (0, 1))
 sol = solve(prob, Rodas5P())
