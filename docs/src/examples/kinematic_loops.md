@@ -162,6 +162,7 @@ nothing # hide
 
 ![animation](fourbar2.gif)
 
+
 ## Using a joint assembly
 This example models a mechanism similar to the previous one, but replaces several joints and bodies with the aggregate [`UniversalSpherical`](@ref) joint. This joint is a combination of a universal joint and a spherical joint, with a bar in-between. A benefit of using this joint assembly in a kinematic loop is that some nonlinear equations are solved analytically, and the solver will thus see fewer nonlinear equations. This can lead to a faster simulation.
 
@@ -216,3 +217,104 @@ using LinearAlgebra
 diag(ssys.mass_matrix), diag(ssys_analytic.mass_matrix)
 ```
 A 1 on the diagonal indicates a differential equation, while a 0 indicates an algebraic equation. The cut-joint version has 6 nonlinear algebraic equations, while the joint assembly version has only 1. Both of them have 2 differential equations (position and velocity), corresponding to the 1 degree of freedom in the mechanism. Nonlinear algebraic equations are more expensive to solve than differential equations.
+
+
+
+## Centrifugal governor
+
+The centrifugal governor is a device used to regulate the speed of a steam engine. The mechanism consists of two balls connected to a rotating shaft. As the shaft rotates, the balls move outwards due to centrifugal force, which in turn moves a lever that regulates the steam flow and thus the engine speed. The mechanism is a kinematic loop with a prismatic joint and three revolute joints per arm. The whole mechanism is allowed to rotate around its center axis by means of yet another revolute joint. 
+
+```@example kinloop
+import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
+W(;kwargs...) = Multibody.world
+
+arm_r = 0.02
+r = 0.02
+l = 0.05
+
+@mtkmodel GovernorArm begin
+    # @structural_parameters begin
+    # end
+    @components begin
+        j1 = Revolute(n = [0, 0, 1], phi0 = deg2rad(10), isroot=true, radius=1.1arm_r, state_priority=10)
+        # j2 = Revolute(n = [0, 0, 1], isroot=true, state_priority=99)
+        j2 = RevolutePlanarLoopConstraint(n = [0, 0, 1], radius=1.1arm_r)
+        j3 = Revolute(n = [0, 0, 1], isroot=false, radius=1.1arm_r)
+        # j3 = RevolutePlanarLoopConstraint(n = [0, 0, 1], radius=1.1arm_r)
+        b1 = BodyShape(r = [0.1, -0.01, 0], radius=arm_r)
+        b2 = BodyShape(r = [-0.1, -0.01, 0], radius=arm_r)
+        # ball = Body(m=0.1, radius=1.5arm_r)
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+    @equations begin
+        connect(frame_a, j1.frame_a)
+        connect(j1.frame_b, b1.frame_a)
+        connect(b1.frame_b, j2.frame_a)
+        connect(j2.frame_b, b2.frame_a)#, ball.frame_a)
+        connect(b2.frame_b, j3.frame_a)
+        connect(j3.frame_b, frame_b)
+    end
+end
+
+
+@mtkmodel Governor begin
+    @components begin
+        world = W()
+        arm1 = GovernorArm()
+        # arm2 = GovernorArm()
+        cylinder = BodyCylinder(r = [0, -l, 0], diameter = 2r, inner_diameter = 0.03)
+        mount1 = FixedTranslation(r = [r, -l/2, 0])
+        # mount2 = FixedTranslation(r = [-r, -l/2, 0])
+        # rev = Revolute(n = [0, 1, 0], w0 = 30, radius=1.01arm_r, state_priority=101)
+        prismatic = Prismatic(n = [0, -1, 0], s0 = 0.1, radius=0.8arm_r, state_priority=100, axisflange=true)
+        damper = TranslationalModelica.Damper(d=500)
+    end
+    @equations begin
+        # connect(world.frame_b, rev.frame_a)
+        # connect(arm1.frame_a, rev.frame_b, arm2.frame_a, prismatic.frame_a)
+        # connect(arm1.frame_b, mount1.frame_b)
+        # connect(arm2.frame_b, mount2.frame_b)
+        # connect(mount1.frame_a, cylinder.frame_a, mount2.frame_a, prismatic.frame_b)
+
+        connect(prismatic.axis, damper.flange_a)
+        connect(prismatic.support, damper.flange_b)
+
+        connect(arm1.frame_a, world.frame_b, prismatic.frame_a)
+        connect(arm1.frame_b, mount1.frame_b)
+        connect(mount1.frame_a, cylinder.frame_a, prismatic.frame_b)
+    end
+end
+
+@named model = Governor()
+model = complete(model)
+ssys = structural_simplify(IRSystem(model))
+
+display([unknowns(ssys) diag(ssys.mass_matrix)])
+##
+prob = ODEProblem(ssys, [
+    # model.rev.w => 32.5;
+    model.prismatic.s => 0.07;
+    model.arm1.j1.phi => 1;
+    model.arm1.j3.phi => 0.5;
+    # model.rev.w => 1.5;
+    model.world.render => true;
+], (0.0, 40))
+
+
+using ModelingToolkit.NonlinearSolve
+nlsolve = TrustRegion()
+
+sol = solve(prob, FBDF(autodiff=true), abstol=1e-8, reltol=1e-8, initializealg = BrownFullBasicInit(; nlsolve))
+# sol = solve(prob, FBDF(autodiff=true), abstol=1e-8, reltol=1e-8, initializealg = ShampineCollocationInit(; nlsolve))
+
+
+# u = prob.u0
+# du = similar(u)
+# for i = 1:length(sol.t)
+#     u = sol.u[i]
+#     @show prob.f(du, u, prob.p, 0)
+# end
+
+plot(sol, layout=6)
+```
