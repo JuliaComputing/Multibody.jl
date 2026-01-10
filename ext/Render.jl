@@ -618,7 +618,7 @@ function render!(scene, ::typeof(FixedTranslation), sys, sol, t)
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
     true
 end
 
@@ -641,7 +641,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
                 extremity = r2
                 Makie.GeometryBasics.Cylinder(origin, extremity, radius)
             end
-            mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=true)
+            mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=color.alpha != 1)
         elseif shape == "box"
             Rfun = get_rot_fun(sol, sys.frame_a)
 
@@ -663,7 +663,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
             origin = Vec3f(0, -width/2, -height/2)
             extent = Vec3f(length, width, height) 
             thing = Makie.Rect3f(origin, extent)
-            m = mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=true)
+            m = mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=color.alpha != 1)
             on(t) do t
                 r1 = Point3f(r_0a(t))
                 R = Rfun(t)
@@ -701,7 +701,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
     #     Makie.GeometryBasics.Sphere((r1+r2) ./ 2, 0.1f0)
     # end
     # mesh!(scene, thing, color=:purple)
-    true
+    false
 end
 
 
@@ -1004,7 +1004,7 @@ function render!(scene, ::typeof(P.Body), sys, sol, t)
         point = Point3f(coords..., 0)
         Sphere(point, Float32(radius))
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
     false
 end
 
@@ -1022,7 +1022,7 @@ function render!(scene, ::Union{typeof(P.FixedTranslation), typeof(P.BodyShape)}
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
     true
 end
 
@@ -1039,7 +1039,7 @@ function render!(scene, ::typeof(P.Prismatic), sys, sol, t)
         radius = Float32(sol($t, idxs=sys.radius))
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
     true
 end
 
@@ -1068,7 +1068,7 @@ function render!(scene, ::typeof(P.Revolute), sys, sol, t)
         p2 = Point3f(O - length*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
     true
 end
 
@@ -1122,7 +1122,7 @@ function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJo
         p2 = Point3f(O - width*n_w)
         Makie.GeometryBasics.Cylinder(p1, p2, radius)
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
     true
 end
 
@@ -1165,7 +1165,7 @@ function render!(scene, ::typeof(Multibody.BoxVisualizer), sys, sol, t)
     origin = Vec3f(-length/2, -width/2, -height/2) + r_shape
     extent = Vec3f(length, width, height) 
     thing = Makie.Rect3f(origin, extent)
-    m = mesh!(scene, thing; color, specular = Vec3f(1.5))
+    m = mesh!(scene, thing; color, specular = Vec3f(1.5), transparency=color.alpha != 1)
     on(t) do t
         r1 = Point3f(r_0a(t))
         R = Rfun(t)
@@ -1188,7 +1188,7 @@ function render!(scene, ::typeof(Multibody.SphereVisualizer), sys, sol, t)
         point = Point3f(coords)
         Sphere(point, Float32(radius))
     end
-    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
 end
 
 function render!(scene, ::typeof(Multibody.CylinderVisualizer), sys, sol, t)
@@ -1213,7 +1213,7 @@ function render!(scene, ::typeof(Multibody.CylinderVisualizer), sys, sol, t)
     origin = r1
     extremity = r2
     thing = Makie.GeometryBasics.Cylinder(origin, extremity, radius)
-    m = mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=true)
+    m = mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1), transparency=color.alpha != 1)
 
 
     on(t) do t
