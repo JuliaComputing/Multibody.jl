@@ -1,5 +1,6 @@
 using DataInterpolations
 using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
+using TrajectoryLimiters: JerkLimiter, calculate_trajectory, duration, evaluate_at
 
 include("ptp.jl")
 
@@ -195,6 +196,71 @@ function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
     eqs = reduce(vcat, interp_eqs)
     System(eqs, t; name, systems)
 end
+
+"""
+    KinematicPTPBoundedJerk(; name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1, qddd_max=10)
+
+A component emitting a time-optimal point-to-point trajectory with bounded velocity,
+acceleration, and jerk, generated using `JerkLimiter` from TrajectoryLimiters.jl.
+
+When multiple axes are specified, the trajectories are time-synchronized so all axes
+reach their targets at the same time.
+
+# Arguments
+- `name`: Name of the component
+- `q0`: Initial position (scalar or vector)
+- `q1`: Final position (scalar or vector)
+- `qd_max`: Maximum velocity (scalar or vector)
+- `qdd_max`: Maximum acceleration (scalar or vector)
+- `qddd_max`: Maximum jerk (scalar or vector)
+
+# Outputs
+- `q`: Position
+- `qd`: Velocity
+- `qdd`: Acceleration
+- `qddd`: Jerk
+
+See also [`KinematicPTP`](@ref) and [`Kinematic5`](@ref).
+"""
+function KinematicPTPBoundedJerk(; name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1, qddd_max=10)
+    nout = max(length(q0), length(q1))
+
+    # Broadcast parameters to nout dimensions
+    q0_vec = q0 isa Number ? fill(float(q0), nout) : collect(float.(q0))
+    q1_vec = q1 isa Number ? fill(float(q1), nout) : collect(float.(q1))
+    qd_max_vec = qd_max isa Number ? fill(float(qd_max), nout) : collect(float.(qd_max))
+    qdd_max_vec = qdd_max isa Number ? fill(float(qdd_max), nout) : collect(float.(qdd_max))
+    qddd_max_vec = qddd_max isa Number ? fill(float(qddd_max), nout) : collect(float.(qddd_max))
+
+    systems = @named begin
+        q = RealOutput(; nout)
+        qd = RealOutput(; nout)
+        qdd = RealOutput(; nout)
+        qddd = RealOutput(; nout)
+    end
+
+    # Create vector of JerkLimiters for time-synchronized multi-DOF trajectory
+    lims = [JerkLimiter(; vmax=qd_max_vec[i], amax=qdd_max_vec[i], jmax=qddd_max_vec[i]) for i in 1:nout]
+
+    # Calculate time-synchronized trajectories for all axes
+    profiles = calculate_trajectory(lims; p0=q0_vec, pf=q1_vec)
+    [q.u[i] ~ evaluate_at_1(profiles, t)
+        qd.u[i] ~ evaluate_at_2(profiles, t)
+        qdd.u[i] ~ evaluate_at_3(profiles, t)
+        qddd.u[i] ~ evaluate_at_4(profiles, t)]
+
+    System(eqs, t; name, systems)
+end
+
+evaluate_at_1(profile, ti::Real) = evaluate_at(profile, ti::Real)[1]
+evaluate_at_2(profile, ti::Real) = evaluate_at(profile, ti::Real)[2]
+evaluate_at_3(profile, ti::Real) = evaluate_at(profile, ti::Real)[3]
+evaluate_at_4(profile, ti::Real) = evaluate_at(profile, ti::Real)[4]
+
+@register_symbolic evaluate_at_1(profile, ti::Real)
+@register_symbolic evaluate_at_2(profile, ti::Real)
+@register_symbolic evaluate_at_3(profile, ti::Real)
+@register_symbolic evaluate_at_4(profile, ti::Real)
 
 """
     Kinematic5(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0, qdd0 = 0, qdd1 = 0)

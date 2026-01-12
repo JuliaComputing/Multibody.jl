@@ -18,6 +18,7 @@ Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StateSelection = "64909d44-ed92-46a8-bbd9-f047dfbdc84b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+TrajectoryLimiters = "9792e600-fe43-4e4e-833b-462f466b8006"
 
 [weakdeps]
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
@@ -49,6 +50,7 @@ Rotations = "1.4"
 SparseArrays = "1"
 StateSelection = "1.1.1"
 StaticArrays = "1"
+TrajectoryLimiters = "0.1"
 julia = "1"
 
 [extras]
