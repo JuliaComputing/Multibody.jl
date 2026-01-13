@@ -179,7 +179,7 @@ this frame.
                  zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                  zeros(3) ~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
-    sys = compose(System(equations, t, vars, pars; name=:nothing), frame_a)
+    sys = compose(System(equations, t; name=:nothing), frame_a)
     add_params(sys, [color;]; name)
 end
 
@@ -241,6 +241,10 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
                     I_32 = 0,
                     render = false)
     end
+    # guesses = Dict([
+    #     (wheeljoint.angles) => angles;
+    #     (wheeljoint.der_angles) => der_angles;
+    # ])
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         m = m, [description = "Mass of the wheel"]

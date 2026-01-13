@@ -119,20 +119,22 @@ The function returns an System representing the prismatic joint.
         render = render, [description = "render the joint in animations"]
     end
 
-    @variables s(t)=s0 [
-        state_priority = state_priority,
-        description = "Relative distance between frame_a and frame_b",
-    ]
-    @variables v(t)=v0 [
-        state_priority = state_priority,
-        description = "Relative velocity between frame_a and frame_b",
-    ]
-    @variables a(t) [
-        description = "Relative acceleration between frame_a and frame_b",
-    ]
-    @variables f(t) [
-        description = "Actuation force in direction of joint axis",
-    ]
+    vars = @variables begin
+        s(t)=s0, [
+            state_priority = state_priority,
+            description = "Relative distance between frame_a and frame_b",
+        ]
+        v(t)=v0, [
+            state_priority = state_priority,
+            description = "Relative velocity between frame_a and frame_b",
+        ]
+        a(t), [
+            description = "Relative acceleration between frame_a and frame_b",
+        ]
+        f(t), [
+            description = "Actuation force in direction of joint axis",
+        ]
+    end
 
     eqs = [v ~ D(s)
            a ~ D(v)
