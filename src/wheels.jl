@@ -317,7 +317,7 @@ plot!(
 ```
 """
 @component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0, v_small = 1e-5, state=true)
-    @parameters begin
+    pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
         vSlide_min = vSlide_min, [description = "Minimum sliding velocity"]
@@ -399,6 +399,7 @@ plot!(
 
     @named frame_a = Frame(varw=state)
     Ra = ori(frame_a, state)
+    append!(vars, Ra.w)
 
     Rarot = axes_rotations(sequence, angles, der_angles)
 
@@ -429,7 +430,7 @@ plot!(
                         Ra.w ~ Rarot.w
                         phi_roll ~ angles[2]
                         w_roll ~ D(phi_roll)
-                        der_angles .~ D.(angles)
+                        der_angles ~ D(angles)
 
                     ]
                 else
@@ -437,39 +438,39 @@ plot!(
                 end
 
                 # frame_a.R is computed from generalized coordinates
-                collect(frame_a.r_0) .~ [x, y, z]
+                frame_a.r_0 ~ [x, y, z]
 
 
                 # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0), resolved in world frame
-                e_axis_0 .~ resolve1(Ra, [0, 0, 1])
-                aux .~ (cross(e_n_0, e_axis_0))
-                e_long_0 .~ (aux ./ _norm(aux))
-                e_lat_0 .~ -(cross(e_long_0, e_n_0)) # wheel rotation axis and lateral axis are opposite
+                e_axis_0 ~ resolve1(Ra, [0, 0, 1])
+                aux ~ (cross(e_n_0, e_axis_0))
+                e_long_0 ~ (aux ./ _norm(aux))
+                e_lat_0 ~ -(cross(e_long_0, e_n_0)) # wheel rotation axis and lateral axis are opposite
 
                 # Determine point on road where the wheel is in contact with the road
                 delta_0 .~ r_road_0 - frame_a.r_0
-                0 ~ delta_0'e_axis_0
-                0 ~ delta_0'e_long_0
+                0 ~ dot(delta_0, e_axis_0)
+                0 ~ dot(delta_0, e_long_0)
 
                 # One holonomic positional constraint equation (no penetration in to the ground)
-                0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
+                0 ~ radius - dot(delta_0, cross(e_long_0, e_axis_0))
 
                 # Slip velocities (world frame)
-                v_0 .~ D.(frame_a.r_0)
-                w_0 .~ angular_velocity1(Ra)
+                v_0 ~ D(frame_a.r_0)
+                w_0 ~ angular_velocity1(Ra)
                 vContact_0 .~ v_0 + cross(w_0, delta_0)
 
                 # Contact dynamics (world frame) ===============================
 
-                v_slip_lat ~ vContact_0' * e_lat_0
-                v_slip_long ~ vContact_0' * e_long_0
+                v_slip_lat ~ dot(vContact_0, e_lat_0)
+                v_slip_long ~ dot(vContact_0, e_long_0)
                 # v_slip_lat ~ v_lat - 0
                 # v_slip_long ~ v_long - radius * w_roll
 
-                v_slip ~ sqrt(v_slip_long^2 + v_slip_lat^2) + v_small
+                v_slip ~ hypot(v_slip_long, v_slip_lat) + v_small
                 # -f_long * radius ~ flange_a.tau # No longer needed?
                 # frame_a.tau ~ 0
-                slip_ratio ~ v_slip_long / (v_0'e_long_0)
+                slip_ratio ~ v_slip_long / dot(v_0, e_long_0)
                 vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
                 vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
 
@@ -478,11 +479,11 @@ plot!(
                 f_lat ~ f * v_slip_lat / v_slip
 
                 # Contact force (world frame)
-                f_wheel_0 .~ f_n * e_n_0 - f_lat * e_lat_0 - f_long * e_long_0
+                f_wheel_0 ~ f_n * e_n_0 - f_lat * e_lat_0 - f_long * e_long_0
 
                 # Force and torque balance at the wheel center
-                zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
-                zeros(3) .~ collect(frame_a.tau) +
+                zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
+                zeros(3) ~ collect(frame_a.tau) +
                             resolve2(Ra, cross(delta_0, f_wheel_0))]
 
                     
@@ -493,7 +494,7 @@ plot!(
                 #     v_slip~mu_A
                 #     v_slip~mu_S
                 # ]
-    compose(System(equations, t; name), frame_a)
+    compose(System(equations, t, vars, pars; name), frame_a)
 end
 
 
