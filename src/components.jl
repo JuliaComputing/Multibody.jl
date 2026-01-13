@@ -526,8 +526,6 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
     )
 
 
-    shapecode = encode(shapefile)
-    shape = encode(shape)
     pars = @parameters begin
         m = m, [description = "mass"]
         I_11=I_11, [description = "Element (1,1) of inertia tensor"]
@@ -542,12 +540,12 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
         ]
         radius = radius, [description = "Radius of the body in animations"]
         color[1:4] = color, [description = "Color of the body in animations"]
-        shapefile[1:length(shapecode)] = shapecode
+        shapefile::String = shapefile
         shape_transform[1:16] = vec(shape_transform)
         shape_scale = shape_scale
         width = width, [description = """Width of the body in animations (if shape = "box")"""]
         height = height, [description = """Height of the body in animations (if shape = "box")"""]
-        shape[1:length(shape)] = shape
+        shape::String = shape
     end
     systems = @named begin
         translation = FixedTranslation(r = r, render=false)

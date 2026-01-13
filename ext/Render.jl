@@ -241,8 +241,8 @@ end
 
 function get_shapefile(sys, sol)::String
     try
-        sf = sol(sol.t[1], idxs=collect(sys.shapefile))
-        decode(sf)
+        sf = sol(sol.t[1], idxs=sys.shapefile)
+        # decode(sf)
     catch
         ""
     end
@@ -250,8 +250,8 @@ end
 
 function get_shape(sys, sol)::String
     try
-        sf = sol(sol.t[1], idxs=collect(sys.shape))
-        decode(sf)
+        sf = sol(sol.t[1], idxs=sys.shape)
+        # decode(sf)
     catch
         ""
     end
