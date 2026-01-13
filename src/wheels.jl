@@ -52,7 +52,7 @@ this frame.
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
+@component function RollingWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = nothing, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         color[1:4] = color, [description = "Color of the wheel in animations"]
@@ -64,52 +64,52 @@ this frame.
         (angles(t)[1:3] = angles),
         [state_priority = state_priority, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
-        (r_road_0(t)[1:3] = zeros(3)),
+        (r_road_0(t)[1:3]),
         [
             description = "Position vector from world frame to contact point on road, resolved in world frame",
         ]
-        (f_wheel_0(t)[1:3] = zeros(3)),
+        (f_wheel_0(t)[1:3]),
         [description = "Force vector on wheel, resolved in world frame"]
-        (f_n(t) = 0), [description = "Contact force acting on wheel in normal direction"]
-        (f_lat(t) = 0), [
+        (f_n(t)), [description = "Contact force acting on wheel in normal direction"]
+        (f_lat(t)), [
             description = "Contact force acting on wheel in lateral direction",
         ]
-        (f_long(t) = 0),
+        (f_long(t)),
         [description = "Contact force acting on wheel in longitudinal direction"]
-        # (err(t) = 0),
+        # (err(t)),
         # [
         #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
         # ]
-        (e_axis_0(t)[1:3] = zeros(3)),
+        (e_axis_0(t)[1:3]),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,-radius, 0]),
-        [description = "Distance vector from wheel center to contact point"]
-        (e_n_0(t)[1:3] = zeros(3)),
+        (delta_0(t)[1:3]),# = [0,-radius, 0]),
+        [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
+        (e_n_0(t)[1:3]),
         [
             description = "Unit vector in normal direction of road at contact point, resolved in world frame",
         ]
-        (e_lat_0(t)[1:3] = zeros(3)),
+        (e_lat_0(t)[1:3]),
         [
             description = "Unit vector in lateral direction of road at contact point, resolved in world frame",
         ]
-        (e_long_0(t)[1:3] = zeros(3)),
+        (e_long_0(t)[1:3]),
         [
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
-        (s(t) = 0), [description = "Road surface parameter 1"]
-        (w(t) = 0), [description = "Road surface parameter 2"]
-        (e_s_0(t)[1:3] = zeros(3)),
+        (s(t)), [description = "Road surface parameter 1"]
+        (w(t)), [description = "Road surface parameter 2"]
+        (e_s_0(t)[1:3]),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
-        (v_0(t)[1:3] = zeros(3)),
+        (v_0(t)[1:3]),
         [description = "Velocity of wheel center, resolved in world frame"]
-        (w_0(t)[1:3] = zeros(3)),
+        (w_0(t)[1:3]),
         [description = "Angular velocity of wheel, resolved in world frame"]
-        (vContact_0(t)[1:3] = zeros(3)),
+        (vContact_0(t)[1:3]),
         [description = "Velocity of contact point, resolved in world frame"]
 
-        (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
+        (aux(t)[1:3]), [description = "Auxiliary variable", guess = [1,0,0]]
     end
 
 
@@ -227,7 +227,7 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
 @component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
 
-    @named wheeljoint = RollingWheelJoint(; radius, angles, x0, z0, der_angles, kwargs...)
+    @named wheeljoint = RollingWheelJoint(; radius, angles=nothing, x0=nothing, z0=nothing, der_angles=nothing, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],
@@ -260,8 +260,8 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
 
     equations = Equation[wheeljoint.x ~ x
                          wheeljoint.z ~ z
-                         collect(wheeljoint.angles) .~ collect(angles)
-                         collect(wheeljoint.der_angles) .~ collect(der_angles)
+                         (wheeljoint.angles) ~ (angles)
+                         (wheeljoint.der_angles) ~ (der_angles)
                          connect(body.frame_a, frame_a)
                          connect(wheeljoint.frame_a, frame_a)]
     compose(System(equations, t; name), frame_a, wheeljoint, body)
