@@ -28,19 +28,13 @@ using LinearAlgebra
 end
 
 @named worldwheel = WheelInWorld()
-worldwheel = complete(worldwheel)
 
-# pars = collect(worldwheel.world.n) .=> [0,0,-1];
 defs = Dict([
-    # collect(worldwheel.world.n) .=> [0,0,-1];
-    worldwheel.wheel.body.r_0[1] => 0.2;
-    worldwheel.wheel.body.r_0[2] => 0.3;
-    worldwheel.wheel.body.r_0[3] => 0.2;
-    # collect(D.(cwheel.wheel.angles)) .=> [0, 5, 1]
+
 ])
 
 ssys = multibody(worldwheel)
-prob = ODEProblem(ssys, defs, (0, 4))
+prob = ODEProblem(ssys, [], (0, 4))
 length(filter(x->occursin("world₊n", string(x)), parameters(worldwheel))) == 3
 # @test prob[collect(worldwheel.world.n)] == [0,0,-1]
 @test prob[collect(worldwheel.wheel.wheeljoint.der_angles)] == prob[collect(worldwheel.wheel.wheeljoint.der_angles)]

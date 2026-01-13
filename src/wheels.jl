@@ -82,11 +82,11 @@ this frame.
         # ]
         (e_axis_0(t)[1:3]),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3]),# = [0,-radius, 0]),
-        [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
+        (delta_0(t)[1:3] = [0,-radius, 0]),
+        [description = "Distance vector from wheel center to contact point"]
         (e_n_0(t)[1:3]),
         [
-            description = "Unit vector in normal direction of road at contact point, resolved in world frame",
+            description = "Unit vector in normal direction of road at contact point, resolved in world frame", guess = [0, 1.0, 0]
         ]
         (e_lat_0(t)[1:3]),
         [
@@ -179,7 +179,7 @@ this frame.
                  zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                  zeros(3) ~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
-    sys = compose(System(equations, t; name=:nothing), frame_a)
+    sys = compose(System(equations, t, vars, pars; name=:nothing), frame_a)
     add_params(sys, [color;]; name)
 end
 
