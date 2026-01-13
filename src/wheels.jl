@@ -53,11 +53,11 @@ this frame.
 - `frame_a`: Frame for the wheel joint
 """
 @component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
-    @parameters begin
+    pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         color[1:4] = color, [description = "Color of the wheel in animations"]
     end
-    @variables begin
+    vars = @variables begin
         (x(t) = x0), [state_priority = state_priority, description = "x-position of the wheel axis"]
         (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
         (z(t) = z0), [state_priority = state_priority, description = "z-position of the wheel axis"]
@@ -112,27 +112,27 @@ this frame.
         (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
     end
 
-    angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
     @named frame_a = Frame(varw=true)
     Ra = ori(frame_a, true)
+    append!(vars, Ra.w)
 
     Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = if surface === nothing
         [ # Road description
-            r_road_0 .~ [s, 0, w]
-            e_n_0 .~ [0, 1, 0]
-            e_s_0 .~ [1, 0, 0]
+            r_road_0 ~ [s, 0, w]
+            e_n_0 ~ [0, 1, 0]
+            e_s_0 ~ [1, 0, 0]
         ]
      else
         sy = surface(s, w)
         e_w_0 = _normalize([0, expand_derivatives(Differential(w)(sy)), 1])
         # @show sy, expand_derivatives(Differential(s)(sy)), expand_derivatives(Differential(w)(sy))
         [
-            r_road_0 .~ [s, sy, w]
-            e_s_0 .~ _normalize([1, expand_derivatives(Differential(s)(sy)), 0])
-            e_n_0 .~ _normalize(cross(e_w_0, e_s_0))
+            r_road_0 ~ [s, sy, w]
+            e_s_0 ~ _normalize([1, expand_derivatives(Differential(s)(sy)), 0])
+            e_n_0 ~ _normalize(cross(e_w_0, e_s_0))
         ]
      end
 
@@ -142,42 +142,42 @@ this frame.
                 Ra.w ~ Rarot.w
 
                  # frame_a.R is computed from generalized coordinates
-                 collect(frame_a.r_0) .~ [x, y, z]
-                 der_angles .~ D.(angles)
+                 frame_a.r_0 ~ [x, y, z]
+                 der_angles ~ D(angles)
 
 
                  # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
-                 e_axis_0 .~ resolve1(Ra, [0, 0, 1])
-                 aux .~ (cross(e_n_0, e_axis_0))
-                 e_long_0 .~ (aux ./ _norm(aux))
-                 e_lat_0 .~ (cross(e_long_0, e_n_0))
+                 e_axis_0 ~ resolve1(Ra, [0, 0, 1])
+                 aux ~ (cross(e_n_0, e_axis_0))
+                 e_long_0 ~ (aux ./ _norm(aux))
+                 e_lat_0 ~ (cross(e_long_0, e_n_0))
 
                  # Determine point on road where the wheel is in contact with the road
-                 delta_0 .~ r_road_0 - frame_a.r_0
-                 0 ~ delta_0'e_axis_0
-                 0 ~ delta_0'e_long_0
+                 delta_0 ~ r_road_0 - frame_a.r_0
+                 0 ~ dot(delta_0,e_axis_0)
+                 0 ~ dot(delta_0,e_long_0)
 
                  # One holonomic positional constraint equation (no penetration in to the ground)
-                 0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
+                 0 ~ radius - dot(delta_0,cross(e_long_0, e_axis_0))
 
                  # only for testing
                 #  err ~ norm(delta_0) - radius
 
                  # Slip velocities
-                 v_0 .~ D.(frame_a.r_0)
-                 w_0 .~ angular_velocity1(Ra)
-                 vContact_0 .~ v_0 + cross(w_0, delta_0)
+                 v_0 ~ D(frame_a.r_0)
+                 w_0 ~ angular_velocity1(Ra)
+                 vContact_0 ~ v_0 + cross(w_0, delta_0)
 
                  # Two non-holonomic constraint equations on velocity level (ideal rolling, no slippage)
-                 0 ~ vContact_0'e_long_0
-                 0 ~ vContact_0'e_lat_0
+                 0 ~ dot(vContact_0, e_long_0)
+                 0 ~ dot(vContact_0, e_lat_0)
 
                  # Contact force
-                 f_wheel_0 .~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
+                 f_wheel_0 ~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
 
                  # Force and torque balance at the wheel center
-                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
-                 zeros(3) .~ collect(frame_a.tau) +
+                 zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
+                 zeros(3) ~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
     sys = compose(System(equations, t; name=:nothing), frame_a)
     add_params(sys, [color;]; name)

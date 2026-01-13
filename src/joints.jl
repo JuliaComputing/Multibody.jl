@@ -22,8 +22,8 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 - `length = radius`: Length of the joint in animations
 - `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
-@component function Revolute(; name, phi0 = 0, w0 = 0, n = Float64[0, 0, 1], axisflange = false,
-                  isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3.0, render = true)
+@component function Revolute(; name, phi0 = 0.0, w0 = 0.0, n = Float64[0, 0, 1], axisflange = false,
+                  isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3, render = true)
     if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
     end
