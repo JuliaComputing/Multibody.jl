@@ -327,7 +327,7 @@ plot!(
         mu_S = mu_S, [description = "Friction coefficient at sliding"]
         v_small = v_small, [description = "Small value added to v_slip to avoid division by zero in slip model."]
     end
-    @variables begin
+    vars = @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
         (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
         (z(t) = z0), [state_priority = 15, description = "z-position of the wheel axis"]
@@ -395,7 +395,7 @@ plot!(
         vSlide(t), [description="Slip velocity at which the flat region of the slip model starts"]
     end
 
-    angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
+    # angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
     @named frame_a = Frame(varw=state)
     Ra = ori(frame_a, state)
