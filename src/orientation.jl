@@ -372,12 +372,12 @@ function resolve_dyade2(R, D1)
     R*D1*R'
 end
 
-function is_frame(x)
+function is_frame(frame)
     md = get_metadata(frame)
     get(md, Multibody.ModelingToolkit.IsFrame, false)
 end
 
-function is_frame_2d(x)
+function is_frame_2d(frame)
     md = get_metadata(frame)
     get(md, Multibody.PlanarMechanics.IsFrame2D, false)
 end
