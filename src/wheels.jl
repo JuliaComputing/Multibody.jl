@@ -82,8 +82,8 @@ this frame.
         # ]
         (e_axis_0(t)[1:3]),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,-radius, 0]),
-        [description = "Distance vector from wheel center to contact point"]
+        (delta_0(t)[1:3]),
+        [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
         (e_n_0(t)[1:3]),
         [
             description = "Unit vector in normal direction of road at contact point, resolved in world frame", guess = [0, 1.0, 0]
@@ -224,8 +224,8 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
     wheel.frame_a.radius => 0.02radius;
     ```
 """
-@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
-                      angles = zeros(3), der_angles = zeros(3), kwargs...)
+@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=nothing, z0=nothing,
+                      angles = nothing, der_angles = nothing, kwargs...)
 
     @named wheeljoint = RollingWheelJoint(; radius, angles=nothing, x0=nothing, z0=nothing, der_angles=nothing, kwargs...)
     @named begin
@@ -320,7 +320,7 @@ plot!(
 )
 ```
 """
-@component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0, v_small = 1e-5, state=true)
+@component function SlipWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = radius, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = nothing, w_roll = nothing, v_small = 1e-5, state=true)
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
@@ -340,11 +340,11 @@ plot!(
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
         (phi_roll(t) = phi_roll), [guess=0, description="wheel angle"] # wheel angle
         (w_roll(t)=w_roll), [guess=0, description="Roll velocity of wheel"]
-        (r_road_0(t)[1:3] = zeros(3)),
+        (r_road_0(t)[1:3]),
         [
             description = "Position vector from world frame to contact point on road, resolved in world frame",
         ]
-        (f_wheel_0(t)[1:3] = zeros(3)),
+        (f_wheel_0(t)[1:3]),
         [description = "Force vector on wheel, resolved in world frame"]
         (f_n(t) = 0), [description = "Contact force acting on wheel in normal direction"]
         (f_lat(t) = 0), [
@@ -356,36 +356,36 @@ plot!(
         # [
         #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
         # ]
-        (e_axis_0(t)[1:3] = zeros(3)),
+        (e_axis_0(t)[1:3]),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,-radius, 0]),
-        [description = "Distance vector from wheel center to contact point"]
-        (e_n_0(t)[1:3] = zeros(3)),
+        (delta_0(t)[1:3]),
+        [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
+        (e_n_0(t)[1:3]),
         [
             description = "Unit vector in normal direction of road at contact point, resolved in world frame",
         ]
-        (e_lat_0(t)[1:3] = zeros(3)),
+        (e_lat_0(t)[1:3]),
         [
             description = "Unit vector in lateral direction of road at contact point, resolved in world frame",
         ]
-        (e_long_0(t)[1:3] = zeros(3)),
+        (e_long_0(t)[1:3]),
         [
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
         (s(t) = 0), [description = "Road surface parameter 1"]
         (w(t) = 0), [description = "Road surface parameter 2"]
-        (e_s_0(t)[1:3] = zeros(3)),
+        (e_s_0(t)[1:3]),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
-        (v_0(t)[1:3] = zeros(3)),
+        (v_0(t)[1:3]),
         [description = "Velocity of wheel center, resolved in world frame"]
-        (w_0(t)[1:3] = zeros(3)),
+        (w_0(t)[1:3]),
         [description = "Angular velocity of wheel, resolved in world frame"]
-        (vContact_0(t)[1:3] = zeros(3)),
+        (vContact_0(t)[1:3]),
         [description = "Velocity of contact point, resolved in world frame"]
 
-        (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
+        (aux(t)[1:3]), [description = "Auxiliary variable"]
 
         # New variables ========================================================
         v_lat(t), [guess=0, description="Velocity in lateral direction"]
@@ -498,7 +498,7 @@ plot!(
                 #     v_slip~mu_A
                 #     v_slip~mu_S
                 # ]
-    compose(System(equations, t, vars, pars; name), frame_a)
+    compose(System(equations, t; name), frame_a)
 end
 
 
