@@ -191,20 +191,19 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
     complete(model)
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)
-model = complete(model)
 ssys = multibody(model)
 # display(unknowns(ssys))
 op = [
-    model.body.v_0[1] => 0;
-    model.Calt.int.x => 4;
-    collect(model.cable.joint_2.phi) .=> 0.1;
+    ssys.body.v_0[1] => 0;
+    ssys.Calt.int.x => 4;
+    collect(ssys.cable.joint_2.phi) .=> 0.1;
 ]
 
-prob = ODEProblem(ssys, op, (0, 20))
+@time "ODEProblem" prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
 @test SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
+plot(sol, idxs=[ssys.arm1.frame_b.r_0[2], ssys.arm2.frame_b.r_0[2], ssys.arm3.frame_b.r_0[2], ssys.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
 ```
 
 ```@example QUAD
@@ -225,7 +224,6 @@ Below, we demonstrate a workflow where the model is linearized and an LQR contro
 ```@example QUAD
 using ControlSystemsBase, RobustAndOptimalControl, ControlSystemsMTK
 quad = RotorCraft(closed_loop=false, addload=false)
-quad = complete(quad)
 inputs = [quad.thruster1.u; quad.thruster2.u; quad.thruster3.u; quad.thruster4.u]
 outputs = [quad.y_alt, quad.y_roll, quad.y_pitch, quad.y_yaw, quad.y_forward, quad.y_sideways, quad.v_alt, quad.v_roll, quad.v_pitch, quad.v_yaw, quad.v_forward, quad.v_sideways, quad.yIe_alt]
 
@@ -266,24 +264,23 @@ L
 ```@example QUAD
 ModelingToolkit.get_iv(i::IRSystem) = i.t
 model = RotorCraft(; closed_loop=true, addload=true, L=-L, outputs) # Negate L for negative feedback
-model = complete(model)
 ssys = multibody(model)
 
 op = [
-    model.body.r_0[2] => 1e-3
-    model.body.r_0[3] => 1e-3
-    model.body.r_0[1] => 1e-3
-    model.cable.joint_2.phi .=> 1 # Usa a larger initial cable bend since this controller is more robust
-    model.world.g => 9.81;
-    model.body.phid .=> 0;
-    D(model.body.phi) .=> 0;
-    model.feedback_gain.input.u .=> 0;
-    model.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
+    ssys.body.r_0[2] => 1e-3
+    ssys.body.r_0[3] => 1e-3
+    ssys.body.r_0[1] => 1e-3
+    ssys.cable.joint_2.phi .=> 1 # Usa a larger initial cable bend since this controller is more robust
+    ssys.world.g => 9.81;
+    ssys.body.phid .=> 0;
+    D(ssys.body.phi) .=> 0;
+    ssys.feedback_gain.input.u .=> 0;
+    ssys.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
 prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
+plot(sol, idxs=[ssys.arm1.frame_b.r_0[2], ssys.arm2.frame_b.r_0[2], ssys.arm3.frame_b.r_0[2], ssys.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
 ```
 
 ```@example QUAD
@@ -296,11 +293,11 @@ The observant reader may have noticed that we linearized the quadrotor without t
 
 ```@example QUAD
 linop = merge(op, Dict([
-    model.cable.joint_2.phi .=> 0
-    model.body.r_0 .=> 1e-32
-    model.body.v_0 .=> 1e-32 # To avoid singularity in linearization
-    model.system_outputs.u .=> 1e-32
-    model.feedback_gain.input.u .=> 1e-32
+    ssys.cable.joint_2.phi .=> 0
+    ssys.body.r_0 .=> 1e-32
+    ssys.body.v_0 .=> 1e-32 # To avoid singularity in linearization
+    ssys.system_outputs.u .=> 1e-32
+    ssys.feedback_gain.input.u .=> 1e-32
     ]))
 @time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 S = minreal(S, 1e-6)
