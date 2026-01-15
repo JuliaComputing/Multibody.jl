@@ -10,7 +10,6 @@ The [`GearConstraint`](@ref) has two rotational axes which do not have to be par
 using Multibody
 using ModelingToolkit
 using Plots
-# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -47,13 +46,12 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
 @named model = System(eqs, t, systems = [world; systems])
-cm = complete(model)
 ssys = multibody(model)
 prob = ODEProblem(ssys, [
-    D(cm.idealGear.phi_b) => 0
-    cm.idealGear.phi_b => 0
+    D(ssys.idealGear.phi_b) => 0
+    ssys.idealGear.phi_b => 0
 ], (0, 10))
-sol = solve(prob, Rodas4())
+sol = solve(prob, Tsit5())
 plot(sol, idxs=[
     inertia1.phi
     inertia2.phi
@@ -62,4 +60,4 @@ plot(sol, idxs=[
     inertia1.phi / inertia2.phi # One can plot arbitrary expressions of variables! In this case, we plot the ratio between the two angles.
 ], layout=3, sp=[1 2 1 2 3], framestyle=:zerolines)
 ```
-The plot indicates that the ratio between the angles of inertia 1 and 2 is 10, as expected, and that the same ratio holds between the two sides of the 3D gear constraint.
+The plot indicates that the ratio between the angles of inertia 1 and 2 is 10, as expected, and that the same ratio holds between the angles on the two sides of the 3D gear constraint.

@@ -372,9 +372,9 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
         bearing = Frame() #"Coordinate system fixed in the bearing"
 
         actuatedRevolute_a = Revolute(axisflange = true,
-                                      n = n_a)
+                                      n = n_a, phi0=nothing, w0=nothing)
         actuatedRevolute_b = Revolute(axisflange = true,
-                                      n = n_b)
+                                      n = n_b, phi0=nothing, w0=nothing)
 
         idealGear = Rotational.IdealGear(ratio = ratio)
         translation1 = FixedTranslation(r = r_b)
