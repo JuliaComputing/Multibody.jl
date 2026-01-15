@@ -283,7 +283,7 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
     # @parameters n_y(t)=n_y [
     #     description = "Vector along y-axis of frame_b resolved in frame_a",
     # ]
-    @parameters angle(t)=angle [
+    @parameters angle=angle [
         description = "angle of rotation in radians",
     ]
     @parameters begin
@@ -312,7 +312,7 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
                zeros(3) ~ taub + resolve1(Rrel_inv, taua) +
                            cross(resolve1(Rrel_inv, r), fb)]
     end
-    append!(eqs, frame_b.r_0 ~ frame_a.r_0 + resolve1(frame_a, r))
+    push!(eqs, frame_b.r_0 ~ frame_a.r_0 + resolve1(frame_a, r))
 
     compose(System(eqs, t, [], pars; name), frame_a, frame_b)
 end
