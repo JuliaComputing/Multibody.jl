@@ -65,6 +65,5 @@ sol = solve(prob, Rodas5P())
 end
 
 @named model = FallingBodyOuter()
-model = complete(model)
 @test_throws ModelingToolkit.StateSelection.ExtraEquationsSystemException multibody(model)
 

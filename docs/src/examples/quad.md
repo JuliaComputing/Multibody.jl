@@ -97,12 +97,12 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         y_yaw(t), [state_priority=2]
         y_forward(t), [state_priority=2]
         y_sideways(t), [state_priority=2]
-        v_alt(t)=0, [state_priority=2]
-        v_roll(t)=0, [state_priority=2]
-        v_pitch(t)=0, [state_priority=2]
-        v_yaw(t)=0, [state_priority=2]
-        v_forward(t)=0, [state_priority=2]
-        v_sideways(t)=0, [state_priority=2]
+        v_alt(t), [state_priority=2]
+        v_roll(t), [state_priority=2]
+        v_pitch(t), [state_priority=2]
+        v_yaw(t), [state_priority=2]
+        v_forward(t), [state_priority=2]
+        v_sideways(t), [state_priority=2]
         (Ie_alt(t)=0), [description="Integral of altitude error"]
         yIe_alt(t)
     end
@@ -188,7 +188,6 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
 
     end
     @named model = System(connections, t, vars, pars; systems)
-    complete(model)
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)
 ssys = multibody(model)
