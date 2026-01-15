@@ -13,7 +13,6 @@ using Test
 t = Multibody.t
 D = Differential(t)
 @named robot = Multibody.Robot6DOF()
-robot = complete(robot)
 
 length(equations(robot))
 ```

@@ -29,7 +29,7 @@ D = Differential(t)
     end
 
     systems = @named begin
-        world = World()
+        world = World(mu = 1, point_gravity = true) # The gravity model is selected here
         body1 = Body(
             m=1,
             I_11=0.1,
@@ -56,7 +56,6 @@ D = Differential(t)
     return System(equations, t; name, systems)
 end
 @named model = PointGrav()
-model = complete(model)
 ssys = multibody(model)
 defs = [
     model.world.mu => 1
@@ -66,7 +65,7 @@ defs = [
 
 ]
 prob = ODEProblem(ssys, defs, (0, 5))
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas5P())
 plot(sol)
 ```
 

@@ -237,18 +237,20 @@ end
     @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
     @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
 
-    @variables length(t) [
-        description = "Distance between the origin of frame_a and the origin of frame_b",
-    ]
-    @variables s(t)=s0 [
-        description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
-    ]
-    @variables r_rel_0(t)[1:3]=r_rel_0 [
-        description = "Position vector from frame_a to frame_b resolved in world frame",
-    ]
-    @variables e_rel_0(t)[1:3] [
-        description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
-    ]
+    vars = begin @variables
+        length(t), [
+            description = "Distance between the origin of frame_a and the origin of frame_b",
+        ]
+        s(t)=s0, [
+            description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
+        ]
+        r_rel_0(t)[1:3]=r_rel_0, [
+            description = "Position vector from frame_a to frame_b resolved in world frame",
+        ]
+        e_rel_0(t)[1:3], [
+            description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
+        ]
+    end
 
     eqs = [r_rel_0 ~ frame_b.r_0 - frame_a.r_0
            length ~ _norm(r_rel_0)

@@ -12,7 +12,6 @@ This example has two parallel spring-mass parts, the first body (`body1`) is att
 using Multibody
 using ModelingToolkit
 using Plots
-# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -24,7 +23,7 @@ world = Multibody.world
     body2 = Body(; m = 1, isroot = false, r_cm = [0.0, -0.2, 0]) # This is not root since there is a joint parallel to the spring leading to this body
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
+    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, v0 = 0, axisflange = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
@@ -57,11 +56,11 @@ ssys = multibody(model)
 
 prob = ODEProblem(ssys, [
     damper1.d => 2;
-    body1.v_0 .=> 0;
-    body1.w_a .=> 0;
+    collect(body1.v_0) .=> 0;
+    # collect(body1.w_a) .=> 0;
 ], (0, 5))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Tsit5())
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(

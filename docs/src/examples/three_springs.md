@@ -38,9 +38,10 @@ eqs = [connect(world.frame_b, bar1.frame_a)
 
 @named model = System(eqs, t, systems = [world; systems])
 ssys = multibody(model)
+
 prob = ODEProblem(ssys, [], (0, 10))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas5P())
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = [body1.r_0...])

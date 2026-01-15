@@ -3,26 +3,28 @@
 Two methods of planning trajectories are available
 - [`point_to_point`](@ref): Generate a minimum-time point-to-point trajectory with specified start and endpoints, not exceeding specified speed and acceleration limits.
 - [`traj5`](@ref): Generate a 5:th order polynomial trajectory with specified start and end points. Additionally allows specification of start and end values for velocity and acceleration.
+- `TrajectoryLimiters.JerkLimiter` from [TrajectoryLimiters.jl](https://github.com/baggepinnen/TrajectoryLimiters.jl): Generate time-optimal trajectories with bounded jerk, acceleration and velocity using the Ruckig algorithm.
 
 Components that make use of these trajectory generators is provided:
 - [`KinematicPTP`](@ref)
+- [`KinematicPTPBoundedJerk`](@ref)
 - [`Kinematic5`](@ref)
 
-These both have output connectors of type `RealOutput` called `q, qd, qdd` for positions, velocities and accelerations.
+These all have output connectors of type `RealOutput` called `q, qd, qdd` for positions, velocities and accelerations.
 
 See [Industrial robot](@ref) for an example making use of the [`point_to_point`](@ref) planner.
 
 
 ## Example
 
-### Point-to-point trajectory
+### Point-to-point trajectory with bounded acceleration
 ```@example TRAJ
 using Multibody, Plots
 Ts = 0.001
-t = -1:Ts:3
+t  = -0.5:Ts:3
 
-q1 = [1, 1.2]           # Final point (2 DOF)
-qd_max = [0.7, 1.2]     # Max velocity (2 DOF)
+q1      = [1, 1.2]      # Final point (2 DOF)
+qd_max  = [0.7, 1.2]    # Max velocity (2 DOF)
 qdd_max = [0.9, 1.1]    # Max acceleration (2 DOF)
 q, qd, qdd = point_to_point(t; q1, qd_max, qdd_max)
 
@@ -30,9 +32,30 @@ plot(t, [q qd qdd], ylabel=["\$q\$" "\$\\dot{q}\$" "\$\\ddot{q}\$"], layout=(3,1
 hline!([qd_max' qdd_max'], l=(2, :dash), sp=[2 2 3 3], c=[1 2 1 2], legend=false)
 ```
 
+### Point-to-point trajectory with bounded jerk
+This kind of trajectory generator is implemented in [TrajectoryLimiters.jl](https://github.com/baggepinnen/TrajectoryLimiters.jl), it may be used as a component in a multibody model through [`KinematicPTPBoundedJerk`](@ref).
+```@example TRAJ
+using Multibody, TrajectoryLimiters, Plots
+Ts = 0.001
+t  = -0.5:Ts:3
+
+q1       = [1, 1.2]      # Final point (2 DOF)
+qd_max   = [0.7, 1.2]    # Max velocity (2 DOF)
+qdd_max  = [0.9, 1.1]    # Max acceleration (2 DOF)
+qddd_max = [4.0, 4.0]    # Max jerk (2 DOF)
+
+lims = [JerkLimiter(; vmax=qd_max[i], amax=qdd_max[i], jmax=qddd_max[i]) for i in 1:length(q1)]
+
+profiles = calculate_trajectory(lims; pf=q1)
+q, qd, qdd, qddd = evaluate_at(profiles, t)
+
+plot(t, [q qd qdd], ylabel=["\$q\$" "\$\\dot{q}\$" "\$\\ddot{q}\$"], layout=(3,1), l=2, sp=[1 1 2 2 3 3], legend=false)
+hline!([qd_max' qdd_max'], l=(2, :dash), sp=[2 2 3 3], c=[1 2 1 2], legend=false)
+```
+
 ### 5:th order polynomial trajectory
 ```@example TRAJ
-t = 0:Ts:3
+t  = 0:Ts:3
 q1 = 1
 q, qd, qdd = traj5(t; q1)
 
