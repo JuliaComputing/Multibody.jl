@@ -237,7 +237,7 @@ end
     @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
     @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
 
-    vars = begin @variables
+    vars = @variables begin
         length(t), [
             description = "Distance between the origin of frame_a and the origin of frame_b",
         ]

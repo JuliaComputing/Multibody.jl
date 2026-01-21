@@ -512,7 +512,7 @@ Simple wheel model with viscous lateral friction and a driving torque
     vars = @variables begin
         θ(t), [guess=0, description="Wheel angle"]
         Vx(t), [guess=0, description="Longitudinal velocity (resolved in local frame)"]
-        Vy(t)=0, [description="Lateral velocity (resolved in local frame)"]
+        Vy(t), [guess=0, description="Lateral velocity (resolved in local frame)"]
         Fy(t), [guess=0, description="Lateral friction force"]
         Fx(t), [guess=0, description="Applied longitudinal wheel force"]
     end

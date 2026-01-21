@@ -14,7 +14,7 @@ g = -9.80665
 @testset "Free body" begin
     m = 2
     I = 1
-    @named body = Pl.Body(; m, I, r=[0,0], v=[0,0], phi=0)
+    @named body = Pl.Body(; m, I, r=[0,0], v=[0,0], phi=0, w=0)
     @named model = System(Equation[],
         t,
         [],
@@ -23,7 +23,7 @@ g = -9.80665
     sys = multibody(model)
     prob = ODEProblem(sys, [], tspan)
 
-    sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+    sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
 
     free_falling_displacement = 0.5 * g * tspan[end]^2  # 0.5 * g * t^2
@@ -48,7 +48,6 @@ end
     @named model = System(connections,
         t,
         systems = [body, revolute, rod, ceiling])
-    model = complete(model)
     ssys = multibody(model)
 
     @test length(unknowns(ssys)) == 2
@@ -73,7 +72,6 @@ end
     @named model = System(connections,
         t,
         systems = [revolute, rod, ceiling])
-    model = complete(model)
     ssys = multibody(model)
 
     @test length(unknowns(ssys)) == 2
@@ -81,8 +79,8 @@ end
 
     sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
-    @test sol(1, idxs=model.rod.frame_a.phi) ≈ -pi atol=1e-2
-    @test sol(2, idxs=model.rod.frame_a.phi) ≈ 0 atol=1e-2
+    @test sol(1, idxs=ssys.rod.frame_a.phi) ≈ -pi atol=1e-2
+    @test sol(2, idxs=ssys.rod.frame_a.phi) ≈ 0 atol=1e-2
 end
 
 @testset "Prismatic" begin
@@ -123,10 +121,9 @@ end
             revolute,
             abs_v_sensor
         ])
-    model = complete(model)
     begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
         ssys = multibody(model)
-        prob = ODEProblem(ssys, [model.body.w => w], tspan)
+        prob = ODEProblem(ssys, [ssys.body.w => w], tspan)
         sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
 
         # phi 
@@ -350,7 +347,7 @@ end
     @named fixed = Pl.Fixed()
     @named spring = Pl.Spring(; c_y = 10, s_rely0 = -0.5, c_x = 1, c_phi = 1e5)
     @named damper = Pl.Damper(d = 1)
-    @named prismatic = Pl.Prismatic(; r=[0, 1])
+    @named prismatic = Pl.Prismatic(; r=[0, 1], s=0, v=0)
 
     connections = [
         connect(fixed.frame_b, spring.frame_a),
@@ -412,26 +409,25 @@ end
         return System(equations, t; name, systems)
     end
     @named model = TestWheel()
-    model = complete(model)
     ssys = multibody(model)
-    defs = Dict(unknowns(ssys) .=> 0)
+    defs = Dict(unknowns(ssys) .=> 1e-8 .* randn.())
     prob = ODEProblem(ssys, defs, (0.0, 10.0))
-    sol = solve(prob, Rodas5P(), initializealg = BrownFullBasicInit())
+    sol = solve(prob, Rodas5P())
     @test SciMLBase.successful_retcode(sol)
-    # Multibody.render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
+    # Multibody.render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[ssys.wheel1.frame_a, ssys.wheel2.frame_a], filename="drifting.gif")
 end
 
 
 # import GLMakie, Multibody
-# Multibody.render(model, sol, show_axis=true, x=1, y=1, z=5, traces=[model.wheel1.frame_a, model.wheel2.frame_a])
+# Multibody.render(model, sol, show_axis=true, x=1, y=1, z=5, traces=[ssys.wheel1.frame_a, ssys.wheel2.frame_a])
 
 
 # plot(sol, idxs=[
-#     model.revolute.phi,
-#     model.revolute.frame_a.phi,
-#     model.revolute.frame_b.phi,
-#     model.wheel1.θ,
-#     model.wheel1.frame.phi
+#     ssys.revolute.phi,
+#     ssys.revolute.frame_a.phi,
+#     ssys.revolute.frame_b.phi,
+#     ssys.wheel1.θ,
+#     ssys.wheel1.frame.phi
 # ])
 
 ##
@@ -486,22 +482,21 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
     end
 
     @named model = TestSlipBasedWheel()
-    model = complete(model)
     ssys = multibody(model)
     display(unknowns(ssys))
     prob = ODEProblem(ssys, [
-        model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
-        model.revolute.frame_b.phi => 0,
-        model.body.w => 0,
-        D(model.revolute.frame_b.phi) => 0,
-        D(model.prismatic.r0[2]) => 0,
+        ssys.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
+        ssys.revolute.frame_b.phi => 0,
+        ssys.body.w => 0,
+        D(ssys.revolute.frame_b.phi) => 0,
+        D(ssys.prismatic.r0[2]) => 0,
     ], (0.0, 20.0))
     sol = solve(prob, Rodas5Pr(autodiff=true)) # Since the friction model is not differentiable everywhere
 
-    @test sol(15, idxs=[model.slipBasedWheelJoint.f_lat, model.slipBasedWheelJoint.f_long]) ≈ [80, -5] rtol=0.01
-    @test sol(20, idxs=[model.slipBasedWheelJoint.f_lat, model.slipBasedWheelJoint.f_long]) ≈ [80, -4.95] rtol=0.01
-    # plot(sol, idxs=[model.slipBasedWheelJoint.f_lat, model.slipBasedWheelJoint.f_long])
-    # plot(sol, idxs=[model.revolute.w, model.prismatic.s])
+    @test sol(15, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long]) ≈ [80, -5] rtol=0.01
+    @test sol(20, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long]) ≈ [80, -4.95] rtol=0.01
+    # plot(sol, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long])
+    # plot(sol, idxs=[ssys.revolute.w, ssys.prismatic.s])
 end
 
 ##
@@ -619,7 +614,7 @@ ssys = multibody(model)
 defs = merge(
     # Dict(unknowns(ssys)[ModelingToolkit.is_diff_equation.(equations(ssys))] .=> 0),
     # ModelingToolkit.defaults(model),
-    Dict(model.body.w => 0),
+    Dict(ssys.body.w => 0),
 )
 prob = ODEProblem(ssys, defs, (0.0, 20.0))
 sol = solve(prob, Rodas5P(autodiff=false))
@@ -634,7 +629,6 @@ end
 # ==============================================================================
 
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
-# NOTE: waiting for release of ModelingToolkitStandardLibrary that includes https://github.com/SciML/ModelingToolkitStandardLibrary.jl/pull/327
 # @testset "Planar Kinematic loop" begin
 #     @info "Testing Planar Kinematic loop"
 
@@ -674,7 +668,6 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 #     end
 
 #     @named model = PlanarKinematicLoop()
-#     model = complete(model)
 #     ssys = multibody(model)
 #     @test length(unknowns(ssys)) <= 6 # ideally 4
 #     display(sort(unknowns(ssys), by=string))
