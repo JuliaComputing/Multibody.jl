@@ -383,7 +383,7 @@ end
     gray = [0.1, 0.1, 0.1, 1]
     @component function TestWheel(; name)
         systems = @named begin
-            body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
+            body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0, r0=zeros(2), phi=0)
             revolute = Pl.Revolute()
             wheel1 = Pl.SimpleWheel(color=gray)
             wheel2 = Pl.SimpleWheel(color=gray, μ=.5)
@@ -410,9 +410,10 @@ end
     end
     @named model = TestWheel()
     ssys = multibody(model)
-    defs = Dict(unknowns(ssys) .=> 1e-8 .* randn.())
-    prob = ODEProblem(ssys, defs, (0.0, 10.0))
-    sol = solve(prob, Rodas5P())
+    defs = Dict()
+    guesses = Dict([ssys.body.body.w => 1.0; collect(ssys.body.body.v) .=> 1.0; ])
+    prob = ODEProblem(ssys, defs, (0.0, 10.0); guesses)
+    sol = solve(prob, Tsit5())
     @test SciMLBase.successful_retcode(sol)
     # Multibody.render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[ssys.wheel1.frame_a, ssys.wheel2.frame_a], filename="drifting.gif")
 end
@@ -492,6 +493,9 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
     @test sol(20, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long]) ≈ [80, -4.95] rtol=0.01
     # plot(sol, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long])
     # plot(sol, idxs=[ssys.revolute.w, ssys.prismatic.s])
+
+    # Multibody.render(model, sol, 0.0)[1]
+
 end
 
 ##

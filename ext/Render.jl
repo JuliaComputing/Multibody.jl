@@ -185,7 +185,7 @@ Return a function of `t` that returns the transpose of the rotation-matrix part 
 See also [`get_rot`](@ref)
 """
 function get_rot_fun(sol, frame)
-    syms = vec(ori(frame).R.mat')
+    syms = vec(ori(frame).R')
     getter = getu(sol, syms)
     p = ModelingToolkit.parameter_values(sol)
     function (t)

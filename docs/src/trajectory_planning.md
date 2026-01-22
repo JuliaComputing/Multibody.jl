@@ -44,10 +44,10 @@ qd_max   = [0.7, 1.2]    # Max velocity (2 DOF)
 qdd_max  = [0.9, 1.1]    # Max acceleration (2 DOF)
 qddd_max = [4.0, 4.0]    # Max jerk (2 DOF)
 
-lims = [JerkLimiter(; vmax=qd_max[i], amax=qdd_max[i], jmax=qddd_max[i]) for i in 1:length(q1)]
+lims = [JerkLimiter(; vmax=qd_max[i], amax=qdd_max[i], jmax=qddd_max[i]) for i in 1:length(q1)] # One limiter per DOF
 
 profiles = calculate_trajectory(lims; pf=q1)
-q, qd, qdd, qddd = evaluate_at(profiles, t)
+q, qd, qdd, qddd = profiles(t)
 
 plot(t, [q qd qdd], ylabel=["\$q\$" "\$\\dot{q}\$" "\$\\ddot{q}\$"], layout=(3,1), l=2, sp=[1 1 2 2 3 3], legend=false)
 hline!([qd_max' qdd_max'], l=(2, :dash), sp=[2 2 3 3], c=[1 2 1 2], legend=false)

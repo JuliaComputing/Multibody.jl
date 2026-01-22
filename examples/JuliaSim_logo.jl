@@ -16,9 +16,9 @@ radius_large = length_scale*0.3
 
     systems = @named begin
         world = World()
-        revl  = Revolute(; radius = radius_large, color=JULIASIM_PURPLE, axisflange=true)
-        revl2 = Revolute(; radius = radius_large, color=JULIASIM_PURPLE, axisflange=true)
-        revr  = Revolute(; radius = radius_small, color=JULIASIM_PURPLE, axisflange=true)
+        revl  = Revolute(; radius = radius_large, color=JULIASIM_PURPLE, axisflange=true, phi=0, w=0)
+        revl2 = Revolute(; radius = radius_large, color=JULIASIM_PURPLE, axisflange=true, phi=0, w=0)
+        revr  = Revolute(; radius = radius_small, color=JULIASIM_PURPLE, axisflange=true, phi=0, w=0)
         bodyl = Body(m=1, radius = radius_small, color=JULIASIM_PURPLE)
         bodyr = Body(m=1, radius = radius_large, color=JULIASIM_PURPLE)
         bar_top = FixedTranslation(r=length_scale*[1, 0.05, 0], radius=length_scale*0.025, color=JULIASIM_PURPLE)
@@ -58,7 +58,6 @@ radius_large = length_scale*0.3
 end
 
 @named logo = Logo()
-logo = complete(logo)
 ssys = multibody(logo)
 prob = ODEProblem(ssys, [], (0.0, 3.51))
 sol = solve(prob, Rodas5P())

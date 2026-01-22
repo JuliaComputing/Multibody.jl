@@ -176,6 +176,7 @@ A prismatic joint
     else
         # actutation torque
         push!(eqs, f ~ 0)
+        push!(eqs, fixed.s ~ 0)
     end
     return extend(System(eqs, t, vars, pars; name, systems), partial_frames)
 end

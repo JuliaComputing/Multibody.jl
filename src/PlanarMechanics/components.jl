@@ -206,7 +206,7 @@ A fixed translation between two components (rigid rod)
         frame_a.tau + frame_b.tau + dot(r0, [frame_b.fy, -frame_b.fx]) ~ 0
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @component function FixedRotation(; name, alpha = 0, render = true)
