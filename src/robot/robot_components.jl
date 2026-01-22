@@ -97,20 +97,21 @@ Axis model of the r3 joints 4,5,6
 """
 function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
                    J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
-    # pars = @parameters begin
-    #     kp = kp, [description = "Gain of position controller"]
-    #     ks = ks, [description = "Gain of speed controller"]
-    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
-    #     k = k, [description = "Gain of motor"]
-    #     w = w, [description = "Time constant of motor"]
-    #     D = D, [description = "Damping constant of motor"]
-    #     J = J, [description = "Moment of inertia of motor"]
-    #     # ratio = ratio, [description = "Gear ratio"]
-    #     Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
-    #     Rv1 = Rv1, [description = "Viscous friction coefficient"]
-    #     peak = peak,
-    #            [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
-    # end
+    pars = @parameters begin
+        kp = kp, [description = "Gain of position controller"]
+        ks = ks, [description = "Gain of speed controller"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller"]
+        k = k, [description = "Gain of motor"]
+        w = w, [description = "Time constant of motor"]
+        D = D, [description = "Damping constant of motor"]
+        J = J, [description = "Moment of inertia of motor"]
+        # ratio = ratio, [description = "Gear ratio"]
+        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+        Rv1 = Rv1, [description = "Viscous friction coefficient"]
+        peak = peak,
+               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+        ratio = ratio, [description = "Gear ratio"]
+    end
 
     systems = @named begin
         flange = Rotational.Flange()
@@ -135,7 +136,7 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
            (accSensor.a.u/ratio ~ axisControlBus.acceleration)
            connect(controller.axisControlBus, axisControlBus)]
 
-    System(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 
@@ -194,7 +195,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
         ratio = ratio, [description = "Gear ratio of gearbox"]
     end
     systems = @named begin
-        gain1 = Blocks.Gain(ratio)
+        gain1 = Blocks.Gain(k=ratio)
         PI = Blocks.PI(k = ks, T = Ts)
         feedback1 = Blocks.Feedback()
         P = Blocks.Gain(k=kp)
@@ -321,14 +322,14 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
 end
 
 function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
-    # @parameters begin
-    #     J = J, [description = "Moment of inertia of motor"]
-    #     k = k, [description = "Gain of motor"]
-    #     w = w, [description = "Time constant of motor"]
-    #     D = D, [description = "Damping constant of motor"]
-    #     w_max = w_max, [description = "Maximum speed of motor"]
-    #     i_max = i_max, [description = "Maximum current of motor"]
-    # end
+    pars = @parameters begin
+        J = J, [description = "Moment of inertia of motor"]
+        k = k, [description = "Gain of motor"]
+        w = w, [description = "Time constant of motor"]
+        D = D, [description = "Damping constant of motor"]
+        w_max = w_max, [description = "Maximum speed of motor"]
+        i_max = i_max, [description = "Maximum current of motor"]
+    end
 
     #   Electrical.Analog.Basic.RotationalEMF emf(k=k, useSupport=false)
 
@@ -406,7 +407,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
            (convert2.y ~ Vs.v)
            connect(emf.flange, Jmotor.flange_a)]
 
-    compose(System(eqs, t; name), systems)
+    compose(System(eqs, t, [], pars; name), systems)
 end
 
 robot_orange = [1, 0.51, 0, 1]
