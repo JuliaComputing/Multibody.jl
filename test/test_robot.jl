@@ -262,7 +262,6 @@ u = m.axis2.controller.PI.ctr_output.u
     #     D(cm.axis.flange.phi) => 0
     # ], (0.0, 5.0))
 
-    zdd = ModelingToolkit.missing_variable_defaults(oneaxis); op = merge(Dict(zdd), op)
 
     prob = ODEProblem(ssys, collect(op), (0.0, 3),)
     sol = solve(prob, Tsit5());
@@ -288,21 +287,24 @@ end
     @info "Testing full robot"
 
     @named robot = Robot6DOF()
-    robot = complete(robot)
 
     @time "full robot" begin 
         @time "multibody" ssys = multibody(robot)
         @time "ODEProblem creation" prob = ODEProblem(ssys, [
-            robot.mechanics.r1.phi => deg2rad(-60)
-            robot.mechanics.r2.phi => deg2rad(20)
-            robot.mechanics.r3.phi => deg2rad(90)
-            robot.mechanics.r4.phi => deg2rad(0)
-            robot.mechanics.r5.phi => deg2rad(-110)
-            robot.mechanics.r6.phi => deg2rad(0)
+            ssys.mechanics.r1.phi => deg2rad(-60)
+            ssys.mechanics.r2.phi => deg2rad(20)
+            ssys.mechanics.r3.phi => deg2rad(90)
+            ssys.mechanics.r4.phi => deg2rad(0)
+            ssys.mechanics.r5.phi => deg2rad(-110)
+            ssys.mechanics.r6.phi => deg2rad(0)
         
-            robot.axis1.motor.Jmotor.phi => deg2rad(-60) * (-105) # Multiply by gear ratio
-            robot.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
-            robot.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
+            ssys.axis1.motor.Jmotor.phi => deg2rad(-60) * (-105) # Multiply by gear ratio
+            ssys.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
+            ssys.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
+
+            ssys.axis1.motor.Jmotor.w => 0
+            ssys.axis2.motor.Jmotor.w => 0
+            ssys.axis3.motor.Jmotor.w => 0
         ], (0.0, 2.0))
         @time "simulation (solve)" sol = solve(prob, Rodas5P(autodiff=false));
         @test SciMLBase.successful_retcode(sol)
@@ -311,36 +313,36 @@ end
     if doplot()
         # plot(sol, layout=30, size=(1900,1200), legend=false)
         @time "Plotting ref" plot(sol, idxs = [
-            robot.pathPlanning.controlBus.axisControlBus1.angle_ref# * (-105)
-            robot.pathPlanning.controlBus.axisControlBus2.angle_ref# * (210)
-            robot.pathPlanning.controlBus.axisControlBus3.angle_ref# * (60)
-            robot.pathPlanning.controlBus.axisControlBus4.angle_ref# * (-99)
-            robot.pathPlanning.controlBus.axisControlBus5.angle_ref# * (79.2)
-            robot.pathPlanning.controlBus.axisControlBus6.angle_ref# * (-99)
+            ssys.pathPlanning.controlBus.axisControlBus1.angle_ref# * (-105)
+            ssys.pathPlanning.controlBus.axisControlBus2.angle_ref# * (210)
+            ssys.pathPlanning.controlBus.axisControlBus3.angle_ref# * (60)
+            ssys.pathPlanning.controlBus.axisControlBus4.angle_ref# * (-99)
+            ssys.pathPlanning.controlBus.axisControlBus5.angle_ref# * (79.2)
+            ssys.pathPlanning.controlBus.axisControlBus6.angle_ref# * (-99)
         ], layout=9, size=(800,800), l=(:black, :dash), legend=false)
         @time "Plotting ang." plot!(sol, idxs = [
-            robot.pathPlanning.controlBus.axisControlBus1.angle
-            robot.pathPlanning.controlBus.axisControlBus2.angle
-            robot.pathPlanning.controlBus.axisControlBus3.angle
-            robot.pathPlanning.controlBus.axisControlBus4.angle
-            robot.pathPlanning.controlBus.axisControlBus5.angle
-            robot.pathPlanning.controlBus.axisControlBus6.angle
+            ssys.pathPlanning.controlBus.axisControlBus1.angle
+            ssys.pathPlanning.controlBus.axisControlBus2.angle
+            ssys.pathPlanning.controlBus.axisControlBus3.angle
+            ssys.pathPlanning.controlBus.axisControlBus4.angle
+            ssys.pathPlanning.controlBus.axisControlBus5.angle
+            ssys.pathPlanning.controlBus.axisControlBus6.angle
         ], sp=(1:6)')
 
         plot!(sol, idxs = [
-            robot.axis1.motor.Jmotor.phi / ( -105) - robot.pathPlanning.controlBus.axisControlBus1.angle_ref
-            robot.axis2.motor.Jmotor.phi / (210) - robot.pathPlanning.controlBus.axisControlBus2.angle_ref
-            robot.axis3.motor.Jmotor.phi / (60) - robot.pathPlanning.controlBus.axisControlBus3.angle_ref
+            ssys.axis1.motor.Jmotor.phi / ( -105) - ssys.pathPlanning.controlBus.axisControlBus1.angle_ref
+            ssys.axis2.motor.Jmotor.phi / (210) - ssys.pathPlanning.controlBus.axisControlBus2.angle_ref
+            ssys.axis3.motor.Jmotor.phi / (60) - ssys.pathPlanning.controlBus.axisControlBus3.angle_ref
         ], sp=(7:9)')
         display(current())
 
     end
 
     tv = 0:0.1:2
-    angle_ref = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref)
+    angle_ref = sol(tv, idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref)
     @test !all(iszero, angle_ref)
 
-    control_error = sol(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
+    control_error = sol(tv, idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref-ssys.pathPlanning.controlBus.axisControlBus1.angle)
     @test maximum(abs, control_error) < 0.01
 end
 
