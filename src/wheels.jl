@@ -333,7 +333,7 @@ plot!(
     end
     vars = @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
+        (y(t) = y0), [guess = radius, state_priority = 0, description = "y-position of the wheel axis"]
         (z(t) = z0), [state_priority = 15, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = 5, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
@@ -346,13 +346,13 @@ plot!(
         ]
         (f_wheel_0(t)[1:3]),
         [description = "Force vector on wheel, resolved in world frame"]
-        (f_n(t) = 0), [description = "Contact force acting on wheel in normal direction"]
-        (f_lat(t) = 0), [
+        (f_n(t)), [description = "Contact force acting on wheel in normal direction", guess=1.0]
+        (f_lat(t)), [
             description = "Contact force acting on wheel in lateral direction",
         ]
-        (f_long(t) = 0),
+        (f_long(t)),
         [description = "Contact force acting on wheel in longitudinal direction"]
-        # (err(t) = 0),
+        # (err(t)),
         # [
         #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
         # ]
@@ -362,7 +362,7 @@ plot!(
         [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
         (e_n_0(t)[1:3]),
         [
-            description = "Unit vector in normal direction of road at contact point, resolved in world frame",
+            description = "Unit vector in normal direction of road at contact point, resolved in world frame", guess = [0, 1.0, 0]
         ]
         (e_lat_0(t)[1:3]),
         [
@@ -373,8 +373,8 @@ plot!(
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
-        (s(t) = 0), [description = "Road surface parameter 1"]
-        (w(t) = 0), [description = "Road surface parameter 2"]
+        (s(t)), [description = "Road surface parameter 1"]
+        (w(t)), [description = "Road surface parameter 2"]
         (e_s_0(t)[1:3]),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
@@ -385,7 +385,7 @@ plot!(
         (vContact_0(t)[1:3]),
         [description = "Velocity of contact point, resolved in world frame"]
 
-        (aux(t)[1:3]), [description = "Auxiliary variable"]
+        (aux(t)[1:3]), [description = "Auxiliary variable", guess = [1,0,0]]
 
         # New variables ========================================================
         v_lat(t), [guess=0, description="Velocity in lateral direction"]
@@ -532,7 +532,7 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
 """
 @component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
                       angles = zeros(3), der_angles = zeros(3), state = true, kwargs...)
-    @named wheeljoint = SlipWheelJoint(; radius, angles, x0, z0, der_angles, state, kwargs...)
+    @named wheeljoint = SlipWheelJoint(; radius, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],

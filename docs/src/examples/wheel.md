@@ -26,7 +26,7 @@ import ModelingToolkitStandardLibrary.Blocks
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
-# using JuliaSimCompiler
+using Random
 using Test
 
 t = Multibody.t
@@ -58,16 +58,15 @@ D = Differential(t)
 end
 
 @named worldwheel = WheelInWorld()
-worldwheel = complete(worldwheel)
+ssys = multibody(worldwheel)
 
 defs = Dict([
-    worldwheel.wheel.body.r_0[1] => 0.2;
-    worldwheel.wheel.body.r_0[2] => 0.3;
-    worldwheel.wheel.body.r_0[3] => 0.2;
+    ssys.wheel.body.r_0[1] => 0.2;
+    ssys.wheel.body.r_0[2] => 0.3;
+    ssys.wheel.body.r_0[3] => 0.2;
 ])
 
-ssys = multibody(worldwheel)
-prob = ODEProblem(ssys, defs, (0, 4))
+prob = ODEProblem(ssys, defs, (0, 4), missing_guess_value = MissingGuessValue.Random(Random.GLOBAL_RNG))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
 ```
@@ -143,19 +142,18 @@ The slip velocity is defined such that when the wheel is moving with positive ve
 end
 
 @named worldwheel = SlipWheelInWorld()
-worldwheel = complete(worldwheel)
+ssys = multibody(worldwheel)
 
 defs = Dict([
-    worldwheel.wheel.body.r_0[1] => 0.2;
-    worldwheel.wheel.body.r_0[2] => 0.3;
-    worldwheel.wheel.body.r_0[3] => 0.2;
-    worldwheel.wheel.frame_a.render => true;
-    worldwheel.wheel.frame_a.length => 0.4;
-    worldwheel.wheel.frame_a.radius => 0.01;
+    # ssys.wheel.body.r_0[1] => 0.2;
+    # ssys.wheel.body.r_0[2] => 0.3;
+    # ssys.wheel.body.r_0[3] => 0.2;
+    ssys.wheel.frame_a.render => true;
+    ssys.wheel.frame_a.length => 0.4;
+    ssys.wheel.frame_a.radius => 0.01;
 ])
 
-ssys = multibody(worldwheel)
-prob = ODEProblem(ssys, defs, (0, 3))
+prob = ODEProblem(ssys, defs, (0, 3), missing_guess_value = MissingGuessValue.Random(Random.GLOBAL_RNG))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
 ```
@@ -205,12 +203,10 @@ A [`RollingWheelSet`](@ref) is comprised out of two wheels mounted on a common a
 end
 
 @named model = DrivingWheelSet()
-model = complete(model)
 ssys = multibody(model)
-# display(unknowns(ssys))
 prob = ODEProblem(ssys, [
-    model.wheels.wheelSetJoint.prismatic1.s => 0.1
-    model.wheels.wheelSetJoint.prismatic2.s => 0.1
+    ssys.wheels.wheelSetJoint.prismatic1.s => 0.1
+    ssys.wheels.wheelSetJoint.prismatic2.s => 0.1
 ], (0, 3))
 sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
@@ -276,7 +272,6 @@ tire_black = [0.1, 0.1, 0.1, 1]
     return System(equations, t; name, systems)
 end
 @named model = Car()
-model = complete(model)
 ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 6))
@@ -301,7 +296,7 @@ import Multibody.PlanarMechanics as Pl
     end
 
     systems = @named begin
-        body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0)
+        body = Pl.BodyShape(r = [1.0, 0.0], m=1, I=0.1, gy=0, r0=[0.1,0], v=[0,0], phi=0, w=0)
         revolute = Pl.Revolute()
         wheel1 = Pl.SimpleWheel(color=tire_black)
         wheel2 = Pl.SimpleWheel(color=tire_black, μ=.5)
@@ -325,11 +320,10 @@ import Multibody.PlanarMechanics as Pl
     return System(equations, t; name, systems)
 end
 @named model = TestWheel()
-model = complete(model)
 ssys = multibody(model)
-defs = Dict(unknowns(ssys) .=> 0)
+defs = Dict()
 prob = ODEProblem(ssys, defs, (0.0, 10.0))
-sol = solve(prob, Rodas5P())
+sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
 render(model, sol, show_axis=true, x=1, y=-1.8, z=5, lookat=[1,-1.8,0], traces=[model.wheel1.frame_a, model.wheel2.frame_a], filename="drifting.gif")
 nothing # hide
@@ -400,18 +394,17 @@ tire_black = [0.1, 0.1, 0.1, 1]
 end
 
 @named model = TestSlipBasedWheel()
-model = complete(model)
 ssys = multibody(model)
 defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
-    model.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
-    model.revolute.frame_b.phi => 0,
-    model.body.w => 0,
-    D(model.revolute.frame_b.phi) => 0,
-    D(model.prismatic.r0[2]) => 0,
+    ssys.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
+    ssys.revolute.frame_b.phi => 0,
+    ssys.body.w => 0,
+    D(ssys.revolute.frame_b.phi) => 0,
+    D(ssys.prismatic.r0[2]) => 0,
 ], (0.0, 15.0))
 sol = solve(prob, Rodas5P())
-render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[model.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=false)
+render(model, sol, show_axis=false, x=0, y=0, z=4, traces=[ssys.slipBasedWheelJoint.frame_a], filename="slipwheel.gif", cache=false)
 nothing # hide
 ```
 
@@ -419,10 +412,10 @@ nothing # hide
 
 ```@example WHEEL
 plot(sol, idxs=[
-    model.slipBasedWheelJoint.w_roll
-    model.slipBasedWheelJoint.v_long
-    model.slipBasedWheelJoint.v_slip_long
-    model.slipBasedWheelJoint.f_long
+    ssys.slipBasedWheelJoint.w_roll
+    ssys.slipBasedWheelJoint.v_long
+    ssys.slipBasedWheelJoint.v_slip_long
+    ssys.slipBasedWheelJoint.f_long
 ], layout=4)
 ```
 
@@ -537,12 +530,11 @@ A more elaborate example with 4 wheels.
 end
 
 @named model = TwoTrackWithDifferentialGear()
-model = complete(model)
 ssys = multibody(model)
 defs = merge(
     Dict(unknowns(ssys) .=> 0),
     ModelingToolkit.defaults(model),
-    Dict(model.body.w => 0),
+    Dict(ssys.body.w => 0),
 )
 prob = ODEProblem(ssys, defs, (0.0, 5.0))
 sol = solve(prob, Rodas5P(autodiff=false))
