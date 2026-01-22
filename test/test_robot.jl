@@ -56,10 +56,8 @@ m = multibody(motorTest)
 # @test length(unknowns(m)) == 3
     # D(motorTest.motor.gear.bearingFriction.w) => 0
 
-prob = ODEProblem(m, [
-    D(D(m.motor.Jmotor.phi)) => 0,
-], (0.0, 5.0))
-sol = solve(prob, Rodas4())
+prob = ODEProblem(m, [], (0.0, 5.0))
+sol = solve(prob, Tsit5())
 @test successful_retcode(sol)
 doplot() && plot(sol, idxs=m.motor.phi.phi.u)
 
@@ -93,12 +91,8 @@ end
 @named gearTest = GearTest()
 m = multibody(gearTest)
 
-prob = ODEProblem(m, [
-    m.motor.Rd4.i => 0,
-    m.gear.gear.phi_b => 0,
-    D(m.gear.gear.phi_b) => 0,
-], (0.0, 5.0))
-sol = solve(prob, Rodas4())
+prob = ODEProblem(m, [], (0.0, 5.0))
+sol = solve(prob, Tsit5())
 @test successful_retcode(sol)
 doplot() && plot(sol, idxs=m.motor.phi.phi.u)
 
@@ -198,16 +192,8 @@ end
 m = multibody(axisTest)
 
 tspan = (0.0, 5.0)
-prob = ODEProblem(m, [
-    # ModelingToolkit.missing_variable_defaults(m);
-    # D(m.axis2.gear.bearingFriction.w) => 0
-    m.axis2.motor.flange_motor.phi => deg2rad(20) *  0,
-    D(m.axis2.motor.flange_motor.phi) => 0,
-    m.axis2.motor.Jmotor.phi => deg2rad(20) *  0,
-    m.axis2.gear.gear.phi_b => 0,
-    D(m.axis2.gear.gear.phi_b) => 0,
-], tspan)
-sol = solve(prob, Rodas4())
+prob = ODEProblem(m, [], tspan)
+sol = solve(prob, Tsit5())
 @test SciMLBase.successful_retcode(sol)
 
 @test sol(0.0, idxs=m.axis2.motor.emf.phi) == 0
@@ -246,18 +232,19 @@ u = m.axis2.controller.PI.ctr_output.u
 @testset "one axis" begin
     @info "Testing one axis"
     @named oneaxis = RobotAxis()
-    oneaxis = complete(oneaxis)
+    ssys = multibody(oneaxis)
+
     op = Dict([
-        oneaxis.axis.flange.phi => 0
-        D(oneaxis.axis.flange.phi) => 0
-        D(D(oneaxis.axis.flange.phi)) => 0
-        D(D(oneaxis.load.phi)) => 0
-        D(oneaxis.axis.gear.gear.phi_b) => 0
-        oneaxis.axis.controller.PI.T => 0.01
-        oneaxis.axis.controller.PI.gainPI.k => 1
-        oneaxis.axis.controller.P.k => 10
-        oneaxis.load.J => 1.3*15
-        oneaxis.load.phi => 0
+        # oneaxis.axis.flange.phi => 0
+        # D(oneaxis.axis.flange.phi) => 0
+        # D(D(oneaxis.axis.flange.phi)) => 0
+        # D(D(oneaxis.load.phi)) => 0
+        # D(oneaxis.axis.gear.gear.phi_b) => 0
+        # oneaxis.axis.controller.PI.T => 0.01
+        # oneaxis.axis.controller.PI.gainPI.k => 1
+        # oneaxis.axis.controller.P.k => 10
+        # oneaxis.load.J => 1.3*15
+        # oneaxis.load.phi => 0
     ])
     # matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
 
@@ -268,7 +255,6 @@ u = m.axis2.controller.PI.ctr_output.u
     # bodeplot(S)
 
 
-    ssys = multibody(oneaxis)
     # ssys = structural_simplify(oneaxis)
     # cm = oneaxis
     # prob = ODEProblem(ssys, [
@@ -279,7 +265,7 @@ u = m.axis2.controller.PI.ctr_output.u
     zdd = ModelingToolkit.missing_variable_defaults(oneaxis); op = merge(Dict(zdd), op)
 
     prob = ODEProblem(ssys, collect(op), (0.0, 3),)
-    sol = solve(prob, Rodas4());
+    sol = solve(prob, Tsit5());
     if doplot()
         plot(sol, layout=length(unknowns(ssys)), size=(1900, 1200))
         plot!(sol, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref)

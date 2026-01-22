@@ -141,10 +141,23 @@ end
 
 function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
     J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
-    # @parameters begin
+    pars = @parameters begin
     #     c = c, [description = "Spring constant"]
     #     cd = cd, [description = "Damper constant"]
-    # end
+        c = c#43,
+        cd = cd#0.005,
+        kp = kp#10,
+        ks = ks#1,
+        Ts = Ts#0.01,
+        k = k#1.1616,
+        w = w#4590,
+        D = D#0.6,
+        J = J#0.0013,
+        ratio = ratio#-105,
+        Rv0 = Rv0#0.4,
+        Rv1 = Rv1#0.13 / 160,
+        peak = peak#1
+    end
 
     systems = @named begin
         flange = Rotational.Flange()
@@ -170,23 +183,23 @@ function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1
         connect(controller.axisControlBus, axisControlBus)
     ]
 
-    System(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
-    # pars = @parameters begin
-    #     kp = kp, [description = "Gain of position controller"]
-    #     ks = ks, [description = "Gain of speed controller"]
-    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
-    #     ratio = ratio, [description = "Gear ratio of gearbox"]
-    # end
+    pars = @parameters begin
+        kp = kp, [description = "Gain of position controller"]
+        ks = ks, [description = "Gain of speed controller"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller"]
+        ratio = ratio, [description = "Gear ratio of gearbox"]
+    end
     systems = @named begin
         gain1 = Blocks.Gain(ratio)
-        PI = Blocks.PI(gainPI.k = ks, T = Ts)
+        PI = Blocks.PI(k = ks, T = Ts)
         feedback1 = Blocks.Feedback()
-        P = Blocks.Gain(kp)
+        P = Blocks.Gain(k=kp)
         add3 = Blocks.Add3(k3 = -1)
-        gain2 = Blocks.Gain(ratio)
+        gain2 = Blocks.Gain(k=ratio)
         axisControlBus = AxisControlBus()
     end
 
@@ -201,7 +214,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
            (add3.input3.u ~ axisControlBus.motorSpeed)
            (PI.ctr_output.u ~ axisControlBus.current_ref)]
 
-    System(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 function GearType2(; name, i = -99,
@@ -346,7 +359,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         g5 = Ground()
         phi = Rotational.AngleSensor()
         speed = Rotational.SpeedSensor()
-        Jmotor = Rotational.Inertia(; J = J, w=0)
+        Jmotor = Rotational.Inertia(; J = J)
         axisControlBus = AxisControlBus()
         convert1 = Blocks.Gain(1)
         convert2 = Blocks.Gain(1)
