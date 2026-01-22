@@ -3,8 +3,9 @@
 using ModelingToolkit, OrdinaryDiffEq, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
+import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import Multibody
-import Multibody: IRSystem
+using Multibody: multibody
 import Multibody.PlanarMechanics as Pl
 # using JuliaSimCompiler
 
@@ -94,7 +95,7 @@ end
     resolve_in_frame = :world
 
     # components
-    @named body = Pl.Body(; m, I=0.1, gy = 0.0)
+    @named body = Pl.Body(; m, I=0.1, gy = 0.0, w, phi=0)
     @named fixed_translation = Pl.FixedTranslation(; r = [10, 0])
     @named fixed = Pl.Fixed()
     @named revolute = Pl.Revolute()#constant_w = w)
@@ -120,26 +121,26 @@ end
             fixed,
             revolute,
             abs_v_sensor
-        ])
-    begin # Yingbo: BoundsError: attempt to access 137-element Vector{Vector{Int64}} at index [138]
-        ssys = multibody(model)
-        prob = ODEProblem(ssys, [ssys.body.w => w], tspan)
-        sol = solve(prob, Rodas5P(), initializealg=BrownFullBasicInit())
+    ])
+    
+    ssys = multibody(model)
+    prob = ODEProblem(ssys, [], tspan)
+    sol = solve(prob, Tsit5())
 
-        # phi 
-        @test sol[body.phi][end] ≈ tspan[end] * w
-        @test all(sol[body.w] .≈ w)
+    # phi 
+    @test sol[body.phi][end] ≈ tspan[end] * w
+    @test all(sol[body.w] .≈ w)
 
-        test_points = [i / w for i in 0:0.1:10]
+    test_points = [i / w for i in 0:0.1:10]
 
-        # instantaneous linear velocity
-        v_signal(t) = -w^2 * sin.(w .* t)
-        @test all(v_signal.(test_points) .≈ sol.(test_points; idxs = abs_v_sensor.v_x.u))
+    # instantaneous linear velocity
+    v_signal(t) = -w^2 * sin.(w .* t)
+    @test all(v_signal.(test_points) .≈ sol.(test_points; idxs = abs_v_sensor.v_x.u))
 
-        # instantaneous linear acceleration
-        a_signal(t) = -w^3 * cos.(w .* t)
-        @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.a[1]))
-    end
+    # instantaneous linear acceleration
+    a_signal(t) = -w^3 * cos.(w .* t)
+    @test all(a_signal.(test_points) .≈ sol.(test_points; idxs = body.a[1]))
+    
 end
 
 @testset "Sensors (two free falling bodies)" begin
@@ -147,8 +148,8 @@ end
     I = 1
     resolve_in_frame = :world
 
-    @named body1 = Pl.Body(; m, I)
-    @named body2 = Pl.Body(; m, I)
+    @named body1 = Pl.Body(; m, I, r=zeros(2), v=zeros(2), phi=0, w=0)
+    @named body2 = Pl.Body(; m, I, r=zeros(2), v=zeros(2), phi=0, w=0)
     @named base = Pl.Fixed()
 
     @named abs_pos_sensor = Pl.AbsolutePosition(; resolve_in_frame)
@@ -216,11 +217,10 @@ end
             rel_a_sensor2
         ])
 
-    sys = structural_simplify((model)) # Yingbo: fails with JSCompiler
-    unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, unset_vars .=> 0.0, tspan)
+    sys = multibody(model) # Yingbo: fails with JSCompiler
+    prob = ODEProblem(sys, [], tspan)
 
-    sol = solve(prob, Rodas5P())
+    sol = solve(prob, Tsit5())
     @test SciMLBase.successful_retcode(sol)
 
     # the two bodyies falled the same distance, and so the absolute sensor attached to body1
@@ -256,10 +256,10 @@ end
 end
 
 @testset "Measure Demo" begin
-    @named body = Pl.Body(; m = 1, I = 0.1, phi=0)
+    @named body = Pl.Body(; m = 1, I = 0.1, phi = 0, w = 0)
     @named fixed_translation = Pl.FixedTranslation(;)
     @named fixed = Pl.Fixed()
-    @named body1 = Pl.Body(; m = 0.4, I = 0.02)
+    @named body1 = Pl.Body(; m = 0.4, I = 0.02, phi = 0, w = 0)
     @named fixed_translation1 = Pl.FixedTranslation(; r = [0.4, 0])
     @named abs_pos_sensor = Pl.AbsolutePosition(; resolve_in_frame = :world)
     @named rel_pos_sensor = Pl.RelativePosition(; resolve_in_frame = :world)
@@ -302,7 +302,7 @@ end
     sys = multibody(model)
     # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
     prob = ODEProblem(sys, [], (0, 5))
-    sol = solve(prob, Rodas5P())
+    sol = solve(prob, Tsit5())
     @test SciMLBase.successful_retcode(sol)
 end
 
@@ -316,7 +316,7 @@ end
         c_x = 5,
         d_x = 1,
         c_phi = 0)
-    @named body = Pl.Body(; I = 0.1, m = 0.5, r = [1,1], color=[0,1,0,1])
+    @named body = Pl.Body(; I = 0.1, m = 0.5, r = [1,1], color=[0,1,0,1], v=[0,0], phi=0, w=0)
     @named fixed = Pl.Fixed()
     @named fixed_translation = Pl.FixedTranslation(; r = [-1, 0])
 
@@ -337,8 +337,8 @@ end
         ])
     sys = multibody(model)
     # unset_vars = setdiff(unknowns(sys), keys(ModelingToolkit.defaults(sys)))
-    prob = ODEProblem(sys, [sys.body.r => zeros(2); sys.body.v => zeros(2); sys.body.phi => 0.0; sys.body.w => 0.0], (0, 5))
-    sol = solve(prob, Rodas5P())
+    prob = ODEProblem(sys, [], (0, 5))
+    sol = solve(prob, Tsit5())
     @test SciMLBase.successful_retcode(sol)
 end
 
@@ -371,7 +371,7 @@ end
         ])
     sys = multibody(model)
     prob = ODEProblem(sys, [], (0, 5))
-    sol = solve(prob, Rodas5P())
+    sol = solve(prob, Tsit5())
     @test SciMLBase.successful_retcode(sol)
 end
 
@@ -454,11 +454,11 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
                 # w_roll = 10
             )
             prismatic = Pl.Prismatic(r = [0,1], s = 1, v = 0)
-            revolute = Pl.Revolute(phi = 0, w = 0)
+            revolute = Pl.Revolute()
             fixed = Pl.Fixed()
             engineTorque = Rotational.ConstantTorque(tau_constant = 2)
             body = Pl.Body(m = 10, I = 1, gy=0, phi=0, w=0)
-            inertia = Rotational.Inertia(J = 1, phi = 0, w = 0)
+            inertia = Rotational.Inertia(J = 1, phi = 0, w=1e-10) # This is important, at zero velocity, the friction is ill-defined
             constant = Blocks.Constant(k = 0)
         end
 
@@ -485,11 +485,6 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
     ssys = multibody(model)
     display(unknowns(ssys))
     prob = ODEProblem(ssys, [
-        ssys.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
-        ssys.revolute.frame_b.phi => 0,
-        ssys.body.w => 0,
-        D(ssys.revolute.frame_b.phi) => 0,
-        D(ssys.prismatic.r0[2]) => 0,
     ], (0.0, 20.0))
     sol = solve(prob, Rodas5Pr(autodiff=true)) # Since the friction model is not differentiable everywhere
 
@@ -518,7 +513,7 @@ end
             sSlide = 0.12,
             vAdhesion_min = 0.05,
             vSlide_min = 0.15,
-            phi_roll = 0)
+            phi_roll = nothing)
         wheelJoint2 = Pl.SlipBasedWheelJoint(
             radius = 0.25,
             r = [0, 1],
@@ -529,7 +524,7 @@ end
             sSlide = 0.12,
             vAdhesion_min = 0.05,
             vSlide_min = 0.15,
-            phi_roll = 0)
+            phi_roll = nothing)
         wheelJoint3 = Pl.SlipBasedWheelJoint(
             radius = 0.25,
             r = [0, 1],
@@ -540,7 +535,7 @@ end
             sSlide = 0.12,
             vAdhesion_min = 0.05,
             vSlide_min = 0.15,
-            phi_roll = 0)
+            phi_roll = nothing)
         wheelJoint4 = Pl.SlipBasedWheelJoint(
             radius = 0.25,
             r = [0, 1],
@@ -551,7 +546,7 @@ end
             sSlide = 0.12,
             vAdhesion_min = 0.05,
             vSlide_min = 0.15,
-            phi_roll = 0)
+            phi_roll = nothing)
         differentialGear = Pl.DifferentialGear()
         pulse = Blocks.Square(frequency = 1/2, offset = 0, start_time = 1, amplitude = -2)
         torque = Rotational.Torque()
@@ -611,12 +606,7 @@ end
 
 @named model = TwoTrackWithDifferentialGear()
 ssys = multibody(model)
-defs = merge(
-    # Dict(unknowns(ssys)[ModelingToolkit.is_diff_equation.(equations(ssys))] .=> 0),
-    # ModelingToolkit.defaults(model),
-    Dict(ssys.body.w => 0),
-)
-prob = ODEProblem(ssys, defs, (0.0, 20.0))
+prob = ODEProblem(ssys, [], (0.0, 20.0))
 sol = solve(prob, Rodas5P(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
 # plot(sol)
