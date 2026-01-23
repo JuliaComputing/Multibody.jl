@@ -944,7 +944,7 @@ Multibody.render!(scene, ::typeof(Multibody.NullJoint), sys, sol, t) = false
 ## PlanarMechanics
 # ==============================================================================
 function get_rot_fun_2d(sol, frame)
-    phifun = get_fun(sol, frame.phi)
+    phifun = get_fun(sol, -frame.phi)
     function (t)
         phi = phifun(t)
         [cos(phi) -sin(phi); sin(phi) cos(phi)]
@@ -964,8 +964,8 @@ get_trans_2d(sol, frame, t::AbstractArray) = sol(t, idxs = [frame.x, frame.y])
 
 function render!(scene, ::typeof(P.Frame), sys, sol, t)
     # sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
-    radius = 0.005f0# sol(sol.t[1], idxs=sys.radius) |> Float32
-    length = 0.1f0#sol(sol.t[1], idxs=sys.length) |> Float32
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    length = sol(sol.t[1], idxs=sys.length) |> Float32
     T = get_frame_fun_2d(sol, sys)
 
     thing = @lift begin
@@ -1124,6 +1124,42 @@ function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJo
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
+end
+
+function render!(scene, ::Union{typeof(P.OneDOFWheelJoint), typeof(P.RollingWheelJoint)}, sys, sol, t)
+    
+    r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    rotfun = get_rot_fun_2d(sol, sys.frame_a)
+    color = get_color(sys, sol, :red)
+
+    # TODO: add some form of assumetry to indicate that the wheel is rotating
+
+    radius = try
+        sol(sol.t[1], idxs=sys.radius)
+    catch
+        0.05f0
+    end |> Float32
+    z = try
+        sol(sol.t[1], idxs=sys.z)
+    catch
+        0.0
+    end |> Float32
+    r = try
+        sol(sol.t[1], idxs=collect(sys.r))
+    catch
+        [1, 0]
+    end .|> Float32
+    n_a = [0, 1.0] # Rotation axis
+    thing = @lift begin
+        O = [r_0($t)..., z]
+        n_w = [0, 0, 1.0] # Rotate to the world frame
+        width = radius/10
+        p1 = Point3f(O + width*n_w)
+        p2 = Point3f(O - width*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    false
 end
 
 function perp(r)
