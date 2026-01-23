@@ -929,7 +929,7 @@ wheelJoint = OneDOFWheelJoint(
         f_long ~ f * v_slip_long / v_slip
 
         frame_a.fx ~ f_long
-        f_long * radius ~ frame_a.tau
+        -f_long * radius ~ frame_a.tau
 
         frame_a.y ~ radius      # Wheel center at ground level + radius
     ]
