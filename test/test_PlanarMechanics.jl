@@ -681,3 +681,41 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 #     sol = solve(prob, Rodas5P(), initializealg = ShampineCollocationInit())
 #     @test SciMLBase.successful_retcode(sol)
 # end
+
+
+
+@testset "RollingWheelJoint" begin
+    @info "Testing RollingWheelJoint"
+
+    @component function SimpleTest(; name)
+        systems = @named begin
+            body = Pl.Body(m = 0.1, I = 0.01, phi=0, w=1, gy=-9.82)
+            wheelJoint = Pl.RollingWheelJoint(
+                radius = 1,
+            )
+        end
+
+        vars = @variables begin
+        end
+
+        eqs = [
+            connect(wheelJoint.frame_a, body.frame_a)
+        ]
+
+        System(eqs, t, vars, []; systems, name)
+    end
+
+    @named model = SimpleTest()
+    ssys = multibody(model)
+
+    guesses = []
+
+    prob = ODEProblem(ssys, [ssys.wheelJoint.frame_a.render => true, ssys.wheelJoint.frame_a.length => 1.3], (0.0, 10.0))
+    # Multibody.render(model, prob)
+    sol = solve(prob, Rodas5P())
+    # Multibody.render(model, sol, 0.0, lookat=[0,0.5,0], x=0, y=0.5, z=-3)[1]
+
+    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.x) ≈ 2pi atol=1e-3
+    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.fx) ≈ 0 atol=1e-3
+    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.fy) ≈ -0.1*9.82 atol=1e-3
+end

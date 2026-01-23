@@ -865,6 +865,8 @@ wheelJoint = OneDOFWheelJoint(
     mu_S,
     render = true,
     color = [0.1, 0.1, 0.1, 1],
+    x = nothing,
+    v = nothing,
     z = 0,
     diameter = 0.1,
     width = diameter * 0.6,
@@ -874,7 +876,6 @@ wheelJoint = OneDOFWheelJoint(
 )
     systems = @named begin
         frame_a = Frame()
-        flange_a = Rotational.Flange()
         dynamicLoad = Blocks.RealInput()
     end
     pars = @parameters begin
@@ -896,7 +897,8 @@ wheelJoint = OneDOFWheelJoint(
     vars = @variables begin
         (phi_roll(t) = phi_roll), [guess=0, description="Wheel rolling angle"]
         (w_roll(t) = w_roll), [guess=0, description="Wheel rolling velocity"]
-        v_long(t), [guess=0, description="Velocity in longitudinal (x) direction"]
+        x(t)=x, [description = "Position in x direction"]
+        v(t)=v, [guess=0, description="Velocity in longitudinal (x) direction"]
         v_slip_long(t), [guess=0, description="Slip velocity in longitudinal direction"]
         v_slip(t), [description="Slip velocity magnitude"]
         f(t), [description="Total traction force magnitude"]
@@ -908,14 +910,15 @@ wheelJoint = OneDOFWheelJoint(
 
     equations = Equation[
         # Velocity in x-direction (fixed driving direction along global x-axis)
-        v_long ~ D(frame_a.x)
+        x ~ frame_a.x
+        v ~ D(x)
 
         # Wheel angle coupling to flange
-        phi_roll ~ flange_a.phi
+        phi_roll ~ frame_a.phi
         w_roll ~ D(phi_roll)
 
         # Longitudinal slip (difference between ground velocity and wheel surface velocity)
-        v_slip_long ~ v_long - radius * w_roll
+        v_slip_long ~ v - radius * w_roll
         v_slip ~ abs(v_slip_long) + 0.0001
 
         # Slip-dependent friction (same model as SlipBasedWheelJoint)
@@ -925,14 +928,10 @@ wheelJoint = OneDOFWheelJoint(
         f ~ fN * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip)
         f_long ~ f * v_slip_long / v_slip
 
-        # Force balance: friction force on frame, reaction torque on flange
-        frame_a.fx ~ -f_long
-        -f_long * radius ~ flange_a.tau
-        frame_a.tau ~ 0
+        frame_a.fx ~ f_long
+        f_long * radius ~ frame_a.tau
 
-        # Constraints for 1-DOF motion
         frame_a.y ~ radius      # Wheel center at ground level + radius
-        frame_a.fy ~ 0          # No vertical force from this friction model
     ]
 
     return System(equations, t, vars, pars; name, systems)
