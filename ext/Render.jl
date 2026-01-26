@@ -791,7 +791,7 @@ function render!(scene, ::typeof(UniversalSpherical), sys, sol, t)
     true
 end
 
-function render!(scene, ::Union{typeof(RollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
+function render!(scene, ::Union{typeof(OneDOFRollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
     
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     # framefun = get_frame_fun(sol, sys.frame_a)
@@ -1126,7 +1126,7 @@ function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJo
     true
 end
 
-function render!(scene, ::Union{typeof(P.OneDOFWheelJoint), typeof(P.RollingWheelJoint)}, sys, sol, t)
+function render!(scene, ::Union{typeof(P.OneDOFSlippingWheelJoint), typeof(P.OneDOFRollingWheelJoint)}, sys, sol, t)
     
     r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
     rotfun = get_rot_fun_2d(sol, sys.frame_a)

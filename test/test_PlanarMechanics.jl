@@ -684,13 +684,13 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
 
 
-@testset "RollingWheelJoint" begin
-    @info "Testing RollingWheelJoint"
+@testset "OneDOFRollingWheelJoint" begin
+    @info "Testing OneDOFRollingWheelJoint"
 
     @component function SimpleTest(; name)
         systems = @named begin
             body = Pl.Body(m = 0.1, I = 0.01, phi=0, w=1, gy=-9.82)
-            wheelJoint = Pl.RollingWheelJoint(
+            wheelJoint = Pl.OneDOFRollingWheelJoint(
                 radius = 1,
             )
         end
@@ -721,7 +721,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 end
 
 
-@testset "OneDOFWheelJoint" begin
-    @info "Testing OneDOFWheelJoint"
-    include("test_OneDOFWheelJoint.jl")
+@testset "OneDOFSlippingWheelJoint" begin
+    @info "Testing OneDOFSlippingWheelJoint"
+    include("test_OneDOFSlippingWheelJoint.jl")
 end

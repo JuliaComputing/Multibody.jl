@@ -10,14 +10,14 @@ import Multibody.PlanarMechanics as Pl
 tspan = (0.0, 3.0)
 g = -9.80665
 
-@testset "OneDOFWheelJoint" begin
-    @info "Testing OneDOFWheelJoint"
+@testset "OneDOFSlippingWheelJoint" begin
+    @info "Testing OneDOFSlippingWheelJoint"
 
     # Wheel spinning in origin
     @component function SimpleTest(; name)
         systems = @named begin
             body = Pl.Body(m = 0.1, I = 0.1, phi=0, w=30, gy=-9.82)
-            wheelJoint = Pl.OneDOFWheelJoint(
+            wheelJoint = Pl.OneDOFSlippingWheelJoint(
                 x = 0,
                 v = 0,
                 radius = 1,
@@ -61,7 +61,7 @@ g = -9.80665
             body = Pl.Body(m = 0.1, I = 0.0001, phi=0, w=0.0, radius=0.02, gy=-9.82)
             body2 = Pl.Body(m = 10, I = 0.001, radius=0.02, gy=-9.82)
             translation_cm = Pl.FixedTranslation(r = [r_cm, 0], radius=0.01)
-            wheelJoint = Pl.OneDOFWheelJoint(
+            wheelJoint = Pl.OneDOFSlippingWheelJoint(
                 radius = radius,
                 x = 0,
                 v = 0,

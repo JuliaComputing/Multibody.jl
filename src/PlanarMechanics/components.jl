@@ -170,11 +170,12 @@ A fixed translation between two components (rigid rod)
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
 """
-@component function FixedTranslation(; name, r = [1.0, 0], radius = 0.1, render = true)
+@component function FixedTranslation(; name, r = [1.0, 0], radius = 0.1, render = true, color=Multibody.purple)
     pars = @parameters begin
         r[1:2] = r, [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
         radius = radius, [description = "Radius of the rod in animations"]
         render = render, [description = "Render the rod in animations"]
+        color = color, [description = "Color of the rod in animations"]
     end
 
     systems = @named begin
@@ -791,7 +792,7 @@ end
 
 
 """
-    OneDOFWheelJoint(;
+    OneDOFSlippingWheelJoint(;
         name,
         vAdhesion_min,
         vSlide_min,
@@ -837,7 +838,7 @@ The slip-dependent friction model is the same as `SlipBasedWheelJoint`:
 
 # Example
 ```julia
-wheelJoint = OneDOFWheelJoint(
+wheelJoint = OneDOFSlippingWheelJoint(
     radius = 0.025,
     mu_A = 1,
     mu_S = 0.7,
@@ -848,7 +849,7 @@ wheelJoint = OneDOFWheelJoint(
 )
 ```
 """
-@component function OneDOFWheelJoint(;
+@component function OneDOFSlippingWheelJoint(;
     name,
     vAdhesion_min,
     vSlide_min,
@@ -933,7 +934,7 @@ end
 
 
 """
-    RollingWheelJoint(;
+    OneDOFRollingWheelJoint(;
         name,
         radius = 0.1,
         render = true,
@@ -947,7 +948,7 @@ end
 
 An ideal rolling wheel joint constrained to move only along the x-axis (forward/backward) without slip.
 
-Unlike `OneDOFWheelJoint` which uses slip-dependent friction, this joint enforces a perfect rolling constraint:
+Unlike `OneDOFSlippingWheelJoint` which uses slip-dependent friction, this joint enforces a perfect rolling constraint:
 `D(x) = radius * w_roll` (ground velocity equals wheel surface velocity).
 
 This is suitable for simplified models where:
@@ -963,10 +964,10 @@ This is suitable for simplified models where:
 
 # Example
 ```julia
-wheelJoint = RollingWheelJoint(radius = 0.025)
+wheelJoint = OneDOFRollingWheelJoint(radius = 0.025)
 ```
 """
-@component function RollingWheelJoint(;
+@component function OneDOFRollingWheelJoint(;
     name,
     radius = 0.1,
     render = true,
