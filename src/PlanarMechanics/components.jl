@@ -170,11 +170,12 @@ A fixed translation between two components (rigid rod)
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
 """
-@component function FixedTranslation(; name, r = [1.0, 0], radius = 0.1, render = true)
+@component function FixedTranslation(; name, r = [1.0, 0], radius = 0.1, render = true, color=Multibody.purple)
     pars = @parameters begin
         r[1:2] = r, [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
         radius = radius, [description = "Radius of the rod in animations"]
         render = render, [description = "Render the rod in animations"]
+        color = color, [description = "Color of the rod in animations"]
     end
 
     systems = @named begin
@@ -189,8 +190,7 @@ A fixed translation between two components (rigid rod)
 
     # Calculations from begin blocks
     # r = collect(r)
-    R = [cos(phi) -sin(phi);
-         sin(phi) cos(phi)]
+    R = ori_2d(phi)
     r0 = R * r
 
     equations = Equation[
@@ -791,9 +791,243 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
     ]
 
     return System(equations, t, vars, pars; name, systems)
-    
+
 end
 
+
+"""
+    OneDOFSlippingWheelJoint(;
+        name,
+        vAdhesion_min,
+        vSlide_min,
+        sAdhesion,
+        sSlide,
+        mu_A,
+        mu_S,
+        render = true,
+        color = [0.1, 0.1, 0.1, 1],
+        z = 0,
+        diameter = 0.1,
+        width = diameter * 0.6,
+        radius = 0.1,
+        phi_roll = nothing,
+        w_roll = nothing,
+    )
+
+A simplified wheel joint that constrains motion to only the x-axis (forward/backward) with slip-dependent friction.
+
+Unlike `SlipBasedWheelJoint` which allows motion in any direction based on the frame orientation, this joint:
+- Fixes the driving direction to the global x-axis `[1, 0]`
+- Constrains the y-position to equal the wheel radius (ground contact)
+- Eliminates lateral velocity and forces
+
+This makes it suitable for simplified 1-DOF models like a planar Segway where the wheel should only move forward/backward.
+
+The slip-dependent friction model is the same as `SlipBasedWheelJoint`:
+- For low velocities, a dry-friction model is used
+- The normal load is determined automatically from constraint dynamics (mass and gravity of attached body)
+- Friction transitions smoothly between adhesion and sliding regimes
+
+# Parameters:
+- `radius`: Wheel radius (also determines y-position constraint)
+- `mu_A`: Friction coefficient at adhesion (peak traction)
+- `mu_S`: Friction coefficient at sliding (saturated traction)
+- `sAdhesion`: Adhesion slip ratio threshold
+- `sSlide`: Sliding slip ratio threshold
+- `vAdhesion_min`: Minimum adhesion velocity (for low-speed stability)
+- `vSlide_min`: Minimum sliding velocity (for low-speed stability)
+
+# Connectors:
+- `frame_a` (Frame) Coordinate system fixed to the wheel. Attach a body here for mass/inertia.
+
+# Example
+```julia
+wheelJoint = OneDOFSlippingWheelJoint(
+    radius = 0.025,
+    mu_A = 1,
+    mu_S = 0.7,
+    sAdhesion = 0.04,
+    sSlide = 0.12,
+    vAdhesion_min = 0.05,
+    vSlide_min = 0.15,
+)
+```
+"""
+@component function OneDOFSlippingWheelJoint(;
+    name,
+    vAdhesion_min,
+    vSlide_min,
+    sAdhesion,
+    sSlide,
+    mu_A,
+    mu_S,
+    render = true,
+    color = [0.1, 0.1, 0.1, 1],
+    x = nothing,
+    v = nothing,
+    z = 0,
+    diameter = 0.1,
+    width = diameter * 0.6,
+    radius = 0.1,
+    phi_roll = nothing,
+    w_roll = nothing,
+)
+    systems = @named begin
+        frame_a = Frame()
+    end
+    pars = @parameters begin
+        vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
+        vSlide_min = vSlide_min, [description = "Minimum sliding velocity"]
+        sAdhesion = sAdhesion, [description = "Adhesion slippage"]
+        sSlide = sSlide, [description = "Sliding slippage"]
+        mu_A = mu_A, [description = "Friction coefficient at adhesion"]
+        mu_S = mu_S, [description = "Friction coefficient at sliding"]
+        render = render, [description = "Render the wheel in animations"]
+        color[1:4] = color, [description = "Color of the wheel in animations"]
+        z = z, [description = "Position z of the body"]
+        diameter = diameter, [description = "Diameter of the rims"]
+        width = width, [description = "Width of the wheel"]
+        radius = radius, [description = "Radius of the wheel"]
+    end
+
+    vars = @variables begin
+        (phi_roll(t) = phi_roll), [guess=0, description="Wheel rolling angle"]
+        (w_roll(t) = w_roll), [guess=0, description="Wheel rolling velocity"]
+        x(t)=x, [description = "Position in x direction"]
+        v(t)=v, [guess=0, description="Velocity in longitudinal (x) direction"]
+        v_slip_long(t), [guess=0, description="Slip velocity in longitudinal direction"]
+        v_slip(t), [description="Slip velocity magnitude"]
+        f(t), [description="Total traction force magnitude"]
+        f_long(t), [description="Longitudinal friction force"]
+        f_n(t), [guess=10.0, description="Normal constraint force (determined by dynamics)"]
+        vAdhesion(t), [description="Adhesion velocity threshold"]
+        vSlide(t), [description="Sliding velocity threshold"]
+    end
+
+    equations = Equation[
+        # Velocity in x-direction (fixed driving direction along global x-axis)
+        x ~ frame_a.x
+        v ~ D(x)
+
+        # Wheel angle coupling
+        phi_roll ~ -frame_a.phi
+        w_roll ~ D(phi_roll)
+
+        # Longitudinal slip (difference between ground velocity and wheel surface velocity)
+        v_slip_long ~ v - radius * w_roll
+        v_slip ~ abs(v_slip_long) + 0.0001
+
+        # Slip-dependent friction (like 3D SlipWheelJoint)
+        # f_n is the normal force, determined by constraint dynamics when a body is attached
+        vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
+        vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
+        f ~ f_n * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip)
+        f_long ~ - f * v_slip_long / v_slip
+
+        # Frame forces from contact
+        frame_a.fx ~ f_long
+        frame_a.fy ~ f_n
+        frame_a.tau ~ radius * f_long
+
+        # Position constraint
+        frame_a.y ~ radius      # Wheel center at ground level + radius
+    ]
+
+    return System(equations, t, vars, pars; name, systems)
+end
+
+
+"""
+    OneDOFRollingWheelJoint(;
+        name,
+        radius = 0.1,
+        render = true,
+        color = [0.1, 0.1, 0.1, 1],
+        z = 0,
+        diameter = 0.1,
+        width = diameter * 0.6,
+        phi_roll = nothing,
+        w_roll = nothing,
+    )
+
+An ideal rolling wheel joint constrained to move only along the x-axis (forward/backward) without slip.
+
+Unlike `OneDOFSlippingWheelJoint` which uses slip-dependent friction, this joint enforces a perfect rolling constraint:
+`D(x) = radius * w_roll` (ground velocity equals wheel surface velocity).
+
+This is suitable for simplified models where:
+- Tire slip can be neglected
+- The kinematic relationship between wheel rotation and translation is exact
+- No friction parameters need to be tuned
+
+# Parameters:
+- `radius`: Wheel radius (determines y-position constraint and rolling kinematics)
+
+# Connectors:
+- `frame_a` (Frame) Coordinate system fixed to the wheel. Attach a revolute joint and a body inertia here.
+
+# Example
+```julia
+wheelJoint = OneDOFRollingWheelJoint(radius = 0.025)
+```
+"""
+@component function OneDOFRollingWheelJoint(;
+    name,
+    radius = 0.1,
+    render = true,
+    color = [0.1, 0.1, 0.1, 1],
+    z = 0,
+    x = nothing,
+    x0 = 0,
+    v = nothing,
+    diameter = 0.1,
+    width = diameter * 0.6,
+    phi_roll = nothing,
+    w_roll = nothing,
+)
+    systems = @named begin
+        frame_a = Frame()
+        # flange_a = Rotational.Flange()
+    end
+    pars = @parameters begin
+        render = render, [description = "Render the wheel in animations"]
+        color[1:4] = color, [description = "Color of the wheel in animations"]
+        z = z, [description = "Position z of the body"]
+        x0 = x0, [description = "x position at zero roll angle"]
+        diameter = diameter, [description = "Diameter of the rims"]
+        width = width, [description = "Width of the wheel"]
+        radius = radius, [description = "Radius of the wheel"]
+    end
+
+    vars = @variables begin
+        (x(t) = x), [description = "Position x of the body"]
+        (v(t) = v), [description = "Velocity x of the body"]
+        # (a(t))
+        (phi_roll(t) = phi_roll), [guess=0, description="Wheel rolling angle"]
+        (w_roll(t) = w_roll), [guess=0, description="Wheel rolling velocity"]
+    end
+
+    equations = Equation[
+        # Wheel angle coupling to flange
+        phi_roll ~ -frame_a.phi
+        w_roll ~ D(phi_roll)
+
+        x ~ frame_a.x
+        v ~ D(x)
+        # a ~ D(v)
+        # Ideal rolling constraint: ground velocity = wheel surface velocity
+        x ~ radius * phi_roll + x0
+        # v ~ radius * w_roll
+
+        # Force/torque relationship (from constraint)
+        frame_a.tau ~ radius * frame_a.fx
+
+        # 1-DOF constraints
+        frame_a.y ~ radius      # Wheel center at ground level + radius
+    ]
+
+    return System(equations, t, vars, pars; name, systems)
+end
 
 
 """

@@ -791,7 +791,7 @@ function render!(scene, ::typeof(UniversalSpherical), sys, sol, t)
     true
 end
 
-function render!(scene, ::Union{typeof(RollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
+function render!(scene, ::Union{typeof(OneDOFRollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
     
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     # framefun = get_frame_fun(sol, sys.frame_a)
@@ -966,9 +966,9 @@ get_trans_2d(sol, frame, t) = SVector{2}(sol(t, idxs = [frame.x, frame.y]))
 get_trans_2d(sol, frame, t::AbstractArray) = sol(t, idxs = [frame.x, frame.y])
 
 function render!(scene, ::typeof(P.Frame), sys, sol, t)
-    # sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
-    radius = 0.005f0# sol(sol.t[1], idxs=sys.radius) |> Float32
-    length = 0.1f0#sol(sol.t[1], idxs=sys.length) |> Float32
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    radius = sol(sol.t[1], idxs=sys.radius) |> Float32
+    length = sol(sol.t[1], idxs=sys.length) |> Float32
     T = get_frame_fun_2d(sol, sys)
 
     thing = @lift begin
@@ -1026,7 +1026,7 @@ function render!(scene, ::Union{typeof(P.FixedTranslation), typeof(P.BodyShape)}
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
-    true
+    false
 end
 
 function render!(scene, ::typeof(P.Prismatic), sys, sol, t)
@@ -1128,6 +1128,42 @@ function render!(scene, ::Union{typeof(P.SimpleWheel), typeof(P.SlipBasedWheelJo
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
     true
+end
+
+function render!(scene, ::Union{typeof(P.OneDOFSlippingWheelJoint), typeof(P.OneDOFRollingWheelJoint)}, sys, sol, t)
+    
+    r_0 = get_fun(sol, [sys.frame_a.x, sys.frame_a.y])
+    rotfun = get_rot_fun_2d(sol, sys.frame_a)
+    color = get_color(sys, sol, :red)
+
+    # TODO: add some form of assumetry to indicate that the wheel is rotating
+
+    radius = try
+        sol(sol.t[1], idxs=sys.radius)
+    catch
+        0.05f0
+    end |> Float32
+    z = try
+        sol(sol.t[1], idxs=sys.z)
+    catch
+        0.0
+    end |> Float32
+    r = try
+        sol(sol.t[1], idxs=collect(sys.r))
+    catch
+        [1, 0]
+    end .|> Float32
+    n_a = [0, 1.0] # Rotation axis
+    thing = @lift begin
+        O = [r_0($t)..., z]
+        n_w = [0, 0, 1.0] # Rotate to the world frame
+        width = radius/10
+        p1 = Point3f(O + width*n_w)
+        p2 = Point3f(O - width*n_w)
+        Makie.GeometryBasics.Cylinder(p1, p2, radius)
+    end
+    mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
+    false
 end
 
 function perp(r)

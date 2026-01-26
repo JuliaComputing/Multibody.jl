@@ -1,5 +1,5 @@
 """
-    RollingWheelJoint(; name, radius, angles, x0, y0, z0)
+    OneDOFRollingWheelJoint(; name, radius, angles, x0, y0, z0)
 
 Joint (no mass, no inertia) that describes an ideal rolling wheel (rolling on the plane y=0). See [`RollingWheel`](@ref) for a realistic wheel model with inertia.
 
@@ -52,7 +52,7 @@ this frame.
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = nothing, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
+@component function OneDOFRollingWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = nothing, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         color[1:4] = color, [description = "Color of the wheel in animations"]
@@ -204,7 +204,7 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
 - `width`: Width of the wheel (default: 0.035)
 - `x0`: Initial x-position of the wheel axis
 - `z0`: Initial z-position of the wheel axis
-- `kwargs...`: Additional keyword arguments passed to the `RollingWheelJoint` function
+- `kwargs...`: Additional keyword arguments passed to the `OneDOFRollingWheelJoint` function
 
 # Variables:
 - `x`: x-position of the wheel axis
@@ -227,7 +227,7 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
 @component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=nothing, z0=nothing,
                       angles = nothing, der_angles = nothing, kwargs...)
 
-    @named wheeljoint = RollingWheelJoint(; radius, angles=nothing, x0=nothing, z0=nothing, der_angles=nothing, kwargs...)
+    @named wheeljoint = OneDOFRollingWheelJoint(; radius, angles=nothing, x0=nothing, z0=nothing, der_angles=nothing, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],
@@ -472,7 +472,6 @@ plot!(
                 # v_slip_long ~ v_long - radius * w_roll
 
                 v_slip ~ hypot(v_slip_long, v_slip_lat) + v_small
-                # -f_long * radius ~ flange_a.tau # No longer needed?
                 # frame_a.tau ~ 0
                 slip_ratio ~ v_slip_long / dot(v_0, e_long_0)
                 vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
