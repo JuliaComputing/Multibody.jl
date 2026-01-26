@@ -30,43 +30,43 @@ function RobotAxis(; name, mLoad = 15, kp = 5.0, ks = 0.5, Ts = 0.05, q0 = 0,
     # parameter SI.AngularAcceleration qdd_max=10
     #   "Maximum reference acceleration";
 
-    @parameters begin
-    mLoad = mLoad, [description = "Mass of load"]
-    kp = kp, [description = "Gain of position controller of axis"]
-    ks = ks, [description = "Gain of speed controller of axis"]
-    Ts = Ts, [description = "Time constant of integrator of speed controller of axis"]
-    # q0 = q0, [description = "Start angle of axis"]
-    # q1 = q1, [description = "End angle of axis"]
-    # qd_max = qd_max, [description = "Maximum reference speed"]
-    # qdd_max = qdd_max, [description = "Maximum reference acceleration"]
+    pars = @parameters begin
+        mLoad = mLoad, [description = "Mass of load"]
+        kp = kp, [description = "Gain of position controller of axis"]
+        ks = ks, [description = "Gain of speed controller of axis"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller of axis"]
+        # q0 = q0, [description = "Start angle of axis"]
+        # q1 = q1, [description = "End angle of axis"]
+        # qd_max = qd_max, [description = "Maximum reference speed"]
+        # qdd_max = qdd_max, [description = "Maximum reference acceleration"]
     end
 
     systems = @named begin
-    axis = AxisType1(w = 5500,
-                ratio = 210,
-                c = 8,
-                cd = 0.01,
-                Rv0 = 0.5,
-                Rv1 = (0.1 / 130),
-                kp = kp,
-                ks = ks,
-                Ts = Ts)
-    load = Rotational.Inertia(J = 1.3 * mLoad)
-    pathPlanning = PathPlanning1(;
-                            q0deg = q0,
-                            q1deg = q1,
-                            speed_max = qd_max,
-                            acc_max = qdd_max,
-                            kwargs...
-                            )
-    controlBus = ControlBus()
+        axis = AxisType1(w = 5500,
+                    ratio = 210,
+                    c = 8,
+                    cd = 0.01,
+                    Rv0 = 0.5,
+                    Rv1 = (0.1 / 130),
+                    kp = kp,
+                    ks = ks,
+                    Ts = Ts)
+        load = Rotational.Inertia(J = 1.3 * mLoad)
+        pathPlanning = PathPlanning1(;
+                                q0deg = q0,
+                                q1deg = q1,
+                                speed_max = qd_max,
+                                acc_max = qdd_max,
+                                kwargs...
+                                )
+        controlBus = ControlBus()
     end
     eqs = [
         connect(axis.flange, load.flange_a),
         connect(pathPlanning.controlBus, controlBus),
         connect(controlBus.axisControlBus1, axis.axisControlBus),
     ]
-    ODESystem(eqs, t; systems, name)
+    System(eqs, t, [], pars; systems, name)
 end
 
 
@@ -262,5 +262,5 @@ function Robot6DOF(; name, kwargs...)
            connect(controlBus.axisControlBus5, axis5.axisControlBus)
            connect(controlBus.axisControlBus6, axis6.axisControlBus)]
 
-    ODESystem(eqs, t; systems, name)
+    System(eqs, t; systems, name)
 end

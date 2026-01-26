@@ -11,21 +11,26 @@ Frame fixed in the planar world frame at a given position and orientation
 # Connectors:
 - `frame_b`: 2-dim. Coordinate system
 """
-@mtkmodel Fixed begin
-    @parameters begin
-        (r[1:2] = [0, 0]), [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
-        phi = 0, [description = "Fixed angle"]
+@component function Fixed(; name, r = [0.0, 0.0], phi = 0.0)
+    pars = @parameters begin
+        r[1:2] = r, [description = "Fixed absolute xy-position, resolved in planarWorld frame"]
+        phi = phi, [description = "Fixed angle"]
     end
 
-    @components begin
+    systems = @named begin
         frame_b = Frame()
     end
 
-    @equations begin
-        frame_b.x ~ r[1]
-        frame_b.y ~ r[2]
-        frame_b.phi ~ phi
+    vars = @variables begin
     end
+
+    equations = Equation[
+        [frame_b.x
+        frame_b.y] ~ r
+        frame_b.phi ~ phi
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -53,8 +58,10 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = zeros(2), v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
-    @named frame_a = Frame()
+@component function Body(; name, m, I, r = nothing, v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
+    systems = @named begin
+        frame_a = Frame()
+    end
     pars = @parameters begin
         m = m, [description = "Mass of the body"]
         I = I, [description = "Inertia of the body with respect to the origin of frame_a along the z-axis of frame_a"]
@@ -77,21 +84,20 @@ Body component with mass and inertia
 
     eqs = [
         # velocity is the time derivative of position
-        r .~ [frame_a.x, frame_a.y]
-        v .~ D.(r)
+        r ~ [frame_a.x, frame_a.y]
+        v ~ D(r)
         phi ~ frame_a.phi
-        w .~ D.(phi)
+        w ~ D(phi)
         # acceleration is the time derivative of velocity
-        a .~ D.(v)
-        α .~ D.(w)
+        a ~ D(v)
+        α ~ D(w)
         # newton's law
-        f .~ [frame_a.fx, frame_a.fy]
-        f + [0, m*gy] .~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
+        f ~ [frame_a.fx, frame_a.fy]
+        f + [0, m*gy] ~ m*a#ifelse(gy !== nothing, fy / m + gy, fy / m),
         I * α ~ frame_a.tau
     ]
 
-    return compose(ODESystem(eqs, t, vars, pars; name),
-        frame_a)
+    return System(eqs, t, vars, pars; name, systems)
 end
 
 """
@@ -112,33 +118,39 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `frame_a`
 - `frame_b`
 """
-@mtkmodel BodyShape begin
-    @structural_parameters begin
-        r = [1,0]
-        r_cm = 0.5*r
+@component function BodyShape(; name, r0=nothing, r = [1, 0], r_cm = 0.5*r, state_priority = 2,
+                                gy = -9.80665, m = 1, I = 0.1, radius = 0.1,
+                                render = true, color = purple, v=nothing, phi=nothing, w=nothing)
+    pars = @parameters begin
+        r0[1:2] = r0, [description = "Vector from frame_a to frame_b resolved in frame_a"]
+        r[1:2] = r, [description = "Vector from frame_a to frame_b resolved in frame_a"]
+        r_cm[1:2] = r_cm, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
+        gy = gy, [description = "Gravity field acting on the mass in the y-direction"]
+        m = m, [description = "Mass of the body"]
+        I = I, [description = "Inertia of the body with respect to the center of mass"]
+        radius = radius, [description = "Radius of the body in animations"]
+        render = render, [description = "Render the body in animations"]
+        color[1:4] = color, [description = "Color of the body in animations"]
     end
-    @parameters begin
-        gy = -9.80665
-        # r[1:2] = [1,0], [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
-        # r_cm[1:2] = 0.5*r, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
-        m = 1, [description = "mass of the body"]
-        I = 0.1, [description = "inertia of the body with respect to the center of mass"]
-        radius = 0.1, [description = "Radius of the body in animations"]
-        render = true, [description = "Render the body in animations"]
-        (color[1:4] = purple), [description = "Color of the body in animations"]
-    end
-    @components begin
-        translation = FixedTranslation(; r)
-        translation_cm = FixedTranslation(; r=r_cm)
-        body = Body(; r=r_cm, I, m, gy)
+
+    systems = @named begin
+        translation = FixedTranslation(; r, render=false)
+        translation_cm = FixedTranslation(; r=r_cm, render=false)
+        body = Body(; r=r0, I, m, gy, state_priority, v, phi, w)
         frame_a = Frame()
         frame_b = Frame()
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
         connect(translation_cm.frame_b, body.frame_a)
-    end
+    ]
+
+    return System(equations, t, vars, pars; name, systems)
 end
 
 """
@@ -158,43 +170,74 @@ A fixed translation between two components (rigid rod)
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 
 """
-@mtkmodel FixedTranslation begin
-    @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
+@component function FixedTranslation(; name, r = [1.0, 0], radius = 0.1, render = true)
+    pars = @parameters begin
+        r[1:2] = r, [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
+        radius = radius, [description = "Radius of the rod in animations"]
+        render = render, [description = "Render the rod in animations"]
+    end
 
-    @parameters begin
-        r[1:2] = [1.0, 0],
-        [
-            description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"
-        ]
-        radius = 0.1, [description = "Radius of the rod in animations"]
-        render = true, [description = "Render the rod in animations"]
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
     end
-    begin
-        r = collect(r)
-    end
-    @variables begin
+
+    vars = @variables begin
         phi(t), [state_priority=1, description = "Angle"]
         w(t), [state_priority=1, description = "Angular velocity"]
     end
 
-    begin
-        R = [cos(phi) -sin(phi);
-             sin(phi) cos(phi)]
-        r0 = R * r
-    end
+    # Calculations from begin blocks
+    # r = collect(r)
+    R = [cos(phi) -sin(phi);
+         sin(phi) cos(phi)]
+    r0 = R * r
 
-    @equations begin
+    equations = Equation[
         phi ~ frame_a.phi
         w ~ D(phi)
         # rigidly connect positions
-        frame_a.x + r0[1] ~ frame_b.x
-        frame_a.y + r0[2] ~ frame_b.y
+        [frame_a.x
+         frame_a.y] + r0 ~ [frame_b.x, frame_b.y]
         frame_a.phi ~ frame_b.phi
         # balancing force including lever principle
         frame_a.fx + frame_b.fx ~ 0
         frame_a.fy + frame_b.fy ~ 0
-        frame_a.tau + frame_b.tau + r0' * [frame_b.fy, -frame_b.fx] ~ 0
+        frame_a.tau + frame_b.tau + dot(r0, [frame_b.fy, -frame_b.fx]) ~ 0
+    ]
+
+    return System(equations, t, vars, pars; name, systems)
+end
+
+@component function FixedRotation(; name, alpha = 0, render = true)
+    pars = @parameters begin
+        alpha = alpha, [description = "Fixed rotation angle between frame_a and frame_b"]
+        render = render, [description = "Render the rotation in animations"]
     end
+
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
+        # Positions are the same
+        frame_a.x ~ frame_b.x
+        frame_a.y ~ frame_b.y
+
+        # Fixed rotation offset
+        frame_a.phi + alpha ~ frame_b.phi
+
+        # Force balance
+        frame_a.fx + frame_b.fx ~ 0
+        frame_a.fy + frame_b.fy ~ 0
+        frame_a.tau + frame_b.tau ~ 0
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -221,43 +264,45 @@ Linear 2D translational spring
 - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
-@mtkmodel Spring begin
-    @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
-
-    @parameters begin
-        c_x = 1, [description = "Spring constant in x dir"]
-        c_y = 1, [description = "Spring constant in y dir"]
-        c_phi = 1.0e5, [description = "Spring constant"]
-        s_relx0 = 0, [description = "Unstretched spring length"]
-        s_rely0 = 0, [description = "Unstretched spring length"]
-        phi_rel0 = 0, [description = "Unstretched spring angle"]
-        s_small = 1.e-10,
-        [
-            description = "Prevent zero-division if distance between frame_a and frame_b is zero"
-        ]
-        num_windings = 6, [description = "Number of windings of the coil when rendered"]
-        color[1:4] = [0, 0.0, 1, 1], [description = "Color of the spring in animations"]
-        render = true, [description = "Render the spring in animations"]
-        radius = 0.1, [description = "Radius of spring when rendered"]
-        N = 200, [description = "Number of points in mesh when rendered"]
+@component function Spring(; name, c_x = 1, c_y = 1, c_phi = 1.0e5, s_relx0 = 0,
+                            s_rely0 = 0, phi_rel0 = 0, s_small = 1.0e-10,
+                            num_windings = 6, color = [0, 0.0, 1, 1],
+                            render = true, radius = 0.1, N = 200)
+    pars = @parameters begin
+        c_x = c_x, [description = "Spring constant in x dir"]
+        c_y = c_y, [description = "Spring constant in y dir"]
+        c_phi = c_phi, [description = "Spring constant"]
+        s_relx0 = s_relx0, [description = "Unstretched spring length"]
+        s_rely0 = s_rely0, [description = "Unstretched spring length"]
+        phi_rel0 = phi_rel0, [description = "Unstretched spring angle"]
+        s_small = s_small, [description = "Prevent zero-division if distance between frame_a and frame_b is zero"]
+        num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
+        color[1:4] = color, [description = "Color of the spring in animations"]
+        render = render, [description = "Render the spring in animations"]
+        radius = radius, [description = "Radius of spring when rendered"]
+        N = N, [description = "Number of points in mesh when rendered"]
         end_ratio = 0.0
     end
 
-    @variables begin
-        s_relx(t) = 0
-        s_rely(t) = 0
-        phi_rel(t) = 0
-        f_x(t)
-        f_y(t)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
     end
 
-    begin
-        r_rel_0 = [s_relx, s_rely, 0]
-        l = sqrt(r_rel_0' * r_rel_0)
-        e_rel_0 = r_rel_0 / max(l, s_small)
+    vars = @variables begin
+        s_relx(t), [description = "Relative x position"]
+        s_rely(t), [description = "Relative y position"]
+        phi_rel(t), [description = "Relative angle"]
+        f_x(t), [description = "Force in x direction"]
+        f_y(t), [description = "Force in y direction"]
     end
 
-    @equations begin
+    # Calculations from begin block
+    r_rel_0 = [s_relx, s_rely, 0]
+    l = sqrt(r_rel_0' * r_rel_0)
+    e_rel_0 = r_rel_0 / max(l, s_small)
+
+    equations = Equation[
         phi_rel ~ frame_b.phi - frame_a.phi
         frame_a.tau ~ 0
         frame_b.tau ~ 0
@@ -269,7 +314,9 @@ Linear 2D translational spring
         frame_b.fx ~ f_x
         frame_a.fy ~ -f_y
         frame_b.fy ~ f_y
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -278,7 +325,7 @@ end
 Linear (velocity dependent) damper
 
 # Parameters:
-- `d`: [N.s/m] Damping constant 
+- `d`: [N.s/m] Damping constant
 - `s_small`: [m] Prevent zero-division if distance between frame_a and frame_b is zero
 
 
@@ -286,34 +333,33 @@ Linear (velocity dependent) damper
 - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
-@mtkmodel Damper begin
-    @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
-
-    @parameters begin
-        d = 1, [description = "damping constant"]
-        s_small = 1.e-10,
-        [
-            description = "Prevent zero-division if distance between frame_a and frame_b is zero"
-        ]
+@component function Damper(; name, d = 1, s_small = 1.0e-10)
+    pars = @parameters begin
+        d = d, [description = "Damping constant"]
+        s_small = s_small, [description = "Prevent zero-division if distance between frame_a and frame_b is zero"]
     end
 
-    @variables begin
-        r0x(t) = 0
-        r0y(t) = 0
-        d0x(t) = 0
-        d0y(t) = 0
-        vx(t) = 0
-        vy(t) = 0
-        v(t)
-        f(t)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
     end
 
-    begin
-        r0 = [r0x, r0y]
-        l = sqrt(r0' * r0)
+    vars = @variables begin
+        r0x(t), [description = "Relative position x component"]
+        r0y(t), [description = "Relative position y component"]
+        d0x(t), [description = "Direction x component"]
+        d0y(t), [description = "Direction y component"]
+        vx(t), [description = "Relative velocity x component"]
+        vy(t), [description = "Relative velocity y component"]
+        v(t), [description = "Relative velocity magnitude"]
+        f(t), [description = "Damping force"]
     end
 
-    @equations begin
+    # Calculations from begin block
+    r0 = [r0x, r0y]
+    l = sqrt(r0' * r0)
+
+    equations = Equation[
         frame_a.x + r0x ~ frame_b.x
         frame_a.y + r0y ~ frame_b.y
         D(frame_a.x) + vx ~ D(frame_b.x)
@@ -330,7 +376,9 @@ Linear (velocity dependent) damper
         frame_a.tau + frame_b.tau ~ 0
 
         # lossPower ~ -f * v
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -360,50 +408,52 @@ Linear 2D translational spring damper model
 - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 - `frame_b` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
-@mtkmodel SpringDamper begin
-    @extend frame_a, frame_b = partial_frames = PartialTwoFrames()
-
-    @parameters begin
-        c_x = 1, [description = "Spring constant in x dir"]
-        c_y = 1, [description = "Spring constant in y dir"]
-        c_phi = 1.0e5, [description = "Spring constant in phi dir"]
-        d_x = 1, [description = "Damping constant in x dir"]
-        d_y = 1, [description = "Damping constant in y dir"]
-        d_phi = 1, [description = "Damping constant in phi dir"]
-        s_relx0 = 0, [description = "Unstretched spring length"]
-        s_rely0 = 0, [description = "Unstretched spring length"]
-        phi_rel0 = 0, [description = "Unstretched spring angle"]
-        s_small = 1.e-10,
-        [
-            description = "Prevent zero-division if distance between frame_a and frame_b is zero"
-        ]
-        num_windings = 6, [description = "Number of windings of the coil when rendered"]
-        color[1:4] = [0, 0.0, 1, 1], [description = "Color of the spring in animations"]
-        render = true, [description = "Render the spring in animations"]
-        radius = 0.1, [description = "Radius of spring when rendered"]
-        N = 200, [description = "Number of points in mesh when rendered"]
+@component function SpringDamper(; name, c_x = 1, c_y = 1, c_phi = 1.0e5, d_x = 1, d_y = 1, d_phi = 1,
+                                  s_relx0 = 0, s_rely0 = 0, phi_rel0 = 0, s_small = 1.0e-10,
+                                  num_windings = 6, color = [0, 0.0, 1, 1],
+                                  render = true, radius = 0.1, N = 200)
+    pars = @parameters begin
+        c_x = c_x, [description = "Spring constant in x dir"]
+        c_y = c_y, [description = "Spring constant in y dir"]
+        c_phi = c_phi, [description = "Spring constant in phi dir"]
+        d_x = d_x, [description = "Damping constant in x dir"]
+        d_y = d_y, [description = "Damping constant in y dir"]
+        d_phi = d_phi, [description = "Damping constant in phi dir"]
+        s_relx0 = s_relx0, [description = "Unstretched spring length"]
+        s_rely0 = s_rely0, [description = "Unstretched spring length"]
+        phi_rel0 = phi_rel0, [description = "Unstretched spring angle"]
+        s_small = s_small, [description = "Prevent zero-division if distance between frame_a and frame_b is zero"]
+        num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
+        color[1:4] = color, [description = "Color of the spring in animations"]
+        render = render, [description = "Render the spring in animations"]
+        radius = radius, [description = "Radius of spring when rendered"]
+        N = N, [description = "Number of points in mesh when rendered"]
         end_ratio = 0.0
     end
 
-    @variables begin
-        v_relx(t)
-        v_rely(t)
-        w_rel(t) = 0
-        s_relx(t)
-        s_rely(t)
-        phi_rel(t) = 0
-        f_x(t)
-        f_y(t)
-        tau(t)
+    systems = @named begin
+        frame_a = Frame()
+        frame_b = Frame()
     end
 
-    begin
-        r_rel_0 = [s_relx, s_rely, 0]
-        l = sqrt(r_rel_0' * r_rel_0)
-        e_rel_0 = r_rel_0 / max(l, s_small)
+    vars = @variables begin
+        v_relx(t), [description = "Relative velocity in x direction"]
+        v_rely(t), [description = "Relative velocity in y direction"]
+        w_rel(t), [description = "Relative angular velocity"]
+        s_relx(t), [description = "Relative x position"]
+        s_rely(t), [description = "Relative y position"]
+        phi_rel(t), [description = "Relative angle"]
+        f_x(t), [description = "Force in x direction"]
+        f_y(t), [description = "Force in y direction"]
+        tau(t), [description = "Torque"]
     end
 
-    @equations begin
+    # Calculations from begin block
+    r_rel_0 = [s_relx, s_rely, 0]
+    l = sqrt(r_rel_0' * r_rel_0)
+    e_rel_0 = r_rel_0 / max(l, s_small)
+
+    equations = Equation[
         s_relx ~ frame_b.x - frame_a.x
         s_rely ~ frame_b.y - frame_a.y
         phi_rel ~ frame_b.phi - frame_a.phi
@@ -422,7 +472,9 @@ Linear 2D translational spring damper model
         frame_b.fy ~ f_y
 
         # lossPower ~ d_x * v_relx * v_relx + d_y * v_rely * v_rely
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 
@@ -447,38 +499,38 @@ Simple wheel model with viscous lateral friction and a driving torque
 - `Fy`: [N] Lateral friction force
 - `Fx`: [N] Applied longitudinal wheel force
 """
-@mtkmodel SimpleWheel begin
-    @structural_parameters begin
-        friction_model = :viscous
-    end
-    @parameters begin
-        (radius = 0.3), [description = "Radius of the wheel"]
-        (color[1:4] = [1, 0, 0, 1]), [description = "Color of the wheel in animations"]
-        μ = 1e9, [description = "Viscous friction coefficient"]
+@component function SimpleWheel(; name, friction_model = :viscous, radius = 0.3,
+                                 color = [1, 0, 0, 1], μ = 1e9)
+    pars = @parameters begin
+        radius = radius, [description = "Radius of the wheel"]
+        color[1:4] = color, [description = "Color of the wheel in animations"]
+        μ = μ, [description = "Viscous friction coefficient"]
         # Fy0 = 1e4, [description = "Lateral friction force at zero longitudinal force"]
         # μx = Fy0, [description = "Maximum longitudinal friction force"]
     end
-    @variables begin
-        θ(t), [guess=0, description="wheel angle"] # wheel angle
-        Vx(t), [guess=0, description="longitudinal velocity (resolved in local frame)"]
-        Vy(t)=0, [description="lateral velocity (resolved in local frame)"]
-        Fy(t), [guess=0, description="lateral friction force"]
-        Fx(t), [guess=0, description="applied longitudinal wheel force"]
-    end
-    @components begin
+
+    systems = @named begin
         frame_a = Frame()
         thrust = Blocks.RealInput()
     end
-    begin
-        R_W_F = ori_2d(frame_a) # rotation matrix, local to global
-        veqs = R_W_F'*[D(frame_a.x), D(frame_a.y)] #~ [Vx, Vy]
-        feqs = R_W_F'*[frame_a.fx, frame_a.fy] #~ [Fx, Fy]
+
+    vars = @variables begin
+        θ(t), [guess=0, description="Wheel angle"]
+        Vx(t), [guess=0, description="Longitudinal velocity (resolved in local frame)"]
+        Vy(t), [guess=0, description="Lateral velocity (resolved in local frame)"]
+        Fy(t), [guess=0, description="Lateral friction force"]
+        Fx(t), [guess=0, description="Applied longitudinal wheel force"]
     end
 
-    
-    @equations begin
+    # Calculations from begin block
+    R_W_F = ori_2d(frame_a) # rotation matrix, local to global
+    veqs = R_W_F'*[D(frame_a.x), D(frame_a.y)] #~ [Vx, Vy]
+    feqs = R_W_F'*[frame_a.fx, frame_a.fy] #~ [Fx, Fy]
+
+
+    equations = Equation[
         θ ~ frame_a.phi
-        
+
         # road friction
         Fx ~ thrust.u
         # if friction_model == :viscous
@@ -495,7 +547,9 @@ Simple wheel model with viscous lateral friction and a driving torque
         # R'*[frame.fx, frame.fy] ~ [Fx, Fy]
 
         frame_a.tau ~ 0 # Assume that wheel does not transmit any torque
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -713,7 +767,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
 
     R = ori_2d(frame_a)
 
-    equations = [
+    equations = Equation[
         e0 .~ R * e
         v .~ D.([frame_a.x, frame_a.y])
 
@@ -736,7 +790,7 @@ In addition there is an input `dynamicLoad` for a dynamic component of the norma
         f_lat ~ [frame_a.fy, -frame_a.fx]'e0
     ]
 
-    return ODESystem(equations, t, vars, pars; name, systems)
+    return System(equations, t, vars, pars; name, systems)
     
 end
 
@@ -763,20 +817,27 @@ According to the overall convention, the positive direction of all vectors, espe
 - `carrier` (Rotational.Flange) Planet carrier
 - `ring` (Rotational.Flange) Ring wheel
 """
-@mtkmodel IdealPlanetary begin
-    @parameters begin
-        ratio = 2, [description="Number of ring_teeth/sun_teeth"]
+@component function IdealPlanetary(; name, ratio = 2)
+    pars = @parameters begin
+        ratio = ratio, [description = "Number of ring_teeth/sun_teeth"]
     end
-    @components begin
+
+    systems = @named begin
         sun = Rotational.Flange()
         carrier = Rotational.Flange()
         ring = Rotational.Flange()
     end
-    @equations begin
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         (1 + ratio)*carrier.phi ~ sun.phi + ratio*ring.phi
         ring.tau ~ ratio*sun.tau
         carrier.tau ~ -(1 + ratio)*sun.tau
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 """
@@ -789,16 +850,25 @@ A 1D-rotational component that is a variant of a planetary gear and can be used 
 - `flange_left` (Rotational.Flange) Flange for the left output torque
 - `flange_right` (Rotational.Flange) Flange for the right output torque
 """
-@mtkmodel DifferentialGear begin
-    @components begin
+@component function DifferentialGear(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         ideal_planetary = IdealPlanetary(ratio=-2)
         flange_b = Rotational.Flange()
         flange_left = Rotational.Flange()
         flange_right = Rotational.Flange()
     end
-    @equations begin
-        connect(flange_b, ideal_planetary.ring) 
-        connect(ideal_planetary.carrier, flange_right) 
-        connect(ideal_planetary.sun, flange_left)
+
+    vars = @variables begin
     end
+
+    equations = Equation[
+        connect(flange_b, ideal_planetary.ring)
+        connect(ideal_planetary.carrier, flange_right)
+        connect(ideal_planetary.sun, flange_left)
+    ]
+
+    return System(equations, t; name, systems)
 end

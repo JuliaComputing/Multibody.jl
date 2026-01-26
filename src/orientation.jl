@@ -1,27 +1,26 @@
 using Rotations
+import ModelingToolkit.RotationMatrix
 
 _norm(x) = sqrt(sum(abs2(x) for x in x)) # Workaround for buggy symbolic arrays
 _normalize(x) = x ./ _norm(x)
 
 const R3{T} = RotMatrix{3, T}
 
-abstract type Orientation end
+# """
+#     RotationMatrix
 
-"""
-    RotationMatrix
+# A struct representing a 3D orientation as a rotation matrix.
 
-A struct representing a 3D orientation as a rotation matrix.
+# If `System` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
 
-If `ODESystem` is called on a `RotationMatrix` object `o`, symbolic variables for `o.R` and `o.w` are created and the value of `o.R` is used as the default value for the symbolic `R`.
-
-# Fields:
-- `R::R3`: The rotation 3×3 matrix ∈ SO(3)
-- `w`: The angular velocity vector
-"""
-struct RotationMatrix <: Orientation
-    R::R3
-    w::Any
-end
+# # Fields:
+# - `R::R3`: The rotation 3×3 matrix ∈ SO(3)
+# - `w`: The angular velocity vector
+# """
+# struct RotationMatrix <: Orientation
+#     R::R3
+#     w::Any
+# end
 
 RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
@@ -41,12 +40,12 @@ Never call this function directly from a component constructor, instead call `f 
 """
 function NumRotationMatrix(; R = collect(1.0I(3)), w = zeros(3), name=:R, varw = false, state_priority=nothing)
     # The reason for not calling this directly is that all R vaiables have to have the same name since they are treated as connector variables (otherwise a connection error is thrown). A component with more than one rotation matrix will thus have two different R variables that overwrite each other
-    R = at_variables_t(:R, 1:3, 1:3; default = R, state_priority) #[description="Orientation rotation matrix ∈ SO(3)"]
+    R = at_variables_t(:R, 1:3, 1:3; state_priority)#; default = R) #[description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R = collect(R)
     # R = ModelingToolkit.renamespace.(name, R) .|> Num
     if varw
-        w = at_variables_t(:w, 1:3, default = w)
+        w = at_variables_t(:w, 1:3)#, default = w)
     else
         w = get_w(R)
     end
@@ -56,7 +55,7 @@ end
 
 nullrotation() = RotationMatrix()
 
-function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
+function ModelingToolkit.System(RM::RotationMatrix; name)
     # @variables R(t)[1:3, 1:3]=Matrix(RM) [description="Orientation rotation matrix ∈ SO(3)"]
     # @variables w(t)[1:3]=w [description="angular velocity"]
     # R,w = collect.((R,w))
@@ -65,13 +64,13 @@ function ModelingToolkit.ODESystem(RM::RotationMatrix; name)
     w = at_variables_t(:w, 1:3)
 
     defaults = Dict(R .=> RM)
-    ODESystem(Equation[], t, [vec(R); w], []; name, defaults)
+    System(Equation[], t, [vec(R); w], []; name, defaults)
 end
 
 Base.:*(R1::RotationMatrix, x::AbstractArray) = R1.R * x
 Base.:*(x::AbstractArray, R2::RotationMatrix) = x * R2.R
 function Base.:*(R1::RotationMatrix, R2::RotationMatrix)
-    RotationMatrix(R1.R.mat * R2.R.mat, R1 * collect(R2.w) + collect(R1.w))
+    RotationMatrix(R1.R * R2.R, R1 * collect(R2.w) + collect(R1.w))
 end
 LinearAlgebra.adjoint(R::RotationMatrix) = RotationMatrix(R.R', -R.w)
 
@@ -133,12 +132,12 @@ r_wb = resolve1(ori(frame_a), r_ab)
 """
 resolve1(R21::RotationMatrix, v2) = R21'collect(v2)
 
-resolve1(sys::ODESystem, v) = resolve1(ori(sys), v)
-resolve2(sys::ODESystem, v) = resolve2(ori(sys), v)
+resolve1(sys::System, v) = resolve1(ori(sys), v)
+resolve2(sys::System, v) = resolve2(ori(sys), v)
 
 function resolve_relative(v1, R1, R2)
-    R1 isa ODESystem && (R1 = ori(R1))
-    R2 isa ODESystem && (R2 = ori(R2))
+    R1 isa System && (R1 = ori(R1))
+    R2 isa System && (R2 = ori(R2))
     v2 = resolve2(R2, resolve1(R1, v1))
 end
 
@@ -171,30 +170,30 @@ function absolute_rotation(R1, Rrel)
     # R2 = Rrel.R*R1.R
     # w = resolve2(Rrel, R1.w) + Rrel.w
     # RotationMatrix(R2, w)
-    R1 isa ODESystem && (R1 = ori(R1))
-    Rrel isa ODESystem && (Rrel = ori(Rrel))
+    R1 isa System && (R1 = ori(R1))
+    Rrel isa System && (Rrel = ori(Rrel))
     Rrel * R1
 end
 
 function relative_rotation(R1, R2)
-    R1 isa ODESystem && (R1 = ori(R1))
-    R2 isa ODESystem && (R2 = ori(R2))
+    R1 isa System && (R1 = ori(R1))
+    R2 isa System && (R2 = ori(R2))
     R = R2'R1
     w = R2.w - resolve2(R2, resolve1(R1, R1.w))
     RotationMatrix(R.R, w)
 end
 
 function inverse_rotation(R)
-    R isa ODESystem && (R = ori(R))
+    R isa System && (R = ori(R))
     Ri = R.R'
     wi = -resolve1(R, R.w)
     RotationMatrix(Ri, wi)
 end
 
 function Base.:~(R1::RotationMatrix, R2::RotationMatrix)
-    # [vec(R1.R.mat .~ R2.R.mat);
+    # [vec(R1.R .~ R2.R);
     #     R1.w .~ R2.w]
-    vec(R1.R.mat .~ R2.R.mat)
+    vec(R1.R .~ R2.R)
 end
 
 """
@@ -232,8 +231,8 @@ orientation_constraint(R1, R2) = orientation_constraint(R1'R2)
 
 function residue(R1, R2)
     # https://github.com/modelica/ModelicaStandardLibrary/blob/master/Modelica/Mechanics/MultiBody/Frames/Orientation.mo
-    R1 isa ODESystem && (R1 = ori(R1))
-    R2 isa ODESystem && (R2 = ori(R2))
+    R1 isa System && (R1 = ori(R1))
+    R2 isa System && (R2 = ori(R2))
     R1 = R1.R
     R2 = R2.R
     [atan(cross(R1[1, :], R1[2, :]) ⋅ R2[2, :], R1[1, :] ⋅ R2[1, :])
@@ -262,7 +261,7 @@ function from_Q(Q2, w; normalize=false)
         Q2 = Q2 / _norm(Q2)
     end
     q = Rotations.QuatRotation(Q2, false)
-    R = RotMatrix(q)
+    R = RotMatrix(q)'
     RotationMatrix(R, w)
 end
 
@@ -313,11 +312,11 @@ Returns a `RotationMatrix` object.
 """
 function axis_rotation(sequence, angle; name = :R)
     if sequence == 1
-        return RotationMatrix(Rotations.RotX(angle), zeros(3))
+        return RotationMatrix(Rotations.RotX(angle)', zeros(3))
     elseif sequence == 2
-        return RotationMatrix(Rotations.RotY(angle), zeros(3))
+        return RotationMatrix(Rotations.RotY(angle)', zeros(3))
     elseif sequence == 3
-        return RotationMatrix(Rotations.RotZ(angle), zeros(3))
+        return RotationMatrix(Rotations.RotZ(angle)', zeros(3))
     else
         error("Invalid sequence $sequence")
     end
@@ -373,6 +372,16 @@ function resolve_dyade2(R, D1)
     R*D1*R'
 end
 
+function is_frame(frame)
+    md = get_metadata(frame)
+    get(md, Multibody.ModelingToolkit.IsFrame, false)
+end
+
+function is_frame_2d(frame)
+    md = get_metadata(frame)
+    get(md, Multibody.PlanarMechanics.IsFrame2D, false)
+end
+
 """
     R_W_F = get_rot(sol, frame, t)
 
@@ -389,7 +398,14 @@ The columns of ``R_W_F`` indicate are the basis vectors of the frame ``F`` expre
 See also [`get_trans`](@ref), [`get_frame`](@ref), [Orientations and directions](@ref) (docs section).
 """
 function get_rot(sol, frame, t)
-    Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R.mat')), 3, 3))
+    if is_frame(frame)
+        Rotations.RotMatrix3(reshape(sol(t, idxs = vec(ori(frame).R')), 3, 3))
+    elseif is_frame_2d(frame)
+        phi = sol(t, idxs = frame.phi)
+        Rotations.RotMatrix2(ori_2d(phi)')
+    else
+        error("$frame is not a multibody frame")
+    end
 end
 
 """
@@ -419,12 +435,12 @@ function get_frame(sol, frame, t)
     [R tr; 0 0 0 1]
 end
 
-function nonunit_quaternion_equations(R, w; neg_w = true)
-    @variables Q(t)[1:4]=[1,0,0,0], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
+function nonunit_quaternion_equations(R, w)
+    @variables Q(t)[1:4], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
     @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
-    @variables Q̂d(t)[1:4]=[0,0,0,0], [state_priority=1000]
+    @variables Q̂d(t)[1:4], [state_priority=1000]
     # NOTE: 
-    @variables n(t)=1 c(t)=0
+    @variables n(t) c(t)
     @parameters k = 0.1
     Q̂ = collect(Q̂)
     Q̂d = collect(Q̂d)
@@ -435,9 +451,6 @@ function nonunit_quaternion_equations(R, w; neg_w = true)
     # where angularVelocity2(Q, der(Q)) = 2*([Q[4]  Q[3] -Q[2] -Q[1]; -Q[3] Q[4] Q[1] -Q[2]; Q[2] -Q[1] Q[4] -Q[3]]*der_Q)
     # They also have w_a = angularVelocity2(frame_a.R) even for quaternions, so w_a = angularVelocity2(Q, der(Q)), this is their link between w_a and D(Q), while ours is D(Q̂) .~ (Ω * Q̂)
     Ω = [0 -w[1] -w[2] -w[3]; w[1] 0 w[3] -w[2]; w[2] -w[3] 0 w[1]; w[3] w[2] -w[1] 0]
-    if neg_w
-        Ω = Ω'
-    end
 
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     QR = from_Q(Q̂ ./ sqrt(n), w)

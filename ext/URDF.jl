@@ -308,30 +308,39 @@ function Multibody.urdf2multibody(filename::AbstractString; extras=false, out=no
 
     s = if extras
         """
-        using ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq, Plots
+        using ModelingToolkit, Multibody, OrdinaryDiffEq, Plots
         import ModelingToolkit: t_nounits as t, D_nounits as D
         """
     else 
         ""
     end
     s = s * """
-    @mtkmodel $(modelname) begin
-        @components begin
+    @component function $(modelname)(; name)
+        pars = @parameters begin
+        end
+
+        systems = @named begin
             world = World()
             $(join(bodies, "\n"))
             $(join(joints, "\n"))
         end
-        @equations begin
+
+        vars = @variables begin
+        end
+
+        equations = Equation[
             $(join(connections, "\n"))
             $(join(extra_connections, "\n"))
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
     """
     if extras
         s = s * """
         @named model = $(modelname)()
         model = complete(model)
-        ssys = structural_simplify(multibody(model))
+        ssys = multibody(model)
         prob = ODEProblem(ssys, [], (0.0, 10.0))
         sol = solve(prob, $(solver)())
         plot(sol) |> display

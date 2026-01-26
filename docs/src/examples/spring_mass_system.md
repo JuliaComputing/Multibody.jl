@@ -12,7 +12,7 @@ This example mirrors that of the [modelica spring-mass system](https://doc.model
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica
 using OrdinaryDiffEq
 
@@ -21,14 +21,14 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    p1      = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
+    p1      = Prismatic(n = [0, -1, 0], s0 = 0.1, v0=0, axisflange = true)
     spring1 = TranslationalModelica.Spring(c=30, s_rel0 = 0.1)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     body1   = Body(m = 1, r_cm = [0, 0, 0], radius=0.1, color=[1,0.5,0,1])
     bar1    = FixedTranslation(r = [0.3, 0, 0])
     bar2    = FixedTranslation(r = [0.3, 0, 0])
     body2   = Body(m = 1, r_cm = [0, 0, 0], radius=0.1)
-    p2      = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
+    p2      = Prismatic(n = [0, -1, 0], s0 = 0.1, v0=0, axisflange = true)
 end
 
 eqs = [
@@ -44,11 +44,11 @@ eqs = [
     connect(spring1.flange_a, p1.support)
 ]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
-ssys = structural_simplify(multibody(model))
-prob = ODEProblem(ssys,[], (0, 5))
+@named model = System(eqs, t, systems = [world; systems])
+ssys = multibody(model)
+prob = ODEProblem(ssys, [], (0, 5))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Tsit5())
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = [body1.r_0[2], body2.r_0[2]])

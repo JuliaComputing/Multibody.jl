@@ -4,11 +4,11 @@ function PartialRelativeBaseSensor(; name)
         frame_b = Frame()
     end
 
-    equations = [frame_a.f .~ zeros(3) |> collect
-                 frame_a.tau .~ zeros(3) |> collect
-                 frame_b.f .~ zeros(3) |> collect
-                 frame_b.tau .~ zeros(3) |> collect]
-    compose(ODESystem(equations, t; name), frame_a, frame_b)
+    equations = Equation[frame_a.f ~ zeros(3)
+                 frame_a.tau ~ zeros(3)
+                 frame_b.f ~ zeros(3)
+                 frame_b.tau ~ zeros(3)]
+    compose(System(equations, t; name), frame_a, frame_b)
 end
 
 function BasicRelativePosition(; name, resolve_frame)
@@ -18,18 +18,18 @@ function BasicRelativePosition(; name, resolve_frame)
         r_rel = RealOutput(nout = 3)
     end
 
-    d = collect(frame_b.r_0 - frame_a.r_0)
+    d = frame_b.r_0 - frame_a.r_0
     eqs = if resolve_frame === :frame_a
-        collect(r_rel.u) .~ resolve2(ori(frame_a), d)
+        r_rel.u ~ resolve2(ori(frame_a), d)
     elseif resolve_frame === :frame_b
-        collect(r_rel.u) .~ resolve2(ori(frame_b), d)
+        r_rel.u ~ resolve2(ori(frame_b), d)
     elseif resolve_frame === :world
-        collect(r_rel.u) .~ d
+        r_rel.u ~ d
     else
         error("resolve_frame must be :world, :frame_a or :frame_b, you provided $resolve_frame, which makes me sad.")
     end
 
-    extend(compose(ODESystem(eqs, t; name), r_rel), prb)
+    extend(compose(System(eqs, t; name), r_rel), prb)
 end
 
 function RelativePosition(; name, resolve_frame = :frame_a)
@@ -46,7 +46,7 @@ function RelativePosition(; name, resolve_frame = :frame_a)
         connect(relativePosition.frame_b, frame_b)
         connect(relativePosition.r_rel, r_rel)
     ]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b, r_rel, relativePosition)
+    compose(System(eqs, t; name), frame_a, frame_b, r_rel, relativePosition)
 end
 
 function PartialAbsoluteSensor(; name, n_out)
@@ -54,8 +54,8 @@ function PartialAbsoluteSensor(; name, n_out)
         frame_a = Frame()
         y = Blocks.RealOutput(nout = n_out)
     end
-    equations = []
-    compose(ODESystem(equations, t; name), frame_a, y)
+    equations = Equation[]
+    compose(System(equations, t; name), frame_a, y)
 end
 
 """
@@ -69,11 +69,11 @@ function PartialCutForceBaseSensor(; name, resolve_frame = :frame_a)
         frame_b = Frame()
     end
 
-    equations = [frame_a.r_0 .~ frame_b.r_0 |> collect
+    equations = Equation[frame_a.r_0 ~ frame_b.r_0
                  ori(frame_a) ~ ori(frame_b)
-                 zeros(3) .~ frame_a.f + frame_b.f |> collect
-                 zeros(3) .~ frame_a.tau + frame_b.tau |> collect]
-    compose(ODESystem(equations, t; name), frame_a, frame_b)
+                 zeros(3) ~ frame_a.f + frame_b.f
+                 zeros(3) ~ frame_a.tau + frame_b.tau]
+    compose(System(equations, t; name), frame_a, frame_b)
 end
 
 """
@@ -88,13 +88,13 @@ function CutTorque(; name, resolve_frame = :frame_a)
     @named torque = Blocks.RealOutput(nout = 3) # "Cut torque resolved in frame defined by resolve_frame"
     @unpack frame_a, frame_b = pcfbs
     eqs = if resolve_frame === :world
-        collect(torque.u) .~ resolve1(ori(frame_a), frame_a.tau)
+        torque.u ~ resolve1(ori(frame_a), frame_a.tau)
     elseif resolve_frame === :frame_a
-        collect(torque.u) .~ collect(frame_a.tau)
+        torque.u ~ frame_a.tau
     else
         error("resolve_frame must be :world or :frame_a")
     end
-    extend(compose(ODESystem(eqs, t; name), torque), pcfbs)
+    extend(compose(System(eqs, t; name), torque), pcfbs)
 end
 
 """
@@ -109,13 +109,13 @@ function CutForce(; name, resolve_frame = :frame_a)
     @named force = Blocks.RealOutput(nout = 3) # "Cut force resolved in frame defined by resolve_frame"
     @unpack frame_a, frame_b = pcfbs
     eqs = if resolve_frame === :world
-        collect(force.u) .~ resolve1(ori(frame_a), frame_a.f)
+        force.u ~ resolve1(ori(frame_a), frame_a.f)
     elseif resolve_frame === :frame_a
-        collect(force.u) .~ collect(frame_a.f)
+        force.u ~ frame_a.f
     else
         error("resolve_frame must be :world or :frame_a")
     end
-    extend(compose(ODESystem(eqs, t; name), force), pcfbs)
+    extend(compose(System(eqs, t; name), force), pcfbs)
 end
 
 function RelativeAngles(; name, sequence = [1, 2, 3])
@@ -125,13 +125,13 @@ function RelativeAngles(; name, sequence = [1, 2, 3])
         angles = Blocks.RealOutput(nout = 3)
     end
     @named Rrel = NumRotationMatrix()
-    eqs = [frame_a.f .~ zeros(3) |> collect
-           frame_a.tau .~ zeros(3) |> collect
-           frame_b.f .~ zeros(3) |> collect
-           frame_b.tau .~ zeros(3) |> collect
+    eqs = [frame_a.f ~ zeros(3)
+           frame_a.tau ~ zeros(3)
+           frame_b.f ~ zeros(3)
+           frame_b.tau ~ zeros(3)
            Rrel ~ relative_rotation(frame_a, frame_b)
-           angles .~ axes_rotationangles(Rrel, sequence, guessAngle1)]
-    compose(ODESystem(eqs, t; name), frame_a, frame_b, angles)
+           angles ~ axes_rotationangles(Rrel, sequence, guessAngle1)]
+    compose(System(eqs, t; name), frame_a, frame_b, angles)
 end
 
 function AbsoluteAngles(; name, sequence = [1, 2, 3])
@@ -141,10 +141,10 @@ function AbsoluteAngles(; name, sequence = [1, 2, 3])
     end
     @unpack frame_a = pas
     @named R_abs = NumRotationMatrix()
-    eqs = [collect(frame_a.f .~ 0)
-           collect(frame_a.tau .~ 0)
-           angles.u .~ axes_rotationangles(ori(frame_a), [1, 2, 3])]
-    extend(compose(ODESystem(eqs, t; name)), pas)
+    eqs = [frame_a.f ~ 0
+           frame_a.tau ~ 0
+           angles.u ~ axes_rotationangles(ori(frame_a), [1, 2, 3])]
+    extend(compose(System(eqs, t; name)), pas)
 end
 
 
@@ -163,12 +163,12 @@ function Power(; name)
         power = RealOutput()
     end
     eqs = [
-        frame_a.r_0 .~ frame_b.r_0 |> collect
+        frame_a.r_0 ~ frame_b.r_0
         ori(frame_a) ~ ori(frame_b)
-        0 .~ frame_a.f + frame_b.f |> collect
-        0 .~ frame_a.tau + frame_b.tau |> collect
-        power.u ~ collect(frame_a.f)'resolve2(frame_a, D.(frame_a.r_0)) +
-                    collect(frame_a.tau)'angular_velocity2(ori(frame_a))
+        zeros(3) ~ frame_a.f + frame_b.f
+        zeros(3) ~ frame_a.tau + frame_b.tau
+        power.u ~ dot(frame_a.f, resolve2(frame_a, D(frame_a.r_0))) +
+                    dot(frame_a.tau, angular_velocity2(ori(frame_a)))
     ]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end

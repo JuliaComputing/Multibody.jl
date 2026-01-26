@@ -29,7 +29,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 using Plots
 using OrdinaryDiffEq
 using LinearAlgebra
-using JuliaSimCompiler
+# using JuliaSimCompiler
 
 t = Multibody.t
 D = Differential(t)
@@ -37,6 +37,7 @@ world = Multibody.world
 
 l = 1.5
 systems = @named begin
+    world = World()
     j1 = Revolute(axisflange=true) # We use an axis flange to attach a damper
     j2 = Revolute(axisflange=true)
     j3 = Revolute()
@@ -73,9 +74,8 @@ connections = [
     connect(j2.support, damper2.flange_b)
     
 ]
-@named fourbar = ODESystem(connections, t, systems = [world; systems])
-fourbar = complete(fourbar)
-ssys = structural_simplify(multibody(fourbar))
+@named fourbar = System(connections, t; systems)
+ssys = multibody(fourbar)
 prob = ODEProblem(ssys, [fourbar.j1.phi => 0.1], (0.0, 10.0))
 sol = solve(prob, FBDF(autodiff=true))
 
@@ -144,9 +144,8 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b0.frame_a, world.frame_b)
                connect(b0.frame_b, j2.frame_a)
                ]
-@named fourbar2 = ODESystem(connections, t, systems = [world; systems])
-fourbar2 = complete(fourbar2)
-ssys = structural_simplify(multibody(fourbar2))
+@named fourbar2 = System(connections, t, systems = [world; systems])
+ssys = multibody(fourbar2)
 
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
 
@@ -185,9 +184,8 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b3.frame_b, j2.frame_a)
 ]
 
-@named fourbar_analytic = ODESystem(connections, t, systems = [world; systems])
-fourbar_analytic = complete(fourbar_analytic)
-ssys_analytic = structural_simplify(multibody(fourbar_analytic))
+@named fourbar_analytic = System(connections, t, systems = [world; systems])
+ssys_analytic = multibody(fourbar_analytic)
 prob = ODEProblem(ssys_analytic, [], (0.0, 1.4399)) 
 sol2 = solve(prob, FBDF(autodiff=true)) # about 4x faster than the simulation above
 plot!(sol2, idxs=[j2.s]) # Plot the same coordinate as above

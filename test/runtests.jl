@@ -1,7 +1,7 @@
 using ModelingToolkit
 using Multibody
 using Test
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using LinearAlgebra
 isdefined(Main, :t) || (t = Multibody.t)
@@ -10,6 +10,11 @@ doplot() = false
 world = Multibody.world
 
 
+# linsys = (; allow_symbolic = true, inline_linear_sccs = true, analytical_linear_scc_limit = 10, reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 10))
+
+linsys = (; reassemble_alg = StructuralTransformations.DefaultReassembleAlgorithm(; inline_linear_sccs = true, analytical_linear_scc_limit = 1))
+
+@testset "initial" begin
 @testset "world" begin
     @info "Testing world"
     include("test_world.jl")
@@ -49,6 +54,7 @@ end
     @info "Testing PlanarMechanics"
     include("test_PlanarMechanics.jl")
 end
+end
 
 # ==============================================================================
 ## Add spring to make a harmonic oscillator ====================================
@@ -67,30 +73,29 @@ t = Multibody.t
 D = Differential(t)
 @testset "spring - harmonic oscillator" begin
 
-    @named body = Body(; m = 1, isroot = true, r_cm = [0, -1, 0], quat=true, neg_w=true) # This time the body isroot since there is no joint containing state
+    @named body = Body(; m = 1, isroot = true, r_cm = [0, -1, 0], quat=true) # This time the body isroot since there is no joint containing state
     @named spring = Multibody.Spring(c = 1)
 
     connections = [connect(world.frame_b, spring.frame_a)
                 connect(spring.frame_b, body.frame_a)]
 
-    @named model = ODESystem(connections, t, systems = [world, spring, body])
+    @named model = System(connections, t, systems = [world, spring, body])
 
     # ssys = structural_simplify(model, allow_parameter = false)
 
-    irsys = multibody(model)
-    ssys = structural_simplify(irsys)
-    D = Differential(t)
+    ssys = multibody(model)
 
     # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
     # @test all(isfinite, du)
 
     # @test_skip begin # Yingbo: instability
     prob = ODEProblem(ssys, [
+        collect(body.Q̂) .=> [1, 0, 0, 0];
         collect(body.r_0) .=> [0, -1e-5, 0]; # To make sure the spring has non-zero extent
-        collect(body.w_a) .=> 0.00;
+        collect(body.w_a) .=> 0.01;
         collect(body.v_0) .=> 0;
     ], (0, 10))
-    sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 0*1e-5 .* randn.())
+    sol = solve(prob, Rodas5P())#, u0 = prob.u0 .+ 0*1e-5 .* randn.())
     @test SciMLBase.successful_retcode(sol)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
     @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
@@ -125,12 +130,11 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(forcesensor.frame_b, powersensor.frame_a)
                connect(powersensor.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, torksensor, forcesensor, powersensor, damper])
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 
 D = Differential(t)
 defs = Dict()
@@ -159,8 +163,8 @@ end
 # ==============================================================================
 ## Point gravity ======================
 # ==============================================================================
-@mtkmodel PointGrav begin
-    @components begin
+@component function PointGrav(; name)
+    systems = @named begin
         world = World()
         body1 = Body(
             m=1,
@@ -179,15 +183,25 @@ end
             isroot=true,
             v_0=[0.6,0,0])
     end
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[]
+
+    return System(equations, t; name, systems)
 end
 @named model = PointGrav()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 defs = [
     model.world.mu => 1
     model.world.point_gravity => true
-    collect(model.body1.w_a) .=> 0
-    collect(model.body2.w_a) .=> 0
+    # collect(model.body1.w_a) .=> 0
+    # collect(model.body2.w_a) .=> 0
     
 ]
 prob = ODEProblem(ssys, defs, (0, 5))
@@ -212,14 +226,12 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rev.support, damper.flange_a)
                connect(body.frame_a, rev.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, rev, body, damper])
+@named model = System(connections, t, systems = [world, rev, body, damper])
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 D = Differential(t)
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
-                  (0, 40))
+prob = ODEProblem(ssys, [], (0, 40))
 
 # du = prob.f.f.f_oop(prob.u0, prob.p, 0)
 # @test all(isfinite, du)
@@ -247,11 +259,11 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rev.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
+@named model = System(connections, t, systems = [world, rev, body, damper, rod])
 # modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-ssys = structural_simplify(multibody(model))#, alias_eliminate = false)
+ssys = multibody(model)#, alias_eliminate = false)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
@@ -281,10 +293,10 @@ connections = [connect(world.frame_b, rev.frame_a)
                connect(rev.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, rev, body, damper, rod])
+@named model = System(connections, t, systems = [world, rev, body, damper, rod])
 
 # ssys = structural_simplify(model)#, allow_parameter = false)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 D = Differential(t)
 
@@ -322,7 +334,7 @@ connections = [connect(damper1.flange_b, rev1.axis)
                connect(rev2.frame_b, rod2.frame_a)
                connect(rod2.frame_b, body2.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [
                              world,
                              rev1,
@@ -337,8 +349,7 @@ connections = [connect(damper1.flange_b, rev1.axis)
 # modele = ModelingToolkit.expand_connections(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = multibody(model)
-ssys = structural_simplify(irsys, alias_eliminate = false)
+ssys = multibody(model; alias_eliminate = false)
 D = Differential(t)
 prob = ODEProblem(ssys,
                   [
@@ -371,8 +382,8 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.support, damper.flange_a, spring.flange_a)
                connect(body.frame_a, joint.frame_b)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, body, damper, spring])
-ssys = structural_simplify(multibody(model))#, allow_parameter = false)
+@named model = System(connections, t, systems = [world, joint, body, damper, spring])
+ssys = multibody(model)#, allow_parameter = false)
 
 prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0],
                   (0, 30))
@@ -419,9 +430,9 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(springdamper.frame_b, body3.frame_a)
        ]
 
-@named model = ODESystem(eqs, t; systems)
+@named model = System(eqs, t; systems)
 # ssys = structural_simplify(model, allow_parameter = false)
-ssys = structural_simplify(multibody(model))#, alias_eliminate = false)
+ssys = multibody(model)#, alias_eliminate = false)
 
 prob = ODEProblem(ssys,
                   [#collect(D.(body1.phid)) .=> 0;
@@ -462,7 +473,7 @@ end
 # https://doc.modelica.org/om/Modelica.Mechanics.MultiBody.Examples.Elementary.ThreeSprings.html
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 
@@ -490,7 +501,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
        connect(spring3.frame_b, spring1.frame_b)
        connect(spring2.frame_a, spring1.frame_b)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [
                              world,
                              body1,
@@ -500,7 +511,7 @@ eqs = [connect(world.frame_b, bar1.frame_a)
                              spring2,
                              spring3,
                          ])
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 # ssys = structural_simplify(model, allow_parameters = false)
 prob = ODEProblem(ssys, [
     collect(body1.v_0 .=> 0);
@@ -535,7 +546,7 @@ eqs = [connect(bar2.frame_a, world.frame_b)
        connect(spring1.frame_a, world.frame_b)
        connect(body.frame_b, spring2.frame_b)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [
                              world,
                              body,
@@ -543,7 +554,7 @@ eqs = [connect(bar2.frame_a, world.frame_b)
                              spring1,
                              spring2,
                          ])
-ssys = structural_simplify(multibody(model))#, alias_eliminate = true)
+ssys = multibody(model)#, alias_eliminate = true)
 # ssys = structural_simplify(model, allow_parameters = false)
 prob = ODEProblem(ssys,
                   [collect(body.body.w_a .=> 0);
@@ -563,25 +574,34 @@ end
 ## Planar joint ================================================================
 # ==============================================================================
 using LinearAlgebra
-@mtkmodel PlanarTest begin
-    @components begin
+@component function PlanarTest(; name)
+    systems = @named begin
         world = World()
         planar = Planar(n=[0,0,1], n_x=[1,0,0])
         force = Force()
         body = Body(m=1)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, planar.frame_a, force.frame_a)
         connect(planar.frame_b, body.frame_a, force.frame_b)
         force.force.u[1] ~ sin(t)
         force.force.u[2] ~ t
         force.force.u[3] ~ t^2/2
         # force.force.u .~ [sin(t), t, t^2]
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named sys = PlanarTest()
 sys = complete(sys)
-ssys = structural_simplify(multibody(sys))
+ssys = multibody(sys)
 prob = ODEProblem(ssys, [
     sys.world.g => 9.80665; # Modelica default
     # collect(sys.body.w_a) .=> 0;
@@ -602,7 +622,7 @@ sol = solve(prob, Rodas4())
 using Multibody
 using ModelingToolkit
 # using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 @testset "Spherical-joint pendulum" begin
@@ -620,9 +640,9 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, bar.frame_a)
                connect(bar.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+@named model = System(connections, t, systems = [world, joint, bar, body])
 # ssys = structural_simplify(model, allow_parameters = false)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 @test length(unknowns(ssys)) == 6
 
 
@@ -661,9 +681,9 @@ end
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, bar.frame_a)
                connect(bar.frame_b, body.frame_a)]
-@named model = ODESystem(connections, t, systems = [world, joint, bar, body])
+@named model = System(connections, t, systems = [world, joint, bar, body])
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys,
                   [
@@ -686,7 +706,7 @@ end
 
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 @testset "GearConstraint" begin
@@ -723,9 +743,9 @@ eqs = [connect(world.frame_b, gearConstraint.bearing)
        connect(mounting1D.flange_b, torque2.support)
        connect(fixed.frame_b, mounting1D.frame_a)]
 
-@named model = ODESystem(eqs, t, systems = [world; systems])
+@named model = System(eqs, t, systems = [world; systems])
 cm = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     cm.idealGear.phi_b => 0
     D(cm.idealGear.phi_b) => 0
@@ -755,12 +775,12 @@ world = Multibody.world
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 @test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
@@ -779,12 +799,12 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 @test length(unknowns(ssys)) == 12 
 
 prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
@@ -799,11 +819,11 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 world = Multibody.world
 @named body = Body(m = 1, isroot = true)
 
-@named model = ODESystem([], t,
+@named model = System([], t,
                          systems = [world;
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 @test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [
@@ -830,12 +850,12 @@ world = Multibody.world
 eqs = [connect(world.frame_b, freeMotion.frame_a)
        connect(freeMotion.frame_b, body.frame_a)]
 
-@named model = ODESystem(eqs, t,
+@named model = System(eqs, t,
                          systems = [world;
                                     freeMotion;
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 prob = ODEProblem(ssys,
                   Symbolics.scalarize.([
@@ -860,7 +880,7 @@ end
 ## Actuated joint
 using Multibody
 using ModelingToolkit
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using ModelingToolkitStandardLibrary.Blocks
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
@@ -873,25 +893,34 @@ D = Differential(t)
 RTorque = Rotational.Torque
 BSine = Blocks.Sine
 
-@mtkmodel ActuatedJoint begin
-    @components begin
+@component function ActuatedJoint(; name)
+    systems = @named begin
         world = World()
         torque = RTorque()
         joint = Revolute(axisflange=true) # The axis flange provides an interface to the 1D torque input from ModelingToolkitStandardLibrary.Mechanical.Rotational
         torque_signal = BSine(frequency=1/5)
         body = BodyShape(; m = 1, r = [0.4, 0, 0])
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, joint.frame_a)
         connect(joint.frame_b, body.frame_a)
         connect(torque_signal.output, torque.tau)
         connect(torque.flange, joint.axis)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = ActuatedJoint()
 cm = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [D(D(cm.joint.phi)) => 0], (0, 10))
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
@@ -919,10 +948,10 @@ number_of_links = 6
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named stiff_rope = ODESystem(connections, t, systems = [world, body, rope])
+@named stiff_rope = System(connections, t, systems = [world, body, rope])
 # ssys = structural_simplify(model, allow_parameter = false)
 
-@time "Simplify stiff rope pendulum" ssys = structural_simplify(multibody(stiff_rope))
+@time "Simplify stiff rope pendulum" ssys = multibody(stiff_rope)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [
@@ -949,10 +978,10 @@ number_of_links = 3
 connections = [connect(world.frame_b, rope.frame_a)
                connect(rope.frame_b, body.frame_a)]
 
-@named flexible_rope = ODESystem(connections, t, systems = [world, body, rope])
+@named flexible_rope = System(connections, t, systems = [world, body, rope])
 # ssys = structural_simplify(model, allow_parameter = false)
 
-@time "Simplify flexible rope pendulum" ssys = structural_simplify(multibody(flexible_rope))
+@time "Simplify flexible rope pendulum" ssys = multibody(flexible_rope)
 D = Differential(t)
 prob = ODEProblem(ssys, [
     # D.(D.(collect(rope.r))) .=> 0;
@@ -960,7 +989,16 @@ prob = ODEProblem(ssys, [
     collect(body.w_a) .=> [1,1,1];
     collect(body.v_0) .=> [10,10,10]
 ], (0, 10))
-@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.5);
+@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ [-0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        0.5, 0.5, 0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        -0.5, -0.5, -0.5,
+                                                                                        0.5, 0.5, 0.5,
+                                                                                        -0.5, -0.5, -0.5]); 
 @test SciMLBase.successful_retcode(sol)
 if false
     import GLMakie
@@ -979,7 +1017,7 @@ end
 
 systems = @named begin
     joint = Spherical(state=true, isroot=true, phi = [π/2, 0, 0], d = 0.3)
-    bar = FixedTranslation(r = [0, -1, 0])
+    bar = FixedTranslation(r = [0, 1, 0])
     body = Body(; m = 1, isroot = false)
 
 
@@ -1003,8 +1041,8 @@ connections = [connect(world.frame_b, joint.frame_a)
             connect(damper.flange_b, joint2.axis)
             ]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
-ssys = structural_simplify(multibody(model))
+@named model = System(connections, t, systems = [world; systems])
+ssys = multibody(model)
 
 prob = ODEProblem(ssys, [
                     D.(joint.phi) .=> 0;
@@ -1036,9 +1074,9 @@ end
     connections = [connect(world.frame_b, fixed.frame_a, chain.frame_a)
                 connect(chain.frame_b, fixed.frame_b)]
 
-    @named mounted_chain = ODESystem(connections, t, systems = [systems; world])
+    @named mounted_chain = System(connections, t, systems = [systems; world])
 
-    ssys = structural_simplify(multibody(mounted_chain))
+    ssys = multibody(mounted_chain)
     prob = ODEProblem(ssys, [
         collect(chain.link_3.body.w_a) .=> [0,0,0]; 
         collect(chain.link_3.frame_b.r_0) .=> [x_dist,0,0]; 
@@ -1058,21 +1096,30 @@ using LinearAlgebra
 @testset "BodyCylinder" begin
     @info "Testing BodyCylinder"
     world = Multibody.world
-    @mtkmodel CylinderPend begin
-        @components begin
+    @component function CylinderPend(; name)
+        systems = @named begin
             world = World()
             body = BodyCylinder(r=[1,2,3], diameter=0.1)
             joint = Revolute()
         end
-        @equations begin
+
+        pars = @parameters begin
+        end
+
+        vars = @variables begin
+        end
+
+        equations = Equation[
             connect(world.frame_b, joint.frame_a)
             connect(joint.frame_b, body.frame_a)
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
 
     @named model = CylinderPend()
     model = complete(model)
-    ssys = structural_simplify(multibody(model))
+    ssys = multibody(model)
 
     prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 10))
     sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
@@ -1106,21 +1153,30 @@ using LinearAlgebra
     # NOTE: r = [0,1,0] yields unstable simulation due to the commented branch in from_nxy: if n_z_aux' * n_z_aux > 1.0e-6
     # NOTE: for r=[0,0,1], r_shape=[0.1, 0, 0] the render of the box appears to have negative gravity
     @info "Testing BodyBox"
-    @mtkmodel BoxPend begin
-        @components begin
+    @component function BoxPend(; name)
+        systems = @named begin
             world = World()
             body = Multibody.BodyBox(r=[0.1, 1, 0.2], r_shape=[0, 0, 0], width=0.1, height=0.3, inner_width=0.05)
             joint = Revolute()
         end
-        @equations begin
+
+        pars = @parameters begin
+        end
+
+        vars = @variables begin
+        end
+
+        equations = Equation[
             connect(world.frame_b, joint.frame_a)
             connect(joint.frame_b, body.frame_a)
-        end
+        ]
+
+        return System(equations, t; name, systems)
     end
 
     @named model = BoxPend()
     model = complete(model)
-    ssys = structural_simplify(multibody(model))
+    ssys = multibody(model)
 
     prob = ODEProblem(ssys, [model.joint.phi => 0], (0, 1))
     sol = solve(prob, Rodas5P(), abstol=1e-8, reltol=1e-8)
@@ -1147,22 +1203,21 @@ end
 
 ##
 
-using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler, OrdinaryDiffEq
+using LinearAlgebra, ModelingToolkit, Multibody, OrdinaryDiffEq
 using Multibody.Rotations: RotXYZ
 world = Multibody.world
 
 @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
-@named body = Body(; m = 1, isroot=true, quat=true, neg_w=true)
+@named body = Body(; m = 1, isroot=true, quat=true)
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, rod])
-irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
     # D.(body.Q̂) .=> 0;
@@ -1172,7 +1227,7 @@ sol1 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol1)
 
 ## quat in joint
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=true, neg_w=true)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1180,10 +1235,9 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, rod])
-irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
     # D.(joint.Q̂) .=> 0;
@@ -1193,7 +1247,7 @@ sol2 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol2)
 
 ## euler
-@named joint = Multibody.Spherical(isroot=true, state=true, quat=false, neg_w=true)
+@named joint = Multibody.Spherical(isroot=true, state=true, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
 @named body = Body(; m = 1, isroot=false, quat=false)
 
@@ -1201,10 +1255,9 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
                connect(rod.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body, rod])
-irsys = multibody(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     # vec(ori(rod.frame_a).R) .=> vec(RotXYZ(0,0,0));
     # D.(joint.Q̂) .=> 0;
@@ -1221,25 +1274,34 @@ sol3 = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8)
 # ==============================================================================
 
 
-@mtkmodel TestSphericalSpherical begin
-    @components begin
+@component function TestSphericalSpherical1(; name)
+    systems = @named begin
         world = World()
         ss = SphericalSpherical(r_0 = [1, 0, 0], m = 1, kinematic_constraint=false)
         ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
         s = Spherical()
         trans = FixedTranslation(r = [1,0,1])
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, ss.frame_a, trans.frame_a)
         connect(ss.frame_b, ss2.frame_a)
         connect(ss2.frame_b, s.frame_a)
         connect(s.frame_b, trans.frame_b)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@named model = TestSphericalSpherical()
+@named model = TestSphericalSpherical1()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     model.ss2.body.phi[1] => 0.1;
     model.ss2.body.phid[3] => 0.0;
@@ -1252,8 +1314,8 @@ sol = solve(prob, Rodas4())
 ## UniversalSpherical
 # ==============================================================================
 
-@mtkmodel TestSphericalSpherical begin
-    @components begin
+@component function TestUniversalSpherical(; name)
+    systems = @named begin
         world = World()
         ss = UniversalSpherical(rRod_ia = [1, 0, 0], kinematic_constraint=false, sphere_diameter=0.3)
         ss2 = BodyShape(r = [0, 0, 1], m = 1, isroot=true)
@@ -1262,7 +1324,14 @@ sol = solve(prob, Rodas4())
         body2 = Body(; m = 1, r_cm=[0.1, 0, 0])
         # rp = Multibody.RelativePosition(resolve_frame=:world)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, ss.frame_a, trans.frame_a)
         connect(ss.frame_b, ss2.frame_a)
         connect(ss2.frame_b, s.frame_a)
@@ -1270,12 +1339,14 @@ sol = solve(prob, Rodas4())
         connect(ss.frame_ia, body2.frame_a)
         # connect(world.frame_b, rp.frame_a)
         # connect(rp.frame_b, ss2.body.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@named model = TestSphericalSpherical()
+@named model = TestUniversalSpherical()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     model.ss2.body.phi[1] => 0.1;
     model.ss2.body.phi[3] => 0.1;
@@ -1295,24 +1366,33 @@ end
 ## =============================================================================
 # using Plots
 # Test cylindrical joint
-@mtkmodel CylinderTest begin
-    @components begin
+@component function CylinderTest(; name)
+    systems = @named begin
         world = World()
         cyl = Cylindrical(n = [0, 1, 0])
         # spring = Spring(c = 1)
         body = Body(state_priority=0)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         # connect(world.frame_b, cyl.frame_a, spring.frame_a)
         # connect(cyl.frame_b, spring.frame_b, body.frame_a)
 
         connect(world.frame_b, cyl.frame_a)
         connect(cyl.frame_b, body.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 @named model = CylinderTest()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 prob = ODEProblem(ssys, [
     model.cyl.revolute.w => 1
 ], (0, 1))
@@ -1343,12 +1423,8 @@ DE = 310.31 / 1000
 t5 = 19.84 |> deg2rad
 
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
-@mtkmodel QuarterCarSuspension begin
-    @structural_parameters begin
-        spring = true
-        (jc = [0.5, 0.5, 0.5, 0.7])#, [description = "Joint color"]
-    end
-    @parameters begin
+@component function QuarterCarSuspension(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7])
+    pars = @parameters begin
         cs = 4000, [description = "Damping constant [Ns/m]"]
         ms = 1500, [description = "Body mass [kg]"]
         ks = 44000, [description = "Spring constant [N/m]"]
@@ -1357,7 +1433,8 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         freq = 2, [description = "Frequency of wheel displacement"]
         jr = 0.03, [description = "Radius of revolute joint"]
     end
-    @components begin
+
+    systems = @named begin
         world = World()
 
         r1 = Revolute(; n, radius=jr, color=jc)
@@ -1368,7 +1445,7 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         b2 = FixedTranslation(radius = rod_radius, r = BC*normalize([0, 0.2, 0])) # BC
         b3 = FixedTranslation(radius = rod_radius, r = AB*normalize([0, -0.1, 0.2])) # AB
         chassis = BodyShape(r = DA*normalize([0, 0.2, 0.2*sin(t5)]), m = ms, color=[0.8, 0.8, 0.8, 0.7])
-        
+
         if spring
             springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius) # NOTE: not sure about unstretched length
         end
@@ -1386,11 +1463,14 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
         body_upright = Prismatic(n = [0, 1, 0], render = false)
     end
-    begin
-        A = chassis.frame_b
-        D = chassis.frame_a
+
+    vars = @variables begin
     end
-    @equations begin
+
+    A = chassis.frame_b
+    D = chassis.frame_a
+
+    equations = Equation[
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
@@ -1420,7 +1500,9 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         # Hold body to world
         connect(world.frame_b, body_upright.frame_a)
         connect(body_upright.frame_b, chassis.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 @named model = QuarterCarSuspension(spring=true)
@@ -1441,7 +1523,7 @@ defs = [
     model.r3.phi => 0.47595
 ]
 
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 display(sort(unknowns(ssys), by=string))
 ##
 
@@ -1469,12 +1551,8 @@ DE = 310.31 / 1000
 t5 = 19.84 |> deg2rad
 
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
-@mtkmodel QuarterCarSuspension begin
-    @structural_parameters begin
-        spring = true
-        (jc = [0.5, 0.5, 0.5, 0.7])#, [description = "Joint color"]
-    end
-    @parameters begin
+@component function QuarterCarSuspension2(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7])
+    pars = @parameters begin
         cs = 4000, [description = "Damping constant [Ns/m]"]
         ms = 1500, [description = "Body mass [kg]"]
         ks = 44000, [description = "Spring constant [N/m]"]
@@ -1483,18 +1561,18 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         freq = 2, [description = "Frequency of wheel displacement"]
         jr = 0.03, [description = "Radius of revolute joint"]
     end
-    begin
-        rRod1_ia = AB*normalize([0, -0.1, 0.2])
-        rRod2_ib = BC*normalize([0, 0.2, 0])
-    end
-    @components begin
+
+    rRod1_ia = AB*normalize([0, -0.1, 0.2])
+    rRod2_ib = BC*normalize([0, 0.2, 0])
+
+    systems = @named begin
         world = World()
 
         r123 = JointRRR(n_a = n, n_b = n, rRod1_ia, rRod2_ib, rod_radius=0.02, rod_color=jc)
         r2 = Revolute(; n, radius=jr, color=jc)
         b1 = FixedTranslation(radius = rod_radius, r = CD*normalize([0, -0.1, 0.3])) # CD
         chassis = BodyShape(r = DA*normalize([0, 0.2, 0.2*sin(t5)]), m = ms, color=[0.8, 0.8, 0.8, 0.7])
-        
+
         if spring
             springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius) # NOTE: not sure about unstretched length
         end
@@ -1512,11 +1590,14 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
 
         body_upright = Prismatic(n = [0, 1, 0], render = false)
     end
-    begin
-        A = chassis.frame_b
-        D = chassis.frame_a
+
+    vars = @variables begin
     end
-    @equations begin
+
+    A = chassis.frame_b
+    D = chassis.frame_a
+
+    equations = Equation[
         wheel_position.s_ref.u ~ amplitude*(sin(2pi*freq*t)) # Displacement of wheel
         connect(wheel_position.flange, wheel_prismatic.axis)
 
@@ -1542,12 +1623,14 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
         # Hold body to world
         connect(world.frame_b, body_upright.frame_a)
         connect(body_upright.frame_b, chassis.frame_a)
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end
 
-@named model = QuarterCarSuspension(spring=true)
+@named model = QuarterCarSuspension2(spring=true)
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 defs = [
     vec(ori(model.chassis.body.frame_a).R .=> I(3))

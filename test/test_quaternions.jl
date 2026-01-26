@@ -1,7 +1,10 @@
 using Test
+using Multibody, ModelingToolkit, OrdinaryDiffEq
 import Multibody.Rotations.QuatRotation as Quat
 import Multibody.Rotations
 import Multibody.Rotations: RotXYZ
+t = Multibody.t
+D = Multibody.D
 function get_R(sol, frame, t)
     reshape(sol(t, idxs=vec(ori(frame).R.mat)), 3, 3)
 end
@@ -24,12 +27,11 @@ using LinearAlgebra
 connections = [connect(world.frame_b, spring.frame_a)
                connect(spring.frame_b, body.frame_a)]
 
-@named model = ODESystem(connections, t, systems = [world, spring, body])
+@named model = System(connections, t, systems = [world, spring, body])
 model = complete(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
-irsys = IRSystem(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 @test length(unknowns(ssys)) == 13 # One extra due to quaternions
 D = Differential(t)
 
@@ -37,7 +39,7 @@ D = Differential(t)
 # @test all(isfinite, du)
 
 # prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
-prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 1, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 1, 0]); collect(body.Q̂ .=> [1, 0, 0, 0])], (0, 10))
 sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
 
 doplot() &&
@@ -68,14 +70,14 @@ end
 # ==============================================================================
 ## Simple motion with quaternions===============================================
 # ==============================================================================
-using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+using LinearAlgebra, ModelingToolkit, Multibody
 using OrdinaryDiffEq, Test
 
 @testset "Simple motion with quaternions and state in Body" begin
 
 t = Multibody.t
 @named joint = Multibody.FreeMotion(isroot = true, state=false)
-@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, quat=true, w_a=[1,0.5,0.2], neg_w=true)
+@named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=true, quat=true, w_a=[1,0.5,0.2])
 
 # @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true)
 # @named body = Body(; m = 1, r_cm = [0.0, 0, 0], isroot=false, w_a=[1,1,1])
@@ -87,10 +89,9 @@ connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, body.frame_a)]
 
 
-@named model = ODESystem(connections, t,
+@named model = System(connections, t,
                          systems = [world, joint, body])
-irsys = IRSystem(model)
-ssys = structural_simplify(irsys)
+ssys = multibody(model)
 
 D = Differential(t)
 prob = ODEProblem(ssys, [collect(body.w_a) .=> [1,0,0];], (0, 2pi))
@@ -145,20 +146,19 @@ end
 # ============================================================
 
 @testset "Quaternions and state in free motion" begin
-    using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+    using LinearAlgebra, ModelingToolkit, Multibody
     t = Multibody.t
     world = Multibody.world
 
-    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true, neg_w=true)
+    @named joint = Multibody.FreeMotion(isroot = true, state=true, quat=true)
     @named body = Body(; m = 1, r_cm = [0.0, 0, 0])
 
     connections = [connect(world.frame_b, joint.frame_a)
                 connect(joint.frame_b, body.frame_a)]
 
-    @named model = ODESystem(connections, t,
+    @named model = System(connections, t,
                             systems = [world, joint, body])
-    irsys = IRSystem(model)
-    ssys = structural_simplify(irsys)
+    ssys = multibody(model)
 
     D = Differential(t)
     # q0 = randn(4); q0 ./= norm(q0)
@@ -197,13 +197,13 @@ end
 # ============================================================
 
 # @testset "Spherical joint with quaternion state" begin
-    using LinearAlgebra, ModelingToolkit, Multibody, JuliaSimCompiler
+    using LinearAlgebra, ModelingToolkit, Multibody
     world = Multibody.world
 
 
     @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
     @named rod = FixedTranslation(; r = [1, 0, 0])
-    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0, neg_w=true)
+    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0)
 
     # @named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
     # @named body = Body(; m = 1, r_cm = [1.0, 0, 0], isroot=false)
@@ -213,10 +213,9 @@ end
                 connect(rod.frame_b, body.frame_a)]
 
 
-    @named model = ODESystem(connections, t,
+    @named model = System(connections, t,
                             systems = [world, joint, body, rod])
-    irsys = IRSystem(model)
-    ssys = structural_simplify(irsys)
+    ssys = multibody(model)
 
 
     isdefined(Main, :D) || (D = Differential(t))
@@ -261,7 +260,7 @@ end
 using Multibody
 using ModelingToolkit
 # using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Multibody.Rotations: params
 
@@ -272,7 +271,7 @@ using Multibody.Rotations: params
 
     @named begin
         body = BodyShape(m = 1, I_11 = 1, I_22 = 1, I_33 = 1, r = [0.4, 0, 0],
-                        r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true, neg_w=true)
+                        r_0 = [0.2, -0.5, 0.1], r_cm = [0.2, 0, 0], isroot = true, quat=true)
         bar2 = FixedTranslation(r = [0.8, 0, 0])
         spring1 = Multibody.Spring(c = 20, s_unstretched = 0)
         spring2 = Multibody.Spring(c = 20, s_unstretched = 0)
@@ -284,7 +283,7 @@ using Multibody.Rotations: params
         connect(spring1.frame_a, world.frame_b)
         connect(body.frame_b, spring2.frame_b)]
 
-    @named model = ODESystem(eqs, t,
+    @named model = System(eqs, t,
                             systems = [
                                 world,
                                 body,
@@ -292,7 +291,7 @@ using Multibody.Rotations: params
                                 spring1,
                                 spring2,
                             ])
-    ssys = structural_simplify(IRSystem(model))#, alias_eliminate = true)
+    ssys = multibody(model)
     # ssys = structural_simplify(model, allow_parameters = false)
     prob = ODEProblem(ssys,
                     [world.g => 9.80665;

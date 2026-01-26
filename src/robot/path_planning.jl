@@ -1,5 +1,6 @@
 using DataInterpolations
 using ModelingToolkitStandardLibrary.Blocks: RealInput, RealOutput
+using TrajectoryLimiters: JerkLimiter, calculate_trajectory, duration, evaluate_at
 
 include("ptp.jl")
 
@@ -21,7 +22,7 @@ function PathPlanning1(; name, q0deg = 0, q1deg = 1, time = 0:0.01:10, speed_max
            connect(path.qdd, pathToAxis1.qdd)
            #    connect(path.moving, pathToAxis1.moving)
            connect(pathToAxis1.axisControlBus, controlBus.axisControlBus1)]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
@@ -75,7 +76,7 @@ function PathPlanning6(; name, naxis = 6, q0deg = zeros(naxis),
            connect(pathToAxis5.axisControlBus, controlBus.axisControlBus5)
            connect(pathToAxis6.axisControlBus, controlBus.axisControlBus6)]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 "Map path planning to one axis control bus"
@@ -106,7 +107,7 @@ function PathToAxisControlBus(; name, nAxis = 6, axisUsed = 1)
            (qdd_axisUsed.output.u ~ axisControlBus.acceleration_ref)
            (qd_axisUsed.output.u ~ axisControlBus.speed_ref)
            (q_axisUsed.output.u ~ axisControlBus.angle_ref)]
-    ODESystem(eqs, t; systems, name)
+    System(eqs, t; systems, name)
 end
 
 """
@@ -185,17 +186,81 @@ function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
     q_vec, qd_vec, qdd_vec = point_to_point(time; q0 = q0, q1 = q1, qd_max, qdd_max)
 
     interp_eqs = map(1:nout) do i
-        qfun = CubicSpline(q_vec[:, i], time; extrapolate=true)
-        qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolate=true)
-        qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolate=true)
+        qfun = CubicSpline(q_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+        qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+        qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
         [q.u[i] ~ qfun(t) 
         qd.u[i] ~ qdfun(t)
         qdd.u[i] ~ qddfun(t)]
     end
     eqs = reduce(vcat, interp_eqs)
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
+"""
+    KinematicPTPBoundedJerk(; name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1, qddd_max=10)
+
+A component emitting a time-optimal point-to-point trajectory with bounded velocity,
+acceleration, and jerk, generated using `JerkLimiter` from TrajectoryLimiters.jl.
+
+When multiple axes are specified, the trajectories are time-synchronized so all axes
+reach their targets at the same time.
+
+# Arguments
+- `name`: Name of the component
+- `q0`: Initial position (scalar or vector)
+- `q1`: Final position (scalar or vector)
+- `qd_max`: Maximum velocity (scalar or vector)
+- `qdd_max`: Maximum acceleration (scalar or vector)
+- `qddd_max`: Maximum jerk (scalar or vector)
+
+# Outputs
+- `q`: Position
+- `qd`: Velocity
+- `qdd`: Acceleration
+- `qddd`: Jerk
+
+See also [`KinematicPTP`](@ref) and [`Kinematic5`](@ref).
+"""
+function KinematicPTPBoundedJerk(; name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1, qddd_max=10)
+    nout = max(length(q0), length(q1))
+
+    # Broadcast parameters to nout dimensions
+    q0_vec = q0 isa Number ? fill(float(q0), nout) : collect(float.(q0))
+    q1_vec = q1 isa Number ? fill(float(q1), nout) : collect(float.(q1))
+    qd_max_vec = qd_max isa Number ? fill(float(qd_max), nout) : collect(float.(qd_max))
+    qdd_max_vec = qdd_max isa Number ? fill(float(qdd_max), nout) : collect(float.(qdd_max))
+    qddd_max_vec = qddd_max isa Number ? fill(float(qddd_max), nout) : collect(float.(qddd_max))
+
+    systems = @named begin
+        q = RealOutput(; nout)
+        qd = RealOutput(; nout)
+        qdd = RealOutput(; nout)
+        qddd = RealOutput(; nout)
+    end
+
+    # Create vector of JerkLimiters for time-synchronized multi-DOF trajectory
+    lims = [JerkLimiter(; vmax=qd_max_vec[i], amax=qdd_max_vec[i], jmax=qddd_max_vec[i]) for i in 1:nout]
+
+    # Calculate time-synchronized trajectories for all axes
+    profiles = calculate_trajectory(lims; p0=q0_vec, pf=q1_vec)
+    [q.u[i] ~ evaluate_at_1(profiles, t)
+        qd.u[i] ~ evaluate_at_2(profiles, t)
+        qdd.u[i] ~ evaluate_at_3(profiles, t)
+        qddd.u[i] ~ evaluate_at_4(profiles, t)]
+
+    System(eqs, t; name, systems)
+end
+
+evaluate_at_1(profile, ti::Real) = evaluate_at(profile, ti::Real)[1]
+evaluate_at_2(profile, ti::Real) = evaluate_at(profile, ti::Real)[2]
+evaluate_at_3(profile, ti::Real) = evaluate_at(profile, ti::Real)[3]
+evaluate_at_4(profile, ti::Real) = evaluate_at(profile, ti::Real)[4]
+
+@register_symbolic evaluate_at_1(profile, ti::Real)
+@register_symbolic evaluate_at_2(profile, ti::Real)
+@register_symbolic evaluate_at_3(profile, ti::Real)
+@register_symbolic evaluate_at_4(profile, ti::Real)
 
 """
     Kinematic5(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0, qdd0 = 0, qdd1 = 0)
@@ -233,7 +298,7 @@ function Kinematic5(; time, name, q0 = 0, q1 = 1, qd0 = 0, qd1 = 0,
 
     end
     eqs = reduce(vcat, interp_eqs)
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 """
@@ -249,5 +314,5 @@ Pass a Real signal through without modification
     @named siso = Blocks.SISO()
     @unpack u, y = siso
     eqs = [y ~ u]
-    extend(ODESystem(eqs, t; name), siso)
+    extend(System(eqs, t; name), siso)
 end

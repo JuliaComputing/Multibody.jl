@@ -12,40 +12,39 @@ function BasicTorque(; name, resolve_frame = :world)
     @named torque = Blocks.RealInput(; nin = 3)
     @unpack frame_a, frame_b = ptf
     @variables begin
-        (r_0(t)[1:3] = zeros(3)),
+        (r_0(t)[1:3]),
         [
             description = "Position vector from origin of frame_a to origin of frame_b resolved in world frame",
         ]
-        (t_b_0(t)[1:3] = zeros(3)), [
+        (t_b_0(t)[1:3]), [
             description = "frame_b.tau resolved in world frame"]
     end
-    r_0, t_b_0 = collect.((r_0, t_b_0))
 
-    eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
-           collect(frame_a.f .~ zeros(3))
-           collect(frame_b.f .~ zeros(3))
+    eqs = [r_0 ~ frame_b.r_0 - frame_a.r_0
+           frame_a.f ~ zeros(3)
+           frame_b.f ~ zeros(3)
            # torque balance
-           zeros(3) .~ collect(frame_a.tau) + resolve2(frame_a, t_b_0)]
+           zeros(3) ~ frame_a.tau + resolve2(frame_a, t_b_0)]
 
     if resolve_frame == :frame_a
         append!(eqs,
-                [t_b_0 .~ -resolve1(frame_a, torque.u)
-                 collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
+                [t_b_0 ~ -resolve1(frame_a, torque.u)
+                 frame_b.tau ~ resolve2(frame_b, t_b_0)])
     elseif resolve_frame == :frame_b
         append!(eqs,
-                [t_b_0 .~ -resolve1(frame_b, torque.u)
-                 collect(frame_b.tau) .~ collect(-torque.u)])
+                [t_b_0 ~ -resolve1(frame_b, torque.u)
+                 frame_b.tau ~ -torque.u])
     elseif resolve_frame == :world
         append!(eqs,
-                [t_b_0 .~ collect(-torque.u)
-                 collect(frame_b.tau) .~ resolve2(frame_b, t_b_0)])
+                [t_b_0 ~ -torque.u
+                 frame_b.tau ~ resolve2(frame_b, t_b_0)])
     else
         error("Unknown value of argument resolve_frame")
-        append!(eqs, [t_b_0 .~ zeros(3)
-                      collect(frame_b.tau) .~ zeros(3)])
+        append!(eqs, [t_b_0 ~ zeros(3)
+                      frame_b.tau ~ zeros(3)])
     end
 
-    extend(ODESystem(eqs, t, name = name, systems = [torque]), ptf)
+    extend(System(eqs, t, name = name, systems = [torque]), ptf)
 end
 
 """
@@ -72,21 +71,21 @@ Torque acting between two frames, defined by 3 input signals and resolved in fra
     eqs = [connect(basicTorque.frame_a, frame_a)
            connect(basicTorque.frame_b, frame_b)
            connect(basicTorque.torque, torque)]
-    extend(ODESystem(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
+    extend(System(eqs, t, name = name, systems = [torque, basicTorque]), ptf)
 end
 
 @component function BasicWorldTorque(; name, resolve_frame = :world)
     @named torque = Blocks.RealInput(; nin = 3)
     @named frame_b = Frame()
-    eqs = if resolve_frame == :world
-        collect(frame_b.tau) .~ -resolve2(ori(frame_b), collect(torque.u))
+    eq1 = if resolve_frame == :world
+        frame_b.tau ~ -resolve2(ori(frame_b), torque.u)
     elseif resolve_frame == :frame_b
-        collect(frame_b.tau) .~ -torque.u
+        frame_b.tau ~ -torque.u
     else
-        collect(frame_b.tau) .~ zeros(3)
-    end |> collect
-    append!(eqs, collect(frame_b.f) .~ zeros(3))
-    ODESystem(eqs, t; name, systems = [torque, frame_b])
+        frame_b.tau ~ zeros(3)
+    end
+    eqs = [eq1; frame_b.f ~ zeros(3)]
+    System(eqs, t; name, systems = [torque, frame_b])
 end
 
 """
@@ -118,7 +117,7 @@ External torque acting at `frame_b`, defined by 3 input signals and resolved in 
         connect(basicWorldTorque.frame_b, frame_b)
         connect(basicWorldTorque.torque, torque)
     ]
-    ODESystem(eqs, t, [], pars; name, systems = [torque, basicWorldTorque, frame_b])
+    System(eqs, t, [], pars; name, systems = [torque, basicWorldTorque, frame_b])
 end
 
 
@@ -127,51 +126,50 @@ end
     @named force = Blocks.RealInput(; nin = 3)
     @unpack frame_a, frame_b = ptf
     @variables begin
-        (r_0(t)[1:3] = zeros(3)),
+        (r_0(t)[1:3]),
         [
             description = "Position vector from origin of frame_a to origin of frame_b resolved in world frame",
         ]
-        (f_b_0(t)[1:3] = zeros(3)), [
+        (f_b_0(t)[1:3]), [
             description = "frame_b.f resolved in world frame"]
     end
-    r_0, f_b_0 = collect.((r_0, f_b_0))
 
-    eqs = [collect(r_0 .~ frame_b.r_0 - frame_a.r_0)
-           collect(frame_b.tau) .~ 0
-           0 .~ collect(frame_a.f) + resolve2(frame_a, f_b_0)
-           0 .~ collect(frame_a.tau) + resolve2(frame_a, cross(r_0, f_b_0))]
+    eqs = [r_0 ~ frame_b.r_0 - frame_a.r_0
+           frame_b.tau ~ 0
+           0 ~ frame_a.f + resolve2(frame_a, f_b_0)
+           0 ~ frame_a.tau + resolve2(frame_a, cross(r_0, f_b_0))]
 
     if resolve_frame == :frame_a
         append!(eqs,
-                [f_b_0 .~ -resolve1(frame_a, force.u)
-                 collect(frame_b.f) .~ resolve2(frame_b, f_b_0)])
+                [f_b_0 ~ -resolve1(frame_a, force.u)
+                 frame_b.f ~ resolve2(frame_b, f_b_0)])
     elseif resolve_frame == :frame_b
         append!(eqs,
-                [f_b_0 .~ -resolve1(frame_b, force.u)
-                 collect(frame_b.f) .~ collect(-force.u)])
+                [f_b_0 ~ -resolve1(frame_b, force.u)
+                 frame_b.f ~ -force.u])
     elseif resolve_frame == :world
         append!(eqs,
-                [f_b_0 .~ collect(-force.u)
-                 collect(frame_b.f) .~ resolve2(frame_b, f_b_0)])
+                [f_b_0 ~ -force.u
+                 frame_b.f ~ resolve2(frame_b, f_b_0)])
     else
         error("Unknown value of argument resolve_frame")
     end
 
-    extend(ODESystem(eqs, t, name = name, systems = [force]), ptf)
+    extend(System(eqs, t, name = name, systems = [force]), ptf)
 end
 
 @component function BasicWorldForce(; name, resolve_frame = :world)
     @named force = Blocks.RealInput(; nin = 3)
     @named frame_b = Frame()
-    eqs = if resolve_frame == :world
-        collect(frame_b.f) .~ -resolve2(ori(frame_b), collect(force.u))
+    eq1 = if resolve_frame == :world
+        frame_b.f ~ -resolve2(ori(frame_b), force.u)
     elseif resolve_frame == :frame_b
-        collect(frame_b.f) .~ -force.u
+        frame_b.f ~ -force.u
     else
-        collect(frame_b.f) .~ zeros(3)
-    end |> collect
-    append!(eqs, collect(frame_b.tau) .~ zeros(3))
-    ODESystem(eqs, t; name, systems = [force, frame_b])
+        frame_b.f ~ zeros(3)
+    end
+    eqs = [eq1; frame_b.tau ~ zeros(3)]
+    System(eqs, t; name, systems = [force, frame_b])
 end
 
 """
@@ -198,7 +196,7 @@ Force acting between two frames, defined by 3 input signals and resolved in fram
     eqs = [connect(basicForce.frame_a, frame_a)
            connect(basicForce.frame_b, frame_b)
            connect(basicForce.force, force)]
-    extend(ODESystem(eqs, t, name = name, systems = [force, basicForce]), ptf)
+    extend(System(eqs, t, name = name, systems = [force, basicForce]), ptf)
 end
 
 """
@@ -231,31 +229,33 @@ External force acting at `frame_b`, defined by 3 input signals and resolved in f
         connect(basicWorldForce.frame_b, frame_b)
         connect(basicWorldForce.force, force)
     ]
-    ODESystem(eqs, t, [], pars; name, systems = [force, basicWorldForce, frame_b])
+    System(eqs, t, [], pars; name, systems = [force, basicWorldForce, frame_b])
 end
 
 @component function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
-    fixed_rotation_at_frame_b = false, r_rel_0 = 0, s0 = 0)
+    fixed_rotation_at_frame_b = false, r_rel_0 = nothing, s0 = nothing)
     @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
     @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
 
-    @variables length(t) [
-        description = "Distance between the origin of frame_a and the origin of frame_b",
-    ]
-    @variables s(t)=s0 [
-        description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
-    ]
-    @variables r_rel_0(t)[1:3]=r_rel_0 [
-        description = "Position vector from frame_a to frame_b resolved in world frame",
-    ]
-    @variables e_rel_0(t)[1:3] [
-        description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
-    ]
+    vars = @variables begin
+        length(t), [
+            description = "Distance between the origin of frame_a and the origin of frame_b",
+        ]
+        s(t)=s0, [
+            description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
+        ]
+        r_rel_0(t)[1:3]=r_rel_0, [
+            description = "Position vector from frame_a to frame_b resolved in world frame",
+        ]
+        e_rel_0(t)[1:3], [
+            description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
+        ]
+    end
 
-    eqs = [collect(r_rel_0 .~ frame_b.r_0 .- frame_a.r_0);
+    eqs = [r_rel_0 ~ frame_b.r_0 - frame_a.r_0
            length ~ _norm(r_rel_0)
            s ~ max(length, s_small)
-           collect(e_rel_0 .~ r_rel_0 ./ s)]
+           e_rel_0 ~ r_rel_0 / s]
 
     # Modelica stdlib has the option to inser special equations when two line forces are connected, this option does not yet exisst here https://github.com/modelica/ModelicaStandardLibrary/blob/10238e9927e2078571e41b53cda128c5207f69f7/Modelica/Mechanics/MultiBody/Interfaces/LineForceBase.mo#L49
 
@@ -273,7 +273,7 @@ end
         eqs = [eqs; frame_b.tau .~ 0]
     end
 
-    compose(ODESystem(eqs, t; name), frame_a, frame_b)
+    compose(System(eqs, t; name), frame_a, frame_b)
 end
 
 @component function LineForceWithMass(; name, length = 0, m = 1.0, lengthfraction = 0.5, kwargs...)
@@ -283,20 +283,17 @@ end
     @named flange_a = TP.Flange()
     @named flange_b = TP.Flange()
     @parameters m=m [description = "mass", bounds = (0, Inf)]
-    @variables fa(t)=0 [description = "scalar force from flange_a"]
-    @variables fb(t)=0 [description = "scalar force from flange_b"]
-    @variables r_CM_0(t)[1:3]=zeros(3) [
+    @variables fa(t) [description = "scalar force from flange_a"]
+    @variables fb(t) [description = "scalar force from flange_b"]
+    @variables r_CM_0(t)[1:3] [
         description = "Position vector from world frame to point mass, resolved in world frame",
     ]
-    @variables v_CM_0(t)[1:3]=zeros(3) [description = "First derivative of r_CM_0"]
-    @variables ag_CM_0(t)[1:3]=zeros(3) [description = "D(v_CM_0) - gravityAcceleration"]
+    @variables v_CM_0(t)[1:3] [description = "First derivative of r_CM_0"]
+    @variables ag_CM_0(t)[1:3] [description = "D(v_CM_0) - gravityAcceleration"]
     @parameters lengthfraction=lengthfraction [
         description = "Location of point mass with respect to frame_a as a fraction of the distance from frame_a to frame_b",
         bounds = (0, 1),
     ]
-
-    r_rel_0, e_rel_0, r_CM_0, v_CM_0, ag_CM_0 = collect.((r_rel_0, e_rel_0, r_CM_0, v_CM_0,
-                                                          ag_CM_0))
 
     eqs = [flange_a.s ~ 0
            flange_b.s ~ length]
@@ -309,23 +306,23 @@ end
     # NOTE, both frames are assumed to be connected, while modelica has special handling if they aren't
     if m0 > 0
         eqs = [eqs
-               collect(r_CM_0 .~ frame_a.r_0 + r_rel_0 * lengthfraction)
-               v_CM_0 .~ D.(r_CM_0)
-               ag_CM_0 .~ D.(v_CM_0) - gravity_acceleration(r_CM_0)
-               frame_a.f .~ resolve2(ori(frame_a),
+               r_CM_0 ~ frame_a.r_0 + r_rel_0 * lengthfraction
+               v_CM_0 ~ D(r_CM_0)
+               ag_CM_0 ~ D(v_CM_0) - gravity_acceleration(r_CM_0)
+               frame_a.f ~ resolve2(ori(frame_a),
                                      (m * (1 - lengthfraction)) * ag_CM_0 - e_rel_0 * fa)
-               frame_b.f .~ resolve2(ori(frame_b),
+               frame_b.f ~ resolve2(ori(frame_b),
                                      (m * lengthfraction) * ag_CM_0 - e_rel_0 * fb)]
     else
         eqs = [eqs
-               r_CM_0 .~ zeros(3)
-               v_CM_0 .~ zeros(3)
-               ag_CM_0 .~ zeros(3)
-               frame_a.f .~ -resolve2(ori(frame_a), e_rel_0 * fa)
-               frame_b.f .~ -resolve2(ori(frame_b), e_rel_0 * fb)]
+               r_CM_0 ~ zeros(3)
+               v_CM_0 ~ zeros(3)
+               ag_CM_0 ~ zeros(3)
+               frame_a.f ~ -resolve2(ori(frame_a), fa*e_rel_0)
+               frame_b.f ~ -resolve2(ori(frame_b), fb*e_rel_0)]
     end
 
-    extend(ODESystem(eqs, t; name, systems = [flange_a, flange_b]), lfb)
+    extend(System(eqs, t; name, systems = [flange_a, flange_b]), lfb)
 end
 
 @component function PartialLineForce(; name, kwargs...)
@@ -333,29 +330,29 @@ end
     @unpack length, s, r_rel_0, e_rel_0, frame_a, frame_b = lfb
 
     @variables begin
-        (r_rel_a(t)[1:3] = 0),
+        (r_rel_a(t)[1:3]),
         [
             description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
         ]
-        (e_a(t)[1:3] = 0),
+        (e_a(t)[1:3]),
         [
             description = "Unit vector on the line connecting the origin of frame_a with the origin of frame_b resolved in frame_a (directed from frame_a to frame_b)",
         ]
-        (f(t) = 0),
+        (f(t)),
         [
             description = "Line force acting on frame_a and on frame_b (positive, if acting on frame_b and directed from frame_a to frame_b)",
         ]
     end
-    equations = [
+    equations = Equation[
                  # Determine relative position vector between the two frames
-                 collect(r_rel_a) .~ resolve2(frame_a, r_rel_0)
-                 collect(e_a) .~ collect(r_rel_a ./ s)
+                 r_rel_a ~ resolve2(frame_a, r_rel_0)
+                 e_a ~ r_rel_a / s
 
                  # Determine forces and torques at frame_a and frame_b
-                 collect(frame_a.f) .~ collect(-e_a * f)
-                 collect(frame_b.f) .~ -resolve2(relative_rotation(frame_a, frame_b),
+                 frame_a.f ~ -e_a * f
+                 frame_b.f ~ -resolve2(relative_rotation(frame_a, frame_b),
                                                  frame_a.f)]
-    extend(ODESystem(equations, t; name), lfb)
+    extend(System(equations, t; name), lfb)
 end
 
 """
@@ -412,7 +409,7 @@ See also [`SpringDamperParallel`](@ref)
     
     @named spring2d = TP.Spring(; c, s_rel0 = s_unstretched)
 
-    @variables r_rel_a(t)[1:3]=0 [
+    @variables r_rel_a(t)[1:3] [
         description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
     ]
     @variables e_a(t)[1:3] [
@@ -438,19 +435,19 @@ See also [`SpringDamperParallel`](@ref)
     ]
 
     eqs = [D(s) ~ v
-           r_rel_a .~ resolve2(ori(frame_a), r_rel_0)
-           e_a .~ r_rel_a / s
+           r_rel_a ~ resolve2(ori(frame_a), r_rel_0)
+           e_a ~ r_rel_a / s
            f ~ spring2d.f
            length ~ lineforce.length
            s ~ lineforce.s
-           r_rel_0 .~ lineforce.r_rel_0
-           e_rel_0 .~ lineforce.e_rel_0
+           r_rel_0 ~ lineforce.r_rel_0
+           e_rel_0 ~ lineforce.e_rel_0
            connect(lineforce.frame_a, frame_a)
            connect(lineforce.frame_b, frame_b)
            connect(spring2d.flange_b, lineforce.flange_b)
            connect(spring2d.flange_a, lineforce.flange_a)]
 
-    sys = extend(ODESystem(eqs, t; name=:nothing, systems = [lineforce, spring2d]), ptf)
+    sys = extend(System(eqs, t; name=:nothing, systems = [lineforce, spring2d]), ptf)
     add_params(sys, pars; name)
 end
 
@@ -490,7 +487,7 @@ See also [`SpringDamperParallel`](@ref)
     eqs = [
         f ~ d * D(s),
     ]
-    extend(ODESystem(eqs, t, [s, f], pars; name), plf)
+    extend(System(eqs, t, [s, f], pars; name), plf)
 end
 
 """
@@ -528,5 +525,5 @@ where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between t
            f ~ c * (s - s_unstretched) + f_d
            # lossPower ~ f_d*der(s)
            ]
-    extend(ODESystem(eqs, t, [], pars; name), plf)
+    extend(System(eqs, t, [], pars; name), plf)
 end

@@ -1,7 +1,7 @@
 using Test
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
-@mtkmodel FurutaPendulum begin
-    @components begin
+@component function FurutaPendulum(; name)
+    systems = @named begin
         world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], isroot = true, axisflange = true)
         elbow_joint    = Revolute(n = [0, 0, 1], isroot = true, axisflange = true, phi0=0.1)
@@ -12,7 +12,14 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
         damper1 = Rotational.Damper(d = 0.07)
         damper2 = Rotational.Damper(d = 0.07)
     end
-    @equations begin
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         connect(world.frame_b, shoulder_joint.frame_a)
         connect(shoulder_joint.frame_b, upper_arm.frame_a)
         connect(upper_arm.frame_b, elbow_joint.frame_a)
@@ -24,16 +31,22 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 
         connect(elbow_joint.axis, damper2.flange_a)
         connect(elbow_joint.support, damper2.flange_b)
+    ]
 
-    end
+    return System(equations, t; name, systems)
 end
 
 @named model = FurutaPendulum()
 model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
-prob = ODEProblem(ssys, [model.shoulder_joint.phi => 0.0, model.elbow_joint.phi => 0.1, model.world.g => 9.81], (0, 12))
-sol = solve(prob, Rodas4())
+prob = ODEProblem(ssys, [
+    model.shoulder_joint.phi => 0.0,
+    model.elbow_joint.phi => 0.1,
+    model.shoulder_joint.w => 0.0,
+    model.elbow_joint.w => 0.0,
+    model.world.g => 9.81], (0, 12))
+sol = solve(prob, Rodas5P())
 
 
 

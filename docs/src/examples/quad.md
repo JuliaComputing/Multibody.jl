@@ -12,7 +12,7 @@ using ModelingToolkit
 using ModelingToolkitStandardLibrary.Blocks
 using LinearAlgebra
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 t = Multibody.t
@@ -46,24 +46,24 @@ kpitch = 0.2
 Tipitch = 100
 Tdpitch = 1
 
-@mtkmodel Thruster begin
-    @structural_parameters begin
-        clockwise = true
+@component function Thruster(; name, clockwise = true)
+    pars = @parameters begin
+        torque_constant = 1, [description="Thrust force to torque conversion factor [Nm/N]"]
     end
-    @components begin
+
+    systems = @named begin
         frame_b = Frame()
         thrust3d = WorldForce(resolve_frame = :frame_b, scale=0.1, radius=0.02) # The thrust force is resolved in the local frame of the thruster.
         torque3d = WorldTorque(resolve_frame = :frame_b, scale=0.1, radius=0.02) # Using the thruster also causes a torque around the force axis.
         thrust = RealInput()
     end
-    @parameters begin
-        torque_constant = 1, [description="Thrust force to torque conversion factor [Nm/N]"]
-    end
-    @variables begin
+
+    vars = @variables begin
         u(t), [state_priority=1000]
         ut(t), [state_priority=1000]
     end
-    @equations begin
+
+    equations = Equation[
         thrust3d.force.u[1] ~ 0
         thrust3d.force.u[2] ~ thrust.u
         thrust3d.force.u[3] ~ 0
@@ -74,7 +74,9 @@ Tdpitch = 1
         ut ~ torque_constant*u
         connect(frame_b, thrust3d.frame_b)
         connect(frame_b, torque3d.frame_b)
-    end
+    ]
+
+    return System(equations, t, vars, pars; name, systems)
 end
 
 function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = nothing, pid=false)
@@ -88,19 +90,19 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         ) for i = 1:num_arms
     ]
 
-    @variables begin
+    vars = @variables begin
         y_alt(t), [state_priority=2]
         y_roll(t), [state_priority=2]
         y_pitch(t), [state_priority=2]
         y_yaw(t), [state_priority=2]
         y_forward(t), [state_priority=2]
         y_sideways(t), [state_priority=2]
-        v_alt(t)=0, [state_priority=2]
-        v_roll(t)=0, [state_priority=2]
-        v_pitch(t)=0, [state_priority=2]
-        v_yaw(t)=0, [state_priority=2]
-        v_forward(t)=0, [state_priority=2]
-        v_sideways(t)=0, [state_priority=2]
+        v_alt(t), [state_priority=2]
+        v_roll(t), [state_priority=2]
+        v_pitch(t), [state_priority=2]
+        v_yaw(t), [state_priority=2]
+        v_forward(t), [state_priority=2]
+        v_sideways(t), [state_priority=2]
         (Ie_alt(t)=0), [description="Integral of altitude error"]
         yIe_alt(t)
     end
@@ -151,16 +153,17 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
 
         if pid
             # Mixing matrices for the control signals
-            @parameters Galt[1:4] = ones(4) # The altitude controller affects all thrusters equally
-            @parameters Groll[1:4] = [-1,0,1,0]
-            @parameters Gpitch[1:4] = [0,1,0,-1]
+            pars = @parameters begin
+                Galt[1:4] = ones(4) # The altitude controller affects all thrusters equally
+                Groll[1:4] = [-1,0,1,0]
+                Gpitch[1:4] = [0,1,0,-1]
+            end
 
             @named Calt = PID(; k=kalt, Ti=Tialt, Td=Tdalt)
             @named Croll = PID(; k=kroll, Ti=Tiroll, Td=Tdroll)
             @named Cpitch = PID(; k=kpitch, Ti=Tipitch, Td=Tdpitch)
 
             uc = Galt*Calt.ctr_output.u + Groll*Croll.ctr_output.u + Gpitch*Cpitch.ctr_output.u
-            uc = collect(uc)
             append!(connections, [thrusters[i].u ~ uc[i] for i = 1:num_arms])
 
             append!(connections, [
@@ -170,6 +173,7 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
             ])
             append!(systems, [Calt; Croll; Cpitch])
         else # LQR
+        pars = []
             @named feedback_gain = Blocks.MatrixGain(K = L)
             @named system_outputs = RealOutput(nout=length(outputs))
             @named system_inputs = RealInput(nin=num_arms)
@@ -183,24 +187,22 @@ function RotorCraft(; closed_loop = true, addload=true, L=nothing, outputs = not
         end
 
     end
-    @named model = ODESystem(connections, t; systems)
-    complete(model)
+    @named model = System(connections, t, vars, pars; systems)
 end
 model = RotorCraft(closed_loop=true, addload=true, pid=true)
-model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 # display(unknowns(ssys))
 op = [
-    model.body.v_0[1] => 0;
-    model.Calt.int.x => 4;
-    collect(model.cable.joint_2.phi) .=> 0.1;
+    ssys.body.v_0[1] => 0;
+    ssys.Calt.int.x => 4;
+    collect(ssys.cable.joint_2.phi) .=> 0.1;
 ]
 
-prob = ODEProblem(ssys, op, (0, 20))
+@time "ODEProblem" prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
 @test SciMLBase.successful_retcode(sol)
 
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
+plot(sol, idxs=[ssys.arm1.frame_b.r_0[2], ssys.arm2.frame_b.r_0[2], ssys.arm3.frame_b.r_0[2], ssys.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
 ```
 
 ```@example QUAD
@@ -221,7 +223,6 @@ Below, we demonstrate a workflow where the model is linearized and an LQR contro
 ```@example QUAD
 using ControlSystemsBase, RobustAndOptimalControl, ControlSystemsMTK
 quad = RotorCraft(closed_loop=false, addload=false)
-quad = complete(quad)
 inputs = [quad.thruster1.u; quad.thruster2.u; quad.thruster3.u; quad.thruster4.u]
 outputs = [quad.y_alt, quad.y_roll, quad.y_pitch, quad.y_yaw, quad.y_forward, quad.y_sideways, quad.v_alt, quad.v_roll, quad.v_pitch, quad.v_yaw, quad.v_forward, quad.v_sideways, quad.yIe_alt]
 
@@ -262,24 +263,23 @@ L
 ```@example QUAD
 ModelingToolkit.get_iv(i::IRSystem) = i.t
 model = RotorCraft(; closed_loop=true, addload=true, L=-L, outputs) # Negate L for negative feedback
-model = complete(model)
-ssys = structural_simplify(multibody(model))
+ssys = multibody(model)
 
 op = [
-    model.body.r_0[2] => 1e-3
-    model.body.r_0[3] => 1e-3
-    model.body.r_0[1] => 1e-3
-    collect(model.cable.joint_2.phi) .=> 1 # Usa a larger initial cable bend since this controller is more robust
-    model.world.g => 9.81;
-    collect(model.body.phid) .=> 0;
-    collect(D.(model.body.phi)) .=> 0;
-    collect(model.feedback_gain.input.u) .=> 0;
-    model.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
+    ssys.body.r_0[2] => 1e-3
+    ssys.body.r_0[3] => 1e-3
+    ssys.body.r_0[1] => 1e-3
+    ssys.cable.joint_2.phi .=> 1 # Usa a larger initial cable bend since this controller is more robust
+    ssys.world.g => 9.81;
+    ssys.body.phid .=> 0;
+    D(ssys.body.phi) .=> 0;
+    ssys.feedback_gain.input.u .=> 0;
+    ssys.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
 prob = ODEProblem(ssys, op, (0, 20))
 sol = solve(prob, FBDF(autodiff=false))
 @test SciMLBase.successful_retcode(sol)
-plot(sol, idxs=[model.arm1.frame_b.r_0[2], model.arm2.frame_b.r_0[2], model.arm3.frame_b.r_0[2], model.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
+plot(sol, idxs=[ssys.arm1.frame_b.r_0[2], ssys.arm2.frame_b.r_0[2], ssys.arm3.frame_b.r_0[2], ssys.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
 ```
 
 ```@example QUAD
@@ -292,11 +292,11 @@ The observant reader may have noticed that we linearized the quadrotor without t
 
 ```@example QUAD
 linop = merge(op, Dict([
-    collect(model.cable.joint_2.phi) .=> 0
-    collect(model.body.r_0) .=> 1e-32
-    collect(model.body.v_0) .=> 1e-32 # To avoid singularity in linearization
-    collect(model.system_outputs.u) .=> 1e-32
-    collect(model.feedback_gain.input.u) .=> 1e-32
+    ssys.cable.joint_2.phi .=> 0
+    ssys.body.r_0 .=> 1e-32
+    ssys.body.v_0 .=> 1e-32 # To avoid singularity in linearization
+    ssys.system_outputs.u .=> 1e-32
+    ssys.feedback_gain.input.u .=> 1e-32
     ]))
 @time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
 S = minreal(S, 1e-6)

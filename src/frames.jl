@@ -1,4 +1,4 @@
-@connector function Frame(; name, varw = false, r_0 = zeros(3), render=false, length=1.0, radius=0.1)
+@connector function Frame(; name, varw = false, r_0 = nothing, render=false, length=1.0, radius=0.1)
     @variables r_0(t)[1:3]=r_0 [
         description = "Position vector directed from the origin of the world frame to the connector frame origin, resolved in world frame",
         state_priority=-1,
@@ -21,8 +21,8 @@
 
     R = NumRotationMatrix(; name, varw, state_priority=-1)
 
-    ODESystem(Equation[], t, [r_0; f; tau], pars; name,
-              metadata = Dict(:orientation => R, :frame => true))
+    System(Equation[], t, [r_0; f; tau; vec(R.R)], pars; name,
+              metadata = Dict(ModelingToolkit.FrameOrientation => R, ModelingToolkit.IsFrame => true))
 end
 
 """

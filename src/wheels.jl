@@ -52,134 +52,134 @@ this frame.
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
-    @parameters begin
+@component function RollingWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = nothing, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
+    pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         color[1:4] = color, [description = "Color of the wheel in animations"]
     end
-    @variables begin
-        (x(t) = x0), [state_priority = state_priority, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = state_priority, description = "z-position of the wheel axis"]
+    vars = @variables begin
+        (x(t) = x0), [state_priority = state_priority, guess = 0, description = "x-position of the wheel axis"]
+        (y(t) = y0), [state_priority = 0, guess = radius, description = "y-position of the wheel axis"]
+        (z(t) = z0), [state_priority = state_priority, guess = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [state_priority = state_priority, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
-        (r_road_0(t)[1:3] = zeros(3)),
+        [state_priority = state_priority, guess = [0, 0, 0], description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 5, guess = [0, 0, 0], description = "Derivatives of angles"]
+        (r_road_0(t)[1:3]),
         [
             description = "Position vector from world frame to contact point on road, resolved in world frame",
         ]
-        (f_wheel_0(t)[1:3] = zeros(3)),
+        (f_wheel_0(t)[1:3]),
         [description = "Force vector on wheel, resolved in world frame"]
-        (f_n(t) = 0), [description = "Contact force acting on wheel in normal direction"]
-        (f_lat(t) = 0), [
+        (f_n(t)), [description = "Contact force acting on wheel in normal direction"]
+        (f_lat(t)), [
             description = "Contact force acting on wheel in lateral direction",
         ]
-        (f_long(t) = 0),
+        (f_long(t)),
         [description = "Contact force acting on wheel in longitudinal direction"]
-        # (err(t) = 0),
+        # (err(t)),
         # [
         #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
         # ]
-        (e_axis_0(t)[1:3] = zeros(3)),
+        (e_axis_0(t)[1:3]),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,-radius, 0]),
-        [description = "Distance vector from wheel center to contact point"]
-        (e_n_0(t)[1:3] = zeros(3)),
+        (delta_0(t)[1:3]),
+        [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
+        (e_n_0(t)[1:3]),
         [
-            description = "Unit vector in normal direction of road at contact point, resolved in world frame",
+            description = "Unit vector in normal direction of road at contact point, resolved in world frame", guess = [0, 1.0, 0]
         ]
-        (e_lat_0(t)[1:3] = zeros(3)),
+        (e_lat_0(t)[1:3]),
         [
             description = "Unit vector in lateral direction of road at contact point, resolved in world frame",
         ]
-        (e_long_0(t)[1:3] = zeros(3)),
+        (e_long_0(t)[1:3]),
         [
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
-        (s(t) = 0), [description = "Road surface parameter 1"]
-        (w(t) = 0), [description = "Road surface parameter 2"]
-        (e_s_0(t)[1:3] = zeros(3)),
+        (s(t)), [description = "Road surface parameter 1"]
+        (w(t)), [description = "Road surface parameter 2"]
+        (e_s_0(t)[1:3]),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
-        (v_0(t)[1:3] = zeros(3)),
+        (v_0(t)[1:3]),
         [description = "Velocity of wheel center, resolved in world frame"]
-        (w_0(t)[1:3] = zeros(3)),
+        (w_0(t)[1:3]),
         [description = "Angular velocity of wheel, resolved in world frame"]
-        (vContact_0(t)[1:3] = zeros(3)),
+        (vContact_0(t)[1:3]),
         [description = "Velocity of contact point, resolved in world frame"]
 
-        (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
+        (aux(t)[1:3]), [description = "Auxiliary variable", guess = [1,0,0]]
     end
 
-    angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
     @named frame_a = Frame(varw=true)
     Ra = ori(frame_a, true)
+    append!(vars, Ra.w)
 
-    Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
+    Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = if surface === nothing
         [ # Road description
-            r_road_0 .~ [s, 0, w]
-            e_n_0 .~ [0, 1, 0]
-            e_s_0 .~ [1, 0, 0]
+            r_road_0 ~ [s, 0, w]
+            e_n_0 ~ [0, 1, 0]
+            e_s_0 ~ [1, 0, 0]
         ]
      else
         sy = surface(s, w)
         e_w_0 = _normalize([0, expand_derivatives(Differential(w)(sy)), 1])
         # @show sy, expand_derivatives(Differential(s)(sy)), expand_derivatives(Differential(w)(sy))
         [
-            r_road_0 .~ [s, sy, w]
-            e_s_0 .~ _normalize([1, expand_derivatives(Differential(s)(sy)), 0])
-            e_n_0 .~ _normalize(cross(e_w_0, e_s_0))
+            r_road_0 ~ [s, sy, w]
+            e_s_0 ~ _normalize([1, expand_derivatives(Differential(s)(sy)), 0])
+            e_n_0 ~ _normalize(cross(e_w_0, e_s_0))
         ]
      end
 
-    equations = [
+    equations = Equation[
                 equations;
                 connect_orientation(Ra, Rarot; iscut)   # Ra ~ Rarot
                 Ra.w ~ Rarot.w
 
                  # frame_a.R is computed from generalized coordinates
-                 collect(frame_a.r_0) .~ [x, y, z]
-                 der_angles .~ D.(angles)
+                 frame_a.r_0 ~ [x, y, z]
+                 der_angles ~ D(angles)
 
 
                  # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0)
-                 e_axis_0 .~ resolve1(Ra, [0, 0, 1])
-                 aux .~ (cross(e_n_0, e_axis_0))
-                 e_long_0 .~ (aux ./ _norm(aux))
-                 e_lat_0 .~ (cross(e_long_0, e_n_0))
+                 e_axis_0 ~ resolve1(Ra, [0, 0, 1])
+                 aux ~ (cross(e_n_0, e_axis_0))
+                 e_long_0 ~ (aux ./ _norm(aux))
+                 e_lat_0 ~ (cross(e_long_0, e_n_0))
 
                  # Determine point on road where the wheel is in contact with the road
-                 delta_0 .~ r_road_0 - frame_a.r_0
-                 0 ~ delta_0'e_axis_0
-                 0 ~ delta_0'e_long_0
+                 delta_0 ~ r_road_0 - frame_a.r_0
+                 0 ~ dot(delta_0,e_axis_0)
+                 0 ~ dot(delta_0,e_long_0)
 
                  # One holonomic positional constraint equation (no penetration in to the ground)
-                 0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
+                 0 ~ radius - dot(delta_0,cross(e_long_0, e_axis_0))
 
                  # only for testing
                 #  err ~ norm(delta_0) - radius
 
                  # Slip velocities
-                 v_0 .~ D.(frame_a.r_0)
-                 w_0 .~ angular_velocity1(Ra)
-                 vContact_0 .~ v_0 + cross(w_0, delta_0)
+                 v_0 ~ D(frame_a.r_0)
+                 w_0 ~ angular_velocity1(Ra)
+                 vContact_0 ~ v_0 + cross(w_0, delta_0)
 
                  # Two non-holonomic constraint equations on velocity level (ideal rolling, no slippage)
-                 0 ~ vContact_0'e_long_0
-                 0 ~ vContact_0'e_lat_0
+                 0 ~ dot(vContact_0, e_long_0)
+                 0 ~ dot(vContact_0, e_lat_0)
 
                  # Contact force
-                 f_wheel_0 .~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
+                 f_wheel_0 ~ f_n * e_n_0 + f_lat * e_lat_0 + f_long * e_long_0
 
                  # Force and torque balance at the wheel center
-                 zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
-                 zeros(3) .~ collect(frame_a.tau) +
+                 zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
+                 zeros(3) ~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
-    sys = compose(ODESystem(equations, t; name=:nothing), frame_a)
+    sys = compose(System(equations, t; name=:nothing), frame_a)
     add_params(sys, [color;]; name)
 end
 
@@ -224,10 +224,10 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
     wheel.frame_a.radius => 0.02radius;
     ```
 """
-@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
-                      angles = zeros(3), der_angles = zeros(3), kwargs...)
+@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=nothing, z0=nothing,
+                      angles = nothing, der_angles = nothing, kwargs...)
 
-    @named wheeljoint = RollingWheelJoint(; radius, angles, x0, z0, der_angles, kwargs...)
+    @named wheeljoint = RollingWheelJoint(; radius, angles=nothing, x0=nothing, z0=nothing, der_angles=nothing, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],
@@ -241,6 +241,10 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
                     I_32 = 0,
                     render = false)
     end
+    # guesses = Dict([
+    #     (wheeljoint.angles) => angles;
+    #     (wheeljoint.der_angles) => der_angles;
+    # ])
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         m = m, [description = "Mass of the wheel"]
@@ -250,21 +254,21 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 20, description = "x-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 20, description = "z-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 20, guess = 0, description = "x-position of the wheel axis"]
+        (z(t) = z0), [state_priority = 20, guess = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [state_priority = 30, description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [state_priority = 30, description = "Derivatives of angles"]
+        [state_priority = 30, guess = [0, 0, 0], description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 30, guess = [0, 0, 0], description = "Derivatives of angles"]
     end
     # sts = reduce(vcat, collect.(sts))
 
     equations = Equation[wheeljoint.x ~ x
                          wheeljoint.z ~ z
-                         collect(wheeljoint.angles) .~ collect(angles)
-                         collect(wheeljoint.der_angles) .~ collect(der_angles)
+                         (wheeljoint.angles) ~ (angles)
+                         (wheeljoint.der_angles) ~ (der_angles)
                          connect(body.frame_a, frame_a)
                          connect(wheeljoint.frame_a, frame_a)]
-    compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
+    compose(System(equations, t; name), frame_a, wheeljoint, body)
 end
 
 
@@ -316,8 +320,8 @@ plot!(
 )
 ```
 """
-@component function SlipWheelJoint(; name, radius, angles = zeros(3), der_angles=zeros(3), x0=0, y0 = radius, z0=0, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0, v_small = 1e-5, state=true)
-    @parameters begin
+@component function SlipWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = radius, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = nothing, w_roll = nothing, v_small = 1e-5, state=true)
+    pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
         vSlide_min = vSlide_min, [description = "Minimum sliding velocity"]
@@ -327,61 +331,61 @@ plot!(
         mu_S = mu_S, [description = "Friction coefficient at sliding"]
         v_small = v_small, [description = "Small value added to v_slip to avoid division by zero in slip model."]
     end
-    @variables begin
+    vars = @variables begin
         (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 0, description = "y-position of the wheel axis"]
+        (y(t) = y0), [guess = radius, state_priority = 0, description = "y-position of the wheel axis"]
         (z(t) = z0), [state_priority = 15, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = 5, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
         (phi_roll(t) = phi_roll), [guess=0, description="wheel angle"] # wheel angle
         (w_roll(t)=w_roll), [guess=0, description="Roll velocity of wheel"]
-        (r_road_0(t)[1:3] = zeros(3)),
+        (r_road_0(t)[1:3]),
         [
             description = "Position vector from world frame to contact point on road, resolved in world frame",
         ]
-        (f_wheel_0(t)[1:3] = zeros(3)),
+        (f_wheel_0(t)[1:3]),
         [description = "Force vector on wheel, resolved in world frame"]
-        (f_n(t) = 0), [description = "Contact force acting on wheel in normal direction"]
-        (f_lat(t) = 0), [
+        (f_n(t)), [description = "Contact force acting on wheel in normal direction", guess=1.0]
+        (f_lat(t)), [
             description = "Contact force acting on wheel in lateral direction",
         ]
-        (f_long(t) = 0),
+        (f_long(t)),
         [description = "Contact force acting on wheel in longitudinal direction"]
-        # (err(t) = 0),
+        # (err(t)),
         # [
         #     description = "|r_road_0 - frame_a.r_0| - radius (must be zero; used for checking)",
         # ]
-        (e_axis_0(t)[1:3] = zeros(3)),
+        (e_axis_0(t)[1:3]),
         [description = "Unit vector along wheel axis, resolved in world frame"]
-        (delta_0(t)[1:3] = [0,-radius, 0]),
-        [description = "Distance vector from wheel center to contact point"]
-        (e_n_0(t)[1:3] = zeros(3)),
+        (delta_0(t)[1:3]),
+        [description = "Distance vector from wheel center to contact point", guess = [0,-radius, 0]]
+        (e_n_0(t)[1:3]),
         [
-            description = "Unit vector in normal direction of road at contact point, resolved in world frame",
+            description = "Unit vector in normal direction of road at contact point, resolved in world frame", guess = [0, 1.0, 0]
         ]
-        (e_lat_0(t)[1:3] = zeros(3)),
+        (e_lat_0(t)[1:3]),
         [
             description = "Unit vector in lateral direction of road at contact point, resolved in world frame",
         ]
-        (e_long_0(t)[1:3] = zeros(3)),
+        (e_long_0(t)[1:3]),
         [
             description = "Unit vector in longitudinal direction of road at contact point, resolved in world frame",
         ]
 
-        (s(t) = 0), [description = "Road surface parameter 1"]
-        (w(t) = 0), [description = "Road surface parameter 2"]
-        (e_s_0(t)[1:3] = zeros(3)),
+        (s(t)), [description = "Road surface parameter 1"]
+        (w(t)), [description = "Road surface parameter 2"]
+        (e_s_0(t)[1:3]),
         [description = "Road heading at (s,w), resolved in world frame (unit vector)"]
 
-        (v_0(t)[1:3] = zeros(3)),
+        (v_0(t)[1:3]),
         [description = "Velocity of wheel center, resolved in world frame"]
-        (w_0(t)[1:3] = zeros(3)),
+        (w_0(t)[1:3]),
         [description = "Angular velocity of wheel, resolved in world frame"]
-        (vContact_0(t)[1:3] = zeros(3)),
+        (vContact_0(t)[1:3]),
         [description = "Velocity of contact point, resolved in world frame"]
 
-        (aux(t)[1:3] = zeros(3)), [description = "Auxiliary variable"]
+        (aux(t)[1:3]), [description = "Auxiliary variable", guess = [1,0,0]]
 
         # New variables ========================================================
         v_lat(t), [guess=0, description="Velocity in lateral direction"]
@@ -395,12 +399,13 @@ plot!(
         vSlide(t), [description="Slip velocity at which the flat region of the slip model starts"]
     end
 
-    angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
+    # angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux = collect.((angles,der_angles,r_road_0,f_wheel_0,e_axis_0,delta_0,e_n_0,e_lat_0,e_long_0,e_s_0,v_0,w_0,vContact_0,aux))
 
     @named frame_a = Frame(varw=state)
     Ra = ori(frame_a, state)
+    append!(vars, Ra.w)
 
-    Rarot = axes_rotations(sequence, angles, -der_angles) # The - is the neg_w change
+    Rarot = axes_rotations(sequence, angles, der_angles)
 
     equations = if surface === nothing
         [ # Road description
@@ -420,7 +425,7 @@ plot!(
     end
 
 
-    equations = [
+    equations = Equation[
                 equations;
 
                 if state
@@ -429,7 +434,7 @@ plot!(
                         Ra.w ~ Rarot.w
                         phi_roll ~ angles[2]
                         w_roll ~ D(phi_roll)
-                        der_angles .~ D.(angles)
+                        der_angles ~ D(angles)
 
                     ]
                 else
@@ -437,39 +442,39 @@ plot!(
                 end
 
                 # frame_a.R is computed from generalized coordinates
-                collect(frame_a.r_0) .~ [x, y, z]
+                frame_a.r_0 ~ [x, y, z]
 
 
                 # Coordinate system at contact point (e_long_0, e_lat_0, e_n_0), resolved in world frame
-                e_axis_0 .~ resolve1(Ra, [0, 0, 1])
-                aux .~ (cross(e_n_0, e_axis_0))
-                e_long_0 .~ (aux ./ _norm(aux))
-                e_lat_0 .~ -(cross(e_long_0, e_n_0)) # wheel rotation axis and lateral axis are opposite
+                e_axis_0 ~ resolve1(Ra, [0, 0, 1])
+                aux ~ (cross(e_n_0, e_axis_0))
+                e_long_0 ~ (aux ./ _norm(aux))
+                e_lat_0 ~ -(cross(e_long_0, e_n_0)) # wheel rotation axis and lateral axis are opposite
 
                 # Determine point on road where the wheel is in contact with the road
                 delta_0 .~ r_road_0 - frame_a.r_0
-                0 ~ delta_0'e_axis_0
-                0 ~ delta_0'e_long_0
+                0 ~ dot(delta_0, e_axis_0)
+                0 ~ dot(delta_0, e_long_0)
 
                 # One holonomic positional constraint equation (no penetration in to the ground)
-                0 ~ radius - delta_0'cross(e_long_0, e_axis_0)
+                0 ~ radius - dot(delta_0, cross(e_long_0, e_axis_0))
 
                 # Slip velocities (world frame)
-                v_0 .~ D.(frame_a.r_0)
-                w_0 .~ angular_velocity1(Ra)
+                v_0 ~ D(frame_a.r_0)
+                w_0 ~ angular_velocity1(Ra)
                 vContact_0 .~ v_0 + cross(w_0, delta_0)
 
                 # Contact dynamics (world frame) ===============================
 
-                v_slip_lat ~ vContact_0' * e_lat_0
-                v_slip_long ~ vContact_0' * e_long_0
+                v_slip_lat ~ dot(vContact_0, e_lat_0)
+                v_slip_long ~ dot(vContact_0, e_long_0)
                 # v_slip_lat ~ v_lat - 0
                 # v_slip_long ~ v_long - radius * w_roll
 
-                v_slip ~ sqrt(v_slip_long^2 + v_slip_lat^2) + v_small
+                v_slip ~ hypot(v_slip_long, v_slip_lat) + v_small
                 # -f_long * radius ~ flange_a.tau # No longer needed?
                 # frame_a.tau ~ 0
-                slip_ratio ~ v_slip_long / (v_0'e_long_0)
+                slip_ratio ~ v_slip_long / dot(v_0, e_long_0)
                 vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
                 vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
 
@@ -478,11 +483,11 @@ plot!(
                 f_lat ~ f * v_slip_lat / v_slip
 
                 # Contact force (world frame)
-                f_wheel_0 .~ f_n * e_n_0 - f_lat * e_lat_0 - f_long * e_long_0
+                f_wheel_0 ~ f_n * e_n_0 - f_lat * e_lat_0 - f_long * e_long_0
 
                 # Force and torque balance at the wheel center
-                zeros(3) .~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
-                zeros(3) .~ collect(frame_a.tau) +
+                zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
+                zeros(3) ~ collect(frame_a.tau) +
                             resolve2(Ra, cross(delta_0, f_wheel_0))]
 
                     
@@ -493,7 +498,7 @@ plot!(
                 #     v_slip~mu_A
                 #     v_slip~mu_S
                 # ]
-    compose(ODESystem(equations, t; name), frame_a)
+    compose(System(equations, t; name), frame_a)
 end
 
 
@@ -527,7 +532,7 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
 """
 @component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
                       angles = zeros(3), der_angles = zeros(3), state = true, kwargs...)
-    @named wheeljoint = SlipWheelJoint(; radius, angles, x0, z0, der_angles, state, kwargs...)
+    @named wheeljoint = SlipWheelJoint(; radius, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],
@@ -549,11 +554,11 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 20, description = "x-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 20, description = "z-position of the wheel axis"]
+        (x(t) = x0), [state_priority = 20, guess = 0, description = "x-position of the wheel axis"]
+        (z(t) = z0), [state_priority = 20, guess = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
-        [state_priority = 30, description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
-        (der_angles(t)[1:3] = der_angles), [state_priority = 30, description = "Derivatives of angles"]
+        [state_priority = 30, guess = [0, 0, 0], description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
+        (der_angles(t)[1:3] = der_angles), [state_priority = 30, guess = [0, 0, 0], description = "Derivatives of angles"]
     end
     # sts = reduce(vcat, collect.(sts))
 
@@ -566,7 +571,7 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
                             collect(wheeljoint.der_angles) .~ collect(der_angles)]
         )
     end
-    compose(ODESystem(equations, t; name), frame_a, wheeljoint, body)
+    compose(System(equations, t, sts, pars; name), frame_a, wheeljoint, body)
 end
 
 """
@@ -660,7 +665,7 @@ function RollingConstraintVerticalWheel(;
         zeros(3) .~ collect(frame_a.f) + resolve2(ori(frame_a), f_wheel_0)
         zeros(3) .~ collect(frame_a.tau) + resolve2(ori(frame_a), cross(rContact_0, f_wheel_0))
     ]
-    ODESystem(equations, t; name, systems = [frame_a])
+    System(equations, t; name, systems = [frame_a])
 end
 
 
@@ -753,13 +758,13 @@ function RollingWheelSetJoint(;
     end
 
     sts = @variables begin
-        (x(t) = x0), [description = "x coordinate for center between wheels", state_priority = state_priority]
-        (z(t) = z0), [description = "z coordinate for center between wheels", state_priority = state_priority]
-        (phi(t) = phi0), [description = "Orientation angle of wheel axis along y-axis", state_priority = state_priority]
-        (theta1(t) = theta1_0), [description = "Angle of wheel 1", state_priority = state_priority]
-        (theta2(t) = theta2_0), [description = "Angle of wheel 2", state_priority = state_priority]
-        (der_theta1(t) = der_theta1_0), [description = "Derivative of theta 1", state_priority = state_priority]
-        (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority]
+        (x(t) = x0), [description = "x coordinate for center between wheels", state_priority = state_priority, guess = 0]
+        (z(t) = z0), [description = "z coordinate for center between wheels", state_priority = state_priority, guess = 0]
+        (phi(t) = phi0), [description = "Orientation angle of wheel axis along y-axis", state_priority = state_priority, guess = 0]
+        (theta1(t) = theta1_0), [description = "Angle of wheel 1", state_priority = state_priority, guess = 0]
+        (theta2(t) = theta2_0), [description = "Angle of wheel 2", state_priority = state_priority, guess = 0]
+        (der_theta1(t) = der_theta1_0), [description = "Derivative of theta 1", state_priority = state_priority, guess = 0]
+        (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority, guess = 0]
     end
     equations = Equation[
         if iscut
@@ -800,7 +805,7 @@ function RollingWheelSetJoint(;
         connect(frame_middle, mounting1D.frame_a)
         connect(mounting1D.flange_b, support)
     ]
-    sys = ODESystem(equations, t; name=:nothing, systems)
+    sys = System(equations, t; name=:nothing, systems)
     add_params(sys, [width_wheel]; name)
 end
 
@@ -905,16 +910,16 @@ function RollingWheelSet(;
     end
 
     sts = @variables begin
-        (x(t) = x0), [description = "x coordinate of center between wheels", state_priority = state_priority]
-        (z(t) = z0), [description = "z coordinate of center between wheels", state_priority = state_priority]
-        (phi(t) = phi0), [description = "Orientation angle of wheel axis along z-axis", state_priority = state_priority]
-        (theta1(t) = theta1_0), [description = "Angle of wheel 1", state_priority = state_priority]
-        (theta2(t) = theta2_0), [description = "Angle of wheel 2", state_priority = state_priority]
-        (der_theta1(t) = der_theta1_0), [description = "Derivative of theta 1", state_priority = state_priority]
-        (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority]
+        (x(t) = x0), [description = "x coordinate of center between wheels", state_priority = state_priority, guess = 0]
+        (z(t) = z0), [description = "z coordinate of center between wheels", state_priority = state_priority, guess = 0]
+        (phi(t) = phi0), [description = "Orientation angle of wheel axis along z-axis", state_priority = state_priority, guess = 0]
+        (theta1(t) = theta1_0), [description = "Angle of wheel 1", state_priority = state_priority, guess = 0]
+        (theta2(t) = theta2_0), [description = "Angle of wheel 2", state_priority = state_priority, guess = 0]
+        (der_theta1(t) = der_theta1_0), [description = "Derivative of theta 1", state_priority = state_priority, guess = 0]
+        (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority, guess = 0]
     end
 
-    equations = [
+    equations = Equation[
         wheelSetJoint.x ~ x
         wheelSetJoint.z ~ z
         wheelSetJoint.phi ~ phi
@@ -933,7 +938,7 @@ function RollingWheelSet(;
         connect(wheelSetJoint.frame_middle, frame_middle)
     ]
 
-    sys = ODESystem(equations, t, sts, pars; name, systems)
+    sys = System(equations, t, sts, pars; name, systems)
 
 end
 

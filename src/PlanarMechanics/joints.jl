@@ -77,8 +77,7 @@ A revolute joint
     end
 
 
-    return compose(ODESystem(eqs, t, vars, pars; name = name),
-        systems...)
+    return System(eqs, t, vars, pars; name = name, systems)
 end
 
 """
@@ -145,7 +144,7 @@ A prismatic joint
         a(t)
         f(t)
         e0(t)[1:2]
-        (r0(t)[1:2]=r), [description="Translation vector of the prismatic rod resolved w.r.t. inertial frame"]
+        (r0(t)[1:2]), [description="Translation vector of the prismatic rod resolved w.r.t. inertial frame"]
     end
 
     e = Multibody._normalize(r)
@@ -177,6 +176,7 @@ A prismatic joint
     else
         # actutation torque
         push!(eqs, f ~ 0)
+        push!(eqs, fixed.s ~ 0)
     end
-    return extend(ODESystem(eqs, t, vars, pars; name, systems), partial_frames)
+    return extend(System(eqs, t, vars, pars; name, systems), partial_frames)
 end

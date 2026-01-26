@@ -11,7 +11,7 @@ The system consists of a pendulum suspended in a spherical joint, a joint withou
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -36,17 +36,16 @@ connections = [
     connect(trans.frame_b, body2.frame_a)
 ]
 
-@named model = ODESystem(connections, t, systems = [world; systems])
-model = complete(model)
-ssys = structural_simplify(multibody(model))
+@named model = System(connections, t, systems = [world; systems])
+ssys = multibody(model)
 
-prob = ODEProblem(ssys, [model.world.g => 9.80665, model.revolute.w => 10], (0, 5))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 9.80665, ssys.revolute.w => 10], (0, 5))
 
 sol = solve(prob, FBDF(), abstol=1e-8, reltol=1e-8);
 @assert SciMLBase.successful_retcode(sol)
 using Test # hide
-@test sol(5, idxs=collect(model.body2.r_0[1:3])) ≈ [-0.0357364, -0.188245, 0.02076935] atol=1e-3 # hide
-# plot(sol, idxs=collect(model.body2.r_0)) # hide
+@test sol(5, idxs=ssys.body2.r_0[1:3]) ≈ [-0.0357364, -0.188245, 0.02076935] atol=1e-3 # hide
+# plot(sol, idxs=ssys.body2.r_0) # hide
 
 import GLMakie
 Multibody.render(model, sol; x=1, z=1, filename = "gyro.gif") # Use "gyro.mp4" for a video file
@@ -55,4 +54,4 @@ nothing # hide
 
 ![animation](gyro.gif)
 
-Try setting `model.revolute.w => 0` and plot this variable using `plot(sol, idxs=model.revolute.w)` and you will notice that the swinging of the pendulum induces a rotation around this joint, even if it has no rotational velocity from the start.
+Try setting `ssys.revolute.w => 0` and plot this variable using `plot(sol, idxs=ssys.revolute.w)` and you will notice that the swinging of the pendulum induces a rotation around this joint, even if it has no rotational velocity from the start.

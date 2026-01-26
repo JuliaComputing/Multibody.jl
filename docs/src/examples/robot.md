@@ -6,14 +6,13 @@
 using Multibody
 using ModelingToolkit
 using Plots
-using JuliaSimCompiler
+# using JuliaSimCompiler
 using OrdinaryDiffEq
 using Test
 
 t = Multibody.t
 D = Differential(t)
 @named robot = Multibody.Robot6DOF()
-robot = complete(robot)
 
 length(equations(robot))
 ```
@@ -21,7 +20,7 @@ The robot is a medium sized system with some 2000 equations before simplificatio
 
 After simplification, the following states are chosen:
 ```@example robot
-ssys = structural_simplify(multibody(robot))
+ssys = multibody(robot)
 unknowns(ssys)
 ```
     
@@ -108,8 +107,8 @@ nothing # hide
 The coordinates of any point on the mechanism may be obtained in the world coordinate frame by either
 
 ```@example robot
-output = collect(robot.mechanics.b6.frame_b.r_0)
-fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+output = robot.mechanics.b6.frame_b.r_0
+fkine = build_explicit_observed_function(ssys, output)
 fkine(prob.u0, prob.p, 0)
 ```
 
@@ -124,7 +123,7 @@ prob[output]
 
 or by building an explicit function `(state, parameters, time) -> output`
 ```@example robot
-fkine = JuliaSimCompiler.build_explicit_observed_function(ssys, output)
+fkine = build_explicit_observed_function(ssys, output)
 fkine(prob.u0, prob.p, 0)
 ```
 !!! note

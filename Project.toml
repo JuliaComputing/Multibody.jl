@@ -1,28 +1,31 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
-authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 version = "0.3.2"
+authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-JuliaSimCompiler = "8391cb6b-4921-5777-4e45-fd9aab8cb88d"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MeshIO = "7269a6da-0436-5bbc-96c2-40638cbb6118"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ModelingToolkitStandardLibrary = "16a59e39-deab-5bd0-87e4-056b12336739"
+OrdinaryDiffEqNonlinearSolve = "127b3ac7-2247-4354-8eb6-78cf4e7c58e8"
+OrdinaryDiffEqRosenbrock = "43230ef6-c299-4910-a778-202eb28ce4ce"
+OrdinaryDiffEqTsit5 = "b1df2697-797e-41e3-8120-5422d3b24e4a"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StateSelection = "64909d44-ed92-46a8-bbd9-f047dfbdc84b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+TrajectoryLimiters = "9792e600-fe43-4e4e-833b-462f466b8006"
 
 [weakdeps]
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
-Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
-
 
 [extensions]
 Render = ["Makie"]
@@ -30,29 +33,33 @@ URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
 
 [compat]
 CoordinateTransformations = "0.6"
-DataInterpolations = "5, 6"
+DataInterpolations = "8.6.1"
 FileIO = "1"
 Graphs = "1.0"
-JuliaFormatter = "1.0"
-JuliaSimCompiler = "0.1.12"
+JuliaFormatter = "1.0, 2.0"
 LightXML = "0.9"
 LinearAlgebra = "1.6"
-MeshIO = "0.4"
+MeshIO = "0.4, 0.5"
 MetaGraphsNext = "0.7"
-ModelingToolkit = "9"
-ModelingToolkitStandardLibrary = "2.7.2"
+ModelingToolkit = "11.5.1"
+ModelingToolkitStandardLibrary = "2.26"
+OrdinaryDiffEqNonlinearSolve = "1.14.1"
+OrdinaryDiffEqRosenbrock = "1.17.0"
+OrdinaryDiffEqTsit5 = "1.5.0"
 Rotations = "1.4"
 SparseArrays = "1"
+StateSelection = "1.1.1"
 StaticArrays = "1"
+TrajectoryLimiters = "0.1"
 julia = "1"
 
 [extras]
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
-Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["OrdinaryDiffEq", "Test", "JuliaFormatter", "LightXML", "Graphs", "MetaGraphsNext"]

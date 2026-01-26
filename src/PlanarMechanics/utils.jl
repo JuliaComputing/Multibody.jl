@@ -1,3 +1,5 @@
+struct IsFrame2D end
+
 @connector function Frame(; name, render=false, length=1.0, radius=0.1)
     vars = @variables begin
         x(t), [state_priority = -1, description = "x position"]
@@ -13,7 +15,7 @@
         radius = radius, [description = "Radius of each axis in animations"]
     end
 
-    ODESystem(Equation[], t, vars, pars; name, metadata = Dict(:frame_2d => true))
+    System(Equation[], t, vars, pars; name, metadata = Dict(IsFrame2D => true))
 end
 Base.@doc """
     Frame(;name)
@@ -35,18 +37,37 @@ All variables are resolved in the planar world frame.
 - `radius`: [m] Radius of each axis in animations
 """ Frame
 
-function ori_2d(frame)
-    phi = frame.phi
+ori_2d(frame::System) = ori_2d(frame.phi)
+
+
+"""
+    ori_2d(frame)
+    ori_2d(phi)
+
+2D orientation matrix from angle phi (in radians). This is the inverse of [`get_rot`](@ref).
+"""
+function ori_2d(phi)
     return [cos(phi) -sin(phi); sin(phi) cos(phi)]
 end
 
 FrameResolve = Frame
 
-@mtkmodel PartialTwoFrames begin
-    @components begin
+@component function PartialTwoFrames(; name)
+    systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
     end
+
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 Base.@doc """
@@ -65,14 +86,22 @@ Set zero position vector and orientation object of frame_resolve
 # Connectors:
 - `frame_resolve` [FrameResolve](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
 """
-@mtkmodel ZeroPosition begin
-    @components begin
+@component function ZeroPosition(; name)
+    systems = @named begin
         frame_resolve = FrameResolve()
     end
 
-    @equations begin
+    pars = @parameters begin
+    end
+
+    vars = @variables begin
+    end
+
+    equations = Equation[
         frame_resolve.x ~ 0
         frame_resolve.y ~ 0
         frame_resolve.phi ~ 0
-    end
+    ]
+
+    return System(equations, t; name, systems)
 end

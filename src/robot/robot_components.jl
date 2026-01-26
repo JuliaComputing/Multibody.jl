@@ -1,8 +1,8 @@
 using ModelingToolkit
 import ModelingToolkitStandardLibrary.Blocks
 using ModelingToolkitStandardLibrary.Electrical
-t = Multibody.t
-D = Differential(t)
+# t = Multibody.t
+# D = Differential(t)
 
 """
     @connector AxisControlBus(; name)    
@@ -33,7 +33,7 @@ D = Differential(t)
         (motorAngle(t)), [guess=0.0,output = true, description = "Angle of motor flange"]
         (motorSpeed(t)), [guess=0.0,output = true, description = "Speed of motor flange"]
     end
-    ODESystem(Equation[], t, vars, []; name)
+    System(Equation[], t, vars, []; name)
 end
 
 @connector function ControlBus(; name)
@@ -45,7 +45,7 @@ end
         axisControlBus5 = AxisControlBus()
         axisControlBus6 = AxisControlBus()
     end
-    ODESystem(Equation[], t; systems, name)
+    System(Equation[], t; systems, name)
 end
 
 """
@@ -66,7 +66,7 @@ Ideal rotational sensor to measure the absolute flange angular acceleration
            a.u ~ D(w)
            flange.tau ~ 0
            ]
-    return ODESystem(eqs, t, [], []; name = name, systems = [flange, a])
+    return System(eqs, t; name = name, systems = [flange, a])
 end
 
 RotationalFlange = Rotational.Flange
@@ -97,20 +97,21 @@ Axis model of the r3 joints 4,5,6
 """
 function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
                    J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
-    # pars = @parameters begin
-    #     kp = kp, [description = "Gain of position controller"]
-    #     ks = ks, [description = "Gain of speed controller"]
-    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
-    #     k = k, [description = "Gain of motor"]
-    #     w = w, [description = "Time constant of motor"]
-    #     D = D, [description = "Damping constant of motor"]
-    #     J = J, [description = "Moment of inertia of motor"]
-    #     # ratio = ratio, [description = "Gear ratio"]
-    #     Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
-    #     Rv1 = Rv1, [description = "Viscous friction coefficient"]
-    #     peak = peak,
-    #            [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
-    # end
+    pars = @parameters begin
+        kp = kp, [description = "Gain of position controller"]
+        ks = ks, [description = "Gain of speed controller"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller"]
+        k = k, [description = "Gain of motor"]
+        w = w, [description = "Time constant of motor"]
+        D = D, [description = "Damping constant of motor"]
+        J = J, [description = "Moment of inertia of motor"]
+        # ratio = ratio, [description = "Gear ratio"]
+        Rv0 = Rv0, [description = "Viscous friction torque at zero velocity"]
+        Rv1 = Rv1, [description = "Viscous friction coefficient"]
+        peak = peak,
+               [description = "Maximum static friction torque is peak*Rv0 (peak >= 1)"]
+        ratio = ratio, [description = "Gear ratio"]
+    end
 
     systems = @named begin
         flange = Rotational.Flange()
@@ -135,16 +136,29 @@ function AxisType2(; name, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D =
            (accSensor.a.u/ratio ~ axisControlBus.acceleration)
            connect(controller.axisControlBus, axisControlBus)]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 
 function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1.1616, w = 4590, D = 0.6,
     J = 0.0013, ratio = -105, Rv0 = 0.4, Rv1 = 0.13 / 160, peak = 1)
-    # @parameters begin
+    pars = @parameters begin
     #     c = c, [description = "Spring constant"]
     #     cd = cd, [description = "Damper constant"]
-    # end
+        c = c#43,
+        cd = cd#0.005,
+        kp = kp#10,
+        ks = ks#1,
+        Ts = Ts#0.01,
+        k = k#1.1616,
+        w = w#4590,
+        D = D#0.6,
+        J = J#0.0013,
+        ratio = ratio#-105,
+        Rv0 = Rv0#0.4,
+        Rv1 = Rv1#0.13 / 160,
+        peak = peak#1
+    end
 
     systems = @named begin
         flange = Rotational.Flange()
@@ -170,23 +184,23 @@ function AxisType1(; name, c = 43, cd = 0.005, kp = 10, ks = 1, Ts = 0.01, k = 1
         connect(controller.axisControlBus, axisControlBus)
     ]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
-    # pars = @parameters begin
-    #     kp = kp, [description = "Gain of position controller"]
-    #     ks = ks, [description = "Gain of speed controller"]
-    #     Ts = Ts, [description = "Time constant of integrator of speed controller"]
-    #     ratio = ratio, [description = "Gear ratio of gearbox"]
-    # end
+    pars = @parameters begin
+        kp = kp, [description = "Gain of position controller"]
+        ks = ks, [description = "Gain of speed controller"]
+        Ts = Ts, [description = "Time constant of integrator of speed controller"]
+        ratio = ratio, [description = "Gear ratio of gearbox"]
+    end
     systems = @named begin
-        gain1 = Blocks.Gain(ratio)
-        PI = Blocks.PI(gainPI.k = ks, T = Ts)
+        gain1 = Blocks.Gain(k=ratio)
+        PI = Blocks.PI(k = ks, T = Ts)
         feedback1 = Blocks.Feedback()
-        P = Blocks.Gain(kp)
+        P = Blocks.Gain(k=kp)
         add3 = Blocks.Add3(k3 = -1)
-        gain2 = Blocks.Gain(ratio)
+        gain2 = Blocks.Gain(k=ratio)
         axisControlBus = AxisControlBus()
     end
 
@@ -201,7 +215,7 @@ function Controller(; name, kp = 10, ks = 1, Ts = 0.01, ratio = 1)
            (add3.input3.u ~ axisControlBus.motorSpeed)
            (PI.ctr_output.u ~ axisControlBus.current_ref)]
 
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 function GearType2(; name, i = -99,
@@ -244,18 +258,27 @@ function GearType2(; name, i = -99,
         # connect(bearingFriction.flange_b, flange_b)
         # connect(bearingFriction.flange_a, flange_a)
     ]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 import ModelingToolkitStandardLibrary.Mechanical.Rotational.Flange as fl
-@mtkmodel BearingFriction begin
-    @components begin
+@component function BearingFriction(; name)
+    pars = @parameters begin
+    end
+
+    systems = @named begin
         flange_a = fl()
         flange_b = fl()
     end
-    @equations begin
-        connect(flange_a, flange_b)
+
+    vars = @variables begin
     end
+
+    equations = Equation[
+        connect(flange_a, flange_b)
+    ]
+
+    return System(equations, t; name, systems)
 end
 
 
@@ -295,18 +318,18 @@ function GearType1(; name, i = -105, c = 43, d = 0.005,
            connect(bearingFriction.flange_b, spring.flange_a)
            connect(gear.flange_b, flange_b)
            connect(bearingFriction.flange_a, flange_a)]
-    ODESystem(eqs, t; name, systems)
+    System(eqs, t; name, systems)
 end
 
 function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i_max = 9)
-    # @parameters begin
-    #     J = J, [description = "Moment of inertia of motor"]
-    #     k = k, [description = "Gain of motor"]
-    #     w = w, [description = "Time constant of motor"]
-    #     D = D, [description = "Damping constant of motor"]
-    #     w_max = w_max, [description = "Maximum speed of motor"]
-    #     i_max = i_max, [description = "Maximum current of motor"]
-    # end
+    pars = @parameters begin
+        J = J, [description = "Moment of inertia of motor"]
+        k = k, [description = "Gain of motor"]
+        w = w, [description = "Time constant of motor"]
+        D = D, [description = "Damping constant of motor"]
+        w_max = w_max, [description = "Maximum speed of motor"]
+        i_max = i_max, [description = "Maximum current of motor"]
+    end
 
     #   Electrical.Analog.Basic.RotationalEMF emf(k=k, useSupport=false)
 
@@ -337,7 +360,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
         g5 = Ground()
         phi = Rotational.AngleSensor()
         speed = Rotational.SpeedSensor()
-        Jmotor = Rotational.Inertia(; J = J, w=0)
+        Jmotor = Rotational.Inertia(; J = J)
         axisControlBus = AxisControlBus()
         convert1 = Blocks.Gain(1)
         convert2 = Blocks.Gain(1)
@@ -384,7 +407,7 @@ function Motor(; name, J = 0.0013, k = 1.1616, w = 4590, D = 0.6, w_max = 315, i
            (convert2.y ~ Vs.v)
            connect(emf.flange, Jmotor.flange_a)]
 
-    compose(ODESystem(eqs, t; name), systems)
+    compose(System(eqs, t, [], pars; name), systems)
 end
 
 robot_orange = [1, 0.51, 0, 1]
@@ -546,5 +569,5 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
            connect(r6.axis, axis6)
            connect(r6.frame_b, b6.frame_a)]
 
-    compose(ODESystem(eqs, t; name), systems)
+    compose(System(eqs, t; name), systems)
 end
