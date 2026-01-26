@@ -258,6 +258,7 @@ Linear 2D translational spring
 - `render = true` Render the spring in animations
 - `radius = 0.1` Radius of spring when rendered
 - `N = 200` Number of points in mesh when rendered
+- `end_ratio = 0.0`: Ratio of the length of the spring [0, 0.5] that is rendered with decreasing radius at the ends. Set this to 0 to have uniform radius along the entire spring.
 
 # Connectors:
 - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
@@ -280,6 +281,7 @@ Linear 2D translational spring
         render = render, [description = "Render the spring in animations"]
         radius = radius, [description = "Radius of spring when rendered"]
         N = N, [description = "Number of points in mesh when rendered"]
+        end_ratio = 0.0
     end
 
     systems = @named begin
@@ -400,6 +402,7 @@ Linear 2D translational spring damper model
 - `render = true` Render the spring in animations
 - `radius = 0.1` Radius of spring when rendered
 - `N = 200` Number of points in mesh when rendered
+- `end_ratio = 0.0`: Ratio of the length of the spring that is rendered with decreasing radius at the ends.
 
 # Connectors:
 - `frame_a` [Frame](@ref) Coordinate system fixed to the component with one cut-force and cut-torque
@@ -425,6 +428,7 @@ Linear 2D translational spring damper model
         render = render, [description = "Render the spring in animations"]
         radius = radius, [description = "Radius of spring when rendered"]
         N = N, [description = "Number of points in mesh when rendered"]
+        end_ratio = 0.0
     end
 
     systems = @named begin

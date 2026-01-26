@@ -385,10 +385,11 @@ additional equations to handle the mass are removed.
 - `color = [0,0,1,1]`: Color of the spring when rendered
 - `radius = 0.1`: Radius of spring when rendered
 - `N = 200`: Number of points in mesh when rendered. Rendering time can be reduced somewhat by reducing this number.
+- `end_ratio = 0.0`: Ratio of the length of the spring [0, 0.5] that is rendered with decreasing radius at the ends. Set this to 0 to have uniform radius along the entire spring.
 
 See also [`SpringDamperParallel`](@ref)
 """
-@component function Spring(; c, name, m = 0, lengthfraction = 0.5, s_unstretched = 0, num_windings=6, color=[0,0,1,1], radius=0.1, N=200, kwargs...)
+@component function Spring(; c, name, m = 0, lengthfraction = 0.5, s_unstretched = 0, num_windings=6, color=[0,0,1,1], radius=0.1, N=200, end_ratio = 0.0, kwargs...)
     @named ptf = PartialTwoFrames()
     @unpack frame_a, frame_b = ptf
     pars = @parameters begin
@@ -398,6 +399,7 @@ See also [`SpringDamperParallel`](@ref)
             bounds = (0, Inf),
         ]
         num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
+        end_ratio = 0.0
         color[1:4] = color
         radius = radius, [description = "Radius of spring when rendered"]
         N = N, [description = "Number of points in mesh when rendered"]
@@ -498,7 +500,7 @@ f = c (s - s_{unstretched}) + d \\cdot D(s)
 where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between the origin of `frame_a` and the origin of `frame_b` and `D(s)` is the time derivative of `s`.
 """
 @component function SpringDamperParallel(; name, c, d, s_unstretched=0,
-    color = [0, 0, 1, 1], radius = 0.1, N = 200, num_windings = 6, kwargs...)
+    color = [0, 0, 1, 1], radius = 0.1, N = 200, num_windings = 6, end_ratio = 0.0, kwargs...)
     @named plf = PartialLineForce(; kwargs...)
     @unpack s, f = plf
 
@@ -513,6 +515,7 @@ where `c`, `s_unstretched` and `d` are parameters, `s` is the distance between t
         radius = radius, [description = "Radius of spring when rendered"]
         N = N, [description = "Number of points in mesh when rendered"]
         num_windings = num_windings, [description = "Number of windings of the coil when rendered"]
+        end_ratio = end_ratio
     end
     # pars = collect_all(pars)
     

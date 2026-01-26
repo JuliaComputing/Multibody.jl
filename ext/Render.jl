@@ -672,7 +672,7 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
                 Makie.transform!(m, translation=r1, rotation=Q)
             end
         else
-            error("Shape $shape not supported")
+            error("""Shape $shape not supported, currently only supports "cylinder" and "box".""")
         end
     else
         T = get_frame_fun(sol, sys.frame_a)
@@ -845,12 +845,13 @@ function render!(scene, ::Union{typeof(Spring), typeof(SpringDamperParallel)}, s
     n_wind = sol(sol.t[1], idxs=sys.num_windings)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
     N = round(Int, sol(sol.t[1], idxs=sys.N))
+    end_ratio = sol(sol.t[1], idxs=sys.end_ratio) |> Float32
     thing = @lift begin
         r1 = Point3f(r_0a($t))
         r2 = Point3f(r_0b($t))
-        spring_mesh(r1,r2; n_wind, radius, N)
+        spring_mesh(r1,r2; n_wind, radius, N, end_ratio)
     end
-    plot!(scene, thing; color)
+    plot!(scene, thing; color, transparency=true)
     true
 end
 
@@ -905,7 +906,7 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
     false
 end
 
-function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)
+function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200, end_ratio = 0.1)
     phis = range(0, n_wind*2π, length=N)
     d = p2 - p1
     z = range(0, norm(d), length=N) # Correct length
@@ -913,8 +914,10 @@ function spring_mesh(p1, p2; n_wind=6, radius=0.1f0, N=200)
     R = rot_from_line(dn)
 
     points = map(enumerate(phis)) do (i,phi)
-        x = radius*cos(phi)
-        y = radius*sin(phi)
+        n_ramp = N * end_ratio
+        ri = i <= n_ramp ? i/n_ramp : i > N-n_ramp ? (N-i)/n_ramp : 1
+        x = ri*radius*cos(phi)
+        y = ri*radius*sin(phi)
         pᵢ = Point3f(x, y, z[i])
 
         R * pᵢ + p1
@@ -1080,12 +1083,13 @@ function render!(scene, ::Union{typeof(P.Spring), typeof(P.SpringDamper)}, sys, 
     n_wind = sol(sol.t[1], idxs=sys.num_windings)
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
     N = sol(sol.t[1], idxs=sys.N) |> Int
+    end_ratio = sol(sol.t[1], idxs=sys.end_ratio) |> Float32
     thing = @lift begin
         r1 = Point3f(r_0a($t)..., 0)
         r2 = Point3f(r_0b($t)..., 0)
-        spring_mesh(r1,r2; n_wind, radius, N)
+        spring_mesh(r1,r2; n_wind, radius, N, end_ratio, end_ratio)
     end
-    plot!(scene, thing; color)
+    plot!(scene, thing; color, transparency=true)
     true
 end
 
@@ -1147,8 +1151,8 @@ function render!(scene, ::typeof(Multibody.BoxVisualizer), sys, sol, t)
     height = Float32(sol(sol.t[1], idxs=sys.height))
     length = Float32(sol(sol.t[1], idxs=sys.length))
 
-    length_dir = sol(sol.t[1], idxs=collect(sys.render_length_dir))
-    width_dir = sol(sol.t[1], idxs=collect(sys.render_width_dir))
+    length_dir = sol(sol.t[1], idxs=collect(sys.length_direction))
+    width_dir = sol(sol.t[1], idxs=collect(sys.width_direction))
     height_dir = normalize(cross(normalize(length_dir), normalize(width_dir)))
     width_dir = normalize(cross(height_dir, length_dir))
 

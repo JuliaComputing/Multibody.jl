@@ -24,9 +24,9 @@ systems = @named begin
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0, 0, 0.3])
     spring1 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, fixed_rotation_at_frame_b=true,
-                               r_rel_0 = [-0.2, -0.2, 0.2], radius=0.05, num_windings=10)
-    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1, color=[0,0,0.3,1])
-    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, radius=0.05, num_windings=10)
+                               r_rel_0 = [-0.2, -0.2, 0.2], radius=0.05, num_windings=10, end_ratio=0.1)
+    spring2 = Multibody.Spring(c = 40, m = 0, s_unstretched = 0.1, color=[0,0,0.3,1], end_ratio=0.1)
+    spring3 = Multibody.Spring(c = 20, m = 0, s_unstretched = 0.1, radius=0.05, num_windings=10, end_ratio=0.1)
 end
 eqs = [connect(world.frame_b, bar1.frame_a)
        connect(world.frame_b, bar2.frame_a)
