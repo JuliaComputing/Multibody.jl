@@ -472,7 +472,6 @@ plot!(
                 # v_slip_long ~ v_long - radius * w_roll
 
                 v_slip ~ hypot(v_slip_long, v_slip_lat) + v_small
-                # -f_long * radius ~ flange_a.tau # No longer needed?
                 # frame_a.tau ~ 0
                 slip_ratio ~ v_slip_long / dot(v_0, e_long_0)
                 vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))

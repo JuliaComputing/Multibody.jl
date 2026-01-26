@@ -723,40 +723,5 @@ end
 
 @testset "OneDOFWheelJoint" begin
     @info "Testing OneDOFWheelJoint"
-    @component function SimpleTest(; name)
-        systems = @named begin
-            body = Pl.Body(m = 0.1, I = 0.1, phi=0, w=30, gy=-9.82)
-            wheelJoint = Pl.OneDOFWheelJoint(
-                x = 0,
-                v = 0,
-                radius = 1,
-                mu_A = 0.95,
-                mu_S = 0.7,
-                N = 10,
-                sAdhesion = 0.04,
-                sSlide = 0.12,
-                vAdhesion_min = 0.05,
-                vSlide_min = 0.15,
-            )
-        end
-
-        vars = @variables begin
-        end
-
-        eqs = [
-            # connect(wheelJoint.flange_a, inertia.flange_b)
-            wheelJoint.dynamicLoad.u ~ 0
-            connect(wheelJoint.frame_a, body.frame_a)
-        ]
-
-        System(eqs, t, vars, []; systems, name)
-    end
-
-    @named model = SimpleTest()
-    ssys = multibody(model)
-    prob = ODEProblem(ssys, [ssys.wheelJoint.frame_a.render => true, ssys.wheelJoint.frame_a.length => 1.3], (0.0, 3))
-    sol = solve(prob, Rodas5P())
-
-    @test sol(3, idxs=ssys.body.v[1] - ssys.body.w) ≈ 0 atol=1e-3 # The rotational speed eventually match linear speed (radius = 1)
-    @test sol(3, idxs=ssys.body.v[1]) > 0
+    include("test_OneDOFWheelJoint.jl")
 end

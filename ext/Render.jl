@@ -944,7 +944,7 @@ Multibody.render!(scene, ::typeof(Multibody.NullJoint), sys, sol, t) = false
 ## PlanarMechanics
 # ==============================================================================
 function get_rot_fun_2d(sol, frame)
-    phifun = get_fun(sol, -frame.phi)
+    phifun = get_fun(sol, frame.phi)
     function (t)
         phi = phifun(t)
         [cos(phi) -sin(phi); sin(phi) cos(phi)]
@@ -963,7 +963,7 @@ get_trans_2d(sol, frame, t) = SVector{2}(sol(t, idxs = [frame.x, frame.y]))
 get_trans_2d(sol, frame, t::AbstractArray) = sol(t, idxs = [frame.x, frame.y])
 
 function render!(scene, ::typeof(P.Frame), sys, sol, t)
-    # sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
+    sol(sol.t[1], idxs=sys.render)==true || return true # yes, == true
     radius = sol(sol.t[1], idxs=sys.radius) |> Float32
     length = sol(sol.t[1], idxs=sys.length) |> Float32
     T = get_frame_fun_2d(sol, sys)
@@ -1023,7 +1023,7 @@ function render!(scene, ::Union{typeof(P.FixedTranslation), typeof(P.BodyShape)}
         Makie.GeometryBasics.Cylinder(origin, extremity, radius)
     end
     mesh!(scene, thing; color, specular = Vec3f(1.5), shininess=20f0, diffuse=Vec3f(1))
-    true
+    false
 end
 
 function render!(scene, ::typeof(P.Prismatic), sys, sol, t)

@@ -189,8 +189,7 @@ A fixed translation between two components (rigid rod)
 
     # Calculations from begin blocks
     # r = collect(r)
-    R = [cos(phi) -sin(phi);
-         sin(phi) cos(phi)]
+    R = ori_2d(phi)
     r0 = R * r
 
     equations = Equation[
@@ -794,7 +793,6 @@ end
 """
     OneDOFWheelJoint(;
         name,
-        N,
         vAdhesion_min,
         vSlide_min,
         sAdhesion,
@@ -822,11 +820,10 @@ This makes it suitable for simplified 1-DOF models like a planar Segway where th
 
 The slip-dependent friction model is the same as `SlipBasedWheelJoint`:
 - For low velocities, a dry-friction model is used
-- The normal load determines the maximum friction force
+- The normal load is determined automatically from constraint dynamics (mass and gravity of attached body)
 - Friction transitions smoothly between adhesion and sliding regimes
 
 # Parameters:
-- `N`: Base normal load
 - `radius`: Wheel radius (also determines y-position constraint)
 - `mu_A`: Friction coefficient at adhesion (peak traction)
 - `mu_S`: Friction coefficient at sliding (saturated traction)
@@ -836,9 +833,7 @@ The slip-dependent friction model is the same as `SlipBasedWheelJoint`:
 - `vSlide_min`: Minimum sliding velocity (for low-speed stability)
 
 # Connectors:
-- `frame_a` (Frame) Coordinate system fixed to the wheel
-- `flange_a` (Rotational.Flange) Flange for the rolling motion (apply driving torque here)
-- `dynamicLoad` (Blocks.RealInput) Input for dynamic normal load component
+- `frame_a` (Frame) Coordinate system fixed to the wheel. Attach a body here for mass/inertia.
 
 # Example
 ```julia
@@ -846,7 +841,6 @@ wheelJoint = OneDOFWheelJoint(
     radius = 0.025,
     mu_A = 1,
     mu_S = 0.7,
-    N = 1000,
     sAdhesion = 0.04,
     sSlide = 0.12,
     vAdhesion_min = 0.05,
@@ -856,7 +850,6 @@ wheelJoint = OneDOFWheelJoint(
 """
 @component function OneDOFWheelJoint(;
     name,
-    N,
     vAdhesion_min,
     vSlide_min,
     sAdhesion,
@@ -876,10 +869,8 @@ wheelJoint = OneDOFWheelJoint(
 )
     systems = @named begin
         frame_a = Frame()
-        dynamicLoad = Blocks.RealInput()
     end
     pars = @parameters begin
-        N = N, [description = "Base normal load"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
         vSlide_min = vSlide_min, [description = "Minimum sliding velocity"]
         sAdhesion = sAdhesion, [description = "Adhesion slippage"]
@@ -902,8 +893,8 @@ wheelJoint = OneDOFWheelJoint(
         v_slip_long(t), [guess=0, description="Slip velocity in longitudinal direction"]
         v_slip(t), [description="Slip velocity magnitude"]
         f(t), [description="Total traction force magnitude"]
-        f_long(t), [description="Longitudinal force"]
-        fN(t), [description="Effective normal load"]
+        f_long(t), [description="Longitudinal friction force"]
+        f_n(t), [guess=10.0, description="Normal constraint force (determined by dynamics)"]
         vAdhesion(t), [description="Adhesion velocity threshold"]
         vSlide(t), [description="Sliding velocity threshold"]
     end
@@ -913,24 +904,27 @@ wheelJoint = OneDOFWheelJoint(
         x ~ frame_a.x
         v ~ D(x)
 
-        # Wheel angle coupling to flange
-        phi_roll ~ frame_a.phi
+        # Wheel angle coupling
+        phi_roll ~ -frame_a.phi
         w_roll ~ D(phi_roll)
 
         # Longitudinal slip (difference between ground velocity and wheel surface velocity)
         v_slip_long ~ v - radius * w_roll
         v_slip ~ abs(v_slip_long) + 0.0001
 
-        # Slip-dependent friction (same model as SlipBasedWheelJoint)
+        # Slip-dependent friction (like 3D SlipWheelJoint)
+        # f_n is the normal force, determined by constraint dynamics when a body is attached
         vAdhesion ~ max(vAdhesion_min, sAdhesion * abs(radius * w_roll))
         vSlide ~ max(vSlide_min, sSlide * abs(radius * w_roll))
-        fN ~ max(0, N + dynamicLoad.u)
-        f ~ fN * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip)
-        f_long ~ f * v_slip_long / v_slip
+        f ~ f_n * limit_S_triple(vAdhesion, vSlide, mu_A, mu_S, v_slip)
+        f_long ~ - f * v_slip_long / v_slip
 
+        # Frame forces from contact
         frame_a.fx ~ f_long
-        -f_long * radius ~ frame_a.tau
+        frame_a.fy ~ f_n
+        frame_a.tau ~ radius * f_long
 
+        # Position constraint
         frame_a.y ~ radius      # Wheel center at ground level + radius
     ]
 
