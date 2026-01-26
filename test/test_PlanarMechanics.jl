@@ -715,9 +715,9 @@ import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Transl
     sol = solve(prob, Rodas5P())
     # Multibody.render(model, sol, 0.0, lookat=[0,0.5,0], x=0, y=0.5, z=-3)[1]
 
-    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.x) ≈ 2pi atol=1e-3
+    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.x) ≈ -2pi atol=1e-3
     @test sol(2pi, idxs=ssys.wheelJoint.frame_a.fx) ≈ 0 atol=1e-3
-    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.fy) ≈ -0.1*9.82 atol=1e-3
+    @test sol(2pi, idxs=ssys.wheelJoint.frame_a.fy) ≈ 0.1*9.82 atol=1e-3
 end
 
 

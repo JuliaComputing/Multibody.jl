@@ -1004,7 +1004,7 @@ wheelJoint = RollingWheelJoint(radius = 0.025)
 
     equations = Equation[
         # Wheel angle coupling to flange
-        phi_roll ~ frame_a.phi
+        phi_roll ~ -frame_a.phi
         w_roll ~ D(phi_roll)
 
         x ~ frame_a.x
@@ -1015,13 +1015,10 @@ wheelJoint = RollingWheelJoint(radius = 0.025)
         # v ~ radius * w_roll
 
         # Force/torque relationship (from constraint)
-        frame_a.fx * radius ~ frame_a.tau
+        frame_a.tau ~ radius * frame_a.fx
 
         # 1-DOF constraints
         frame_a.y ~ radius      # Wheel center at ground level + radius
-        # frame_a.tau + flange_a.tau ~ 0
-        # frame_a.phi ~ flange_a.phi
-        # frame_a.fy  ~ 0          # Vertical force handled externally
     ]
 
     return System(equations, t, vars, pars; name, systems)
