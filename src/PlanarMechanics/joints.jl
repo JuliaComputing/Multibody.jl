@@ -61,7 +61,7 @@ A revolute joint
 
     if axisflange
         @named fixed = Rotational.Fixed()
-        @named flange_a = Rotational.Flange(; phi, tau)
+        @named flange_a = Rotational.Flange()#; phi, tau)
         @named support = Rotational.Support()
         push!(systems, fixed)
         push!(systems, flange_a)

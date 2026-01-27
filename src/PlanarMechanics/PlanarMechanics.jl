@@ -28,4 +28,8 @@ export AbsolutePosition,
        RelativePosition, AbsoluteVelocity, RelativeVelocity, AbsoluteAcceleration,
        RelativeAcceleration, connect_sensor
 include("sensors.jl")
+
+
+export WorldForceTorque
+include("sources.jl")
 end
