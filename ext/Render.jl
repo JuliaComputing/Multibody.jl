@@ -791,7 +791,7 @@ function render!(scene, ::typeof(UniversalSpherical), sys, sol, t)
     true
 end
 
-function render!(scene, ::Union{typeof(OneDOFRollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
+function render!(scene, ::Union{typeof(RollingWheelJoint), typeof(SlipWheelJoint)}, sys, sol, t)
     
     r_0 = get_fun(sol, collect(sys.frame_a.r_0))
     # framefun = get_frame_fun(sol, sys.frame_a)
@@ -1087,7 +1087,7 @@ function render!(scene, ::Union{typeof(P.Spring), typeof(P.SpringDamper)}, sys, 
     thing = @lift begin
         r1 = Point3f(r_0a($t)..., 0)
         r2 = Point3f(r_0b($t)..., 0)
-        spring_mesh(r1,r2; n_wind, radius, N, end_ratio, end_ratio)
+        spring_mesh(r1,r2; n_wind, radius, N, end_ratio)
     end
     plot!(scene, thing; color, transparency=true)
     true
