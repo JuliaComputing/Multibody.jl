@@ -374,65 +374,43 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         # @warn "Make the body have state variables by using isroot=true rather than state=true"
         isroot = true
     end
-    @variables r_0(t)[1:3]=r_0 [
-        state_priority = state_priority+isroot,
-        description = "Position vector from origin of world frame to origin of frame_a",
-    ]
-    @variables v_0(t)[1:3]=v_0 [ 
-        state_priority = state_priority+isroot,
-        description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
-    ]
-    @variables a_0(t)[1:3] [ 
-        description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
-    ]
-    @variables g_0(t)[1:3] [ description = "gravity acceleration"]
-    @variables w_a(t)[1:3]=w_a [ 
-        state_priority = isroot ? quat ? state_priority : -1 : 0,
-        description = "Absolute angular velocity of frame_a resolved in frame_a",
-    ]
-    @variables z_a(t)[1:3] [ 
-        description = "Absolute angular acceleration of frame_a resolved in frame_a",
-    ]
-    # 6*3 potential variables + Frame: 2*3 flow + 3 potential + 3 residual = 24 equations + 2*3 flow
-    @parameters m=m [description = "mass"]
-    @parameters r_cm[1:3]=r_cm [
-        description = "Vector from frame_a to center of mass, resolved in frame_a",
-    ]
-    @parameters radius=radius [
-        description = "Radius of the body in animations",
-    ]
-    @parameters cylinder_radius=cylinder_radius [
-        description = "Radius of the cylinder from frame to COM in animations",
-    ]
-    @parameters color[1:4] = color [description = "Color of the body in animations (RGBA)"]
-    @parameters length_fraction=length_fraction, [description = "Fraction of the length of the body that is the cylinder from frame to COM in animations"]
-    @parameters render = render [description = "Render the component in animations"]
-    # @parameters I[1:3, 1:3]=I [description="inertia tensor"]
 
     if sparse_I
         Isparsity = sparse(.!isequal.(0, [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]))
     end
 
-    @parameters I_11=I_11 [description = "Element (1,1) of inertia tensor"]
-    @parameters I_22=I_22 [description = "Element (2,2) of inertia tensor"]
-    @parameters I_33=I_33 [description = "Element (3,3) of inertia tensor"]
-    @parameters I_21=I_21 [description = "Element (2,1) of inertia tensor"]
-    @parameters I_31=I_31 [description = "Element (3,1) of inertia tensor"]
-    @parameters I_32=I_32 [description = "Element (3,2) of inertia tensor"]
+    vars = @variables begin
+        r_0(t)[1:3]=r_0, [state_priority = state_priority+isroot, description = "Position vector from origin of world frame to origin of frame_a"]
+        v_0(t)[1:3]=v_0, [state_priority = state_priority+isroot, description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))"]
+        a_0(t)[1:3], [description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))"]
+        g_0(t)[1:3], [description = "gravity acceleration"]
+        w_a(t)[1:3]=w_a, [state_priority = isroot ? quat ? state_priority : -1 : 0, description = "Absolute angular velocity of frame_a resolved in frame_a"]
+        z_a(t)[1:3], [description = "Absolute angular acceleration of frame_a resolved in frame_a"]
+    end
+
+    pars = @parameters begin
+        m=m, [description = "mass"]
+        r_cm[1:3]=r_cm, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
+        I_11=I_11, [description = "Element (1,1) of inertia tensor"]
+        I_22=I_22, [description = "Element (2,2) of inertia tensor"]
+        I_33=I_33, [description = "Element (3,3) of inertia tensor"]
+        I_21=I_21, [description = "Element (2,1) of inertia tensor"]
+        I_31=I_31, [description = "Element (3,1) of inertia tensor"]
+        I_32=I_32, [description = "Element (3,2) of inertia tensor"]
+        radius=radius, [description = "Radius of the body in animations"]
+        cylinder_radius=cylinder_radius, [description = "Radius of the cylinder from frame to COM in animations"]
+        color[1:4] = color, [description = "Color of the body in animations (RGBA)"]
+        length_fraction=length_fraction, [description = "Fraction of the length of the body that is the cylinder from frame to COM in animations"]
+        render = render, [description = "Render the component in animations"]
+    end
 
     I = [I_11 I_21 I_31; I_21 I_22 I_32; I_31 I_32 I_33]
     if sparse_I
         I = I.*Isparsity
     end
 
-    # r_0, v_0, a_0, g_0, w_a, z_a, r_cm = collect.((r_0, v_0, a_0, g_0, w_a, z_a, r_cm))
-
-    # DRa = D(Ra)
-
-    dvs = [r_0;v_0;a_0;g_0;w_a;z_a;]
-
     eqs = if isroot # isRoot
-        
+
         if quat
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
@@ -443,7 +421,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3] [state_priority = 0]
-            # phi, phid, phidd = collect.((phi, phid, phidd))
+            append!(vars, [phi; phid; phidd])
             ar = axes_rotations(sequence, phi, phid)
             Equation[
                     phid .~ D.(phi)
@@ -478,10 +456,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
            end
            (frame_a.tau ~ I * z_a + cross(w_a, collect(I * w_a)) + cross(r_cm, frame_a.f))]
 
-    # pars = [m;r_cm;radius;I_11;I_22;I_33;I_21;I_31;I_32;color]
-    
-    sys = System(eqs, t; name=:nothing, metadata = Dict(IsRoot => isroot), systems = [frame_a])
-    add_params(sys, [radius; cylinder_radius; color; length_fraction; render]; name)
+    System(eqs, t, vars, pars; name, metadata = Dict(IsRoot => isroot), systems = [frame_a])
 end
 
 

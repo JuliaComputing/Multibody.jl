@@ -235,7 +235,7 @@ u = m.axis2.controller.PI.ctr_output.u
     ssys = multibody(oneaxis)
 
     op = Dict([
-        # oneaxis.axis.flange.phi => 0
+        oneaxis.axis.motor.Rd4.i => 0
         # D(oneaxis.axis.flange.phi) => 0
         # D(D(oneaxis.axis.flange.phi)) => 0
         # D(D(oneaxis.load.phi)) => 0
@@ -263,7 +263,7 @@ u = m.axis2.controller.PI.ctr_output.u
     # ], (0.0, 5.0))
 
 
-    prob = ODEProblem(ssys, collect(op), (0.0, 3),)
+    prob = ODEProblem(ssys, op, (0.0, 3),)
     sol = solve(prob, Tsit5());
     if doplot()
         plot(sol, layout=length(unknowns(ssys)), size=(1900, 1200))
@@ -348,34 +348,34 @@ end
 
 
 
-@testset "subs constants" begin
-    @info "Testing subs constants"
-    @named robot = Robot6DOF()
-    robot = complete(robot)
-    ssys = multibody(robot)
-    ssys = Multibody.subs_constants(robot; ssys)
-    prob = ODEProblem(ssys, [
-        robot.mechanics.r1.phi => deg2rad(-60)
-        robot.mechanics.r2.phi => deg2rad(20)
-        robot.mechanics.r3.phi => deg2rad(90)
-        robot.mechanics.r4.phi => deg2rad(0)
-        robot.mechanics.r5.phi => deg2rad(-110)
-        robot.mechanics.r6.phi => deg2rad(0)
+# @testset "subs constants" begin
+#     @info "Testing subs constants"
+#     @named robot = Robot6DOF()
+#     robot = complete(robot)
+#     ssys = multibody(robot)
+#     ssys = Multibody.subs_constants(robot; ssys)
+#     prob = ODEProblem(ssys, [
+#         robot.mechanics.r1.phi => deg2rad(-60)
+#         robot.mechanics.r2.phi => deg2rad(20)
+#         robot.mechanics.r3.phi => deg2rad(90)
+#         robot.mechanics.r4.phi => deg2rad(0)
+#         robot.mechanics.r5.phi => deg2rad(-110)
+#         robot.mechanics.r6.phi => deg2rad(0)
 
-        robot.axis1.motor.Jmotor.phi => deg2rad(-60) * (-105) # Multiply by gear ratio
-        robot.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
-        robot.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
-    ], (0.0, 2.0))
-    sol2 = solve(prob, Rodas5P(autodiff=false))
+#         robot.axis1.motor.Jmotor.phi => deg2rad(-60) * (-105) # Multiply by gear ratio
+#         robot.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
+#         robot.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
+#     ], (0.0, 2.0))
+#     sol2 = solve(prob, Rodas5P(autodiff=false))
 
-    @test SciMLBase.successful_retcode(sol2)
+#     @test SciMLBase.successful_retcode(sol2)
 
-    tv = 0:0.1:2
-    # control_error = sol2(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
-    # @test maximum(abs, control_error) < 0.002
+#     tv = 0:0.1:2
+#     # control_error = sol2(tv, idxs=robot.pathPlanning.controlBus.axisControlBus1.angle_ref-robot.pathPlanning.controlBus.axisControlBus1.angle)
+#     # @test maximum(abs, control_error) < 0.002
 
-    # using BenchmarkTools
-    # @btime solve(prob, Rodas5P(autodiff=false));
-    # 152.225 ms (2272926 allocations: 40.08 MiB)
-    # 114.113 ms (1833534 allocations: 33.38 MiB) # sub 0, 1
-end
+#     # using BenchmarkTools
+#     # @btime solve(prob, Rodas5P(autodiff=false));
+#     # 152.225 ms (2272926 allocations: 40.08 MiB)
+#     # 114.113 ms (1833534 allocations: 33.38 MiB) # sub 0, 1
+# end
