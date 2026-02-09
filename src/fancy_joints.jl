@@ -331,7 +331,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         render = render, [description="Whether or not to render the joint in animations"]
     end
 
-    pars = collect_all(pars)
+    # pars = collect_all(pars)
 
     vars = @variables begin
         f_rod(t), [description="Constraint force in direction of the rod (positive on frame_a, when directed from frame_a to frame_b)"]
@@ -340,14 +340,14 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         # e3_ia(t)[1:3], [description="Unit vector perpendicular to eRod_ia and e2_ia, resolved in frame_ia"]
         f_b_a1(t)[1:3], [description="frame_b.f without f_rod part, resolved in frame_a (needed for analytic loop handling)"]
         eRod_a(t)[1:3], [description="Unit vector in direction of rRod_a, resolved in frame_a (needed for analytic loop handling)"]
-        rRod_0(t)[1:3] = rRod_ia, [description="Position vector from frame_a to frame_b resolved in world frame"]
-        rRod_a(t)[1:3] = rRod_ia, [description="Position vector from frame_a to frame_b resolved in frame_a"]
-        (constraint_residue(t) = 0), [description="Constraint equation of joint in residue form: Either length constraint (= default) or equation to compute rod force (for analytic solution of loops in combination with Internal.RevoluteWithLengthConstraint/PrismaticWithLengthConstraint)"]
+        rRod_0(t)[1:3], [guess = rRod_ia, description="Position vector from frame_a to frame_b resolved in world frame"]
+        rRod_a(t)[1:3], [guess = rRod_ia, description="Position vector from frame_a to frame_b resolved in frame_a"]
+        (constraint_residue(t)), [guess = 0, description="Constraint equation of joint in residue form: Either length constraint (= default) or equation to compute rod force (for analytic solution of loops in combination with Internal.RevoluteWithLengthConstraint/PrismaticWithLengthConstraint)"]
         f_b_a(t)[1:3], [description="frame_b.f resolved in frame_a"]
         f_ia_a(t)[1:3], [description="frame_ia.f resolved in frame_a"]
         t_ia_a(t)[1:3], [description="frame_ia.t resolved in frame_a"]
         n2_a(t)[1:3], [description="Vector in direction of axis 2 of the universal joint (e2_ia), resolved in frame_a"]
-        (length2_n2_a(t) = 1), [description="Square of length of vector n2_a"]
+        (length2_n2_a(t)), [guess = 1, description="Square of length of vector n2_a"]
         length_n2_a(t), [description="Length of vector n2_a"]
         e2_a(t)[1:3], [description="Unit vector in direction of axis 2 of the universal joint (e2_ia), resolved in frame_a"]
         e3_a(t)[1:3], [description="Unit vector perpendicular to eRod_ia and e2_a, resolved in frame_a"]

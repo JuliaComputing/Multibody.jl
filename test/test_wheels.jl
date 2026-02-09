@@ -14,6 +14,7 @@ using LinearAlgebra
                             I_long = 0.12,
                             x0 = 0.2,
                             z0 = 0.2,
+                            angles = [0,0,0],
                             der_angles = [0, -5, -1])
     end
 
@@ -31,22 +32,9 @@ end
 @named worldwheel = WheelInWorld()
 
 defs = Dict([
-
 ])
 
-ssys = multibody(worldwheel)
-guesses = Dict([
-    # collect(ssys.wheel.wheeljoint.angles) .=> [0,0,0];
-    ssys.wheel.wheeljoint.v_0[2] => 0.00001;
-# (ssys.wheel.wheeljoint.f_wheel_0)[3]  => 0
-# (ssys.wheel.wheeljoint.vContact_0)[3]  => 0
-# (ssys.wheel.wheeljoint.delta_0)[2]  => 0
-# (ssys.wheel.wheeljoint.f_wheel_0)[2]  => 0
-# (ssys.wheel.wheeljoint.f_wheel_0)[1]  => 0
-# (ssys.wheel.wheeljoint.delta_0)[1]  => 0
-])
-
-prob = ODEProblem(ssys, [], (0, 4); guesses, missing_guess_value = MissingGuessValue.Random(Random.GLOBAL_RNG))
+prob = ODEProblem(ssys, defs, (0, 4); guesses, missing_guess_value = MissingGuessValue.Random(Random.GLOBAL_RNG))
 @test prob[collect(worldwheel.wheel.wheeljoint.der_angles)] == prob[collect(worldwheel.wheel.wheeljoint.der_angles)]
 
 sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)

@@ -11,7 +11,7 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10.0, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
     j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
     b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
     b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
@@ -38,7 +38,6 @@ connections = [connect(j2.frame_b, b2.frame_a)
                connect(b0.frame_b, j2.frame_a)
                ]
 @named fourbar2 = System(connections, t, systems = [world; systems])
-fourbar2 = complete(fourbar2)
 ssys = multibody(fourbar2)
 
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
@@ -49,7 +48,7 @@ sol = solve(prob, FBDF(autodiff=true));
 
 
 systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755983, state_priority=12.0, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755983, phi0=nothing, state_priority=12, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
     j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
     b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
     b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
@@ -67,9 +66,8 @@ connections = [connect(j2.frame_b, b2.frame_a)
 ]
 
 @named model = System(connections, t, systems = [world; systems])
-model = complete(model)
-ssys = multibody(model)
-prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
+ssys = multibody(model, allow_symbolic=true)
+prob = ODEProblem(ssys, [], (0.0, 1.4399), guesses = [ssys.j1.phi => 0]) # The end time is chosen to make the animation below appear to loop forever
 sol2 = solve(prob, FBDF(autodiff=true)) # 3.9x faster than above
 # plot(sol2, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green in the animation below)
 
