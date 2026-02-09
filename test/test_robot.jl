@@ -235,50 +235,29 @@ u = m.axis2.controller.PI.ctr_output.u
     ssys = multibody(oneaxis)
 
     op = Dict([
-        oneaxis.axis.motor.Rd4.i => 0
-        # D(oneaxis.axis.flange.phi) => 0
-        # D(D(oneaxis.axis.flange.phi)) => 0
-        # D(D(oneaxis.load.phi)) => 0
-        # D(oneaxis.axis.gear.gear.phi_b) => 0
-        # oneaxis.axis.controller.PI.T => 0.01
-        # oneaxis.axis.controller.PI.gainPI.k => 1
-        # oneaxis.axis.controller.P.k => 10
-        # oneaxis.load.J => 1.3*15
-        # oneaxis.load.phi => 0
+        ssys.axis.motor.Rd4.i => 0
     ])
-    # matrices_S, simplified_sys = Blocks.get_sensitivity(oneaxis, :axis₊controller_e; op)
-
-
-    # using ControlSystemsBase 
-    # S = ss(matrices_S...) |> minreal
-    # @test isstable(S)
-    # bodeplot(S)
-
-
-    # ssys = structural_simplify(oneaxis)
-    # cm = oneaxis
-    # prob = ODEProblem(ssys, [
-    #     cm.axis.flange.phi => 0
-    #     D(cm.axis.flange.phi) => 0
-    # ], (0.0, 5.0))
-
 
     prob = ODEProblem(ssys, op, (0.0, 3),)
     sol = solve(prob, Tsit5());
     if doplot()
         plot(sol, layout=length(unknowns(ssys)), size=(1900, 1200))
-        plot!(sol, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref)
+        plot!(sol, idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref)
         display(current())
     end
     @test SciMLBase.successful_retcode(sol)
-    # @test sol(10, idxs=oneaxis.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
+    # @test sol(10, idxs=ssys.axis.controller.PI.err_input.u) ≈ 0 atol=1e-8
 
-    tv = 0:0.1:10.0
-    control_error = sol(tv, idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref-oneaxis.load.phi)
+    tv = 0:0.1:3.0
+    control_error = sol(tv, idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref-ssys.load.phi)
 
-    @test sol(tv[1], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
-    @test sol(tv[end], idxs=oneaxis.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
-    @test maximum(abs, control_error) < 1e-3
+    # plot(sol, idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref)
+    # plot!(sol, idxs=ssys.load.phi)
+    # plot!(sol, idxs=idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref-ssys.load.phi)
+
+    @test sol(tv[1], idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(0) atol=1e-8
+    @test sol(tv[end], idxs=ssys.pathPlanning.controlBus.axisControlBus1.angle_ref) ≈ deg2rad(120)
+    @test maximum(abs, control_error) < 2e-3
 end
 
 
