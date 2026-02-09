@@ -416,17 +416,17 @@ This component has a single frame, `frame_a`. To represent bodies with more than
             Ra = ori(frame_a, false)
             qeeqs = nonunit_quaternion_equations(Ra, w_a)
         else
-            @named frame_a = Frame(varw=true)
-            Ra = ori(frame_a, true)
+            @named frame_a = Frame(varw=false)
+            Ra = ori(frame_a, false)
             @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
             @variables phid(t)[1:3]=phid0 [state_priority = 10]
             @variables phidd(t)[1:3] [state_priority = 0]
-            append!(vars, [phi; phid; phidd])
+            append!(vars, [phi, phid, phidd])
             ar = axes_rotations(sequence, phi, phid)
             Equation[
                     phid .~ D.(phi)
                     phidd .~ D.(phid)
-                    Ra.w .~ ar.w
+                    # Ra.w .~ ar.w
                     collect(w_a .~ (angular_velocity2(ar)))
                         # w_a .~ ar.w # This one for most systems
                     Ra ~ ar
