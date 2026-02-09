@@ -105,14 +105,13 @@ A component rigidly attached to the world frame with translation `r` between the
 """
 @component function Fixed(; name, r = [0, 0, 0], render = true)
     systems = @named begin frame_b = Frame() end
-    @parameters begin
+    pars = @parameters begin
         r[1:3] = r, [description = "Position vector from world frame to frame_b, resolved in world frame"]
         render = render, [description = "Render the component in animations"]
     end
     eqs = [frame_b.r_0 ~ r
            ori(frame_b) ~ nullrotation()]
-    sys = compose(System(eqs, t; name=:nothing), systems...)
-    add_params(sys, [render]; name)
+    compose(System(eqs, t, [], pars; name), systems...)
 end
 
 """
@@ -129,10 +128,10 @@ See also [`Pose`](@ref) for a component that allows for forced orientation as we
 """
 @component function Position(; name, r = [0, 0, 0], render = true, fixed_orientation = true, x_locked = true, y_locked = true, z_locked = true)
     systems = @named begin frame_b = Frame() end
-    @parameters begin
+    pars = @parameters begin
         render = render, [description = "Render the component in animations"]
     end
-    @variables begin
+    vars = @variables begin
         p(t)[1:3], [description = "Position vector from world frame to frame_b, resolved in world frame"]
         v(t)[1:3], [description = "Absolute velocity of frame_b, resolved in world frame"]
         a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
@@ -146,8 +145,7 @@ See also [`Pose`](@ref) for a component that allows for forced orientation as we
     if fixed_orientation
         append!(eqs, ori(frame_b) ~ nullrotation())
     end
-    sys = compose(System(eqs, t; name=:nothing), systems...)
-    add_params(sys, [render]; name)
+    compose(System(eqs, t, vars, pars; name), systems...)
 end
 
 """
@@ -177,10 +175,10 @@ See also [`Position`](@ref) for a component that allows for only forced translat
 """
 @component function Pose(; name, r = [0, 0, 0], R=nothing, q=nothing, render = true, normalize=true, x_locked = true, y_locked = true, z_locked = true)
     systems = @named begin frame_b = Frame() end
-    @parameters begin
+    pars = @parameters begin
         render = render, [description = "Render the component in animations"]
     end
-    @variables begin
+    vars = @variables begin
         p(t)[1:3], [description = "Position vector from world frame to frame_b, resolved in world frame"]
         v(t)[1:3], [description = "Absolute velocity of frame_b, resolved in world frame"]
         a(t)[1:3], [description = "Absolute acceleration of frame_b, resolved in world frame"]
@@ -198,8 +196,7 @@ See also [`Position`](@ref) for a component that allows for only forced translat
             error("Either R or q must be provided. If you only want to specify the position, use the `Position` component instead.")
         end
     ]
-    sys = compose(System(eqs, t; name=:nothing), systems...)
-    add_params(sys, [render]; name)
+    compose(System(eqs, t, vars, pars; name), systems...)
 end
 
 @component function Mounting1D(; name, n = [1, 0, 0], phi0 = 0)
