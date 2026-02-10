@@ -359,6 +359,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               r_0 = state || isroot ? zeros(3) : nothing,
               v_0 = state || isroot ? zeros(3) : nothing,
               w_a = (state || isroot) && quat ? zeros(3) : nothing,
+              Q0 = (state || isroot) && quat ? [1, 0, 0, 0] : nothing,
               radius = 0.05,
               cylinder_radius = radius/2,
               length_fraction = 1,
@@ -411,7 +412,7 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         if quat
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
-            qeeqs, qvars, qpars = nonunit_quaternion_equations(Ra, w_a)
+            qeeqs, qvars, qpars = nonunit_quaternion_equations(Ra, w_a; Q0)
             vars = [vars; qvars]
             pars = [pars; qpars]
             qeeqs
