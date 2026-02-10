@@ -28,16 +28,16 @@ BP = 129.03 / 1000
 DE = 310.31 / 1000
 t5 = 19.84 |> deg2rad
 
-@component function QuarterCarSuspension(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7], mirror = false)
+@component function QuarterCarSuspension(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7], mirror = false, cs=4000, ks=44000, rod_radius=0.02, jr=0.03)
     dir = mirror ? -1 : 1
     rRod1_ia = AB*normalize([0, -0.1, 0.2dir])
     rRod2_ib = BC*normalize([0, 0.2, 0dir])
 
     pars = @parameters begin
-        cs = 4000, [description = "Damping constant [Ns/m]"]
-        ks = 44000, [description = "Spring constant [N/m]"]
-        rod_radius = 0.02
-        jr = 0.03, [description = "Radius of revolute joint"]
+        cs = cs, [description = "Damping constant [Ns/m]"]
+        ks = ks, [description = "Spring constant [N/m]"]
+        rod_radius = rod_radius
+        jr = jr, [description = "Radius of revolute joint"]
     end
 
     systems = @named begin
@@ -47,15 +47,14 @@ t5 = 19.84 |> deg2rad
         chassis = FixedTranslation(r = DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=false)
         chassis_frame = Frame()
 
-        if spring
+    end
+    if spring
+        more_systems = @named begin 
             springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius, num_windings=10)
-        end
-        if spring
             spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false)
-        end
-        if spring
             spring_mount_E = FixedTranslation(r = 1.3DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=true)
         end
+        systems = [systems; more_systems]
     end
 
     A = chassis.frame_b
@@ -82,28 +81,30 @@ t5 = 19.84 |> deg2rad
         connect(chassis_frame, chassis.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 mirror = false
-@component function SuspensionWithExcitation(; name, mirror = false)
+@component function SuspensionWithExcitation(; name, mirror = false, ms = 1500/4, rod_radius = 0.02, amplitude = 0.1, freq = 2, spring=true, r = [0, 0, CD], r_0 = [0, 0.1, 0])
     dir = mirror ? -1 : 1
 
     pars = @parameters begin
-        ms = 1500, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
-        amplitude = 0.1, [description = "Amplitude of wheel displacement"]
-        freq = 2, [description = "Frequency of wheel displacement"]
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius, [description = "Radius of the rod"]
+        amplitude = amplitude, [description = "Amplitude of wheel displacement"]
+        freq = freq, [description = "Frequency of wheel displacement"]
+        r[1:3] = r, [description = "Actuation position"]
+        r_0[1:3] = r_0, [description = "Initial position of the actuation rod"]
     end
 
     systems = @named begin
-        fixed = Fixed()
+        fixed = Multibody.Fixed()
         chassis_frame = Frame()
-        suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
+        suspension = QuarterCarSuspension(; spring, mirror, rod_radius)
 
         wheel_prismatic = Prismatic(n = [0,1,0], axisflange=true, state_priority=100, iscut=false)
-        actuation_rod = SphericalSpherical(radius=rod_radius, r_0 = [0, BC, 0])
-        actuation_position = FixedTranslation(r = [0, 0, CD*dir], render=false)
+        actuation_rod = SphericalSpherical(; radius=rod_radius, r_0)
+        actuation_position = FixedTranslation(; r, render=false)
         wheel_position = Translational.Position(exact=true)
     end
 
@@ -122,21 +123,21 @@ mirror = false
         connect(chassis_frame, suspension.chassis_frame)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
-@component function SuspensionWithExcitationAndMass(; name, mirror = false)
+@component function SuspensionWithExcitationAndMass(; name, mirror = false, ms = 1500, rod_radius = 0.02)
     dir = mirror ? -1 : 1
 
     pars = @parameters begin
-        ms = 1500, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius, [description = "Radius of the rod"]
     end
 
     systems = @named begin
         world = World()
         mass = Body(m=ms, r_cm = 0.5DA*normalize([0, 0.2, 0.2*sin(t5)*dir]))
-        excited_suspension = SuspensionWithExcitation(; suspension.spring=true, mirror, rod_radius)
+        excited_suspension = SuspensionWithExcitation(; spring=true, mirror, rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
     end
 
@@ -148,25 +149,24 @@ end
         connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named model = SuspensionWithExcitationAndMass()
-model = complete(model)
 ssys = multibody(model)
 
 defs = [
-    model.body_upright.s => 0.17
-    model.excited_suspension.amplitude => 0.05
-    model.excited_suspension.freq => 10
-    model.excited_suspension.suspension.ks => 30*44000
-    model.excited_suspension.suspension.cs => 30*4000
-    model.ms => 1500/4
-    model.excited_suspension.suspension.springdamper.num_windings => 10
-    # model.r1.phi => -1.0889
-    model.excited_suspension.suspension.r2.phi => -0.6031*(mirror ? -1 : 1)
-    # model.r3.phi => 0.47595
-    model.body_upright.v => 0.14
+    ssys.body_upright.s => 0.17
+    ssys.excited_suspension.amplitude => 0.05
+    ssys.excited_suspension.freq => 10
+    ssys.excited_suspension.suspension.ks => 30*44000
+    ssys.excited_suspension.suspension.cs => 30*4000
+    ssys.ms => 1500/4
+    ssys.excited_suspension.suspension.springdamper.num_windings => 10
+    # ssys.r1.phi => -1.0889
+    ssys.excited_suspension.suspension.r2.phi => -0.6031*(mirror ? -1 : 1)
+    # ssys.r3.phi => 0.47595
+    ssys.body_upright.v => 0.14
 ]
 
 display(sort(unknowns(ssys), by=string))
@@ -175,7 +175,7 @@ prob = ODEProblem(ssys, defs, (0, 2))
 sol = solve(prob, FBDF(autodiff=true))
 @test SciMLBase.successful_retcode(sol)
 rms(x) = sqrt(sum(abs2, x) / length(x))
-@test rms(sol(0:0.1:2, idxs=model.body_upright.v)) ≈ 2.740 atol=0.01
+@test rms(sol(0:0.1:2, idxs=ssys.body_upright.v)) ≈ 2.740 atol=0.01
 ```
 ```@example suspension
 import GLMakie
@@ -193,22 +193,22 @@ Due to the high excitation frequency, we make use of the argument `timescale = 3
 In the example below, we extend the previous example to a half-car model with two wheels. We now model the car as a [`BodyShape`](@ref) and attach one suspension system on each side. This time, we let the car rotate around the x-axis to visualize roll effects due to uneven road surfaces. We excite each wheel with similar but slightly different frequencies to produce a beat.
 
 ```@example suspension
-@component function DoubleSuspensionWithExcitationAndMass(; name, wheel_base = 1)
+@component function DoubleSuspensionWithExcitationAndMass(; name, wheel_base = 1, ms = 1500, rod_radius = 0.02)
     pars = @parameters begin
-        ms = 1500, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius
     end
 
     systems = @named begin
         world = World()
         mass = BodyShape(m=ms, r = [0,0,-wheel_base], radius=0.1, color=[0.4, 0.4, 0.4, 0.3])
-        excited_suspension_r = SuspensionWithExcitation(; suspension.spring=true, mirror=false, rod_radius,
-            actuation_position.r = [0, 0, (CD+wheel_base/2)],
-            actuation_rod.r_0 = r_0 = [0, 0.1, 0],
+        excited_suspension_r = SuspensionWithExcitation(; mirror=false, rod_radius,
+            r = [0, 0, (CD+wheel_base/2)],
+            r_0 = [0, 0.1, 0],
         )
-        excited_suspension_l = SuspensionWithExcitation(; suspension.spring=true, mirror=true, rod_radius,
-            actuation_position.r = [0, 0, -(CD+wheel_base/2)],
-            actuation_rod.r_0 = r_0 = [0, 0.1, 0],
+        excited_suspension_l = SuspensionWithExcitation(; mirror=true, rod_radius,
+            r = [0, 0, -(CD+wheel_base/2)],
+            r_0 = [0, 0.1, 0],
         )
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
         body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=1000, phi0=0, w0=0)
@@ -230,33 +230,32 @@ In the example below, we extend the previous example to a half-car model with tw
         connect(excited_suspension_l.chassis_frame, mass.frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named model = DoubleSuspensionWithExcitationAndMass()
-model = complete(model)
 ssys = multibody(model)
 
 defs = [
-    model.excited_suspension_r.amplitude => 0.05
-    model.excited_suspension_r.freq => 10
-    model.excited_suspension_r.suspension.ks => 30*44000
-    model.excited_suspension_r.suspension.cs => 30*4000
-    model.excited_suspension_r.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_r.amplitude => 0.05
+    ssys.excited_suspension_r.freq => 10
+    ssys.excited_suspension_r.suspension.ks => 30*44000
+    ssys.excited_suspension_r.suspension.cs => 30*4000
+    ssys.excited_suspension_r.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_l.amplitude => 0.05
-    model.excited_suspension_l.freq => 9.5
-    model.excited_suspension_l.suspension.ks => 30*44000
-    model.excited_suspension_l.suspension.cs => 30*4000
-    model.excited_suspension_l.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_l.amplitude => 0.05
+    ssys.excited_suspension_l.freq => 9.5
+    ssys.excited_suspension_l.suspension.ks => 30*44000
+    ssys.excited_suspension_l.suspension.cs => 30*4000
+    ssys.excited_suspension_l.suspension.r2.phi => -0.6031
 
-    model.ms => 1500/2
+    ssys.ms => 1500/2
 
-    model.body_upright.s => 0.17
-    model.body_upright.v => 0.14
+    ssys.body_upright.s => 0.17
+    ssys.body_upright.v => 0.14
 
-    # model.body_upright.prismatic_y.s => 0.17
-    # model.body_upright.prismatic_y.v => 0.14
+    # ssys.body_upright.prismatic_y.s => 0.17
+    # ssys.body_upright.prismatic_y.v => 0.14
 ]
 
 display(sort(unknowns(ssys), by=string))
@@ -285,18 +284,18 @@ We start by adding a wheel to the quarter-car setup and then to the half-car set
 ### Quarter car
 ```@example suspension
 using ModelingToolkitStandardLibrary.Mechanical.Rotational
-@component function ExcitedWheelAssembly(; name, mirror = false, iscut = true)
+@component function ExcitedWheelAssembly(; name, mirror = false, iscut = true, rod_radius = 0.02, amplitude = 0.02, freq = 2, spring=true)
     dir = mirror ? -1 : 1
 
     pars = @parameters begin
-        rod_radius = 0.02
-        amplitude = 0.02, [description = "Amplitude of wheel displacement"]
-        freq = 2, [description = "Frequency of wheel displacement"]
+        rod_radius = rod_radius, [description = "Radius of the rod"]
+        amplitude = amplitude, [description = "Amplitude of wheel displacement"]
+        freq = freq, [description = "Frequency of wheel displacement"]
     end
 
     systems = @named begin
         chassis_frame = Frame()
-        suspension = QuarterCarSuspension(; spring=true, mirror, rod_radius)
+        suspension = QuarterCarSuspension(; spring, mirror, rod_radius)
         wheel_rotation = Revolute(n = [0, 0, dir], axisflange=true) # Wheel rotation axis
         rotational_losses = Rotational.Damper(d = 0.1)
         wheel = SlippingWheel(
@@ -325,14 +324,15 @@ using ModelingToolkitStandardLibrary.Mechanical.Rotational
         connect(rotational_losses.flange_b, wheel_rotation.support)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 
-@component function SuspensionWithExcitationAndMass(; name)
+@component function SuspensionWithExcitationAndMass(; name, mirror = false, ms = 1500/4, rod_radius = 0.02)
+    dir = mirror ? -1 : 1
     pars = @parameters begin
-        ms = 1500/4, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius, [description = "Radius of the rod"]
     end
 
     systems = @named begin
@@ -350,26 +350,25 @@ end
         connect(body_upright.frame_b, excited_suspension.chassis_frame, mass.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named model = SuspensionWithExcitationAndMass()
-model = complete(model)
 ssys = multibody(model)
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [
-    model.excited_suspension.amplitude => 0.02
-    model.excited_suspension.freq => 3
-    model.excited_suspension.suspension.ks => 5*44000
-    model.excited_suspension.suspension.cs => 5*4000
-    model.excited_suspension.suspension.r2.phi => -0.6031
-    model.body_upright.s => 0.17
-    model.body_upright.v => 0.14
+    ssys.excited_suspension.amplitude => 0.02
+    ssys.excited_suspension.freq => 3
+    ssys.excited_suspension.suspension.ks => 5*44000
+    ssys.excited_suspension.suspension.cs => 5*4000
+    ssys.excited_suspension.suspension.r2.phi => -0.6031
+    ssys.body_upright.s => 0.17
+    ssys.body_upright.v => 0.14
 ]
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
-@assert all(sol[model.excited_suspension.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
+@assert all(sol[ssys.excited_suspension.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename="suspension_wheel.gif") # Video
 nothing # hide
@@ -378,10 +377,10 @@ nothing # hide
 
 ### Half car
 ```@example suspension
-@component function HalfCar(; name, wheel_base = 1)
+@component function HalfCar(; name, wheel_base = 1, ms = 1500, rod_radius = 0.02)
     pars = @parameters begin
-        ms = 1500, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius
     end
 
     systems = @named begin
@@ -408,36 +407,35 @@ nothing # hide
         connect(excited_suspension_l.chassis_frame, mass.frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named model = HalfCar()
-model = complete(model)
 ssys = multibody(model)
 
 defs = [
-    model.excited_suspension_r.amplitude => 0.015
-    model.excited_suspension_r.freq => 3
-    model.excited_suspension_r.suspension.ks => 30*44000
-    model.excited_suspension_r.suspension.cs => 30*4000
-    model.excited_suspension_r.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_r.amplitude => 0.015
+    ssys.excited_suspension_r.freq => 3
+    ssys.excited_suspension_r.suspension.ks => 30*44000
+    ssys.excited_suspension_r.suspension.cs => 30*4000
+    ssys.excited_suspension_r.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_l.amplitude => 0.015
-    model.excited_suspension_l.freq => 2.9
-    model.excited_suspension_l.suspension.ks => 30*44000
-    model.excited_suspension_l.suspension.cs => 30*4000
-    model.excited_suspension_l.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_l.amplitude => 0.015
+    ssys.excited_suspension_l.freq => 2.9
+    ssys.excited_suspension_l.suspension.ks => 30*44000
+    ssys.excited_suspension_l.suspension.cs => 30*4000
+    ssys.excited_suspension_l.suspension.r2.phi => -0.6031
 
-    model.ms => 1500
+    ssys.ms => 1500
 
-    model.body_upright.s => 0.17
-    model.body_upright.v => 0.14
+    ssys.body_upright.s => 0.17
+    ssys.body_upright.v => 0.14
 
-    # model.body_upright.prismatic_y.s => 0.17
-    # model.body_upright.prismatic_y.v => 0.14
+    # ssys.body_upright.prismatic_y.s => 0.17
+    # ssys.body_upright.prismatic_y.v => 0.14
 
-    # vec(ori(model.mass.frame_a).R .=> I(3))
-    # vec(ori(model.excited_suspension_r.suspension.r123.jointUSR.frame_a).R .=> I(3))
+    # vec(ori(ssys.mass.frame_a).R .=> I(3))
+    # vec(ori(ssys.excited_suspension_r.suspension.r123.jointUSR.frame_a).R .=> I(3))
 ]
 
 display(sort(unknowns(ssys), by=string))
@@ -445,8 +443,8 @@ display(sort(unknowns(ssys), by=string))
 prob = ODEProblem(ssys, defs, (0, 4))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = ShampineCollocationInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
-@assert all(sol[model.excited_suspension_r.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
-@assert all(sol[model.excited_suspension_l.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
+@assert all(sol[ssys.excited_suspension_r.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
+@assert all(sol[ssys.excited_suspension_l.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
 Multibody.render(model, sol, show_axis=false, x=-1.5, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename="suspension_halfcar_wheels.gif") # Video
 nothing # hide
 ```
@@ -457,16 +455,16 @@ nothing # hide
 
 ```@example suspension
 transparent_gray = [0.4, 0.4, 0.4, 0.3]
-@component function FullCar(; name, wheel_base = 1)
+@component function FullCar(; name, wheel_base = 1, ms = 1500, rod_radius = 0.02)
     pars = @parameters begin
-        ms = 1500, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius, [description = "Radius of the rod"]
     end
 
     systems = @named begin
         world = World()
         front_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
-        back_front = BodyShape(m=ms/2, r = [-2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=Inf, quat=false)
+        back_front = BodyShape(m=ms/2, r = [-2, 0, 0], radius=0.2, color=transparent_gray, isroot=true, state_priority=1000, quat=false)
         back_axle = BodyShape(m=ms/4, r = [0,0,-wheel_base], radius=0.1, color=transparent_gray)
 
         excited_suspension_fr = ExcitedWheelAssembly(; mirror=false, rod_radius, freq = 10)
@@ -490,52 +488,51 @@ transparent_gray = [0.4, 0.4, 0.4, 0.3]
         connect(excited_suspension_bl.chassis_frame, back_axle.frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named model = FullCar()
-model = complete(model)
 @time "simplification" ssys = multibody(model)
 
 defs = [
-    model.excited_suspension_br.wheel.wheeljoint.v_small => 1e-3
-    model.excited_suspension_br.amplitude => 0.015
-    model.excited_suspension_br.freq => 3.1
-    model.excited_suspension_br.suspension.ks => 5*44000
-    model.excited_suspension_br.suspension.cs => 5*4000
-    model.excited_suspension_br.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_br.wheel.wheeljoint.v_small => 1e-3
+    ssys.excited_suspension_br.amplitude => 0.015
+    ssys.excited_suspension_br.freq => 3.1
+    ssys.excited_suspension_br.suspension.ks => 5*44000
+    ssys.excited_suspension_br.suspension.cs => 5*4000
+    ssys.excited_suspension_br.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_bl.wheel.wheeljoint.v_small => 1e-3
-    model.excited_suspension_bl.amplitude => 0.015
-    model.excited_suspension_bl.freq => 3.2
-    model.excited_suspension_bl.suspension.ks => 5*44000
-    model.excited_suspension_bl.suspension.cs => 5*4000
-    model.excited_suspension_bl.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_bl.wheel.wheeljoint.v_small => 1e-3
+    ssys.excited_suspension_bl.amplitude => 0.015
+    ssys.excited_suspension_bl.freq => 3.2
+    ssys.excited_suspension_bl.suspension.ks => 5*44000
+    ssys.excited_suspension_bl.suspension.cs => 5*4000
+    ssys.excited_suspension_bl.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_fr.wheel.wheeljoint.v_small => 1e-3
-    model.excited_suspension_fr.amplitude => 0.015
-    model.excited_suspension_fr.freq => 2.9
-    model.excited_suspension_fr.suspension.ks => 5*44000
-    model.excited_suspension_fr.suspension.cs => 5*4000
-    model.excited_suspension_fr.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_fr.wheel.wheeljoint.v_small => 1e-3
+    ssys.excited_suspension_fr.amplitude => 0.015
+    ssys.excited_suspension_fr.freq => 2.9
+    ssys.excited_suspension_fr.suspension.ks => 5*44000
+    ssys.excited_suspension_fr.suspension.cs => 5*4000
+    ssys.excited_suspension_fr.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_fl.wheel.wheeljoint.v_small => 1e-3
-    model.excited_suspension_fl.amplitude => 0.015
-    model.excited_suspension_fl.freq => 2.8
-    model.excited_suspension_fl.suspension.ks => 5*44000
-    model.excited_suspension_fl.suspension.cs => 5*4000
-    model.excited_suspension_fl.suspension.r2.phi => -0.6031
+    ssys.excited_suspension_fl.wheel.wheeljoint.v_small => 1e-3
+    ssys.excited_suspension_fl.amplitude => 0.015
+    ssys.excited_suspension_fl.freq => 2.8
+    ssys.excited_suspension_fl.suspension.ks => 5*44000
+    ssys.excited_suspension_fl.suspension.cs => 5*4000
+    ssys.excited_suspension_fl.suspension.r2.phi => -0.6031
 
-    model.excited_suspension_fr.wheel.frame_a.render => true # To visualize one wheel rolling
-    model.excited_suspension_fr.wheel.frame_a.radius => 0.01
-    model.excited_suspension_fr.wheel.frame_a.length => 0.3
+    ssys.excited_suspension_fr.wheel.frame_a.render => true # To visualize one wheel rolling
+    ssys.excited_suspension_fr.wheel.frame_a.radius => 0.01
+    ssys.excited_suspension_fr.wheel.frame_a.length => 0.3
 
-    model.ms => 1500
+    ssys.ms => 1500
 
-    model.back_front.body.r_0[1] => 0
-    model.back_front.body.r_0[2] => 0.193
-    model.back_front.body.r_0[3] => 0.0
-    model.back_front.body.v_0[1] => 1
+    ssys.back_front.body.r_0[1] => 0
+    ssys.back_front.body.r_0[2] => 0.193
+    ssys.back_front.body.r_0[3] => 0.0
+    ssys.back_front.body.v_0[1] => 1
 ]
 
 display(sort(unknowns(ssys), by=string))
@@ -543,7 +540,7 @@ display(sort(unknowns(ssys), by=string))
 prob = ODEProblem(ssys, defs, (0, 3))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
-@assert all(reduce(hcat, sol[[model.excited_suspension_bl.wheel.wheeljoint.f_n, model.excited_suspension_br.wheel.wheeljoint.f_n, model.excited_suspension_fl.wheel.wheeljoint.f_n, model.excited_suspension_fr.wheel.wheeljoint.f_n]]) .> 0) "Model not valid for negative normal forces"
+@assert all(reduce(hcat, sol[[ssys.excited_suspension_bl.wheel.wheeljoint.f_n, ssys.excited_suspension_br.wheel.wheeljoint.f_n, ssys.excited_suspension_fl.wheel.wheeljoint.f_n, ssys.excited_suspension_fr.wheel.wheeljoint.f_n]]) .> 0) "Model not valid for negative normal forces"
 
 # plot(sol, layout=length(unknowns(ssys)), size=(1900,1200))
 import GLMakie
