@@ -225,7 +225,11 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 
     if state
         if quat
-            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel))
+            qeeqs, qvars, qpars = nonunit_quaternion_equations(Rrel, w_rel)
+            vars = [vars; qvars]
+            pars = [pars; qpars]
+            eqs = [eqs; qeeqs]
+            # append!(eqs, nonunit_quaternion_equations(Rrel, w_rel))
             # append!(eqs, collect(w_rel) .~ angularVelocity2(Rrel))
         else
             @variables begin
@@ -542,7 +546,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
 
         if quat
-            append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
+            qeeqs, qvars, qpars = nonunit_quaternion_equations(Rrel, w_rel_b)
+            vars = [vars; qvars]
+            pars = [pars; qpars]
+            eqs = [eqs; qeeqs]
+            # append!(eqs, nonunit_quaternion_equations(Rrel, w_rel_b))
         else
             morevars = @variables begin
                 (phi(t)[1:3] = phi), [state_priority = state_priority, description = "3 angles to rotate frame_a into frame_b"]

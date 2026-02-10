@@ -436,15 +436,20 @@ function get_frame(sol, frame, t)
 end
 
 function nonunit_quaternion_equations(R, w)
-    @variables Q(t)[1:4], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
-    @variables Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
-    @variables Q̂d(t)[1:4], [state_priority=1000]
-    # NOTE: 
-    @variables n(t) c(t)
-    @parameters k = 0.1
-    Q̂ = collect(Q̂)
-    Q̂d = collect(Q̂d)
-    Q = collect(Q)
+    vars = @variables begin
+        Q(t)[1:4], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
+        Q̂(t)[1:4]=[1,0,0,0], [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+        Q̂d(t)[1:4], [state_priority=1000]
+        # NOTE: 
+        n(t)
+        c(t)
+    end
+    pars = @parameters begin
+        k = 0.1
+    end
+    # Q̂ = collect(Q̂)
+    # Q̂d = collect(Q̂d)
+    # Q = collect(Q)
     # w is used in Ω, and Ω determines D(Q̂)
     # This corresponds to modelica's 
     # frame_a.R = from_Q(Q, angularVelocity2(Q, der(Q)));
@@ -454,7 +459,7 @@ function nonunit_quaternion_equations(R, w)
 
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     QR = from_Q(Q̂ ./ sqrt(n), w)
-    [
+    eqs = [
         n ~ Q̂'Q̂
         c ~ k * (1 - n)
         D.(Q̂) .~ Q̂d
@@ -463,6 +468,7 @@ function nonunit_quaternion_equations(R, w)
         R ~ from_Q(Q, w)
         # R.w .~ angularVelocity2(Q̂, Q̂d)
     ]
+    eqs, vars, pars
 end
 
 # function angularVelocity2(Q, der_Q)

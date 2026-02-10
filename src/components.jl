@@ -411,7 +411,10 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         if quat
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
-            qeeqs = nonunit_quaternion_equations(Ra, w_a)
+            qeeqs, qvars, qpars = nonunit_quaternion_equations(Ra, w_a)
+            vars = [vars; qvars]
+            pars = [pars; qpars]
+            qeeqs
         else
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
