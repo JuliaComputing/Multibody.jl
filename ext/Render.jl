@@ -879,8 +879,8 @@ function render!(scene, ::Function, sys, sol, t, args...) # Fallback for systems
     frameinds = findall(ModelingToolkit.isframe, collect(getfield(sys, :systems)))
     length(frameinds) == 2 || return false
 
-    nameof(sys.systems[frameinds[1]]) ∈ (:frame_a, :frame_b) || return false
-    nameof(sys.systems[frameinds[2]]) ∈ (:frame_a, :frame_b) || return false
+    nameof(getfield(sys, :systems)[frameinds[1]]) ∈ (:frame_a, :frame_b) || return false
+    nameof(getfield(sys, :systems)[frameinds[2]]) ∈ (:frame_a, :frame_b) || return false
 
     r_0a = get_fun(sol, collect(sys.frame_a.r_0))
     r_0b = get_fun(sol, collect(sys.frame_b.r_0))
