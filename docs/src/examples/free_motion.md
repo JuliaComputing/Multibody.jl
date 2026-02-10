@@ -26,7 +26,7 @@ ssys = multibody(model)
 
 prob = ODEProblem(ssys, [], (0, 10))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas5P())
 plot(sol, idxs = body.r_0[2], title="Free falling body")
 
 # Plot analytical solution
@@ -68,7 +68,6 @@ eqs = [connect(bar2.frame_a, world.frame_b)
                              spring1,
                              spring2,
                          ])
-model = complete(model)
 ssys = multibody(model)
 prob = ODEProblem(ssys, [
     body.body.v_0 .=> zeros(3);

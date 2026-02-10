@@ -18,7 +18,6 @@ In this example, we set ``\mu = 1``, `point_gravity = true` and let two masses o
 using Multibody
 using ModelingToolkit
 using Plots
-# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t
@@ -57,13 +56,7 @@ D = Differential(t)
 end
 @named model = PointGrav()
 ssys = multibody(model)
-defs = [
-    model.world.mu => 1
-    model.world.point_gravity => true # The gravity model is selected here
-    model.body1.w_a .=> 0
-    model.body2.w_a .=> 0
-
-]
+defs = []
 prob = ODEProblem(ssys, defs, (0, 5))
 sol = solve(prob, Rodas5P())
 plot(sol)

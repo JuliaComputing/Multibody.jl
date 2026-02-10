@@ -94,7 +94,7 @@ t5 = 19.84 |> deg2rad
         connect(chassis_frame, chassis.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @component function ExcitedWheelAssembly(; name, rod_radius = 0.02)
@@ -126,7 +126,7 @@ end
         connect(chassis_frame, suspension.chassis_frame)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 
@@ -150,7 +150,7 @@ end
         connect(prescribed_motion.frame_b, excited_suspension.chassis_frame, mass.frame_a)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @named model = SuspensionWithExcitationAndMass()
@@ -163,7 +163,7 @@ defs = [
     ssys.excited_suspension.suspension.r2.phi => -0.6031*(1)
 ]
 prob = ODEProblem(ssys, defs, (0, 2π))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) 
+sol = solve(prob, Rodas5P(autodiff=false)) 
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-0.8, y=0.7, z=0.1, lookat=[0,0.1,0.0], filename="prescribed_motion.gif") # Video
 nothing # hide

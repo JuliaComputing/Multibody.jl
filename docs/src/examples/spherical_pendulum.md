@@ -27,9 +27,9 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = System(connections, t, systems = [world; systems])
 ssys = multibody(model)
 
-prob = ODEProblem(ssys, [], (0, 5), guesses=unknowns(ssys).=>0.1)
+prob = ODEProblem(ssys, [], (0, 5))
 
-sol = solve(prob, Rodas4())
+sol = solve(prob, Rodas5P())
 @assert SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [body.r_0...])
