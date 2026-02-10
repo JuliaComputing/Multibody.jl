@@ -489,8 +489,8 @@ end
         ori(frame_b) ~ Rb
         # ori(frame_b).w ~ Rb.w
 
-        0 ~ frame_a.f + resolve1(Rrel, frame_b.f)
-        0 ~ frame_a.tau + resolve1(Rrel, frame_b.tau)
+        zeros(3) ~ frame_a.f + resolve1(Rrel, frame_b.f)
+        zeros(3) ~ frame_a.tau + resolve1(Rrel, frame_b.tau)
 
         if use_arrays
             angle ~ compute_angle2(length_constraint, e, r_a, r_b, positive_branch)[1]
@@ -649,9 +649,9 @@ The rest of this joint aggregation is defined by the following parameters:
 
 end
 
-@component function Constant3(; name)
+@component function Constant3(; name, k = zeros(3))
     pars = @parameters begin
-        k[1:3] = zeros(3), [description = "Constant output value of block"]
+        k[1:3] = k, [description = "Constant output value of block"]
     end
 
     systems = @named begin

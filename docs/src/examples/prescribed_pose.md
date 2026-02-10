@@ -41,18 +41,18 @@ BP = 129.03 / 1000
 DE = 310.31 / 1000
 t5 = 19.84 |> deg2rad
 
-@component function QuarterCarSuspension(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7], mirror = false)
+@component function QuarterCarSuspension(; name, spring = true, jc = [0.5, 0.5, 0.5, 0.7], mirror = false,
+    cs = 4000, ks = 44000, rod_radius = 0.02, jr = 0.03)
     dir = mirror ? -1 : 1
     rRod1_ia = AB*normalize([0, -0.1, 0.2dir])
     rRod2_ib = BC*normalize([0, 0.2, 0dir])
 
     pars = @parameters begin
-        cs = 4000, [description = "Damping constant [Ns/m]"]
-        ks = 44000, [description = "Spring constant [N/m]"]
-        rod_radius = 0.02
-        jr = 0.03, [description = "Radius of revolute joint"]
+        cs = cs, [description = "Damping constant [Ns/m]"]
+        ks = ks, [description = "Spring constant [N/m]"]
+        rod_radius = rod_radius
+        jr = jr, [description = "Radius of revolute joint"]
     end
-
     systems = @named begin
         r123 = JointRRR(n_a = n*dir, n_b = n*dir, rRod1_ia, rRod2_ib, rod_radius=0.018, rod_color=jc)
         r2 = Revolute(; n=n*dir, radius=jr, color=jc)
@@ -60,16 +60,15 @@ t5 = 19.84 |> deg2rad
         chassis = FixedTranslation(r = DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=false)
         chassis_frame = Frame()
 
-        if spring
-            springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius, num_windings=10)
-        end
-        if spring
-            spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false)
-        end
-        if spring
-            spring_mount_E = FixedTranslation(r = 1.3DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=true)
-        end
     end
+        if spring
+            more_systems = @named begin 
+                springdamper = SpringDamperParallel(c = ks, d = cs, s_unstretched = 1.3*BC, radius=rod_radius, num_windings=10)
+                spring_mount_F = FixedTranslation(r = 0.7*CD*normalize([0, -0.1, 0.3dir]), render=false)
+                spring_mount_E = FixedTranslation(r = 1.3DA*normalize([0, 0.2, 0.2*sin(t5)*dir]), render=true)
+            end
+            systems = [systems; more_systems]
+        end
 
     A = chassis.frame_b
     D = chassis.frame_a
@@ -98,9 +97,9 @@ t5 = 19.84 |> deg2rad
     return System(equations, t; name, systems)
 end
 
-@component function ExcitedWheelAssembly(; name)
+@component function ExcitedWheelAssembly(; name, rod_radius = 0.02)
     pars = @parameters begin
-        rod_radius = 0.02
+        rod_radius = rod_radius
     end
 
     systems = @named begin
@@ -131,10 +130,10 @@ end
 end
 
 
-@component function SuspensionWithExcitationAndMass(; name)
+@component function SuspensionWithExcitationAndMass(; name, rod_radius = 0.02, ms=1500/4)
     pars = @parameters begin
-        ms = 1500/4, [description = "Mass of the car [kg]"]
-        rod_radius = 0.02
+        ms = ms, [description = "Mass of the car [kg]"]
+        rod_radius = rod_radius
     end
 
     systems = @named begin
@@ -155,14 +154,13 @@ end
 end
 
 @named model = SuspensionWithExcitationAndMass()
-model = complete(model)
 ssys = multibody(model)
 display([unknowns(ssys) diag(ssys.mass_matrix)])
 
 defs = [
-    model.excited_suspension.suspension.ks => 30*44000
-    model.excited_suspension.suspension.cs => 30*4000
-    model.excited_suspension.suspension.r2.phi => -0.6031*(1)
+    ssys.excited_suspension.suspension.ks => 30*44000
+    ssys.excited_suspension.suspension.cs => 30*4000
+    ssys.excited_suspension.suspension.r2.phi => -0.6031*(1)
 ]
 prob = ODEProblem(ssys, defs, (0, 2π))
 sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) 
