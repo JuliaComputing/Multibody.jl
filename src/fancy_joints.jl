@@ -423,8 +423,7 @@ This joint aggregation can be used in cases where in reality a rod with spherica
         residue === :external || error("Unknown value for constraint_residue, expected nothing or :external")
     end
 
-    sys = System(eqs, t; name=:nothing, systems)
-    add_params(sys, pars; name)
+    sys = System(eqs, t, vars, pars; name, systems)
 end
 
 
@@ -570,7 +569,7 @@ The rest of this joint aggregation is defined by the following parameters:
         bearing = Rotational.Flange()
     end
 
-    @parameters begin
+    pars = @parameters begin
         # n1_a[1:3] = n1_a, [description = "Axis 1 of universal joint fixed and resolved in frame_a (axis 2 is orthogonal to axis 1 and to rod 1)"]
         # n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
         rRod1_ia[1:3] = rRod1_ia, [description = "Vector from origin of frame_a to spherical joint, resolved in frame_ia"]
@@ -582,7 +581,7 @@ The rest of this joint aggregation is defined by the following parameters:
 
 
 
-    @variables begin
+    vars = @variables begin
         aux(t), [description = "Denominator used to compute force in rod connecting universal and spherical joint"]
         f_rod(t), [description = "Constraint force in direction of the rod (positive, if rod is pressed)"]
     end
@@ -645,7 +644,7 @@ The rest of this joint aggregation is defined by the following parameters:
         connect(relative_position.r_rel, revolute.position_a)
         connect(revolute.bearing, bearing)
     ]
-    System(eqs, t; name, systems=[systems; more_systems])
+    System(eqs, t, vars, pars; name, systems=[systems; more_systems])
 
 end
 
@@ -667,7 +666,7 @@ end
         output.u[3] ~ k[3]
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 """
@@ -720,7 +719,7 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
     kwargs...
 )
 
-    @parameters begin
+    pars = @parameters begin
         # n_a[1:3] = n_a, [description = "Axes of revolute joints resolved in frame_a (all axes are parallel to each other)"]
         # n_b[1:3] = n_b, [description = "Axis of revolute joint fixed and resolved in frame_b"]
         rRod1_ia[1:3] = rRod1_ia, [description = "Vector from origin of frame_a to revolute joint in the middle, resolved in frame_ia"]
@@ -763,7 +762,7 @@ Basically, the JointRRR model internally consists of a universal-spherical-revol
         connect(jointUSR.bearing, bearing)
     ]
 
-    System(eqs, t; name, systems)
+    System(eqs, t, [], pars; name, systems)
 end
 
 

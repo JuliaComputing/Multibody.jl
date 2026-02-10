@@ -491,7 +491,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
                     phi = state ? zeros(3) : nothing,
                     phid = state ? zeros(3) : nothing,
                     phidd = nothing,
-                    w_rel_b = state ? zeros(3) : nothing,
+                    w_rel_b = nothing,
                     r_rel_a = state ? zeros(3) : nothing,
                     v_rel_a = state ? zeros(3) : nothing,
                     a_rel_a = nothing)
@@ -502,7 +502,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     vars = @variables begin
         (w_rel_b(t)[1:3] = w_rel_b),
         [
-            state_priority = quat ? state_priority : 1.0,
+            state_priority = quat ? state_priority : 1,
             description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
         ]
         (r_rel_a(t)[1:3] = r_rel_a),
@@ -517,6 +517,7 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         ]
         (a_rel_a(t)[1:3] = a_rel_a), [description = "= D(v_rel_a)"]
     end
+    pars = eltype(vars)[]
 
     @named Rrel_f = Frame()
     @named Rrel_inv_f = Frame()
@@ -573,11 +574,11 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
     end
     if state && !isroot
-        compose(System(eqs, t, vars, []; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
+        compose(System(eqs, t, vars, pars; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
     elseif state
-        compose(System(eqs, t, vars, []; name), frame_a, frame_b, Rrel_f, )
+        compose(System(eqs, t, vars, pars; name), frame_a, frame_b, Rrel_f, )
     else
-        compose(System(eqs, t, vars, []; name), frame_a, frame_b)
+        compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
     end
 end
 
