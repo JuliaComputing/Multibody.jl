@@ -11,7 +11,6 @@ The system consists of a pendulum suspended in a spherical joint, a joint withou
 using Multibody
 using ModelingToolkit
 using Plots
-# using JuliaSimCompiler
 using OrdinaryDiffEq
 
 t = Multibody.t

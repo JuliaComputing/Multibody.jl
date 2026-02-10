@@ -150,19 +150,18 @@ The function returns an System representing the prismatic joint.
            # d'Alemberts principle
            f ~ -dot(n,frame_b.f)]
 
-    sys = if axisflange
+    if axisflange
         @named fixed = Translational.Fixed(s0=0)
         @named axis = Translational.Flange()
         @named support = Translational.Flange()
         push!(eqs, connect(fixed.flange, support))
         push!(eqs, axis.s ~ s)
         push!(eqs, axis.f ~ f)
-        compose(System(eqs, t; name=:nothing), frame_a, frame_b, axis, support, fixed)
+        compose(System(eqs, t, vars, [n; pars]; name), frame_a, frame_b, axis, support, fixed)
     else
         push!(eqs, f ~ 0)
-        compose(System(eqs, t; name=:nothing), frame_a, frame_b)
+        compose(System(eqs, t, vars, [n; pars]; name), frame_a, frame_b)
     end
-    add_params(sys, pars; name)
 end
 
 """
@@ -232,7 +231,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
             # append!(eqs, nonunit_quaternion_equations(Rrel, w_rel))
             # append!(eqs, collect(w_rel) .~ angularVelocity2(Rrel))
         else
-            @variables begin
+            morevars = @variables begin
                 (phi(t)[1:3] = phi),
                 [state_priority = 10, description = "3 angles to rotate frame_a into frame_b"]
                 (phid(t)[1:3] = phid),
@@ -240,6 +239,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                 (phidd(t)[1:3] = phidd),
                 [state_priority = 10, description = "3 angle second derivatives"]
             end
+            vars = [vars; morevars]
             append!(eqs,
                     [Rrel ~ axes_rotations(sequence, phi, phid)
                     w_rel ~ angular_velocity2(Rrel)
@@ -272,8 +272,7 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         end
     end
 
-    sys = extend(System(eqs, t; name=:nothing), ptf)
-    add_params(sys, pars; name)
+    extend(System(eqs, t, vars, pars; name), ptf)
 end
 
 
@@ -304,7 +303,7 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
         revolute_b = Revolute(n = n_b, isroot = false, radius, length, color)
     end
     @unpack frame_a, frame_b = ptf
-    @parameters begin
+    pars = @parameters begin
         n_a = n_a,
               [
                   description = "Axis of revolute joint 1 resolved in frame_a",
@@ -314,7 +313,7 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
                   description = "Axis of revolute joint 2 resolved in frame_b",
               ]
     end
-    @variables begin
+    vars = @variables begin
         (phi_a(t) = phi_a),
         [
             state_priority = state_priority,
@@ -355,7 +354,7 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
            connect(frame_a, revolute_a.frame_a)
            connect(revolute_b.frame_b, frame_b)
            connect(revolute_a.frame_b, revolute_b.frame_a)]
-    extend(System(eqs, t; name, systems = [revolute_a, revolute_b]), ptf)
+    extend(System(eqs, t, vars, pars; name, systems = [revolute_a, revolute_b]), ptf)
 end
 
 """
@@ -386,7 +385,7 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
     end
     @unpack frame_a, frame_b = ptf
 
-    @parameters begin
+    pars = @parameters begin
         ratio = ratio, [description = "Gear speed ratio"]
 
         n_a = n_a,
@@ -408,7 +407,7 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
                    ]
     end
 
-    @variables begin
+    vars = @variables begin
         (phi_b(t) = 0),
         [
             state_priority = 10,
@@ -452,7 +451,7 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
                            bearing.tau'angular_velocity2(bearing))
     end
 
-    extend(System(eqs, t; name, systems), ptf)
+    extend(System(eqs, t, vars, pars; name, systems), ptf)
 end
 
 
@@ -621,10 +620,12 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     ex_a = cross(ey_a, n) 
     
     
-    @variables r_rel_a(t)[1:3] [description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a"]
-    @variables f_c(t)[1:2] [description = "Dummy or constraint forces in direction of ex_a, ey_a"]
     n0 = n
-    @variables n(t)[1:3]
+    vars = @variables begin
+        r_rel_a(t)[1:3], [description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a"]
+        f_c(t)[1:2], [description = "Dummy or constraint forces in direction of ex_a, ey_a"]
+        n(t)[1:3]
+    end
     
 
     # @named Rrel = NumRotationMatrix()
@@ -646,8 +647,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         frame_b.f ~ -resolve2(Rrel, frame_a.f)
         n ~ n0
     ]
-    sys = System(eqs, t; name=:nothing, systems=[frame_a, frame_b])
-    add_params(sys, pars; name)
+    System(eqs, t, vars, pars; name, systems=[frame_a, frame_b])
 end
 
 LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)
@@ -743,7 +743,7 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
         connect(revolute.frame_b, frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @component function Cylindrical(; name, n = [1, 0, 0], cylinder_color = [1, 0, 1, 1],
@@ -785,7 +785,7 @@ end
         connect(revolute.frame_b, frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 
 @component function URDFRevolute(; name, r, R=I(3), axisflange = false, kwargs...)
@@ -824,7 +824,7 @@ end
             connect(support, rev.support)
         ]
     end
-    System(connections, t; systems, name)
+    System(connections, t, [], []; systems, name)
 end
 
 @component function URDFPrismatic(; name, r, R, axisflange = false, kwargs...)
@@ -863,7 +863,7 @@ end
             connect(support, rev.support)
         ]
     end
-    System(connections, t; systems, name)
+    System(connections, t, [], []; systems, name)
 end
 
 @component function NullJoint(; name)
@@ -882,5 +882,5 @@ end
         connect(frame_a, frame_b)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end

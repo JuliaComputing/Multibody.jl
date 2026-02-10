@@ -37,15 +37,17 @@ It is not possible to connect other components, such as a body with mass propert
     #     sequence[1:3] = sequence
     # end
 
-    @variables f_rod(t), [description="Constraint force in direction of the rod (positive on frame_a, when directed from frame_a to frame_b)";]
-    @variables rRod_0(t)[1:3]=r_0, [description="Position vector from frame_a to frame_b resolved in world frame";]
-    @variables rRod_a(t)[1:3], [description="Position vector from frame_a to frame_b resolved in frame_a";]
-    @variables eRod_a(t)[1:3], [description="Unit vector in direction from frame_a to frame_b, resolved in frame_a";]
-    @variables r_cm_0(t)[1:3], [description="Dummy if m==0, or position vector from world frame to mid-point of rod, resolved in world frame";]
-    @variables v_cm_0(t)[1:3], [description="First derivative of r_cm_0";]
-    @variables f_cm_a(t)[1:3], [description="Dummy if m==0, or inertial force acting at mid-point of rod due to mass point acceleration, resolved in frame_a";]
-    @variables f_cm_e(t)[1:3], [description="Dummy if m==0, or projection of f_cm_a onto eRod_a, resolved in frame_a";]
-    @variables f_b_a1(t)[1:3], [description="Force acting at frame_b, but without force in rod, resolved in frame_a";]
+    vars = @variables begin
+        f_rod(t), [description="Constraint force in direction of the rod (positive on frame_a, when directed from frame_a to frame_b)"]
+        (rRod_0(t)[1:3]=r_0), [description="Position vector from frame_a to frame_b resolved in world frame"]
+        rRod_a(t)[1:3], [description="Position vector from frame_a to frame_b resolved in frame_a"]
+        eRod_a(t)[1:3], [description="Unit vector in direction from frame_a to frame_b, resolved in frame_a"]
+        r_cm_0(t)[1:3], [description="Dummy if m==0, or position vector from world frame to mid-point of rod, resolved in world frame"]
+        v_cm_0(t)[1:3], [description="First derivative of r_cm_0"]
+        f_cm_a(t)[1:3], [description="Dummy if m==0, or inertial force acting at mid-point of rod due to mass point acceleration, resolved in frame_a"]
+        f_cm_e(t)[1:3], [description="Dummy if m==0, or projection of f_cm_a onto eRod_a, resolved in frame_a"]
+        f_b_a1(t)[1:3], [description="Force acting at frame_b, but without force in rod, resolved in frame_a"]
+    end
 
     rodlength = _norm(r_0)
     constraint_residue = rRod_0'rRod_0 - rodlength^2
@@ -116,8 +118,7 @@ It is not possible to connect other components, such as a body with mass propert
     ]
 
 
-    sys = extend(System(eqs, t; name=:nothing), ptf)
-    add_params(sys, pars; name)
+    extend(System(eqs, t, vars, pars; name), ptf)
 end
 
 """
@@ -156,7 +157,7 @@ In complex multibody systems with closed loops this may help to simplify the sys
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
     end
     @unpack frame_a, frame_b = ptf
-    @variables begin (r_rel_a(t)[1:3] = zeros(3)),
+    vars = @variables begin (r_rel_a(t)[1:3] = zeros(3)),
                      [
                          description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
                      ] end
@@ -187,8 +188,7 @@ In complex multibody systems with closed loops this may help to simplify the sys
         zeros(3) ~ frame_a.tau + resolve1(Rrel, frame_b.tau) - cross(r_rel_a, frame_a.f);
     ]
 
-    sys = extend(System(eqs, t; name=:nothing), ptf)
-    add_params(sys, pars; name)
+    extend(System(eqs, t, vars, pars; name), ptf)
 end
 
 """
@@ -437,32 +437,31 @@ end
         position_a = RealInput(nin=3) # Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint
         position_b = RealInput(nin=3)
     end
-    @parameters e[1:3] = _normalize(n) [description = "normalized axis of rotation"]
     # @parameters n[1:3]=n [description = "axis of rotation"] # Can't have this as parameter since e = _normalize(n) does not work :/
-    @parameters phi_offset = phi_offset, [description = "offset of the joint in animations"]
-    @parameters length_constraint = length_constraint, [description = "Fixed length of length constraint"]
     pars = @parameters begin
+        e[1:3] = _normalize(n), [description = "normalized axis of rotation"]
+        phi_offset = phi_offset, [description = "offset of the joint in animations"]
+        length_constraint = length_constraint, [description = "Fixed length of length constraint"]
         radius = radius, [description = "radius of the joint in animations"]
         length = length, [description = "length of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
     end
-    @variables tau(t) [
-        connect = Flow,
-        description = "Driving torque in direction of axis of rotation",
-    ]
-    @variables phi(t) [
-        state_priority = 1,
-        description = "Relative rotation angle from frame_a to frame_b",
-    ]
-    @variables angle(t) [
-        state_priority = -1,
-        description = "= phi + phi_offset (relative rotation angle between frame_a and frame_b)",
-    ]
-    @variables r_a(t)[1:3], [description = "Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint"]
-    @variables r_b(t)[1:3], [description = "Position vector from frame_b to frame_b side of length constraint, resolved in frame_b of revolute joint"]
-
-    # vars = [tau; phi; angle; r_a; r_b]
-    # pars = [collect(e); phi_offset; length_constraint]
+    vars = @variables begin
+        tau(t), [
+            connect = Flow,
+            description = "Driving torque in direction of axis of rotation",
+        ]
+        phi(t), [
+            state_priority = 1,
+            description = "Relative rotation angle from frame_a to frame_b",
+        ]
+        angle(t), [
+            state_priority = -1,
+            description = "= phi + phi_offset (relative rotation angle between frame_a and frame_b)",
+        ]
+        r_a(t)[1:3], [description = "Position vector from frame_a to frame_a side of length constraint, resolved in frame_a of revolute joint"]
+        r_b(t)[1:3], [description = "Position vector from frame_b to frame_b side of length constraint, resolved in frame_b of revolute joint"]
+    end
 
     # @parameters positive_branch::Bool=false
     # NOTE: final parameters in modelica can be implemented by parameter_dependencies = [final_parameter => expression with other parameters]
@@ -500,9 +499,7 @@ end
         end
     ]
 
-    sys = System(eqs, t; name=:nothing, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
-    
-    add_params(sys, pars; name)
+    System(eqs, t, vars, pars; name, systems)#, parameter_dependencies = [positive_branch => select_branch(length_constraint, e, phi_offset + phi_guess, r_a, r_b)])  # JuliaSimCompiler ignores parameter dependencies, the user has to provide it instead
 end
 
 

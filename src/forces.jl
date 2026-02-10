@@ -409,30 +409,32 @@ See also [`SpringDamperParallel`](@ref)
     
     @named spring2d = TP.Spring(; c, s_rel0 = s_unstretched)
 
-    @variables r_rel_a(t)[1:3] [
-        description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
-    ]
-    @variables e_a(t)[1:3] [
-        description = "Unit vector on the line connecting the origin of frame_a with the origin of frame_b resolved in frame_a (directed from frame_a to frame_b)",
-    ]
-    @variables f(t) [
-        description = "Line force acting on frame_a and on frame_b (positive, if acting on frame_b and directed from frame_a to frame_b)",
-    ]
-    @variables length(t) [
-        description = "Distance between the origin of frame_a and the origin of frame_b",
-    ]
-    @variables s(t) [
-        description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
-    ]
-    @variables v(t) [
-        description = "derivative of s",
-    ]
-    @variables r_rel_0(t)[1:3] [
-        description = "Position vector from frame_a to frame_b resolved in world frame",
-    ]
-    @variables e_rel_0(t)[1:3] [
-        description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
-    ]
+    vars = @variables begin
+        r_rel_a(t)[1:3], [
+            description = "Position vector from origin of frame_a to origin of frame_b, resolved in frame_a",
+        ]
+        e_a(t)[1:3], [
+            description = "Unit vector on the line connecting the origin of frame_a with the origin of frame_b resolved in frame_a (directed from frame_a to frame_b)",
+        ]
+        f(t), [
+            description = "Line force acting on frame_a and on frame_b (positive, if acting on frame_b and directed from frame_a to frame_b)",
+        ]
+        length(t), [
+            description = "Distance between the origin of frame_a and the origin of frame_b",
+        ]
+        s(t), [
+            description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
+        ]
+        v(t), [
+            description = "derivative of s",
+        ]
+        r_rel_0(t)[1:3], [
+            description = "Position vector from frame_a to frame_b resolved in world frame",
+        ]
+        e_rel_0(t)[1:3], [
+            description = "Unit vector in direction from frame_a to frame_b, resolved in world frame",
+        ]
+    end
 
     eqs = [D(s) ~ v
            r_rel_a ~ resolve2(ori(frame_a), r_rel_0)
@@ -447,8 +449,7 @@ See also [`SpringDamperParallel`](@ref)
            connect(spring2d.flange_b, lineforce.flange_b)
            connect(spring2d.flange_a, lineforce.flange_a)]
 
-    sys = extend(System(eqs, t; name=:nothing, systems = [lineforce, spring2d]), ptf)
-    add_params(sys, pars; name)
+    extend(System(eqs, t, vars, pars; name, systems = [lineforce, spring2d]), ptf)
 end
 
 """

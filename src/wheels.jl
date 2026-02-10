@@ -179,8 +179,7 @@ this frame.
                  zeros(3) ~ collect(frame_a.f) + resolve2(Ra, f_wheel_0)
                  zeros(3) ~ collect(frame_a.tau) +
                              resolve2(Ra, cross(delta_0, f_wheel_0))]
-    sys = compose(System(equations, t; name=:nothing), frame_a)
-    add_params(sys, [color;]; name)
+    compose(System(equations, t, vars, pars; name), frame_a)
 end
 
 """
@@ -268,7 +267,7 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
                          (wheeljoint.der_angles) ~ (der_angles)
                          connect(body.frame_a, frame_a)
                          connect(wheeljoint.frame_a, frame_a)]
-    compose(System(equations, t; name), frame_a, wheeljoint, body)
+    compose(System(equations, t, sts, pars; name), frame_a, wheeljoint, body)
 end
 
 
@@ -804,8 +803,7 @@ function RollingWheelSetJoint(;
         connect(frame_middle, mounting1D.frame_a)
         connect(mounting1D.flange_b, support)
     ]
-    sys = System(equations, t; name=:nothing, systems)
-    add_params(sys, [width_wheel]; name)
+    System(equations, t, sts, pars; name, systems)
 end
 
 """
