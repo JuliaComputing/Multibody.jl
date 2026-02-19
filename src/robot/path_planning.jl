@@ -183,18 +183,34 @@ function KinematicPTP(; time, name, q0 = 0, q1 = 1, qd_max=1, qdd_max=1)
         qdd = RealOutput(; nout)
     end
 
-    q_vec, qd_vec, qdd_vec = point_to_point(time; q0 = q0, q1 = q1, qd_max, qdd_max)
+    q_vec, qd_vec, qdd_vec = point_to_point(time; q0, q1, qd_max, qdd_max)
 
-    interp_eqs = map(1:nout) do i
-        qfun = CubicSpline(q_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
-        qdfun = LinearInterpolation(qd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
-        qddfun = ConstantInterpolation(qdd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
-        [q.u[i] ~ qfun(t) 
-        qd.u[i] ~ qdfun(t)
-        qdd.u[i] ~ qddfun(t)]
+    eqs = Equation[]
+    pars = []
+    for i in 1:nout
+        qfun_val = CubicSpline(q_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+        qdfun_val = LinearInterpolation(qd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+        qddfun_val = ConstantInterpolation(qdd_vec[:, i], time; extrapolation=ExtrapolationType.Constant)
+
+        Tq = typeof(qfun_val)
+        Tqd = typeof(qdfun_val)
+        Tqdd = typeof(qddfun_val)
+
+        qfun_name = Symbol(:qfun_, i)
+        qdfun_name = Symbol(:qdfun_, i)
+        qddfun_name = Symbol(:qddfun_, i)
+
+        qfun_sym = only(@parameters ($qfun_name::Tq)(..) = qfun_val)
+        qdfun_sym = only(@parameters ($qdfun_name::Tqd)(..) = qdfun_val)
+        qddfun_sym = only(@parameters ($qddfun_name::Tqdd)(..) = qddfun_val)
+        push!(pars, qfun_sym, qdfun_sym, qddfun_sym)
+
+        push!(eqs, q.u[i] ~ qfun_sym(t))
+        push!(eqs, qd.u[i] ~ qdfun_sym(t))
+        push!(eqs, qdd.u[i] ~ qddfun_sym(t))
     end
-    eqs = reduce(vcat, interp_eqs)
-    System(eqs, t; name, systems)
+
+    System(eqs, t, [], pars; name, systems)
 end
 
 """
