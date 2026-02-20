@@ -211,7 +211,7 @@ In the example below, we extend the previous example to a half-car model with tw
             r_0 = [0, 0.1, 0],
         )
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=1000)
-        body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=1000, phi0=0, w0=0)
+        body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=1000, phi=0, w=0)
         # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=1000, radius=0.01)
     end
 
@@ -303,8 +303,8 @@ using ModelingToolkitStandardLibrary.Mechanical.Rotational
             m = 15,
             I_axis = 0.8,
             I_long = 0.8,
-            x0 = 0.0,
-            z0 = 0.0,
+            x = 0.0,
+            z = 0.0,
             state = false,
             # iscut = true,
             # Note the ParentScope qualifier, without this, the parameters are treated as belonging to the wheel.wheel_joint component instead of the ExcitedWheelAssembly
@@ -389,7 +389,7 @@ nothing # hide
         excited_suspension_r = ExcitedWheelAssembly(; mirror=false, rod_radius)
         excited_suspension_l = ExcitedWheelAssembly(; mirror=true, rod_radius)
         body_upright = Prismatic(n = [0, 1, 0], render = false, state_priority=2000)
-        body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi0=0, w0=0, iscut=false)
+        body_upright2 = Revolute(n = [1, 0, 0], render = false, state_priority=2000, phi=0, w=0, iscut=false)
         # body_upright = Planar(n = [1, 0, 0], n_x = [0,0,1], render = false, state_priority=100000, radius=0.01)
     end
 

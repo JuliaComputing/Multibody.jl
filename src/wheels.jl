@@ -1,5 +1,5 @@
 """
-    RollingWheelJoint(; name, radius, angles, x0, y0, z0)
+    RollingWheelJoint(; name, radius, angles, x, y, z)
 
 Joint (no mass, no inertia) that describes an ideal rolling wheel (rolling on the plane y=0). See [`RollingWheel`](@ref) for a realistic wheel model with inertia.
 
@@ -52,15 +52,15 @@ this frame.
 # Connector frames
 - `frame_a`: Frame for the wheel joint
 """
-@component function RollingWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = nothing, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
+@component function RollingWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x=nothing, y = nothing, z=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, color = [1, 0, 0, 1], state_priority = 15)
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         color[1:4] = color, [description = "Color of the wheel in animations"]
     end
     vars = @variables begin
-        (x(t) = x0), [state_priority = state_priority, guess = 0, description = "x-position of the wheel axis"]
-        (y(t) = y0), [state_priority = 0, guess = radius, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = state_priority, guess = 0, description = "z-position of the wheel axis"]
+        (x(t) = x), [state_priority = state_priority, guess = 0, description = "x-position of the wheel axis"]
+        (y(t) = y), [state_priority = 0, guess = radius, description = "y-position of the wheel axis"]
+        (z(t) = z), [state_priority = state_priority, guess = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = state_priority, guess = [0, 0, 0], description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, guess = [0, 0, 0], description = "Derivatives of angles"]
@@ -183,7 +183,7 @@ this frame.
 end
 
 """
-    RollingWheel(; name, radius, m, I_axis, I_long, width=0.035, x0, y0, kwargs...)
+    RollingWheel(; name, radius, m, I_axis, I_long, width=0.035, x, z, kwargs...)
 
 Ideal rolling wheel on flat surface y=0 (5 positional, 3 velocity degrees of freedom)
 
@@ -201,8 +201,8 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
 - `I_axis`: Moment of inertia of the wheel along its axis
 - `I_long`: Moment of inertia of the wheel perpendicular to its axis
 - `width`: Width of the wheel (default: 0.035)
-- `x0`: Initial x-position of the wheel axis
-- `z0`: Initial z-position of the wheel axis
+- `x`: Initial x-position of the wheel axis
+- `z`: Initial z-position of the wheel axis
 - `kwargs...`: Additional keyword arguments passed to the `RollingWheelJoint` function
 
 # Variables:
@@ -223,10 +223,10 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
     wheel.frame_a.radius => 0.02radius;
     ```
 """
-@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=nothing, z0=nothing,
+@component function RollingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x=nothing, z=nothing,
                       angles = nothing, der_angles = nothing, kwargs...)
 
-    @named wheeljoint = RollingWheelJoint(; radius, angles=nothing, x0=nothing, z0=nothing, der_angles=nothing, kwargs...)
+    @named wheeljoint = RollingWheelJoint(; radius, angles=nothing, x=nothing, z=nothing, der_angles=nothing, kwargs...)
     @named begin
         frame_a = Frame()
         body = Body(r_cm = [0, 0, 0],
@@ -253,8 +253,8 @@ with the wheel itself. A [`Revolute`](@ref) joint rotationg around `n = [0, 1, 0
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 20, guess = 0, description = "x-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 20, guess = 0, description = "z-position of the wheel axis"]
+        (x(t) = x), [state_priority = 20, guess = 0, description = "x-position of the wheel axis"]
+        (z(t) = z), [state_priority = 20, guess = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = 30, guess = [0, 0, 0], description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 30, guess = [0, 0, 0], description = "Derivatives of angles"]
@@ -273,7 +273,7 @@ end
 
 
 """
-    SlipWheelJoint(; name, radius, angles = zeros(3), der_angles = zeros(3), x0 = 0, y0 = radius, z0 = 0, sequence, iscut = false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
+    SlipWheelJoint(; name, radius, angles = zeros(3), der_angles = zeros(3), x = 0, y = radius, z = 0, sequence, iscut = false, surface = nothing, vAdhesion_min = 0.1, vSlide_min = 0.1, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = 0, w_roll = 0)
 
 Joint for a wheel with slip rolling on a surface. See https://people.inf.ethz.ch/fcellier/MS/andres_ms.pdf for details.
 
@@ -319,7 +319,7 @@ plot!(
 )
 ```
 """
-@component function SlipWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x0=nothing, y0 = radius, z0=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = nothing, w_roll = nothing, v_small = 1e-5, state=true)
+@component function SlipWheelJoint(; name, radius, angles = nothing, der_angles=nothing, x=nothing, y = radius, z=nothing, sequence = [2, 3, 1], iscut=false, surface = nothing, vAdhesion_min = 0.05, vSlide_min = 0.15, sAdhesion = 0.04, sSlide = 0.12, mu_A = 0.8, mu_S = 0.6, phi_roll = nothing, w_roll = nothing, v_small = 1e-5, state=true)
     pars = @parameters begin
         radius = radius, [description = "Radius of the wheel"]
         vAdhesion_min = vAdhesion_min, [description = "Minimum adhesion velocity"]
@@ -331,9 +331,9 @@ plot!(
         v_small = v_small, [description = "Small value added to v_slip to avoid division by zero in slip model."]
     end
     vars = @variables begin
-        (x(t) = x0), [state_priority = 15, description = "x-position of the wheel axis"]
-        (y(t) = y0), [guess = radius, state_priority = 0, description = "y-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 15, description = "z-position of the wheel axis"]
+        (x(t) = x), [state_priority = 15, description = "x-position of the wheel axis"]
+        (y(t) = y), [guess = radius, state_priority = 0, description = "y-position of the wheel axis"]
+        (z(t) = z), [state_priority = 15, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = 5, description = "Angles to rotate world-frame into frame_a around z-, y-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 5, description = "Derivatives of angles"]
@@ -501,7 +501,7 @@ end
 
 
 """
-    SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
+    SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x=0, z=0,
                       angles = zeros(3), der_angles = zeros(3), kwargs...)
 
 Wheel with slip rolling on a surface.
@@ -512,8 +512,8 @@ Wheel with slip rolling on a surface.
 - `I_axis`: Moment of inertia of the wheel along its axis
 - `I_long`: Moment of inertia of the wheel perpendicular to its axis
 - `width`: Width of the wheel (for rendering)
-- `x0`: Initial x-position of the wheel axis
-- `z0`: Initial z-position of the wheel axis
+- `x`: Initial x-position of the wheel axis
+- `z`: Initial z-position of the wheel axis
 - `state`: (structural) whether or not the component has angular state variables. 
 
 # Variables
@@ -528,7 +528,7 @@ Wheel with slip rolling on a surface.
 # Examples
 See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
 """
-@component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x0=0, z0=0,
+@component function SlippingWheel(; name, radius, m, I_axis, I_long, width = 0.035, x=0, z=0,
                       angles = zeros(3), der_angles = zeros(3), state = true, kwargs...)
     @named wheeljoint = SlipWheelJoint(; radius, kwargs...)
     @named begin
@@ -552,8 +552,8 @@ See [Docs: Wheels](https://help.juliahub.com/multibody/dev/examples/wheel/)
         width = width, [description = "Width of the wheel"]
     end
     sts = @variables begin
-        (x(t) = x0), [state_priority = 20, guess = 0, description = "x-position of the wheel axis"]
-        (z(t) = z0), [state_priority = 20, guess = 0, description = "z-position of the wheel axis"]
+        (x(t) = x), [state_priority = 20, guess = 0, description = "x-position of the wheel axis"]
+        (z(t) = z), [state_priority = 20, guess = 0, description = "z-position of the wheel axis"]
         (angles(t)[1:3] = angles),
         [state_priority = 30, guess = [0, 0, 0], description = "Angles to rotate world-frame into frame_a around y-, z-, x-axis"]
         (der_angles(t)[1:3] = der_angles), [state_priority = 30, guess = [0, 0, 0], description = "Derivatives of angles"]
@@ -673,13 +673,13 @@ end
         radius = 0.3,
         track = 1.0,
         state_priority = 1,
-        x0 = 0,
-        z0 = 0,
-        phi0 = 0,
-        theta1_0 = 0,
-        theta2_0 = 0,
-        der_theta1_0 = 0,
-        der_theta2_0 = 0,
+        x = 0,
+        z = 0,
+        phi = 0,
+        theta1 = 0,
+        theta2 = 0,
+        der_theta1 = 0,
+        der_theta2 = 0,
         render = true,
         iscut = false,
     )
@@ -708,13 +708,13 @@ function RollingWheelSetJoint(;
     radius = 0.3,
     track = 1.0,
     state_priority = 100,
-    x0 = 0,
-    z0 = 0,
-    phi0 = 0,
-    theta1_0 = 0,
-    theta2_0 = 0,
-    der_theta1_0 = 0,
-    der_theta2_0 = 0,
+    x = 0,
+    z = 0,
+    phi = 0,
+    theta1 = 0,
+    theta2 = 0,
+    der_theta1 = 0,
+    der_theta2 = 0,
     render = true,
     color = [0, 1, 1, 0.1],
     width_wheel = 0.15*radius,
@@ -756,13 +756,13 @@ function RollingWheelSetJoint(;
     end
 
     sts = @variables begin
-        (x(t) = x0), [description = "x coordinate for center between wheels", state_priority = state_priority, guess = 0]
-        (z(t) = z0), [description = "z coordinate for center between wheels", state_priority = state_priority, guess = 0]
-        (phi(t) = phi0), [description = "Orientation angle of wheel axis along y-axis", state_priority = state_priority, guess = 0]
-        (theta1(t) = theta1_0), [description = "Angle of wheel 1", state_priority = state_priority, guess = 0]
-        (theta2(t) = theta2_0), [description = "Angle of wheel 2", state_priority = state_priority, guess = 0]
-        (der_theta1(t) = der_theta1_0), [description = "Derivative of theta 1", state_priority = state_priority, guess = 0]
-        (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority, guess = 0]
+        (x(t) = x), [description = "x coordinate for center between wheels", state_priority = state_priority, guess = 0]
+        (z(t) = z), [description = "z coordinate for center between wheels", state_priority = state_priority, guess = 0]
+        (phi(t) = phi), [description = "Orientation angle of wheel axis along y-axis", state_priority = state_priority, guess = 0]
+        (theta1(t) = theta1), [description = "Angle of wheel 1", state_priority = state_priority, guess = 0]
+        (theta2(t) = theta2), [description = "Angle of wheel 2", state_priority = state_priority, guess = 0]
+        (der_theta1(t) = der_theta1), [description = "Derivative of theta 1", state_priority = state_priority, guess = 0]
+        (der_theta2(t) = der_theta2), [description = "Derivative of theta 2", state_priority = state_priority, guess = 0]
     end
     equations = Equation[
         if iscut
@@ -815,13 +815,13 @@ end
         I_long = 1.0,
         track = 1.0,
         state_priority = 1,
-        x0 = 0,
-        z0 = 0,
-        phi0 = 0,
-        theta1_0 = 0,
-        theta2_0 = 0,
-        der_theta1_0 = 0,
-        der_theta2_0 = 0,
+        x = 0,
+        z = 0,
+        phi = 0,
+        theta1 = 0,
+        theta2 = 0,
+        der_theta1 = 0,
+        der_theta2 = 0,
         width_wheel = 0.01,
         color = [0.3, 0.3, 0.3, 1],
         render = true,
@@ -858,13 +858,13 @@ function RollingWheelSet(;
     I_long = 1.0,
     track = 1.0,
     state_priority = 1,
-    x0 = 0,
-    z0 = 0,
-    phi0 = 0,
-    theta1_0 = 0,
-    theta2_0 = 0,
-    der_theta1_0 = 0,
-    der_theta2_0 = 0,
+    x = 0,
+    z = 0,
+    phi = 0,
+    theta1 = 0,
+    theta2 = 0,
+    der_theta1 = 0,
+    der_theta2 = 0,
     width_wheel = 0.01,
     hollow_fraction = 0.8,
     color = [0.3, 0.3, 0.3, 1],
@@ -902,18 +902,18 @@ function RollingWheelSet(;
                     render = false)
         axis1 = Rotational.Flange()
         axis2 = Rotational.Flange()
-        wheelSetJoint = RollingWheelSetJoint(; radius, track, state_priority, x0, z0, phi0, theta1_0, theta2_0, der_theta1_0, der_theta2_0, render, width_wheel, color, kwargs...)
+        wheelSetJoint = RollingWheelSetJoint(; radius, track, state_priority, x, z, phi, theta1, theta2, der_theta1, der_theta2, render, width_wheel, color, kwargs...)
         support = Rotational.Flange()
     end
 
     sts = @variables begin
-        (x(t) = x0), [description = "x coordinate of center between wheels", state_priority = state_priority, guess = 0]
-        (z(t) = z0), [description = "z coordinate of center between wheels", state_priority = state_priority, guess = 0]
-        (phi(t) = phi0), [description = "Orientation angle of wheel axis along z-axis", state_priority = state_priority, guess = 0]
-        (theta1(t) = theta1_0), [description = "Angle of wheel 1", state_priority = state_priority, guess = 0]
-        (theta2(t) = theta2_0), [description = "Angle of wheel 2", state_priority = state_priority, guess = 0]
-        (der_theta1(t) = der_theta1_0), [description = "Derivative of theta 1", state_priority = state_priority, guess = 0]
-        (der_theta2(t) = der_theta2_0), [description = "Derivative of theta 2", state_priority = state_priority, guess = 0]
+        (x(t) = x), [description = "x coordinate of center between wheels", state_priority = state_priority, guess = 0]
+        (z(t) = z), [description = "z coordinate of center between wheels", state_priority = state_priority, guess = 0]
+        (phi(t) = phi), [description = "Orientation angle of wheel axis along z-axis", state_priority = state_priority, guess = 0]
+        (theta1(t) = theta1), [description = "Angle of wheel 1", state_priority = state_priority, guess = 0]
+        (theta2(t) = theta2), [description = "Angle of wheel 2", state_priority = state_priority, guess = 0]
+        (der_theta1(t) = der_theta1), [description = "Derivative of theta 1", state_priority = state_priority, guess = 0]
+        (der_theta2(t) = der_theta2), [description = "Derivative of theta 2", state_priority = state_priority, guess = 0]
     end
 
     equations = Equation[

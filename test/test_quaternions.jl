@@ -21,7 +21,7 @@ end
 using LinearAlgebra
 @testset "Harmonic oscillator with Body as root and quaternions as state variables" begin
 
-@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi0 = [0, 0.9, 0], quat=true) # This time the body isroot since there is no joint containing state
+@named body = Body(; m = 1, isroot = true, r_cm = [0.0, 0, 0], phi = [0, 0.9, 0], quat=true) # This time the body isroot since there is no joint containing state
 @named spring = Multibody.Spring(c = 1)
 
 connections = [connect(world.frame_b, spring.frame_a)

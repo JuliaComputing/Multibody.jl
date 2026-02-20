@@ -4,12 +4,12 @@ function add_params(sys, params; name)
 end
 
 """
-    Revolute(; name, phi0 = 0, w0 = 0, n, axisflange = false)
+    Revolute(; name, phi = 0, w = 0, n, axisflange = false)
 
 Revolute joint with 1 rotational degree-of-freedom
 
-- `phi0`: Initial angle
-- `w0`: Iniitial angular velocity
+- `phi`: Initial angle
+- `w`: Initial angular velocity
 - `n`: The axis of rotation
 - `axisflange`: If true, the joint will have two additional frames from Mechanical.Rotational, `axis` and `support`, between which rotational components such as springs and dampers can be connected.
 
@@ -22,7 +22,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
 - `length = radius`: Length of the joint in animations
 - `color`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 """
-@component function Revolute(; name, phi0 = 0.0, w0 = 0.0, n = Float64[0, 0, 1], axisflange = false,
+@component function Revolute(; name, phi = 0.0, w = 0.0, n = Float64[0, 0, 1], axisflange = false,
                   isroot = true, iscut = false, radius = 0.05, length = radius, color = [0.5019608f0,0.0f0,0.5019608f0,1.0f0], state_priority = 3, render = true)
     if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Axis of rotation must be a unit vector")
@@ -42,12 +42,12 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Rotatio
             # state_priority = 2,
             description = "Driving torque in direction of axis of rotation",
         ]
-        phi(t)=phi0, [
+        phi(t)=phi, [
             state_priority = state_priority,
             description = "Relative rotation angle from frame_a to frame_b",
         ]
-        w(t)=w0, [state_priority = state_priority, description = "angular velocity (rad/s)"]
-        # Rrel0 = planar_rotation(n, phi0, w0)
+        w(t)=w, [state_priority = state_priority, description = "angular velocity (rad/s)"]
+        # Rrel0 = planar_rotation(n, phi, w)
     # @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w)
     end
     
@@ -105,7 +105,7 @@ If `axisflange`, flange connectors for ModelicaStandardLibrary.Mechanics.Transla
 The function returns an System representing the prismatic joint.
 """
 @component function Prismatic(; name, n = Float64[0, 0, 1], axisflange = false,
-                   s0 = nothing, v0 = nothing, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
+                   s = nothing, v = nothing, radius = 0.05, color = [0,0.8,1,1], state_priority=10, iscut=false, render=true)
     if !(eltype(n) <: Num) && !isa(n, Symbolics.Arr{Num, 1})
         norm(n) ≈ 1 || error("Prismatic axis of motion must be a unit vector, got norm(n) = $(norm(n))")
     end
@@ -120,11 +120,11 @@ The function returns an System representing the prismatic joint.
     end
 
     vars = @variables begin
-        s(t)=s0, [
+        s(t)=s, [
             state_priority = state_priority,
             description = "Relative distance between frame_a and frame_b",
         ]
-        v(t)=v0, [
+        v(t)=v, [
             state_priority = state_priority,
             description = "Relative velocity between frame_a and frame_b",
         ]
@@ -375,9 +375,9 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
         bearing = Frame() #"Coordinate system fixed in the bearing"
 
         actuatedRevolute_a = Revolute(axisflange = true,
-                                      n = n_a, phi0=nothing, w0=nothing)
+                                      n = n_a, phi=nothing, w=nothing)
         actuatedRevolute_b = Revolute(axisflange = true,
-                                      n = n_b, phi0=nothing, w0=nothing)
+                                      n = n_b, phi=nothing, w=nothing)
 
         idealGear = Rotational.IdealGear(ratio = ratio)
         translation1 = FixedTranslation(r = r_b)

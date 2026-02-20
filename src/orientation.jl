@@ -435,10 +435,10 @@ function get_frame(sol, frame, t)
     [R tr; 0 0 0 1]
 end
 
-function nonunit_quaternion_equations(R, w; Q0 = [1, 0, 0, 0])
+function nonunit_quaternion_equations(R, w; Q = [1, 0, 0, 0])
     vars = @variables begin
         Q(t)[1:4], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
-        Q̂(t)[1:4]=Q0, [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+        Q̂(t)[1:4]=Q, [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
         Q̂d(t)[1:4], [state_priority=1000]
         # NOTE: 
         n(t)

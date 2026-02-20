@@ -111,8 +111,8 @@ end
             m = 15,
             I_axis = 0.06,
             I_long = 0.12,
-            x0 = 0.0,
-            z0 = 0.0,
+            x = 0.0,
+            z = 0.0,
             der_angles = [0, 0, 0],
             iscut = true,
         )

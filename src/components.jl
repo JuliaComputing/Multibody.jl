@@ -315,7 +315,7 @@ To obtain an axis-angle representation of any rotation, see [Conversion between 
 end
 
 """
-    Body(; name, m = 1, r_cm, isroot = false, phi0 = zeros(3), phid0 = zeros(3), r_0 = zeros(3), state_priority = 2, quat = false, sparse_I = false)
+    Body(; name, m = 1, r_cm, isroot = false, phi = zeros(3), phid = zeros(3), r_0 = zeros(3), state_priority = 2, quat = false, sparse_I = false)
 
 Representing a body with 3 translational and 3 rotational degrees-of-freedom.
 
@@ -329,8 +329,8 @@ This component has a single frame, `frame_a`. To represent bodies with more than
 - `r_cm`: Vector from `frame_a` to center of mass, resolved in `frame_a`
 - `I_11, I_22, I_33, I_21, I_31, I_32`: Inertia-matrix elements
 - `isroot`: Indicate whether this component is the root of the system, useful when there are no joints in the model.
-- `phi0`: Initial orientation, only applicable if `isroot = true` and `quat = false`
-- `phid0`: Initial angular velocity
+- `phi`: Initial orientation, only applicable if `isroot = true` and `quat = false`
+- `phid`: Initial angular velocity
 
 # Variables
 - `r_0`: Position vector from origin of world frame to origin of `frame_a`
@@ -354,12 +354,12 @@ This component has a single frame, `frame_a`. To represent bodies with more than
               state = false,
               sequence = [1,2,3],
               quat = false,
-              phi0 = state || isroot ? zeros(3) : nothing,
-              phid0 = state || isroot ? zeros(3) : nothing,
+              phi = state || isroot ? zeros(3) : nothing,
+              phid = state || isroot ? zeros(3) : nothing,
               r_0 = state || isroot ? zeros(3) : nothing,
               v_0 = state || isroot ? zeros(3) : nothing,
               w_a = (state || isroot) && quat ? zeros(3) : nothing,
-              Q0 = (state || isroot) && quat ? [1, 0, 0, 0] : nothing,
+              Q = (state || isroot) && quat ? [1, 0, 0, 0] : nothing,
               radius = 0.05,
               cylinder_radius = radius/2,
               length_fraction = 1,
@@ -412,15 +412,15 @@ This component has a single frame, `frame_a`. To represent bodies with more than
         if quat
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
-            qeeqs, qvars, qpars = nonunit_quaternion_equations(Ra, w_a; Q0)
+            qeeqs, qvars, qpars = nonunit_quaternion_equations(Ra, w_a; Q)
             vars = [vars; qvars]
             pars = [pars; qpars]
             qeeqs
         else
             @named frame_a = Frame(varw=false)
             Ra = ori(frame_a, false)
-            @variables phi(t)[1:3]=phi0 [state_priority = 10, description = "Euler angles"]
-            @variables phid(t)[1:3]=phid0 [state_priority = 10]
+            @variables phi(t)[1:3]=phi [state_priority = 10, description = "Euler angles"]
+            @variables phid(t)[1:3]=phid [state_priority = 10]
             @variables phidd(t)[1:3] [state_priority = 0]
             append!(vars, [phi, phid, phidd])
             ar = axes_rotations(sequence, phi, phid)
@@ -605,7 +605,7 @@ function Rope(; name, l = 1, dir = [0,-1, 0], n = 10, m = 1, c = 0, d=0, air_res
         springs = [Translational.Spring(c = ci, s_rel0=li, name=Symbol("link_$i")) for i = 1:n]
         dampers = [Translational.Damper(d = di, name=Symbol("damping_$i")) for i = 1:n]
         masses = [Body(; m = mi, name=Symbol("mass_$i"), isroot=false, r_cm = li/2*dir, air_resistance, color=0.9*color) for i = 1:n]
-        links = [Prismatic(; n = dir, s0 = li, name=Symbol("flexibility_$i"), axisflange=true, color, radius, iscut = cutprismatic && i == 1) for i = 1:n]
+        links = [Prismatic(; n = dir, s = li, name=Symbol("flexibility_$i"), axisflange=true, color, radius, iscut = cutprismatic && i == 1) for i = 1:n]
         for i = 1:n
             push!(eqs, connect(links[i].support, springs[i].flange_a, dampers[i].flange_a))
             push!(eqs, connect(links[i].axis, springs[i].flange_b, dampers[i].flange_b))

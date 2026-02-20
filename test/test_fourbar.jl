@@ -11,8 +11,8 @@ D = Differential(t)
 world = Multibody.world
 
 systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755982989, state_priority=10, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
-    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
+    j1 = Revolute(n = [1, 0, 0], w = 5.235987755982989, state_priority=10, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j2 = Prismatic(n = [1, 0, 0], s = -0.2)
     b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
     b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
     b3 = BodyShape(r = [-1, 0.3, 0.1], radius=0.03)
@@ -48,8 +48,8 @@ sol = solve(prob, FBDF(autodiff=true));
 
 
 systems = @named begin
-    j1 = Revolute(n = [1, 0, 0], w0 = 5.235987755983, phi0=nothing, state_priority=12, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
-    j2 = Prismatic(n = [1, 0, 0], s0 = -0.2)
+    j1 = Revolute(n = [1, 0, 0], w = 5.235987755983, phi=nothing, state_priority=12, radius=0.1f0) # Increase state priority to ensure that this joint coordinate is chosen as state variable
+    j2 = Prismatic(n = [1, 0, 0], s = -0.2)
     b1 = BodyShape(r = [0, 0.5, 0.1], radius=0.03)
     b2 = BodyShape(r = [0, 0.2, 0], radius=0.03)
     b3 = FixedTranslation(r = [1.2, 0, 0], radius=0)

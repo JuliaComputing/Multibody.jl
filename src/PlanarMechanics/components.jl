@@ -175,7 +175,7 @@ A fixed translation between two components (rigid rod)
         r[1:2] = r, [description = "Fixed x,y-length of the rod resolved w.r.t to body frame_a at phi = 0"]
         radius = radius, [description = "Radius of the rod in animations"]
         render = render, [description = "Render the rod in animations"]
-        color = color, [description = "Color of the rod in animations"]
+        color[1:4] = color, [description = "Color of the rod in animations"]
     end
 
     systems = @named begin

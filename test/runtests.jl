@@ -408,7 +408,7 @@ systems = @named begin
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
     bar3 = FixedTranslation(r = [0.9, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s0 = 0.1, axisflange = true)
+    p2 = Prismatic(n = [0, -1, 0], s = 0.1, axisflange = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)

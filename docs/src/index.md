@@ -29,9 +29,9 @@ radius_large = length_scale*0.3
 
         # revl2 = Revolute(; radius = radius_large, color=JULIASIM_PURPLE, axisflange=true)
 
-        revl2 = RollingWheel(; radius = radius_large, color=JULIASIM_PURPLE, m=1, I_axis=0.1, I_long=0.1, x0=0, z0=0, state_priority=1000, angles=zeros(3), der_angles=zeros(3))
+        revl2 = RollingWheel(; radius = radius_large, color=JULIASIM_PURPLE, m=1, I_axis=0.1, I_long=0.1, x=0, z=0, state_priority=1000, angles=zeros(3), der_angles=zeros(3))
 
-        revr  = Revolute(; radius = radius_small, color=JULIASIM_PURPLE, axisflange=true, phi0=0, w0=0)
+        revr  = Revolute(; radius = radius_small, color=JULIASIM_PURPLE, axisflange=true, phi=0, w=0)
         bodyl = Body(m=1, radius = radius_small, color=JULIASIM_PURPLE)
         bodyr = Body(m=1, radius = radius_large, color=JULIASIM_PURPLE, state_priority=-1)
         bar_top = FixedTranslation(r=length_scale*[1, 0.05, 0], radius=length_scale*0.025, color=JULIASIM_PURPLE)

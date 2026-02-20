@@ -233,7 +233,7 @@ External force acting at `frame_b`, defined by 3 input signals and resolved in f
 end
 
 @component function LineForceBase(; name, length = 0, s_small = 1e-10, fixed_rotation_at_frame_a = false,
-    fixed_rotation_at_frame_b = false, r_rel_0 = nothing, s0 = nothing)
+    fixed_rotation_at_frame_b = false, r_rel_0 = nothing, s = nothing)
     @named frame_a = Frame(varw = fixed_rotation_at_frame_a)
     @named frame_b = Frame(varw = fixed_rotation_at_frame_b)
 
@@ -241,7 +241,7 @@ end
         length(t), [
             description = "Distance between the origin of frame_a and the origin of frame_b",
         ]
-        s(t)=s0, [
+        s(t)=s, [
             description = "(Guarded) distance between the origin of frame_a and the origin of frame_b (>= s_small))",
         ]
         r_rel_0(t)[1:3]=r_rel_0, [

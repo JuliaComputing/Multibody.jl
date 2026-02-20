@@ -43,8 +43,8 @@ D = Differential(t)
             m = 2,
             I_axis = 0.06,
             I_long = 0.12,
-            x0 = 0.2,
-            z0 = 0.2,
+            x = 0.2,
+            z = 0.2,
             der_angles = [0, 5, 1],
         )
     end
@@ -121,8 +121,8 @@ The slip velocity is defined such that when the wheel is moving with positive ve
             m = 2,
             I_axis = 0.06,
             I_long = 0.12,
-            x0 = 0.2,
-            z0 = 0.2,
+            x = 0.2,
+            z = 0.2,
             der_angles = [0, 25, 0.1],
             mu_A = 0.95,             # Friction coefficient at adhesion
             mu_S = 0.5,             # Friction coefficient at sliding

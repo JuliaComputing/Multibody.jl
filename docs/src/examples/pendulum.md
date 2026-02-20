@@ -146,7 +146,7 @@ nothing # hide
 ### Why do we need a joint?
 In the example above, we introduced a prismatic joint to model the oscillating motion of the mass-spring system. In reality, we can suspend a mass in a spring without any joint, so why do we need one here? The answer is that we do not, in fact, need the joint, but if we connect the spring directly to the world, we need to make the body (mass) the root object of the kinematic tree instead:
 ```@example pendulum
-@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi0 = [0, 1, 0])
+@named root_body = Body(; m = 1, isroot = true, r_cm = [0, 1, 0], phi = [0, 1, 0])
 @named multibody_spring = Multibody.Spring(c=10)
 
 connections = [connect(world.frame_b, multibody_spring.frame_a)
@@ -193,7 +193,7 @@ import Multibody.Rotations
     systems = @named begin
         world = World()
         shoulder_joint = Revolute(n = [0, 1, 0], axisflange = true)
-        elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi0=0.1)
+        elbow_joint    = Revolute(n = [0, 0, 1], axisflange = true, phi=0.1)
         upper_arm = BodyShape(; m = 0.1, r = [0, 0, 0.6], radius=0.04)
         lower_arm = BodyShape(; m = 0.1, r = [0, 0.6, 0], radius=0.04)
         tip = Body(; m = 0.3)
@@ -334,7 +334,7 @@ gray = [0.5, 0.5, 0.5, 1]
         fixed = Fixed()
         cart = BodyShape(m = 1, r = [0.2, 0, 0], color=[0.2, 0.2, 0.2, 1], shape="box")
         mounting_point = FixedTranslation(r = [0.1, 0, 0])
-        prismatic = Prismatic(n = [1, 0, 0], s0 = 0, axisflange = true, color=gray, state_priority=100)
+        prismatic = Prismatic(n = [1, 0, 0], s = 0, axisflange = true, color=gray, state_priority=100)
         revolute = Revolute(n = [0, 0, 1], axisflange = false, state_priority=100)
         pendulum = BodyCylinder(r = [0, 0.5, 0], diameter = 0.015, color=gray)
         motor = TranslationalModelica.Force(use_support = false)

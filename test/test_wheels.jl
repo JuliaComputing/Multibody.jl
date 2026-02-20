@@ -1,4 +1,6 @@
+using TestEnv; TestEnv.activate()
 using Test, ModelingToolkit, Multibody, Random
+using OrdinaryDiffEq
 t = Multibody.t
 # ==============================================================================
 ## Rolling wheel ===============================================================
@@ -12,8 +14,8 @@ using LinearAlgebra
         world = World()
         wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
                             I_long = 0.12,
-                            x0 = 0.2,
-                            z0 = 0.2,
+                            x = 0.2,
+                            z = 0.2,
                             angles = [0,0,0],
                             der_angles = [0, -5, -1])
     end
@@ -63,8 +65,8 @@ using LinearAlgebra
         world = World()
         wheel = RollingWheel(; radius = 0.3, m = 2, I_axis = 0.06,
                             I_long = 0.12,
-                            x0 = 0.2,
-                            z0 = 0.2,
+                            x = 0.2,
+                            z = 0.2,
                             surface,
                             der_angles = [0, 0, 0])
     end
@@ -134,9 +136,9 @@ import ModelingToolkitStandardLibrary.Blocks
     systems = @named begin
         world = World()
         prismatic = Prismatic(n = [0,1,0])
-        world_axis = Revolute(n = [0,1,0], iscut=false, state_priority=100, w0=10)
+        world_axis = Revolute(n = [0,1,0], iscut=false, state_priority=100, w=10)
         # world_axis = RevolutePlanarLoopConstraint(n = [0,1,0])
-        spin_axis = Revolute(n = [0,0,1], iscut=false, state_priority=100, phi0=nothing, w0=nothing)
+        spin_axis = Revolute(n = [0,0,1], iscut=false, state_priority=100, phi=nothing, w=nothing)
         # spin_axis = RevolutePlanarLoopConstraint(n = [0,0,1])
         bar = FixedTranslation(r = [0, 0.3, 1])
         wheel = RollingWheel(radius = 0.3, m = 2, I_axis = 0.06,
