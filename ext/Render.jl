@@ -241,7 +241,7 @@ end
 
 function get_shapefile(sys, sol)::String
     try
-        sf = sol(sol.t[1], idxs=sys.shapefile)
+        return sf = sol(sol.t[1], idxs=[sys.shapefile])[]
         # decode(sf)
     catch
         ""
@@ -250,7 +250,7 @@ end
 
 function get_shape(sys, sol)::String
     try
-        sf = sol(sol.t[1], idxs=sys.shape)
+        return sf = sol(sol.t[1], idxs=[sys.shape])[]
         # decode(sf)
     catch
         ""
@@ -631,7 +631,6 @@ function render!(scene, ::typeof(BodyShape), sys, sol, t)
     if isempty(shapepath)
         r_0a = get_fun(sol, collect(sys.frame_a.r_0))
         r_0b = get_fun(sol, collect(sys.frame_b.r_0))
-        shape = get_shape(sys, sol)
         if shape == "cylinder"
             radius = Float32(sol(sol.t[1], idxs=sys.radius))
             thing = @lift begin

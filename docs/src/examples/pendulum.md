@@ -59,7 +59,7 @@ This results in a simplified model with the minimum required variables and equat
 multibody
 ```
 
-We are now ready to create an `ODEProblem` and simulate it. We use the `Rodas4` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
+We are now ready to create an `ODEProblem` and simulate it. We use the `Tsit5` solver from OrdinaryDiffEq.jl, and pass a dictionary for the initial conditions. We specify only initial condition for some variables, for those variables where no initial condition is specified, the default initial condition defined the model will be used.
 ```@example pendulum
 D = Differential(t)
 defs = Dict() # We may specify the initial condition here
@@ -334,10 +334,10 @@ gray = [0.5, 0.5, 0.5, 1]
         fixed = Fixed()
         cart = BodyShape(m = 1, r = [0.2, 0, 0], color=[0.2, 0.2, 0.2, 1], shape="box")
         mounting_point = FixedTranslation(r = [0.1, 0, 0])
-        prismatic = Prismatic(n = [1, 0, 0], axisflange = true, color=gray, state_priority=100)
+        prismatic = Prismatic(n = [1, 0, 0], s0 = 0, axisflange = true, color=gray, state_priority=100)
         revolute = Revolute(n = [0, 0, 1], axisflange = false, state_priority=100)
         pendulum = BodyCylinder(r = [0, 0.5, 0], diameter = 0.015, color=gray)
-        motor = TranslationalModelica.Force(use_support = true)
+        motor = TranslationalModelica.Force(use_support = false)
         tip = Body(m = 0.05)
     end
 
@@ -356,7 +356,7 @@ gray = [0.5, 0.5, 0.5, 1]
         connect(revolute.frame_b, pendulum.frame_a)
         connect(pendulum.frame_b, tip.frame_a)
         connect(motor.flange, prismatic.axis)
-        connect(prismatic.support, motor.support)
+        # connect(prismatic.support, motor.support)
         u ~ motor.f.u
         x ~ prismatic.s
         v ~ prismatic.v
@@ -411,13 +411,13 @@ op = Dict([ # Operating point to linearize in
     cp.revolute.phi => 0 # Pendulum pointing upwards
 ]
 )
-matrices, simplified_sys = linearize(cp, inputs, outputs; op)
+matrices, simplified_sys = linearize(cp, inputs, outputs; op, Multibody.linsys...)
 matrices
 ```
 This gives us the matrices $A,B,C,D$ in a linearized statespace representation of the system. To make these easier to work with, we load the control packages and call `named_ss` instead of `linearize` to get a named statespace object instead:
 ```@example pendulum
 using ControlSystemsMTK
-lsys = named_ss(cp, inputs, outputs; op) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
+lsys = named_ss(cp, inputs, outputs; op, Multibody.linsys...) # identical to linearize, but packages the resulting matrices in a named statespace object for convenience
 ```
 
 ### LQR and LQG Control design
