@@ -122,7 +122,6 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
                                 gy = -9.80665, m = 1, I = 0.1, radius = 0.1,
                                 render = true, color = purple, v=nothing, phi=nothing, w=nothing)
     pars = @parameters begin
-        r0[1:2] = r0, [description = "Vector from frame_a to frame_b resolved in frame_a"]
         r[1:2] = r, [description = "Vector from frame_a to frame_b resolved in frame_a"]
         r_cm[1:2] = r_cm, [description = "Vector from frame_a to center of mass, resolved in frame_a"]
         gy = gy, [description = "Gravity field acting on the mass in the y-direction"]
@@ -136,15 +135,17 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
     systems = @named begin
         translation = FixedTranslation(; r, render=false)
         translation_cm = FixedTranslation(; r=r_cm, render=false)
-        body = Body(; r=r0, I, m, gy, state_priority, v, phi, w)
+        body = Body(; I, m, gy, state_priority, v, phi, w)
         frame_a = Frame()
         frame_b = Frame()
     end
 
     vars = @variables begin
+        (body_r(t)[1:2] = r0)
     end
 
     equations = Equation[
+        body.r ~ body_r
         connect(frame_a, translation.frame_a, translation_cm.frame_a)
         connect(frame_b, translation.frame_b)
         connect(translation_cm.frame_b, body.frame_a)
