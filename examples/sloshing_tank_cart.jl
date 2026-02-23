@@ -61,6 +61,10 @@ g = 9.81            # Gravitational acceleration (m/s²)
 m_cart = 50.0       # Cart mass (kg)
 cart_length = 0.4   # Cart length (m)
 
+# Driving force (square wave)
+F_amp = 100.0       # Force amplitude (N)
+F_freq = 0.03        # Frequency (Hz)
+
 # Damping
 ζ_slosh = 0.02      # Sloshing damping ratio (2%)
 
@@ -136,10 +140,12 @@ M_BB[11,11] = 0.01
 M_BB[12,12] = 0.01
 
 # M_BI: Boundary-modal coupling
-# Horizontal (x) acceleration at boundary 1 excites sloshing modes
+# For mass-normalized modes (M_II = I), the coupling is sqrt(participating_mass)
+# Physical: m_n * η̈_n + k_n * η_n = -m_n * ẍ
+# Mass-normalized (ξ = η*√m): ξ̈ + ω²ξ = -√m_n * ẍ
 M_BI = zeros(n_bdof, n_modes)
-M_BI[1, 1] = m_1    # x-acceleration couples to mode 1
-M_BI[1, 2] = m_2    # x-acceleration couples to mode 2
+M_BI[1, 1] = sqrt(m_1)    # x-acceleration couples to mode 1
+M_BI[1, 2] = sqrt(m_2)    # x-acceleration couples to mode 2
 
 # M_II: Modal mass matrix (identity for mass-normalized modes)
 M_II = Matrix(1.0I, n_modes, n_modes)
@@ -187,8 +193,12 @@ systems = @named begin
         ω = ω_modes,
     )
 
-    # Optional: damper on prismatic joint for cart friction
-    cart_damper = Multibody.Translational.Damper(d=5.0)
+    # Damper on prismatic joint for cart friction
+    cart_damper = Multibody.Translational.Damper(d=250.0)
+
+    # Square wave driving force
+    force_signal = Multibody.Blocks.Square(frequency=F_freq, amplitude=F_amp)
+    drive_force = Multibody.Translational.Force()
 end
 
 # Connect the system
@@ -199,23 +209,23 @@ eqs = [
     connect(mount.frame_b, tank.frame_a)
     connect(prismatic.axis, cart_damper.flange_a)
     connect(prismatic.support, cart_damper.flange_b)
+    connect(force_signal.output, drive_force.f)
+    connect(drive_force.flange, prismatic.axis)
 ]
 
 @named model = System(eqs, t; systems=[world; systems])
 
 # =============================================================================
-# Simulate: Free response - initial cart velocity
+# Simulate: Square wave driven cart
 # =============================================================================
 
 println("\n=== Building and simulating model ===")
 ssys = multibody(model)
 
-# Initial conditions: cart has initial velocity
-v0_cart = 1.0  # m/s initial velocity
 prob = ODEProblem(ssys, [
-    prismatic.v => v0_cart,
+    prismatic.v => 0.0,
     prismatic.s => 0.0,
-], (0.0, 20.0))
+], (0.0, 50.0))
 
 sol = solve(prob, Tsit5())
 println("Simulation complete: $(sol.retcode)")
@@ -232,22 +242,10 @@ p2 = plot(sol, idxs=[prismatic.v], label="Cart velocity (m/s)", ylabel="Velocity
 p3 = plot(sol, idxs=[tank.η[1]], label="Mode 1 (ω=$(round(ω_1,digits=1)) rad/s)", ylabel="η")
 plot!(p3, sol, idxs=[tank.η[2]], label="Mode 2 (ω=$(round(ω_2,digits=1)) rad/s)")
 
+# Driving force
+p4 = plot(sol, idxs=[force_signal.output.u], label="Drive force (N)", ylabel="Force")
+
 # Combined plot
-p = plot(p1, p2, p3, layout=(3,1), size=(800, 600),
-         title=["Cart with Sloshing Tank" "" ""])
+p = plot(p1, p2, p3, p4, layout=(4,1), size=(800, 800),
+         title=["Square-Wave Driven Cart with Sloshing Tank" "" "" ""])
 display(p)
-
-# =============================================================================
-# Analysis: Energy transfer
-# =============================================================================
-
-println("\n=== Energy Analysis ===")
-# Initial kinetic energy of cart
-KE_initial = 0.5 * m_cart * v0_cart^2
-println("Initial cart KE: $(round(KE_initial, digits=2)) J")
-
-# Final cart velocity (should be reduced due to sloshing)
-v_final = sol[prismatic.v][end]
-KE_final = 0.5 * m_cart * v_final^2
-println("Final cart KE: $(round(KE_final, digits=2)) J")
-println("Energy dissipated by sloshing damping: $(round(KE_initial - KE_final, digits=2)) J")

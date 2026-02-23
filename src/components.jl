@@ -1015,11 +1015,34 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
         q̇_flex(t)[1:n_flex_dof] = zeros(n_flex_dof), [description = "Boundary deformation velocities"]
     end
 
+    # Reference frame acceleration variables (needed for modal coupling)
+    @variables begin
+        r_0(t)[1:3], [description = "Position of frame_a origin in world frame"]
+        v_0(t)[1:3], [description = "Velocity of frame_a origin in world frame"]
+        a_0(t)[1:3], [description = "Acceleration of frame_a origin in world frame"]
+        w_a(t)[1:3], [description = "Angular velocity of frame_a in body frame"]
+        z_a(t)[1:3], [description = "Angular acceleration of frame_a in body frame"]
+    end
+
     # Reference frame orientation
     R_a = ori(frame_a)
 
     # Build equation arrays
     eqs = Equation[]
+
+    # frame_a kinematics (following Body component pattern)
+    append!(eqs, collect(r_0) .~ collect(frame_a.r_0))
+    append!(eqs, collect(v_0) .~ D.(collect(r_0)))
+    append!(eqs, collect(a_0) .~ D.(collect(v_0)))
+    push!(eqs, w_a ~ angular_velocity2(R_a))
+    append!(eqs, collect(z_a) .~ D.(collect(w_a)))
+
+    # Boundary 1 acceleration in body frame (drives modal excitation through M_BI coupling)
+    # Subtract gravity so that only the "dynamic" acceleration excites modes and contributes
+    # to inertial forces, matching the Body component convention: a_0 - g_0
+    g_0 = gravity_acceleration(collect(frame_a.r_0))
+    a_body = resolve2(R_a, collect(a_0) - g_0)
+    q̈_B1 = vcat(a_body, collect(z_a))
 
     # Kinematic equations for states
     append!(eqs, D.(collect(η)) .~ collect(η̇))
@@ -1027,14 +1050,13 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
         append!(eqs, D.(collect(q_flex)) .~ collect(q̇_flex))
     end
 
-    # Build full q_B vector: [zeros(6); q_flex] (frame_a deformation is zero)
-    # q_B represents deformations in the body frame (frame_a coordinates)
+    # Build full q_B vector: [zeros(6); q_flex] for stiffness terms (deformations only)
     q_B_full = vcat(zeros(Num, 6), collect(q_flex))
     q̇_B_full = vcat(zeros(Num, 6), collect(q̇_flex))
 
-    # Second derivatives for dynamics
+    # Second derivatives: boundary 1 uses actual frame_a acceleration, rest use deformation accelerations
     η_ddot = D.(collect(η̇))
-    q̈_B_full = vcat(zeros(Num, 6), D.(collect(q̇_flex)))
+    q̈_B_full = vcat(q̈_B1, D.(collect(q̇_flex)))
 
     # Modal dynamics equation:
     # M_II * η̈ + C_II * η̇ + K_II * η = -M_BI' * q̈_B
@@ -1070,9 +1092,9 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
             f_i = f_B[idx_start:idx_start+2]      # Forces in body frame
             τ_i = f_B[idx_start+3:idx_end]        # Torques in body frame
 
-            # The reaction force at frame_a equals the internal CB forces (resolved to world frame)
-            append!(eqs, collect(frame_a.f) .~ resolve1(R_a, f_i))
-            append!(eqs, collect(frame_a.tau) .~ resolve1(R_a, τ_i))
+            # The reaction force at frame_a equals the internal CB forces (in body/connector frame)
+            append!(eqs, collect(frame_a.f) .~ f_i)
+            append!(eqs, collect(frame_a.tau) .~ τ_i)
         else
             # Other boundaries have position determined by deformation
             flex_idx = 6*(i-2) + 1  # Index into q_flex
@@ -1091,13 +1113,13 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
             f_i = f_B[idx_start:idx_start+2]      # Forces in body frame
             τ_i = f_B[idx_start+3:idx_end]        # Torques in body frame
 
-            # Include moment from offset for force balance
-            append!(eqs, collect(frame_i.f) .~ resolve1(R_a, f_i))
-            append!(eqs, collect(frame_i.tau) .~ resolve1(R_a, τ_i))
+            # Force balance for this boundary (in connector frame)
+            append!(eqs, collect(frame_i.f) .~ f_i)
+            append!(eqs, collect(frame_i.tau) .~ τ_i)
         end
     end
 
-    System(eqs, t, [η; η̇; q_flex; q̇_flex], pars; name, systems=frames)
+    System(eqs, t, [η; η̇; q_flex; q̇_flex; r_0; v_0; a_0; w_a; z_a], pars; name, systems=frames)
 end
 
 #=
