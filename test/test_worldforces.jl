@@ -41,7 +41,7 @@ end
 @named testwf = TestWorldForce1()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.b.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
@@ -49,7 +49,6 @@ sol = solve(prob, Tsit5())
 # ==============================================================================
 ## A single force
 # ==============================================================================
-# Tests here pass for any combination of quat and neg_w
 @component function TestWorldForce2(; name)
     pars = @parameters begin
         f[1:3]
@@ -78,13 +77,13 @@ end
 @named testwf = TestWorldForce2()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0.5*1^2*1, 0, 0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.5*1^2*1, 0] atol=1e-3
@@ -125,13 +124,13 @@ end
 @named testwf = TestWorldForce3()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5(), reltol=1e-8)
 # plot(sol)
 @test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.572800369240885, 0.4946715021692289, 0.0] atol=1e-3 # Spinning around center of mass
@@ -169,13 +168,13 @@ end
 @named testwf = TestWorldForce4()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Tsit5(), reltol=1e-8)
 # plot(sol)
 @test sol(1, idxs=testwf.body.frame_a.r_0) ≈ [0.9419246090353689, -0.23388592078659548, 0.0] atol=1e-3
@@ -213,13 +212,13 @@ end
 @named testwf = TestWorldForce5()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
 sol = solve(prob, Tsit5(), reltol=1e-8)
 # plot(sol)
 @test sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36637355877861, 0.4818152481205165, 0.0] atol=1e-3
@@ -259,13 +258,13 @@ end
 @named testwf = TestWorldForce6()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 @test sol(1, idxs=testwf.body.body.w_a[3]-testwf.b0.w_a[3]) ≈ 0 atol=1e-3 # These should be identical
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 1))
 sol = solve(prob, Rodas4(), reltol=1e-8)
 # plot(sol)
 @test sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36595999301484056, 0.48169308140123934, 0.0] atol=1e-3 # Identical to the test above without extra body b0
@@ -306,13 +305,13 @@ end
 @named testwf = TestWorldForce7()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0, 0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,1,0]], (0, 0.1))
 sol = solve(prob, Tsit5(), abstol=1e-8, reltol=1e-8)
 # plot(sol)
 @test sol(0.1, idxs=testwf.body.frame_a.r_0) ≈ [0.36595999301484056, 0.48169308140123934, 0.0] atol=1e-3
@@ -354,7 +353,7 @@ end
 @named testwf = TestWorldForce8()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.b1.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
@@ -396,7 +395,7 @@ end
 @named testwf = TestWorldForce9()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
 
@@ -432,7 +431,7 @@ end
 @named testwf = TestWorldForce10()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
@@ -472,13 +471,13 @@ end
 @named testwf = TestWorldForce11()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,10,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,10,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test !iszero(sol(1, idxs=testwf.body.frame_a.r_0))
@@ -531,13 +530,13 @@ end
 @named testwf = TestWorldForce12()
 testwf = complete(testwf)
 ssys = multibody(testwf)
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [1,0,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test sol(1, idxs=testwf.body.r_0) ≈ [0, 0.0, 0.0] atol=1e-3
 
 
-prob = ODEProblem(ssys, [testwf.world.g => 0; collect(testwf.f) .=> [0,10,0]], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G => 0; collect(testwf.f) .=> [0,10,0]], (0, 1))
 sol = solve(prob, Tsit5())
 # plot(sol)
 @test !iszero(sol(1, idxs=testwf.body.frame_a.r_0))
