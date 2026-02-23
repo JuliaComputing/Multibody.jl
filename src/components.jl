@@ -1031,23 +1031,23 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
     eqs = Equation[]
 
     # frame_a kinematics (following Body component pattern)
-    append!(eqs, collect(r_0) .~ collect(frame_a.r_0))
-    append!(eqs, collect(v_0) .~ D.(collect(r_0)))
-    append!(eqs, collect(a_0) .~ D.(collect(v_0)))
+    push!(eqs, r_0 ~ frame_a.r_0)
+    push!(eqs, v_0 ~ D(r_0))
+    push!(eqs, a_0 ~ D(v_0))
     push!(eqs, w_a ~ angular_velocity2(R_a))
-    append!(eqs, collect(z_a) .~ D.(collect(w_a)))
+    push!(eqs, z_a ~ D(w_a))
 
     # Boundary 1 acceleration in body frame (drives modal excitation through M_BI coupling)
     # Subtract gravity so that only the "dynamic" acceleration excites modes and contributes
     # to inertial forces, matching the Body component convention: a_0 - g_0
-    g_0 = gravity_acceleration(collect(frame_a.r_0))
-    a_body = resolve2(R_a, collect(a_0) - g_0)
-    q̈_B1 = vcat(a_body, collect(z_a))
+    g_0 = gravity_acceleration(frame_a.r_0)
+    a_body = resolve2(R_a, a_0 - g_0)
+    q̈_B1 = vcat(collect(a_body), collect(z_a))
 
     # Kinematic equations for states
-    append!(eqs, D.(collect(η)) .~ collect(η̇))
+    push!(eqs, D(η) ~ η̇)
     if n_flex_dof > 0
-        append!(eqs, D.(collect(q_flex)) .~ collect(q̇_flex))
+        push!(eqs, D(q_flex) ~ q̇_flex)
     end
 
     # Build full q_B vector: [zeros(6); q_flex] for stiffness terms (deformations only)
@@ -1077,22 +1077,19 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
     # Frame kinematics and force balance for each boundary
     for i in 1:n_boundaries
         frame_i = frames[i]
-        p_i = collect(boundary_positions[i])  # Undeformed position in body frame
+        p_i = boundary_positions[i]  # Undeformed position in body frame
 
         # Index into q_B for this boundary's DOFs
         idx_start = 6*(i-1) + 1
         idx_end = 6*i
 
+        # Forces and torques in body frame
+        f_i = f_B[idx_start:idx_start+2]
+        τ_i = f_B[idx_start+3:idx_end]
+
         if i == 1
-            # frame_a is the reference - its deformation is zero
-            # Position equation: frame_a position is determined by external connections
-            # No additional position constraint needed for frame_a
-
-            # Force balance for frame_a
-            f_i = f_B[idx_start:idx_start+2]      # Forces in body frame
-            τ_i = f_B[idx_start+3:idx_end]        # Torques in body frame
-
-            # The reaction force at frame_a equals the internal CB forces (in body/connector frame)
+            # frame_a is the reference - its position is determined by external connections
+            # Force balance (in connector/body frame)
             append!(eqs, collect(frame_a.f) .~ f_i)
             append!(eqs, collect(frame_a.tau) .~ τ_i)
         else
@@ -1102,18 +1099,13 @@ See also [`Body`](@ref), [`BodyShape`](@ref) for rigid body components.
             θ_i = q_flex[flex_idx+3:flex_idx+5]    # Rotation deformation (small angles)
 
             # Position: r_i = r_a + R_a * (p_i + u_i)
-            r_rel = p_i + collect(u_i)  # Relative position in body frame
+            r_rel = p_i + collect(u_i)
             append!(eqs, collect(frame_i.r_0) .~ collect(frame_a.r_0) + resolve1(R_a, r_rel))
 
-            # Orientation: For small rotations, use same orientation as frame_a
-            # (Full small rotation: R_i = R_a * (I + skew(θ_i)), but for simplicity use R_a)
+            # Orientation: same as frame_a (small angle approximation)
             append!(eqs, ori(frame_i) ~ R_a)
 
-            # Force balance for this boundary
-            f_i = f_B[idx_start:idx_start+2]      # Forces in body frame
-            τ_i = f_B[idx_start+3:idx_end]        # Torques in body frame
-
-            # Force balance for this boundary (in connector frame)
+            # Force balance (in connector/body frame)
             append!(eqs, collect(frame_i.f) .~ f_i)
             append!(eqs, collect(frame_i.tau) .~ τ_i)
         end
