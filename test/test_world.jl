@@ -29,14 +29,14 @@ tv = 0:0.1:1
 
 
 # Change g
-prob = ODEProblem(ssys, [model.my_world.g .=> 2], (0, 1))
+prob = ODEProblem(ssys, [Multibody.WORLD_G .=> 2], (0, 1))
 sol = solve(prob, Rodas5P())
 @test iszero(sol(tv, idxs=model.body.r_0[1]))
 @test sol(tv, idxs=model.body.r_0[2]) ≈ 2*tv.^2 ./ 2 atol=1e-6
 @test iszero(sol(tv, idxs=model.body.r_0[3]))
 
 # Change n
-prob = ODEProblem(ssys, collect(model.my_world.n) .=> [1, 0, 0], (0, 1))
+prob = ODEProblem(ssys, collect(Multibody.WORLD_N) .=> [1, 0, 0], (0, 1))
 sol = solve(prob, Rodas5P())
 @test sol(tv, idxs=model.body.r_0[1]) ≈ tv.^2 ./ 2 atol=1e-6
 @test iszero(sol(tv, idxs=model.body.r_0[2]))
@@ -65,5 +65,5 @@ sol = solve(prob, Rodas5P())
 end
 
 @named model = FallingBodyOuter()
-@test_throws ModelingToolkit.StateSelection.ExtraEquationsSystemException multibody(model)
+@test_logs (:warn, r"World found in a non-top level component") multibody(model)
 
