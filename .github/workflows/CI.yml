@@ -1,15 +1,12 @@
 name: CI
-
 on:
   push:
     branches:
       - main
     tags: '*'
   pull_request:
-
 env:
   JULIA_PKG_SERVER: https://internal.juliahub.com/
-
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
@@ -18,29 +15,26 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.10'
+          - '1'
         os:
           - ubuntu-latest
+          # - macOS-latest
         arch:
           - x64
     steps:
-      - name: Set debug env
-        run: export JULIA_DEBUG="loading"
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        name: Checkout
       - uses: julia-actions/cache@v1
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: PumasAI/add-private-registry@main
+      - name: "Set up private JuliaHub registries"
+        uses: "JuliaComputing/set-up-private-juliahub-registries@v2.0.0"
         with:
-          juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
-          private_registry_name: JuliaHubRegistry
-          private_registry_uuid: de52bcdf-fcb2-40cf-a397-3d64b64f4d9c
+          encoded-juliahub-token: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          ssh-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-      - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: matrix.os == 'ubuntu-latest' && matrix.arch == 'x64'
+      - name: Run tests with virtual display
+        run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project -e 'using Pkg; Pkg.test()'
+        continue-on-error: ${{ matrix.version == '1.6' }}

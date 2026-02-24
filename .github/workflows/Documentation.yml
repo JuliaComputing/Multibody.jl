@@ -12,23 +12,24 @@ on:
 env:
   JULIA_PKG_SERVER: https://internal.juliahub.com/
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
-    permissions:
-      contents: write
-      statuses: write
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted-juliasim-docs]
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        name: Checkout
       - uses: julia-actions/cache@v1
       - uses: julia-actions/setup-julia@latest
         with:
-          version: '1.10'
-      - uses: PumasAI/add-private-registry@main
+          version: '1'
+      - name: "Set up private JuliaHub registries"
+        uses: "JuliaComputing/set-up-private-juliahub-registries@v2.0.0"
         with:
-          juliahub_token_encoded: ${{ secrets.JULIAHUB_TOKEN_ENCODED }}
-          private_registry_name: JuliaHubRegistry
-          private_registry_uuid: de52bcdf-fcb2-40cf-a397-3d64b64f4d9c
+          encoded-juliahub-token: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
+          ssh-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
                                       Pkg.add(PackageSpec(name = "ModelingToolkitStandardLibrary", url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl", rev = "main"));
