@@ -1,0 +1,34 @@
+"""
+Linear velocity-dependent damper.
+
+Damping force acts along the line connecting the two frames. Uses `ifelse` to prevent
+zero-division when the distance between frames is very small.
+"""
+component Damper
+  extends PartialTwoFrames
+  parameter d::Real = 1
+  parameter s_small::Length = 1e-10
+  variable r0x::Length
+  variable r0y::Length
+  variable d0x::Real
+  variable d0y::Real
+  variable vx::Velocity
+  variable vy::Velocity
+  variable v::Velocity
+  variable f::Dyad.Force
+relations
+  frame_a.x + r0x = frame_b.x
+  frame_a.y + r0y = frame_b.y
+  der(frame_a.x) + vx = der(frame_b.x)
+  der(frame_a.y) + vy = der(frame_b.y)
+  v = transpose([vx, vy]) * [d0x, d0y]
+  f = -d * v
+  d0x = ifelse(sqrt(r0x^2 + r0y^2) < s_small, r0x, r0x / sqrt(r0x^2 + r0y^2))
+  d0y = ifelse(sqrt(r0x^2 + r0y^2) < s_small, r0y, r0y / sqrt(r0x^2 + r0y^2))
+  frame_a.fx = d0x * f
+  frame_a.fy = d0y * f
+  frame_a.tau = 0
+  frame_a.fx + frame_b.fx = 0
+  frame_a.fy + frame_b.fy = 0
+  frame_a.tau + frame_b.tau = 0
+end

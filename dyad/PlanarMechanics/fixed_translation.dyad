@@ -1,0 +1,25 @@
+"""
+A fixed translation between two components (rigid rod).
+The translation vector is resolved w.r.t. body frame_a at phi = 0.
+"""
+component FixedTranslation
+  extends PartialTwoFrames
+  parameter r::Length[2] = [1, 0]
+  variable phi::Angle
+  variable w::AngularVelocity
+  variable r0::Real[2]
+relations
+  phi = frame_a.phi
+  w = der(phi)
+  # rotate the rod vector by the current angle
+  r0 = [[cos(phi), -sin(phi)], [sin(phi), cos(phi)]] * r
+  # position constraint
+  r0 = [frame_b.x, frame_b.y] - [frame_a.x, frame_a.y]
+  # rigidly transfer rotation
+  frame_a.phi = frame_b.phi
+  # force balance
+  frame_a.fx + frame_b.fx = 0
+  frame_a.fy + frame_b.fy = 0
+  # torque balance with lever-arm contribution
+  frame_a.tau + frame_b.tau + dot(r0, [frame_b.fy, -frame_b.fx]) = 0
+end

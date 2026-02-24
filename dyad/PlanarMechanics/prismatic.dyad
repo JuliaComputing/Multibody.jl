@@ -1,0 +1,36 @@
+"""
+Prismatic (sliding) joint allowing translation along a fixed direction.
+
+The sliding direction is given by parameter `r`, rotated by frame_a's orientation.
+Without axisflange support, the joint slides freely (`f = 0`).
+"""
+component Prismatic
+  extends PartialTwoFrames
+  parameter r::Length[2] = [1, 0]
+  variable s::Length
+  variable v::Velocity
+  variable a::Acceleration
+  variable f::Dyad.Force
+  variable e0::Real[2]
+  variable r0::Length[2]
+relations
+  # Rotate the unit direction by frame_a angle
+  e0 = [[cos(frame_a.phi), -sin(frame_a.phi)], [sin(frame_a.phi), cos(frame_a.phi)]] * (r / sqrt(transpose(r) * r))
+  r0 = e0 * s
+  v = der(s)
+  a = der(v)
+  # position constraint
+  frame_a.x + r0[1] = frame_b.x
+  frame_a.y + r0[2] = frame_b.y
+  # orientation rigidly transferred
+  frame_a.phi = frame_b.phi
+  # force balance
+  frame_a.fx + frame_b.fx = 0
+  frame_a.fy + frame_b.fy = 0
+  # torque balance with lever arm
+  frame_a.tau + frame_b.tau + r0[1] * frame_b.fy - r0[2] * frame_b.fx = 0
+  # joint force along sliding direction
+  e0[1] * frame_a.fx + e0[2] * frame_a.fy = f
+  # free sliding (no axisflange)
+  f = 0
+end

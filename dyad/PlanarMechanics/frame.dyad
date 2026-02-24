@@ -1,0 +1,12 @@
+"""
+Coordinate system (2-dim.) fixed to the component with one cut-force and cut-torque.
+All variables are resolved in the planar world frame.
+"""
+connector Frame
+  potential x::Dyad.Position
+  potential y::Dyad.Position
+  potential phi::Angle
+  flow fx::Dyad.Force
+  flow fy::Dyad.Force
+  flow tau::Torque
+end

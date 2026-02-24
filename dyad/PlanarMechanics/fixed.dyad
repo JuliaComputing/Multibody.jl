@@ -1,0 +1,11 @@
+"""
+Frame fixed in the planar world frame at a given position and orientation.
+"""
+component Fixed
+  frame_b = Frame()
+  parameter r::Dyad.Position[2] = [0, 0]
+  parameter phi::Angle = 0
+relations
+  [frame_b.x, frame_b.y] = r
+  frame_b.phi = phi
+end

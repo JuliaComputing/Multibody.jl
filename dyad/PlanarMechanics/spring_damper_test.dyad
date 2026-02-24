@@ -1,0 +1,30 @@
+"""
+Test: Pendulum with a spring attached between the fixed point and the body.
+
+Fixed -> Revolute -> FixedTranslation -> Body, with a Spring connecting
+the fixed frame to the body frame.
+"""
+test component SpringDamperTest
+  fixed = Fixed()
+  revolute = Revolute()
+  rod = FixedTranslation(r=[1.0, 0.0])
+  body = Body(m=1.0, I=0.1, gy=-9.80665)
+  spring = Spring(c_x=10.0, c_y=10.0)
+relations
+  initial revolute.phi = 1.0
+  initial revolute.w = 0.0
+  connect(fixed.frame_b, revolute.frame_a)
+  connect(revolute.frame_b, rod.frame_a)
+  connect(rod.frame_b, body.frame_a)
+  connect(fixed.frame_b, spring.frame_a)
+  connect(body.frame_a, spring.frame_b)
+metadata {
+  "Dyad": {
+    "tests": {
+      "case1": {
+        "stop": 3
+      }
+    }
+  }
+}
+end

@@ -1,0 +1,20 @@
+"""
+Body with shape: a rigid rod (FixedTranslation) from frame_a to frame_b with a
+Body attached at the center of mass via a second FixedTranslation.
+"""
+component BodyShape
+  frame_a = Frame()
+  frame_b = Frame()
+  parameter r::Length[2] = [1, 0]
+  parameter r_cm::Length[2] = [0.5, 0]
+  parameter m::Dyad.Mass = 1
+  parameter I::MomentOfInertia = 0.1
+  parameter gy::Acceleration = -9.80665
+  translation = FixedTranslation(r=r)
+  translation_cm = FixedTranslation(r=r_cm)
+  body = Body(m=m, I=I, gy=gy)
+relations
+  connect(frame_a, translation.frame_a, translation_cm.frame_a)
+  connect(frame_b, translation.frame_b)
+  connect(translation_cm.frame_b, body.frame_a)
+end

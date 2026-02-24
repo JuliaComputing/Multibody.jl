@@ -1,0 +1,25 @@
+"""
+Pendulum with BodyShape: Fixed -> Revolute -> BodyShape.
+
+A 1m BodyShape pendulum starting at rest, swinging under gravity.
+Translates the "Pendulum with body shape" test from test_PlanarMechanics.jl.
+"""
+test component BodyShapePendulumTest
+  ceiling = Fixed()
+  revolute = Revolute()
+  rod = BodyShape(r=[1.0, 0.0], m=1.0, I=0.1)
+relations
+  initial revolute.phi = 0.0
+  initial revolute.w = 0.0
+  connect(ceiling.frame_b, revolute.frame_a)
+  connect(revolute.frame_b, rod.frame_a)
+metadata {
+  "Dyad": {
+    "tests": {
+      "case1": {
+        "stop": 3
+      }
+    }
+  }
+}
+end

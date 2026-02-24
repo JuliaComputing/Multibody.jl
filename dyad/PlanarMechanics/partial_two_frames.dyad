@@ -1,0 +1,7 @@
+"""
+Partial model with two frames.
+"""
+partial component PartialTwoFrames
+  frame_a = Frame()
+  frame_b = Frame()
+end

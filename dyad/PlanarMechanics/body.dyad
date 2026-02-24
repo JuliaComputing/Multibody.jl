@@ -1,0 +1,31 @@
+"""
+Body component with mass and inertia.
+
+Newton's second law: `f + [0, m*gy] = m*a` and `I*alpha = tau`.
+"""
+component Body
+  frame_a = Frame()
+  parameter m::Dyad.Mass
+  parameter I::MomentOfInertia
+  parameter gy::Acceleration = -9.80665
+  variable f::Dyad.Force[2]
+  variable r::Dyad.Position[2]
+  variable v::Velocity[2]
+  variable a::Acceleration[2]
+  variable phi::Angle
+  variable w::AngularVelocity
+  variable alpha::AngularAcceleration
+relations
+  # position from frame
+  r = [frame_a.x, frame_a.y]
+  v = der(r)
+  phi = frame_a.phi
+  w = der(phi)
+  # acceleration
+  a = der(v)
+  alpha = der(w)
+  # newton's law
+  f = [frame_a.fx, frame_a.fy]
+  f + [0, m * gy] = m * a
+  I * alpha = frame_a.tau
+end

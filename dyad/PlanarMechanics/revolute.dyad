@@ -1,0 +1,28 @@
+"""
+Revolute joint: allows rotation about the z-axis while rigidly connecting positions.
+
+When `axisflange` support is not needed, the joint torque is zero (free rotation).
+"""
+component Revolute
+  extends PartialTwoFrames
+  variable phi::Angle
+  variable w::AngularVelocity
+  variable alpha::AngularAcceleration
+  variable tau::Torque
+relations
+  w = der(phi)
+  alpha = der(w)
+  # rigidly connect positions
+  frame_a.x = frame_b.x
+  frame_a.y = frame_b.y
+  # rotation constraint
+  frame_a.phi + phi = frame_b.phi
+  # balance forces
+  frame_a.fx + frame_b.fx = 0
+  frame_a.fy + frame_b.fy = 0
+  # balance torques
+  frame_a.tau + frame_b.tau = 0
+  frame_a.tau = tau
+  # free rotation (no axisflange)
+  tau = 0
+end

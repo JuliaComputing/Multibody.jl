@@ -1,0 +1,30 @@
+"""
+SpringDamper system test: Fixed -> FixedTranslation -> SpringDamper -> Body.
+
+A body at position [1,1] connected to the origin via a rigid offset and a
+spring-damper with stiffness c_x=c_y=5 and damping d_x=d_y=1.
+Translates the "SpringDamper" test from test_PlanarMechanics.jl.
+"""
+test component SpringDamperSystemTest
+  fixed = Fixed()
+  fixed_translation = FixedTranslation(r=[-1.0, 0.0])
+  spring_damper = SpringDamper(c_x=5.0, c_y=5.0, c_phi=0.0, d_x=1.0, d_y=1.0, d_phi=0.0, s_relx0=0.0, s_rely0=0.0)
+  body = Body(m=0.5, I=0.1, gy=-9.80665)
+relations
+  initial body.r = [1.0, 1.0]
+  initial body.v = [0.0, 0.0]
+  initial body.phi = 0.0
+  initial body.w = 0.0
+  connect(fixed.frame_b, fixed_translation.frame_a)
+  connect(fixed_translation.frame_b, spring_damper.frame_a)
+  connect(spring_damper.frame_b, body.frame_a)
+metadata {
+  "Dyad": {
+    "tests": {
+      "case1": {
+        "stop": 5
+      }
+    }
+  }
+}
+end

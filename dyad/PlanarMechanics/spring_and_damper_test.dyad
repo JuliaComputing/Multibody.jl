@@ -1,0 +1,32 @@
+"""
+Spring and damper demo: a body on a vertical prismatic joint with parallel spring and damper.
+
+Fixed -> Spring -> Body, with Damper and Prismatic(r=[0,1]) in parallel.
+The prismatic constrains motion to the vertical direction.
+Translates the "Spring and damper demo" test from test_PlanarMechanics.jl.
+"""
+test component SpringAndDamperTest
+  fixed = Fixed()
+  spring = Spring(c_x=1.0, c_y=10.0, s_rely0=-0.5, c_phi=1e5)
+  damper = Damper(d=1.0)
+  prismatic = Prismatic(r=[0.0, 1.0])
+  body = Body(m=0.5, I=0.1, gy=-9.80665)
+relations
+  initial prismatic.s = 0.0
+  initial prismatic.v = 0.0
+  connect(fixed.frame_b, spring.frame_a)
+  connect(spring.frame_b, body.frame_a)
+  connect(damper.frame_a, spring.frame_a)
+  connect(damper.frame_b, spring.frame_b)
+  connect(spring.frame_a, prismatic.frame_a)
+  connect(prismatic.frame_b, spring.frame_b)
+metadata {
+  "Dyad": {
+    "tests": {
+      "case1": {
+        "stop": 5
+      }
+    }
+  }
+}
+end

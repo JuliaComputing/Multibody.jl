@@ -1,0 +1,32 @@
+"""
+Linear 2D translational spring with independent x and y stiffness.
+
+Spring forces act along world x and y axes independently. No rotational spring torque
+is applied through the frames (both taus are zero).
+"""
+component Spring
+  extends PartialTwoFrames
+  parameter c_x::TranslationalSpringConstant = 1
+  parameter c_y::TranslationalSpringConstant = 1
+  parameter c_phi::RotationalSpringConstant = 1e5
+  parameter s_relx0::Length = 0
+  parameter s_rely0::Length = 0
+  parameter phi_rel0::Angle = 0
+  variable s_relx::Length
+  variable s_rely::Length
+  variable phi_rel::Angle
+  variable f_x::Dyad.Force
+  variable f_y::Dyad.Force
+relations
+  s_relx = frame_b.x - frame_a.x
+  s_rely = frame_b.y - frame_a.y
+  phi_rel = frame_b.phi - frame_a.phi
+  f_x = c_x * (s_relx - s_relx0)
+  f_y = c_y * (s_rely - s_rely0)
+  frame_a.fx = -f_x
+  frame_b.fx = f_x
+  frame_a.fy = -f_y
+  frame_b.fy = f_y
+  frame_a.tau = 0
+  frame_b.tau = 0
+end

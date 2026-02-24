@@ -1,0 +1,26 @@
+"""
+Simple pendulum test: Fixed -> Revolute -> FixedTranslation -> Body.
+A 1m pendulum starting at rest, swinging under gravity.
+Translates the "Pendulum" test from test_PlanarMechanics.jl.
+"""
+test component PendulumTest
+  fixed = Fixed()
+  revolute = Revolute()
+  rod = FixedTranslation(r=[1.0, 0.0])
+  body = Body(m=1.0, I=0.1, gy=-9.80665)
+relations
+  initial revolute.phi = 0.0
+  initial revolute.w = 0.0
+  connect(fixed.frame_b, revolute.frame_a)
+  connect(revolute.frame_b, rod.frame_a)
+  connect(rod.frame_b, body.frame_a)
+metadata {
+  "Dyad": {
+    "tests": {
+      "case1": {
+        "stop": 3
+      }
+    }
+  }
+}
+end
