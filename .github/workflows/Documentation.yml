@@ -25,11 +25,6 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      - name: "Set up private JuliaHub registries"
-        uses: "JuliaComputing/set-up-private-juliahub-registries@v2.0.0"
-        with:
-          encoded-juliahub-token: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
-          ssh-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
                                       Pkg.add(PackageSpec(name = "ModelingToolkitStandardLibrary", url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl", rev = "main"));

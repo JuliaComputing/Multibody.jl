@@ -29,11 +29,6 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - name: "Set up private JuliaHub registries"
-        uses: "JuliaComputing/set-up-private-juliahub-registries@v2.0.0"
-        with:
-          encoded-juliahub-token: "${{ secrets.JULIAHUB_TOKEN_ENCODED }}"
-          ssh-key: "${{ secrets.JULIASIM_REGISTRY_SSH_KEY }}"
       - uses: julia-actions/julia-buildpkg@v1
       - name: Run tests with virtual display
         run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project -e 'using Pkg; Pkg.test()'
