@@ -744,8 +744,8 @@ function RollingWheelSetJoint(;
         support = Rotational.Flange()
     end
     if iscut
-        @named freemotion = FreeMotion(iscut=false, isroot=true, state=false)
-        push!(systems, freemotion)
+        # @named freemotion = FreeMotion(iscut=false, isroot=false, state=false)
+        # push!(systems, freemotion)
     else
         more = @named begin
             revolute = Revolute(; render, n = [0, 1, 0], color)
@@ -767,12 +767,16 @@ function RollingWheelSetJoint(;
     equations = Equation[
         if iscut
             [
-                connect(freemotion.frame_a, fixed.frame_b)
-                connect(freemotion.frame_b, frame_middle)
-                freemotion.r_rel_a[1] ~ x
-                freemotion.r_rel_a[3] ~ z
+                # connect(freemotion.frame_a, fixed.frame_b)
+                # connect(freemotion.frame_b, frame_middle)
+                # freemotion.r_rel_a[1] ~ x
+                # freemotion.r_rel_a[3] ~ z
                 # freemotion.phi[2] ~ phi
+
                 phi ~ 0
+                
+                x ~ frame_middle.r_0[1]
+                z ~ frame_middle.r_0[3]
             ]
         else    
             [prismatic1.s ~ x
