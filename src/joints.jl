@@ -222,6 +222,10 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
         frame_b.r_0 ~ frame_a.r_0]
     end
 
+    if state || dnum > 0
+        vars = [vars; vec(Rrel.R)]
+    end
+
     if state
         if quat
             qeeqs, qvars, qpars = nonunit_quaternion_equations(Rrel, w_rel)
@@ -647,7 +651,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
         frame_b.f ~ -resolve2(Rrel, frame_a.f)
         n ~ n0
     ]
-    System(eqs, t, vars, pars; name, systems=[frame_a, frame_b])
+    System(eqs, t, [vars; vec(Rrel.R)], pars; name, systems=[frame_a, frame_b])
 end
 
 LinearAlgebra.normalize(a::Vector{Num}) = a / norm(a)

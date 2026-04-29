@@ -521,11 +521,11 @@ See also [`BodyCylinder`](@ref) and [`BodyBox`](@ref) for body components with p
             state_priority = 2,
             description = "Position vector from origin of world frame to origin of frame_a",
         ]
-        v_0(t)[1:3], [ guess=0,
+        v_0(t)[1:3], [ guess=zeros(3),
             state_priority = 2,
             description = "Absolute velocity of frame_a, resolved in world frame (= D(r_0))",
         ]
-        a_0(t)[1:3], [ guess=0,
+        a_0(t)[1:3], [ guess=zeros(3),
             description = "Absolute acceleration of frame_a resolved in world frame (= D(v_0))",
         ]
     end

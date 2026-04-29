@@ -420,12 +420,12 @@ function MechanicalStructure(; name, mLoad = 15, rLoad = [0, 0.25, 0], g = 9.81)
     # end
 
     @variables begin
-        (q(t)[1:6]), [guess = 0, state_priority = 2, description = "Joint angles"]
-        (qd(t)[1:6]), [guess = 0, state_priority = 2, description = "Joint speeds"]
+        (q(t)[1:6]), [guess = zeros(6), state_priority = 2, description = "Joint angles"]
+        (qd(t)[1:6]), [guess = zeros(6), state_priority = 2, description = "Joint speeds"]
         (qdd(t)[1:6]),
-        [guess = 0, state_priority = 2, description = "Joint accelerations"]
+        [guess = zeros(6), state_priority = 2, description = "Joint accelerations"]
         (tau(t)[1:6]),
-        [guess = 0, description = "Joint driving torques"]
+        [guess = zeros(6), description = "Joint driving torques"]
     end
     path = @__DIR__()
 
