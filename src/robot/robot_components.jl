@@ -36,14 +36,27 @@ using ModelingToolkitStandardLibrary.Electrical
     System(Equation[], t, vars, []; name)
 end
 
-@connector function ControlBus(; name)
+
+@connector function StewartAxisControlBus(; name)
+    vars = @variables begin
+        angularPos(t), [description = "Shaft absolute angle"]
+        angularVel(t), [description = "Shaft angular velocity"]
+        angularAcc(t), [description = "Shaft angular acceleration"]
+        refTorque(t), [description = "Reference value for the torque"]
+        appliedTorque(t), [description = "Applied torque"]
+    end
+    ODESystem(Equation[], t, vars, []; name)
+end
+
+
+@connector function ControlBus(; name, Axisbus = AxisControlBus)
     systems = @named begin
-        axisControlBus1 = AxisControlBus()
-        axisControlBus2 = AxisControlBus()
-        axisControlBus3 = AxisControlBus()
-        axisControlBus4 = AxisControlBus()
-        axisControlBus5 = AxisControlBus()
-        axisControlBus6 = AxisControlBus()
+        axisControlBus1 = Axisbus()
+        axisControlBus2 = Axisbus()
+        axisControlBus3 = Axisbus()
+        axisControlBus4 = Axisbus()
+        axisControlBus5 = Axisbus()
+        axisControlBus6 = Axisbus()
     end
     System(Equation[], t; systems, name)
 end
