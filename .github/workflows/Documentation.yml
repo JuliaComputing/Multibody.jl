@@ -17,7 +17,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: [self-hosted-juliasim-docs]
+    # The old `self-hosted-juliasim-docs` box (arctic3) is gone. This repo is
+    # public, and the `Default` runner group is `allows_public_repositories:
+    # false`, so it has to use a `-public` scale set (runner group `public`).
+    runs-on: self-hosted-8vcpu-16gb-public
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         name: Checkout
