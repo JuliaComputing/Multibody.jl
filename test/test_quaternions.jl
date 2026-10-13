@@ -28,7 +28,6 @@ connections = [connect(world.frame_b, spring.frame_a)
                connect(spring.frame_b, body.frame_a)]
 
 @named model = System(connections, t, systems = [world, spring, body])
-model = complete(model)
 # ssys = structural_simplify(model, allow_parameter = false)
 
 ssys = multibody(model)
