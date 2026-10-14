@@ -761,7 +761,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = multibody(model)
 @test length(unknowns(ssys)) == 12 
 
-prob = ODEProblem(ssys, [ collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [ collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -868,9 +868,8 @@ BSine = Blocks.Sine
 end
 
 @named model = ActuatedJoint()
-cm = complete(model)
 ssys = multibody(model)
-prob = ODEProblem(ssys, [D(D(cm.joint.phi)) => 0], (0, 10))
+prob = ODEProblem(ssys, [ssys.joint.phi => 0, ssys.joint.w => 0], (0, 10))
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
 doplot() && plot(sol) |> display

@@ -46,6 +46,7 @@ Body component with mass and inertia
 - `radius`: [m] Radius of the body in animations
 - `render`: [Bool] Render the body in animations
 - `color`: [Array{Float64,1}] Color of the body in animations
+- `state_priority = 0`: Favors joint coordinates over dependent body coordinates
 
 # Variables:
   - `r`: [m, m] x,y position
@@ -108,6 +109,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 # Parameters
 - `r`: (Structural) Vector from `frame_a` to `frame_b` resolved in `frame_a`
 - `r_cm`: (Structural) Vector from `frame_a` to the center of mass resolved in `frame_a`
+- `state_priority = 0`: State selection priority passed to the internal `Body`
 
 # Subsystems
 - `translation`: [FixedTranslation](@ref) Fixed translation between `frame_a` and `frame_b`

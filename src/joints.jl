@@ -177,6 +177,11 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 - `radius = 0.1`: Radius of the joint in animations
 - `color = [1,1,0,1]`: Color of the joint in animations, a vector of length 4 with values between [0, 1] providing RGBA values
 - `render = true`: Render the joint in animations
+
+`w_rel` is the relative angular velocity resolved in `frame_b`, including when
+`state=false`. For positive `d`, damping opposes this velocity; the reaction torque
+is transformed into `frame_a` coordinates.
+
 """
 @component function Spherical(; name, state = false, isroot = true, iscut=false, w_rel_a_fixed = false,
                    z_rel_a_fixed = false, sequence = [1, 2, 3], phi = state ? zeros(3) : nothing,
