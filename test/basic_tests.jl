@@ -123,7 +123,7 @@ end
 # ==============================================================================
 @component function PointGrav(; name)
     systems = @named begin
-        world = World()
+        world = World(mu = 1, point_gravity = true)
         body1 = Body(
             m=1,
             I_11=0.1,
@@ -155,14 +155,7 @@ end
 @named model = PointGrav()
 model = complete(model)
 ssys = multibody(model)
-defs = [
-    model.world.mu => 1
-    model.world.point_gravity => true
-    # collect(model.body1.w_a) .=> 0
-    # collect(model.body2.w_a) .=> 0
-    
-]
-prob = ODEProblem(ssys, defs, (0, 5))
+prob = ODEProblem(ssys, [], (0, 5))
 sol = solve(prob, Rodas4())
 
 @test sol(5, idxs=model.body2.r_0) ≈ [0.7867717, 0.478463, 0] atol=1e-1

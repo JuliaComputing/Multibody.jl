@@ -173,7 +173,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 ssys = multibody(model)
 prob = ODEProblem(ssys, defs, (0, 10))
 
-sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
+sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")
 ```
 

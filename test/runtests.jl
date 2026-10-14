@@ -3,6 +3,7 @@ using Multibody
 using Test
 # using JuliaSimCompiler
 using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 using LinearAlgebra
 isdefined(Main, :t) || (t = Multibody.t)
 isdefined(Main, :D) || (D = Differential(t))
@@ -59,4 +60,11 @@ end
     @info "Testing basic_tests"
     include("basic_tests.jl")
 end
+
+@testset "CraigBampton" begin
+    include("test_craig_bampton.jl")
+end
+
+include("test_bodyshape_initialization.jl")
+include("test_joint_array_parameters.jl")
 end

@@ -6,6 +6,11 @@ A mass with a shape can be modeled using a [`BodyShape`](@ref). The primary diff
 
 A rod without a mass (just a translation), is modeled using [`FixedTranslation`](@ref).
 
+[`CraigBampton`](@ref) models a flexible body from reduced mass and stiffness matrices.
+Its first boundary is the reference frame; additional boundaries expose connector frames
+whose deformation is represented by the reduced model. A single-boundary model can
+represent internal modes, such as fluid sloshing, coupled to the reference frame.
+
 ```@index
 Pages   = ["components.md"]
 ```

@@ -109,7 +109,7 @@ println("Total participating: $(round(m_1 + m_2, digits=2)) kg ($(round(100*(m_1
 # =============================================================================
 
 n_modes = 2
-n_boundaries = 2  # Tank bottom (attached) and top (free)
+n_boundaries = 1
 n_bdof = 6 * n_boundaries
 
 # Total mass at boundary (tank + water)
@@ -121,23 +121,13 @@ I_yy = m_total * (L_tank^2 + h_tank^2) / 12
 I_zz = m_total * (L_tank^2 + W_tank^2) / 12
 
 # M_BB: Boundary mass matrix
-# For boundary 1 (bottom, attached to cart): full mass
-# For boundary 2 (top, free): small mass (just for numerical stability)
 M_BB = zeros(n_bdof, n_bdof)
-# Boundary 1 (indices 1-6): main mass
 M_BB[1,1] = m_total      # x translation
 M_BB[2,2] = m_total      # y translation
 M_BB[3,3] = m_total      # z translation
 M_BB[4,4] = I_xx         # rotation about x
 M_BB[5,5] = I_yy         # rotation about y
 M_BB[6,6] = I_zz         # rotation about z
-# Boundary 2 (indices 7-12): small mass for free end
-M_BB[7,7] = 0.1
-M_BB[8,8] = 0.1
-M_BB[9,9] = 0.1
-M_BB[10,10] = 0.01
-M_BB[11,11] = 0.01
-M_BB[12,12] = 0.01
 
 # M_BI: Boundary-modal coupling
 # For mass-normalized modes (M_II = I), the coupling is sqrt(participating_mass)
@@ -152,13 +142,6 @@ M_II = Matrix(1.0I, n_modes, n_modes)
 
 # K_BB: Boundary stiffness (zero for rigid connection)
 K_BB = zeros(n_bdof, n_bdof)
-# Add small stiffness for the free boundary to prevent drift
-K_BB[7,7] = 100.0
-K_BB[8,8] = 100.0
-K_BB[9,9] = 100.0
-K_BB[10,10] = 10.0
-K_BB[11,11] = 10.0
-K_BB[12,12] = 10.0
 
 # K_II: Modal stiffness matrix (diagonal with ω²)
 ω_modes = [ω_1, ω_2]
@@ -183,7 +166,7 @@ systems = @named begin
 
     # Sloshing water tank (Craig-Bampton model)
     tank = CraigBampton(
-        boundary_positions = [[0.0, 0.0, 0.0], [0.0, h_tank, 0.0]],  # Bottom and top
+        boundary_positions = [[0.0, 0.0, 0.0]],
         M_BB = M_BB,
         M_BI = M_BI,
         M_II = M_II,

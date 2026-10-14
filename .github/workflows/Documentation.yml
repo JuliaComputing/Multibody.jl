@@ -30,8 +30,8 @@ jobs:
           version: '1'
       - name: Install dependencies
         run: DISPLAY=:0 xvfb-run --auto-servernum -s '-screen 0 1024x768x24' julia --project=docs -e 'using Pkg;
-                                      Pkg.add(PackageSpec(name = "ModelingToolkitStandardLibrary", url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl", rev = "main"));
                                       Pkg.develop(PackageSpec(path=pwd()));
+                                      Pkg.add(PackageSpec(name = "ModelingToolkitStandardLibrary", url = "https://github.com/SciML/ModelingToolkitStandardLibrary.jl", rev = "main"));
                                       Pkg.instantiate()'
       - name: Build and deploy
         env:

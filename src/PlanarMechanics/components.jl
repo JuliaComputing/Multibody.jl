@@ -58,7 +58,7 @@ Body component with mass and inertia
 # Connectors:
   - `frame`: 2-dim. Coordinate system
 """
-@component function Body(; name, m, I, r = nothing, v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=2)
+@component function Body(; name, m, I, r = nothing, v=nothing, phi = nothing, w=nothing, gy = -9.80665, radius=0.1, render=true, color=Multibody.purple, state_priority=0)
     systems = @named begin
         frame_a = Frame()
     end
@@ -118,7 +118,7 @@ The `BodyShape` component is similar to a [`Body`](@ref), but it has two frames 
 - `frame_a`
 - `frame_b`
 """
-@component function BodyShape(; name, r0=nothing, r = [1, 0], r_cm = 0.5*r, state_priority = 2,
+@component function BodyShape(; name, r0=nothing, r = [1, 0], r_cm = 0.5*r, state_priority = 0,
                                 gy = -9.80665, m = 1, I = 0.1, radius = 0.1,
                                 render = true, color = purple, v=nothing, phi=nothing, w=nothing)
     pars = @parameters begin

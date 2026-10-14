@@ -8,6 +8,27 @@ t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
+@testset "Single boundary modal body" begin
+    M_BI = zeros(6, 1)
+    M_BI[1, 1] = 0.1
+    @named cb = CraigBampton(
+        boundary_positions = [[0.0, 0.0, 0.0]],
+        M_BB = Diagonal([1.0, 1.0, 1.0, 0.1, 0.1, 0.1]),
+        M_BI = M_BI,
+        M_II = I(1),
+        K_BB = zeros(6, 6),
+        K_II = Diagonal([100.0]),
+        ζ = [0.02],
+        ω = [10.0],
+    )
+    @named model = System([connect(world.frame_b, cb.frame_a)], t; systems = [world, cb])
+    ssys = multibody(model)
+    prob = ODEProblem(ssys, [cb.η[1] => 0.01], (0.0, 1.0))
+    sol = solve(prob, Rodas5P())
+    @test SciMLBase.successful_retcode(sol)
+    @test abs(sol[cb.η[1]][end]) < abs(sol[cb.η[1]][1])
+end
+
 
 @testset "Component construction" begin
     # Test basic construction with 2 boundaries and 2 modes
@@ -499,4 +520,3 @@ end
     t_peak_expected = atan(ωd / (ζ_test * ω_test)) / ωd
     @test isapprox(t_peak, t_peak_expected, rtol=0.1)
 end
-

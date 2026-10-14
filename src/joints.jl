@@ -304,11 +304,11 @@ Joint where `frame_a` rotates around axis `n_a` which is fixed in `frame_a` and 
     end
     @unpack frame_a, frame_b = ptf
     pars = @parameters begin
-        n_a = n_a,
+        n_a[1:3] = n_a,
               [
                   description = "Axis of revolute joint 1 resolved in frame_a",
               ]
-        n_b = n_b,
+        n_b[1:3] = n_b,
               [
                   description = "Axis of revolute joint 2 resolved in frame_b",
               ]
@@ -388,11 +388,11 @@ This ideal massless joint provides a gear constraint between frames `frame_a` an
     pars = @parameters begin
         ratio = ratio, [description = "Gear speed ratio"]
 
-        n_a = n_a,
+        n_a[1:3] = n_a,
               [
                   description = "Axis of rotation of shaft a (same coordinates in frame_a, frame_b, bearing)",
               ]
-        n_b = n_b,
+        n_b[1:3] = n_b,
               [
                   description = "Axis of rotation of shaft b (same coordinates in frame_a, frame_b, bearing)",
               ]
@@ -710,18 +710,18 @@ s_y=prismatic_y.s=0` and `phi=revolute.phi=0`.
     systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
-        prismatic_x = Prismatic(; state_priority=2.1, n=cross(cross(n, n_x), n), color=boxcolor, radius)
-        prismatic_y = Prismatic(; state_priority=2.1, n=cross(n, n_x), color=boxcolor, radius)
-        revolute = Revolute(; state_priority=2.1, n, isroot=false, color=cylindercolor, radius)
+        prismatic_x = Prismatic(; state_priority=2, n=cross(cross(n, n_x), n), color=boxcolor, radius)
+        prismatic_y = Prismatic(; state_priority=2, n=cross(n, n_x), color=boxcolor, radius)
+        revolute = Revolute(; state_priority=2, n, isroot=false, color=cylindercolor, radius)
     end
 
     vars = @variables begin
-        (s_x(t) = 0), [state_priority = 3.0, description = "Relative distance along first prismatic joint starting at frame_a"]
-        (s_y(t) = 0), [state_priority = 3.0, description = "Relative distance along second prismatic joint starting at first prismatic joint"]
-        (phi(t) = 0), [state_priority = 3.0, description = "Relative rotation angle from frame_a to frame_b"]
-        (v_x(t) = 0), [state_priority = 3.0, description = "Relative velocity along first prismatic joint"]
-        (v_y(t) = 0), [state_priority = 3.0, description = "Relative velocity along second prismatic joint"]
-        (w(t) = 0), [state_priority = 3.0, description = "Relative angular velocity around revolute joint"]
+        (s_x(t) = 0), [state_priority = 3, description = "Relative distance along first prismatic joint starting at frame_a"]
+        (s_y(t) = 0), [state_priority = 3, description = "Relative distance along second prismatic joint starting at first prismatic joint"]
+        (phi(t) = 0), [state_priority = 3, description = "Relative rotation angle from frame_a to frame_b"]
+        (v_x(t) = 0), [state_priority = 3, description = "Relative velocity along first prismatic joint"]
+        (v_y(t) = 0), [state_priority = 3, description = "Relative velocity along second prismatic joint"]
+        (w(t) = 0), [state_priority = 3, description = "Relative angular velocity around revolute joint"]
         (a_x(t)), [description = "Relative acceleration along first prismatic joint"]
         (a_y(t)), [description = "Relative acceleration along second prismatic joint"]
         (wd(t)), [description = "Relative angular acceleration around revolute joint"]

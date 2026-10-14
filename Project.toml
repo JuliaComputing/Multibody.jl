@@ -1,6 +1,6 @@
 name = "Multibody"
 uuid = "e1cad5d1-98ef-44f9-a79a-9ca4547f95b9"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Fredrik Bagge Carlson, JuliaHub Inc."]
 
 [deps]
@@ -33,7 +33,7 @@ URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
 
 [compat]
 CoordinateTransformations = "0.6"
-DataInterpolations = "8.6.1"
+DataInterpolations = "10"
 FileIO = "1"
 Graphs = "1.0"
 JuliaFormatter = "1.0, 2.0"
@@ -41,11 +41,11 @@ LightXML = "0.9"
 LinearAlgebra = "1.6"
 MeshIO = "0.4, 0.5"
 MetaGraphsNext = "0.7"
-ModelingToolkit = "11.5.1"
+ModelingToolkit = "11.40"
 ModelingToolkitStandardLibrary = "2.26"
-OrdinaryDiffEqNonlinearSolve = "1.14.1"
-OrdinaryDiffEqRosenbrock = "1.17.0"
-OrdinaryDiffEqTsit5 = "1.5.0"
+OrdinaryDiffEqNonlinearSolve = "2"
+OrdinaryDiffEqRosenbrock = "2"
+OrdinaryDiffEqTsit5 = "2"
 Rotations = "1.4"
 SparseArrays = "1"
 StateSelection = "1.1.1"

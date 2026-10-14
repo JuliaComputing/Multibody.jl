@@ -135,9 +135,9 @@ end
     end
 
     eqs = [r_0 ~ frame_b.r_0 - frame_a.r_0
-           frame_b.tau ~ 0
-           0 ~ frame_a.f + resolve2(frame_a, f_b_0)
-           0 ~ frame_a.tau + resolve2(frame_a, cross(r_0, f_b_0))]
+           frame_b.tau ~ zeros(3)
+           zeros(3) ~ frame_a.f + resolve2(frame_a, f_b_0)
+           zeros(3) ~ frame_a.tau + resolve2(frame_a, cross(r_0, f_b_0))]
 
     if resolve_frame == :frame_a
         append!(eqs,
