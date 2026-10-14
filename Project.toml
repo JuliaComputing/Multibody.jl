@@ -32,6 +32,7 @@ Render = ["Makie"]
 URDF = ["LightXML", "Graphs", "MetaGraphsNext", "JuliaFormatter"]
 
 [compat]
+ADTypes = "1"
 CoordinateTransformations = "0.6"
 DataInterpolations = "10"
 FileIO = "1"
@@ -46,6 +47,7 @@ ModelingToolkitStandardLibrary = "2.26"
 OrdinaryDiffEqNonlinearSolve = "2"
 OrdinaryDiffEqRosenbrock = "2"
 OrdinaryDiffEqTsit5 = "2"
+Random = "1"
 Rotations = "1.4"
 SparseArrays = "1"
 StateSelection = "1.1.1"
@@ -54,12 +56,14 @@ TrajectoryLimiters = "0.1"
 julia = "1"
 
 [extras]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
 LightXML = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
 MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["OrdinaryDiffEq", "Test", "JuliaFormatter", "LightXML", "Graphs", "MetaGraphsNext"]
+test = ["Random", "ADTypes", "OrdinaryDiffEq", "Test", "JuliaFormatter", "LightXML", "Graphs", "MetaGraphsNext"]

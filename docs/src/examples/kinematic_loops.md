@@ -28,6 +28,7 @@ using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
 using Plots
 using OrdinaryDiffEq
+using ADTypes
 using LinearAlgebra
 # using JuliaSimCompiler
 
@@ -76,8 +77,8 @@ connections = [
 ]
 @named fourbar = System(connections, t; systems)
 ssys = multibody(fourbar)
-prob = ODEProblem(ssys, [fourbar.j1.phi => 0.1], (0.0, 10.0))
-sol = solve(prob, FBDF(autodiff=true))
+prob = ODEProblem(ssys, [ssys.j1.phi => 0.1], (0.0, 10.0))
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()))
 
 plot(
     plot(sol, idxs = [j1.phi, j2.phi, j3.phi]),
@@ -149,7 +150,7 @@ ssys = multibody(fourbar2)
 
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
 
-sol = solve(prob, FBDF(autodiff=true));
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()));
 @test SciMLBase.successful_retcode(sol)
 plot(sol, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green in the animation below)
 ```
@@ -187,7 +188,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
 @named fourbar_analytic = System(connections, t, systems = [world; systems])
 ssys_analytic = multibody(fourbar_analytic)
 prob = ODEProblem(ssys_analytic, [], (0.0, 1.4399)) 
-sol2 = solve(prob, FBDF(autodiff=true)) # about 4x faster than the simulation above
+sol2 = solve(prob, FBDF(autodiff=AutoForwardDiff())) # about 4x faster than the simulation above
 plot!(sol2, idxs=[j2.s]) # Plot the same coordinate as above
 ```
 In practice, the two simulations are not exactly identical since we haven't modeled any mass attached to the rod in the joint assembly. We could add such mass to the rod by attaching to the `joint_us.frame_ia` connector.
@@ -213,6 +214,6 @@ variables.
 We can also inspect the mass matrices of the two systems to see how many nonlinear algebraic equations the solver has to deal with
 ```@example kinloop
 using LinearAlgebra
-diag(ssys.mass_matrix), diag(ssys_analytic.mass_matrix)
+calculate_massmatrix(ssys), calculate_massmatrix(ssys_analytic)
 ```
 A 1 on the diagonal indicates a differential equation, while a 0 indicates an algebraic equation. The cut-joint version has 6 nonlinear algebraic equations, while the joint assembly version has only 1. Both of them have 2 differential equations (position and velocity), corresponding to the 1 degree of freedom in the mechanism. Nonlinear algebraic equations are more expensive to solve than differential equations.

@@ -13,17 +13,18 @@ using ModelingToolkit
 using Plots
 # using JuliaSimCompiler
 using OrdinaryDiffEq
+using ADTypes
 
 t = Multibody.t
 D = Differential(t)
 world = Multibody.world
 
-@component function SwingRope(; name)
+@component function SwingRope(; name, r = [0.0, -1, 0])
     systems = @named begin
         frame_a = Frame()
         frame_b = Frame()
         joint1 = Spherical(isroot=true, state=true, d=0.001, color=[0.7, 0.7, 0.7, 0.7])
-        rope = BodyShape(r=[0.0,-1,0], m=0.05, radius=0.01)
+        rope = BodyShape(; r, m=0.05, radius=0.01)
         spring = Spring(c = inv(0.04/60), m=0.01, radius=0.06)
         damper = Damper(d = 50.0, radius=0.05, length_fraction=0.1)
     end
@@ -46,7 +47,7 @@ end
     systems = @named begin
         world = World()
         upper_trans1 = FixedTranslation(r=[-w/2, 0, 0])
-        rope1 = SwingRope(rope.r=[-w/2, h, -w/2])
+        rope1 = SwingRope(r=[-w/2, h, -w/2])
         body  = Body(m=6, isroot=true, I_11=0.1, I_22=0.1, I_33=0.1)
         damper = Damper(d=10.0)
     end
@@ -70,7 +71,7 @@ prob = ODEProblem(ssys, [
     model.body.v_0 .=> 0;
     model.body.w_a .=> 0;
 ], (0, 4))
-sol = solve(prob, ImplicitEuler(autodiff=false), reltol=5e-3)
+sol = solve(prob, ImplicitEuler(autodiff=AutoFiniteDiff()), reltol=5e-3)
 @assert SciMLBase.successful_retcode(sol)
 ```
 
@@ -96,10 +97,10 @@ Next, we create the full swing assembly
         world = World()
         upper_trans1 = FixedTranslation(r=[-w/2, 0, 0])
         upper_trans2 = FixedTranslation(r=[ w/2, 0, 0])
-        rope1 = SwingRope(rope.r=[-w/2, -h, -w/2])
-        rope2 = SwingRope(rope.r=[-w/2, -h,  w/2])
-        rope3 = SwingRope(rope.r=[ w/2, -h, -w/2])
-        rope4 = SwingRope(rope.r=[ w/2, -h,  w/2])
+        rope1 = SwingRope(r=[-w/2, -h, -w/2])
+        rope2 = SwingRope(r=[-w/2, -h,  w/2])
+        rope3 = SwingRope(r=[ w/2, -h, -w/2])
+        rope4 = SwingRope(r=[ w/2, -h,  w/2])
 
         body_back  = BodyShape(m=0.1, r = [w, 0, 0])
         body_front = BodyShape(m=0.1, r = [w, 0, 0])
@@ -159,7 +160,7 @@ prob = ODEProblem(ssys, [
 ], (0.0, 6))
 
 
-@time sol = solve(prob, ImplicitEuler(autodiff=false), reltol=1e-2)
+@time sol = solve(prob, ImplicitEuler(autodiff=AutoFiniteDiff()), reltol=1e-2)
 @assert SciMLBase.successful_retcode(sol)
 
 Plots.plot(sol, idxs = model.body.r_0)

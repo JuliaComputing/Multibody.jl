@@ -1,3 +1,4 @@
+using ADTypes
 using ModelingToolkit, OrdinaryDiffEq, Test
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
@@ -91,7 +92,7 @@ g = -9.80665
         missing_guess_value = MissingGuessValue.Constant(0.0),
     )
 
-    sol = solve(prob, Rodas5P(autodiff=true))
+    sol = solve(prob, Rodas5P(autodiff=AutoForwardDiff()))
 
     @test sol(0.1, idxs=ssys.body.frame_a.phi - ssys.wheelJoint.frame_a.phi) == 0 # These two should be the same
     @test sol(0.1, idxs=ssys.body.w + ssys.wheelJoint.w_roll) == 0 # These two should be the same but opposite sign

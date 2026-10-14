@@ -682,7 +682,7 @@ The force depends with friction characteristics on the slip. The slip is split i
 - lateral slip: the lateral velocity divided by the rolling velocity.
 - longitudinal slip: the longitudinal slip velocity divided by the rolling velocity.
 
-For low rolling velocity this definition become ill-conditioned. Hence a dry-friction model is used for low rolling velocities. For **zero rolling velocity**, the intitialization might fail if automatic differentiation is used. Either start with a non-zero (but tiny) rolling velocity or pass `autodiff=false` to the solver.
+For low rolling velocity this definition become ill-conditioned. Hence a dry-friction model is used for low rolling velocities. For **zero rolling velocity**, the intitialization might fail if automatic differentiation is used. Either start with a non-zero (but tiny) rolling velocity or pass `autodiff=AutoFiniteDiff()` to the solver.
 
 The radius of the wheel can be specified by the parameter `radius`. The driving direction (for `phi = 0`) can be specified by the parameter `r`. The normal load is set by `N`.
 

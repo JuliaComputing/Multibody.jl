@@ -70,10 +70,10 @@ eqs = [connect(bar2.frame_a, world.frame_b)
                          ])
 ssys = multibody(model)
 prob = ODEProblem(ssys, [
-    body.body.v_0 .=> zeros(3);
-    body.body.w_a .=> zeros(3);
+    collect(body.body.v_0) .=> zeros(3);
+    collect(body.body.w_a) .=> zeros(3);
     # body.body.phi .=> deg2rad.([10,10,10]); # If using Euler/Cardan angles
-    body.body.Q̂ .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
+    collect(body.body.Q̂) .=> params(QuatRotation(RotXYZ(deg2rad.((10,10,10))...)));
 ], (0, 4))
 
 sol = solve(prob, Rodas5P())

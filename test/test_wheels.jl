@@ -1,4 +1,4 @@
-using TestEnv; TestEnv.activate()
+using ADTypes
 using Test, ModelingToolkit, Multibody, Random
 using OrdinaryDiffEq
 t = Multibody.t
@@ -96,7 +96,7 @@ defs = Dict([
 ])
 
 prob = ODEProblem(ssys, defs, (0, 4); missing_guess_value = MissingGuessValue.Random(Random.GLOBAL_RNG))
-sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
+sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()), abstol=1e-8, reltol=1e-8)
 @test SciMLBase.successful_retcode(sol)
 # first(Multibody.render(worldwheel, sol, 0, show_axis=true))
 @test sol(4, idxs=[ssys.wheel.x; ssys.wheel.z]) ≈ [0.162547, -2.23778] atol=1e-3
@@ -115,7 +115,7 @@ defs = Dict([
 ])
 
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, FBDF(autodiff=false), abstol=1e-8, reltol=1e-8)
+sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()), abstol=1e-8, reltol=1e-8)
 # plot(sol)
 tv = 0:0.5:4
 @test sol(tv, idxs=ssys.wheel.body.r_0[1]) ≈ sol(tv, idxs=ssys.wheel.body.r_0[2]) .- 0.3*sqrt(2) rtol=1e-6 # The sqrt(2) is to account for the shifted contact point at a 45 degree plane
@@ -169,7 +169,7 @@ end
 ssys = multibody(model)
 prob = ODEProblem(ssys, [], (0, 4), guesses=Dict([ssys.spin_axis.phi => 0.0]); missing_guess_value = MissingGuessValue.Random(Random.GLOBAL_RNG))
 @test_skip begin # Singular linear system
-    sol = solve(prob, Rodas4(autodiff=false), abstol=1e-8, reltol=1e-8)
+    sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()), abstol=1e-8, reltol=1e-8)
     @test_broken !all(iszero, sol.u)
 end
 # first(Multibody.render(model, sol, 0, show_axis=true))

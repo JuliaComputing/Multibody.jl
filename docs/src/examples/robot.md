@@ -8,6 +8,7 @@ using ModelingToolkit
 using Plots
 # using JuliaSimCompiler
 using OrdinaryDiffEq
+using ADTypes
 using Test
 
 t = Multibody.t
@@ -26,18 +27,22 @@ unknowns(ssys)
     
 ```@example robot
 prob = ODEProblem(ssys, Dict([
-    robot.mechanics.r1.phi => deg2rad(-60)
-    robot.mechanics.r2.phi => deg2rad(20)
-    robot.mechanics.r3.phi => deg2rad(90)
-    robot.mechanics.r4.phi => deg2rad(0)
-    robot.mechanics.r5.phi => deg2rad(-110)
-    robot.mechanics.r6.phi => deg2rad(0)
+    ssys.mechanics.r1.phi => deg2rad(-60)
+    ssys.mechanics.r2.phi => deg2rad(20)
+    ssys.mechanics.r3.phi => deg2rad(90)
+    ssys.mechanics.r4.phi => deg2rad(0)
+    ssys.mechanics.r5.phi => deg2rad(-110)
+    ssys.mechanics.r6.phi => deg2rad(0)
 
-    robot.axis1.motor.Jmotor.phi => deg2rad(-60) *  -105 # Multiply by gear ratio
-    robot.axis2.motor.Jmotor.phi => deg2rad(20) *  210
-    robot.axis3.motor.Jmotor.phi => deg2rad(90) *  60
+    ssys.axis1.motor.Jmotor.phi => deg2rad(-60) *  -105 # Multiply by gear ratio
+    ssys.axis2.motor.Jmotor.phi => deg2rad(20) *  210
+    ssys.axis3.motor.Jmotor.phi => deg2rad(90) *  60
+
+    ssys.axis1.motor.Jmotor.w => 0
+    ssys.axis2.motor.Jmotor.w => 0
+    ssys.axis3.motor.Jmotor.w => 0
 ]), (0.0, 2.0))
-sol = solve(prob, Rodas5P(autodiff=false));
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()));
 @test SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs = [

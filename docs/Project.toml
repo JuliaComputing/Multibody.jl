@@ -1,4 +1,7 @@
 [deps]
+TrajectoryLimiters = "9792e600-fe43-4e4e-833b-462f466b8006"
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+OrdinaryDiffEqRosenbrock = "43230ef6-c299-4910-a778-202eb28ce4ce"
 ControlSystemsBase = "aaaaaaaa-a6ca-5380-bf3e-84a91bcd477e"
 ControlSystemsMTK = "687d7614-c7e5-45fc-bfc3-9ee385575c88"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

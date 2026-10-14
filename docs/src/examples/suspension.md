@@ -12,6 +12,7 @@ using ModelingToolkit
 import ModelingToolkitStandardLibrary.Mechanical.TranslationalModelica as Translational
 using Plots
 using OrdinaryDiffEq
+using ADTypes
 using LinearAlgebra
 # using JuliaSimCompiler
 using Test
@@ -172,7 +173,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 2))
-sol = solve(prob, FBDF(autodiff=true))
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()))
 @test SciMLBase.successful_retcode(sol)
 rms(x) = sqrt(sum(abs2, x) / length(x))
 @test rms(sol(0:0.1:2, idxs=ssys.body_upright.v)) ≈ 2.740 atol=0.01
@@ -261,7 +262,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, FBDF(autodiff=true), initializealg = ShampineCollocationInit())
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()), initializealg = ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
 ```
 
@@ -367,7 +368,7 @@ defs = [
     ssys.body_upright.v => 0.14
 ]
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()), initializealg = BrownFullBasicInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @assert all(sol[ssys.excited_suspension.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-1.3, y=0.3, z=0.0, lookat=[0,0.1,0.0], filename="suspension_wheel.gif") # Video
@@ -441,7 +442,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 4))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = ShampineCollocationInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()), initializealg = ShampineCollocationInit()) # FBDF is inefficient for models including the `SlippingWheel` component due to the discontinuous second-order derivative of the slip model
 @test SciMLBase.successful_retcode(sol)
 @assert all(sol[ssys.excited_suspension_r.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
 @assert all(sol[ssys.excited_suspension_l.wheel.wheeljoint.f_n] .> 0) "Model not valid for negative normal forces"
@@ -538,7 +539,7 @@ defs = [
 display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 3))
-sol = solve(prob, Rodas5P(autodiff=false), initializealg = BrownFullBasicInit())
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()), initializealg = BrownFullBasicInit())
 @test SciMLBase.successful_retcode(sol)
 @assert all(reduce(hcat, sol[[ssys.excited_suspension_bl.wheel.wheeljoint.f_n, ssys.excited_suspension_br.wheel.wheeljoint.f_n, ssys.excited_suspension_fl.wheel.wheeljoint.f_n, ssys.excited_suspension_fr.wheel.wheeljoint.f_n]]) .> 0) "Model not valid for negative normal forces"
 

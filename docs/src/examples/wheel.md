@@ -25,6 +25,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
 import ModelingToolkitStandardLibrary.Blocks
 using Plots
 using OrdinaryDiffEq
+using ADTypes
 using LinearAlgebra
 using Random
 using Test
@@ -269,7 +270,7 @@ tire_black = [0.1, 0.1, 0.1, 1]
         connect(prefer_straight_ahead.flange_b, steering_joint.support)
     ]
 
-    return System(equations, t; name, systems)
+    return System(equations, t, vars, pars; name, systems)
 end
 @named model = Car()
 ssys = multibody(model)
@@ -343,6 +344,7 @@ import ModelingToolkitStandardLibrary.Blocks
 import Multibody.PlanarMechanics as Pl
 using Plots
 using OrdinaryDiffEq
+using ADTypes
 using LinearAlgebra
 # using JuliaSimCompiler
 using Test
@@ -395,7 +397,6 @@ end
 
 @named model = TestSlipBasedWheel()
 ssys = multibody(model)
-defs = ModelingToolkit.defaults(model)
 prob = ODEProblem(ssys, [
     ssys.inertia.w => 1e-10, # This is important, at zero velocity, the friction is ill-defined
     ssys.revolute.frame_b.phi => 0,
@@ -533,11 +534,12 @@ end
 ssys = multibody(model)
 defs = merge(
     Dict(unknowns(ssys) .=> 0),
-    ModelingToolkit.defaults(model),
+    ModelingToolkit.initial_conditions(model),
+    ModelingToolkit.bindings(model),
     Dict(ssys.body.w => 0),
 )
 prob = ODEProblem(ssys, defs, (0.0, 5.0))
-sol = solve(prob, Rodas5P(autodiff=false))
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()))
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=0, y=0, z=5, filename="twotrack.gif", cache=false)
 nothing # hide

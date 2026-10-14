@@ -81,7 +81,7 @@ If a connection to the world is needed in a component model, use [`Fixed`](@ref)
 end
 
 """
-The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field and a gravity vector specified by the unit direction `world.n` (defaults to [0, -1, 0]) and magnitude `world.g` (defaults to 9.80665).
+The world component is the root of all multibody models. It is a fixed frame with a parallel gravitational field. The `n` and `g` arguments of [`World`](@ref) specify the unit direction and magnitude of gravity.
 """
 const world = World(; name = :world)
 
@@ -191,7 +191,7 @@ See also [`Position`](@ref) for a component that allows for only forced translat
         if R !== nothing
             ori(frame_b).R ~ R
         elseif q !== nothing
-            ori(frame_b) ~ from_Q(q, 0; normalize)
+            ori(frame_b) ~ from_Q(q, zeros(3); normalize)
         else
             error("Either R or q must be provided. If you only want to specify the position, use the `Position` component instead.")
         end

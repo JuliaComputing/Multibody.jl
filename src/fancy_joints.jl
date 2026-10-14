@@ -50,7 +50,7 @@ It is not possible to connect other components, such as a body with mass propert
     end
 
     rodlength = _norm(r_0)
-    constraint_residue = rRod_0'rRod_0 - rodlength^2
+    constraint_residue = sum(abs2, collect(rRod_0)) - rodlength^2
 
 
     eqs = [
@@ -99,7 +99,7 @@ It is not possible to connect other components, such as a body with mass propert
     [r_cm_0 ~ frame_a.r_0 + rRod_0/2;
     v_cm_0 ~ D(r_cm_0);
     f_cm_a ~ m*resolve2(ori(frame_a), D(v_cm_0) - gravity_acceleration(r_cm_0))
-    f_cm_e ~ (f_cm_a'eRod_a)*eRod_a
+    f_cm_e ~ dot(collect(f_cm_a), collect(eRod_a))*eRod_a
     frame_a.f ~ (f_cm_a - f_cm_e)./2 + f_rod*eRod_a
     f_b_a1 ~ (f_cm_a + f_cm_e)./2
     frame_b.f ~ resolve_relative(f_b_a1 - f_rod*eRod_a, ori(frame_a),

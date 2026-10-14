@@ -24,6 +24,7 @@ using Multibody.Rotations # To specify orientations using Euler angles
 using ModelingToolkit
 using Plots
 using OrdinaryDiffEq
+using ADTypes
 using LinearAlgebra
 # using JuliaSimCompiler
 using Test
@@ -163,7 +164,7 @@ defs = [
     ssys.excited_suspension.suspension.r2.phi => -0.6031*(1)
 ]
 prob = ODEProblem(ssys, defs, (0, 2π))
-sol = solve(prob, Rodas5P(autodiff=false)) 
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()))
 @test SciMLBase.successful_retcode(sol)
 Multibody.render(model, sol, show_axis=false, x=-0.8, y=0.7, z=0.1, lookat=[0,0.1,0.0], filename="prescribed_motion.gif") # Video
 nothing # hide

@@ -1,3 +1,4 @@
+using ADTypes
 using Test
 using Multibody
 using ModelingToolkit
@@ -47,7 +48,7 @@ ssys = multibody(model)
 ##
 
 prob = ODEProblem(ssys, [model.p1.v => 0.0], (0.0, 1.4))
-sol = solve(prob, FBDF(autodiff=true))
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()))
 @test sol(1.0, idxs=model.p1.s) ≈ -2.8 rtol=0.01 # test vs. OpenModelica
 
 
@@ -87,6 +88,6 @@ ssys = multibody(model)
 ##
 
 prob = ODEProblem(ssys, [model.p1.v => 0.0], (0.0, 1.4))
-sol = solve(prob, FBDF(autodiff=true))
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()))
 @test sol(1.0, idxs=model.p1.s) ≈ -2.8 rtol=0.01 # test vs. OpenModelica
 

@@ -67,4 +67,6 @@ end
 
 include("test_bodyshape_initialization.jl")
 include("test_joint_array_parameters.jl")
+include("test_joint_orientation.jl")
+include("test_linear_scc.jl")
 end

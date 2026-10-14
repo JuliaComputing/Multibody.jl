@@ -17,6 +17,8 @@ using ModelingToolkit
 using Plots
 # using JuliaSimCompiler
 using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
+using ADTypes
 using Test
 t = Multibody.t
 
@@ -33,7 +35,7 @@ connections = [connect(world.frame_b, rope.frame_a)
 stiff_rope = complete(stiff_rope)
 ssys = multibody(stiff_rope)
 prob = ODEProblem(ssys, [], (0, 5))
-sol = solve(prob, Rodas4(autodiff=false))
+sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()))
 @test SciMLBase.successful_retcode(sol)
 
 import GLMakie
@@ -57,7 +59,7 @@ connections = [connect(world.frame_b, rope.frame_a)
 flexible_rope = complete(flexible_rope)
 ssys = multibody(flexible_rope)
 prob = ODEProblem(ssys, [], (0, 8))
-sol = solve(prob, Rodas4(autodiff=false));
+sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()));
 @test SciMLBase.successful_retcode(sol)
 
 Multibody.render(flexible_rope, sol, y = -3, x = -6, z = -6, lookat=[0, -3, 0], filename = "flexible_rope.gif") # May take long time for n>=10
@@ -93,7 +95,7 @@ prob = ODEProblem(ssys, [
     chain.link_8.body.w_a .=> [0,0,0];
     chain.link_8.frame_b.r_0 .=> [x_dist,0,0];
 ], (0, 4))
-sol = solve(prob, Rodas4(autodiff=false))
+sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()))
 @test SciMLBase.successful_retcode(sol)
 
 Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May take long time for n>=10

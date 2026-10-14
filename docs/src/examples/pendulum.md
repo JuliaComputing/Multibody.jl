@@ -4,8 +4,10 @@ This beginners tutorial will start by modeling a pendulum pivoted around the ori
 To start, we load the required packages
 ```@example pendulum
 using ModelingToolkit
+import ModelingToolkit: connect
 using Multibody
 using OrdinaryDiffEq # Contains the ODE solver we will use
+using OrdinaryDiffEqRosenbrock
 using Plots
 ```
 We then access the world frame and time variable from the Multibody module
@@ -173,7 +175,7 @@ push!(connections, connect(multibody_spring.spring2d.flange_b, damper.flange_b))
 ssys = multibody(model)
 prob = ODEProblem(ssys, defs, (0, 10))
 
-sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-5 .* randn.())
+sol = solve(prob, Rodas4(), u0 = prob.u0 .+ 1e-5 .* randn.())
 plot(sol, idxs = multibody_spring.r_rel_0[2], title="Mass-spring-damper without joint")
 ```
 
@@ -340,6 +342,10 @@ gray = [0.5, 0.5, 0.5, 1]
         motor = TranslationalModelica.Force(use_support = false)
         tip = Body(m = 0.05)
     end
+    if use_world
+        @named world = World()
+        push!(systems, world)
+    end
 
     vars = @variables begin
         u(t)
@@ -402,15 +408,19 @@ We start by linearizing the model in the upward equilibrium position using the f
 ```@example pendulum
 import ModelingToolkit: D_nounits as D
 using LinearAlgebra
-@named cp = Cartpole()
+@named cp = Cartpole(use_world = true)
 cp = complete(cp)
 inputs = [cp.u] # Input to the linearized system
 outputs = [cp.x, cp.phi, cp.v, cp.w] # These are the outputs of the linearized system
-op = Dict([ # Operating point to linearize in
+op = merge(initial_conditions(cp), Dict([ # Operating point to linearize in
     cp.u => 0
+    cp.prismatic.s => 0
+    cp.prismatic.v => 0
+    D(cp.prismatic.s) => 0
+    cp.revolute.w => 0
+    D(cp.revolute.phi) => 0
     cp.revolute.phi => 0 # Pendulum pointing upwards
-]
-)
+]))
 matrices, simplified_sys = linearize(cp, inputs, outputs; op, Multibody.linsys...)
 matrices
 ```
@@ -494,8 +504,7 @@ nothing # hide
 Below, we add also an energy-based swing-up controller. For more details this kind of swing-up controller, see [Part 7: Control of rotary pendulum using Julia: Swing up control (YouTube)](https://www.youtube.com/watch?v=RhF2NMCYoiw)
 ```@example pendulum
 "Compute total energy, kinetic + potential, for a body rotating around the z-axis of the world"
-function energy(body, w)
-    g = GlobalScope(world.g_inner)
+function energy(body, w, g)
     m = body.m
     d2 = body.r_cm[1]^2 + body.r_cm[2]^2 # Squared distance from 
     I = body.I_33 + m*d2 # Parallel axis theorem
@@ -530,7 +539,7 @@ normalize_angle(x::Number) = mod(x+3.1415, 2pi)-3.1415
     equations = Equation[
         phi ~ normalize_angle(cartpole.phi)
         w ~ cartpole.w
-        E ~ energy(cartpole.pendulum.body, w) + energy(cartpole.tip, w)
+        E ~ energy(cartpole.pendulum.body, w, 9.80665) + energy(cartpole.tip, w, 9.80665)
         u_swing ~ 100*(E - Er)*sign(w*cos(phi-3.1415))
 
         L.input.u[1] ~ 0 - namespaced_outputs[1] # - cartpole.x

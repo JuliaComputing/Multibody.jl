@@ -6,7 +6,7 @@ import Multibody.Rotations: RotXYZ
 t = Multibody.t
 D = Multibody.D
 function get_R(sol, frame, t)
-    reshape(sol(t, idxs=vec(ori(frame).R.mat)), 3, 3)
+    reshape(sol(t, idxs=vec(collect(ori(frame).R))), 3, 3)
 end
 function get_r(sol, frame, t)
     sol(t, idxs=collect(frame.r_0))
@@ -38,7 +38,7 @@ D = Differential(t)
 # @test all(isfinite, du)
 
 # prob = ODEProblem(ssys, ModelingToolkit.missing_variable_defaults(ssys), (0, 10))
-prob = ODEProblem(ssys, [collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 1, 0]); collect(body.Q̂ .=> [1, 0, 0, 0])], (0, 10))
+prob = ODEProblem(ssys, [collect(body.r_0) .=> [0, -1e-5, 0]; collect(body.v_0 .=> [0, 0, 0]); collect(body.w_a .=> [0, 1, 0]); collect(body.Q̂ .=> [1, 0, 0, 0])], (0, 10))
 sol = solve(prob, Rodas5P(), u0 = prob.u0 .+ 1e-12 .* randn.())
 
 doplot() &&
@@ -47,7 +47,7 @@ doplot() &&
 @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
 @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
 @test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
-@test sol(pi, idxs = body.r_0[2]) < -2
+@test sol(float(pi), idxs = body.r_0[2]) < -2
 
 # TODO: add more tests
 ts = 0:0.1:2pi
@@ -56,7 +56,7 @@ ti = 5
 for (i, ti) in enumerate(ts)
     R = get_R(sol, body.frame_a, ti)
     Q = sol(ti, idxs=body.Q)
-    @test Multibody.from_Q(Q, 0).R ≈ R atol=1e-6 # Test that from_Q yields a rotation matrix consistent with R
+    @test Symbolics.value.(Multibody.from_Q(Q, zeros(3)).R) ≈ R atol=1e-6 # Test that from_Q yields a rotation matrix consistent with R
     R2 = get_R(sol, spring.frame_b, ti)
     @test norm(R'R2 - I) < 1e-10
 end
@@ -114,7 +114,7 @@ ti = 5
 for (i, ti) in enumerate(ts)
     R = get_R(sol, body.frame_a, ti)
     @test norm(R'R - I) < 1e-10
-    @test Multibody.from_Q(Q[:, i], 0).R ≈ R atol=1e-3
+    @test Symbolics.value.(Multibody.from_Q(Q[:, i], zeros(3)).R) ≈ R atol=1e-3
 end
 
 # Test that rotational velocity of 1 results in one full rotation in 2π seconds. Test rotation around all three major axes
@@ -202,7 +202,7 @@ end
 
     @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
     @named rod = FixedTranslation(; r = [1, 0, 0])
-    @named body = Body(; m = 1, isroot=true, quat=true, air_resistance=0.0)
+    @named body = Body(; m = 1, isroot=true, quat=true, r_0=[1, 0, 0], air_resistance=0.0)
 
     # @named joint = Multibody.Spherical(isroot=true, state=true, quat=true)
     # @named body = Body(; m = 1, r_cm = [1.0, 0, 0], isroot=false)
@@ -293,7 +293,7 @@ using Multibody.Rotations: params
     ssys = multibody(model)
     # ssys = structural_simplify(model, allow_parameters = false)
     prob = ODEProblem(ssys,
-                    [world.g => 9.80665;
+                    [
                         collect(body.body.w_a .=> 0);
                     collect(body.body.v_0 .=> 0);
                     #   collect(body.body.phi .=> deg2rad(10));

@@ -1,6 +1,6 @@
 # using Revise
 # using Plots
-using ModelingToolkit, OrdinaryDiffEq, Test
+using ModelingToolkit, OrdinaryDiffEq, Test, ADTypes
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import ModelingToolkitStandardLibrary.Blocks
 import ModelingToolkitStandardLibrary.Mechanical.Rotational
@@ -487,7 +487,7 @@ import ModelingToolkitStandardLibrary.Mechanical.Rotational
     display(unknowns(ssys))
     prob = ODEProblem(ssys, [
     ], (0.0, 20.0))
-    sol = solve(prob, Rodas5Pr(autodiff=true)) # Since the friction model is not differentiable everywhere
+    sol = solve(prob, Rodas5Pr(autodiff=AutoForwardDiff())) # Since the friction model is not differentiable everywhere
 
     @test sol(15, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long]) ≈ [80, -5] rtol=0.01
     @test sol(20, idxs=[ssys.slipBasedWheelJoint.f_lat, ssys.slipBasedWheelJoint.f_long]) ≈ [80, -4.95] rtol=0.01
@@ -611,7 +611,7 @@ end
 @named model = TwoTrackWithDifferentialGear()
 ssys = multibody(model)
 prob = ODEProblem(ssys, [], (0.0, 20.0))
-sol = solve(prob, Rodas5P(autodiff=false))
+sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()))
 @test SciMLBase.successful_retcode(sol)
 # plot(sol)
 

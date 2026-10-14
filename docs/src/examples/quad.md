@@ -9,16 +9,18 @@ The main body of the aircraft is modeled using a [`Body`](@ref), and the arms ar
 ```@example QUAD
 using Multibody
 using ModelingToolkit
+import ModelingToolkit: connect
 using ModelingToolkitStandardLibrary.Blocks
 using LinearAlgebra
 using Plots
 # using JuliaSimCompiler
 using OrdinaryDiffEq
+using ADTypes
 using Test
 t = Multibody.t
 D = Differential(t)
 
-world = Multibody.world
+world = World(; name = :world, g = 9.81)
 
 num_arms = 4 # Number of arms of the rotor craft.
 angle_between_arms = 2*pi/num_arms # Angle between the arms, assuming they are evenly spaced.
@@ -199,7 +201,7 @@ op = [
 ]
 
 @time "ODEProblem" prob = ODEProblem(ssys, op, (0, 20))
-sol = solve(prob, FBDF(autodiff=false), reltol=1e-8, abstol=1e-8)
+sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()), reltol=1e-8, abstol=1e-8)
 @test SciMLBase.successful_retcode(sol)
 
 plot(sol, idxs=[ssys.arm1.frame_b.r_0[2], ssys.arm2.frame_b.r_0[2], ssys.arm3.frame_b.r_0[2], ssys.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
@@ -229,7 +231,6 @@ outputs = [quad.y_alt, quad.y_roll, quad.y_pitch, quad.y_yaw, quad.y_forward, qu
 op = [
     quad.body.r_0[2] => 1e-32
     quad.v_alt => 1e-32 # To avoid singularity in linearization
-    quad.world.g => 9.81
     inputs .=> 1;
 ] |> Dict
 
@@ -261,7 +262,6 @@ L
 
 
 ```@example QUAD
-ModelingToolkit.get_iv(i::IRSystem) = i.t
 model = RotorCraft(; closed_loop=true, addload=true, L=-L, outputs) # Negate L for negative feedback
 ssys = multibody(model)
 
@@ -270,14 +270,13 @@ op = [
     ssys.body.r_0[3] => 1e-3
     ssys.body.r_0[1] => 1e-3
     ssys.cable.joint_2.phi .=> 1 # Usa a larger initial cable bend since this controller is more robust
-    ssys.world.g => 9.81;
     ssys.body.phid .=> 0;
     D(ssys.body.phi) .=> 0;
     ssys.feedback_gain.input.u .=> 0;
     ssys.Ie_alt => -10; # Initialize the integrator state to avoid a very large initial transient. This pre-compensates for gravity
 ] |> Dict
 prob = ODEProblem(ssys, op, (0, 20))
-sol = solve(prob, FBDF(autodiff=false))
+sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()))
 @test SciMLBase.successful_retcode(sol)
 plot(sol, idxs=[ssys.arm1.frame_b.r_0[2], ssys.arm2.frame_b.r_0[2], ssys.arm3.frame_b.r_0[2], ssys.arm4.frame_b.r_0[2]], layout=4, framestyle=:zerolines)
 ```
@@ -298,20 +297,20 @@ linop = merge(op, Dict([
     ssys.system_outputs.u .=> 1e-32
     ssys.feedback_gain.input.u .=> 1e-32
     ]))
-@time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=IRSystem, op=linop)
+@time "Sensitivity function" S = get_named_sensitivity(model, :y; system_modifier=multibody, op=linop)
 S = minreal(S, 1e-6)
 isstable(S) || @error "Sensitivity function S is not stable"
 T = I(S.ny) - S
 T = minreal(T, 1e-6)
 isstable(T) || @error "Sensitivity function T is not stable"
-LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=IRSystem, op)
+LT = feedback(T, -I(T.ny))#get_named_looptransfer(model, :y; system_modifier=multibody, op)
 
-@time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=IRSystem, op=linop)
+@time "Comp Sensitivity function" Ti = get_named_comp_sensitivity(model, :u; system_modifier=multibody, op=linop)
 Ti = minreal(Ti, 1e-6)
 isstable(Ti) || @error "Sensitivity function Ti is not stable"
 LTi = feedback(Ti, -I(Ti.ny)) # Input loop-transfer function
 
-CS = named_ss(model, :y, :u; op=linop, system_modifier=IRSystem) # Closed-loop system from measurement noise to control signal
+CS = named_ss(model, :y, :u; op=linop, system_modifier=multibody) # Closed-loop system from measurement noise to control signal
 
 w = 2pi.*exp10.(LinRange(-2, 2, 200))
 fig_dm = plot(diskmargin(LT, 0.5), label="Plant output") # Compute diskmargin with a positive skew of 0.5 to account for a likely gain increase when the load is dropped

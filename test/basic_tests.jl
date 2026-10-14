@@ -1,3 +1,4 @@
+using ADTypes
 using ModelingToolkit
 using Multibody
 using Test
@@ -58,7 +59,7 @@ D = Differential(t)
     @test sol(2pi, idxs = body.r_0[1])≈0 atol=1e-3
     @test sol(2pi, idxs = body.r_0[2])≈0 atol=1e-3
     @test sol(2pi, idxs = body.r_0[3])≈0 atol=1e-3
-    @test sol(pi, idxs = body.r_0[2]) < -2
+    @test sol(float(pi), idxs = body.r_0[2]) < -2
 
     doplot() &&
         plot(sol, idxs = [collect(body.r_0); collect(body.v_0)], layout = 6)
@@ -121,6 +122,7 @@ end
 # ==============================================================================
 ## Point gravity ======================
 # ==============================================================================
+@testset "Point gravity" begin
 @component function PointGrav(; name)
     systems = @named begin
         world = World(mu = 1, point_gravity = true)
@@ -161,6 +163,8 @@ sol = solve(prob, Rodas4())
 @test sol(5, idxs=model.body2.r_0) ≈ [0.7867717, 0.478463, 0] atol=1e-1
 # plot(sol)
 
+
+end
 
 # ==============================================================================
 ## Simple pendulum from Modelica "First Example" tutorial ======================
@@ -217,7 +221,7 @@ connections = [connect(world.frame_b, rev.frame_a)
 ssys = multibody(model)#, alias_eliminate = false)
 
 D = Differential(t)
-prob = ODEProblem(ssys, [damper.phi_rel => 1, D(rev.phi) => 0, D(D(rev.phi)) => 0],
+prob = ODEProblem(ssys, [rev.phi => 0, rev.w => 0],
                   (0, 100))
 sol2 = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol2)
@@ -251,7 +255,7 @@ ssys = multibody(model)
 
 D = Differential(t)
 
-prob = ODEProblem(ssys, [damper.phi_rel => 1], (0, 40))
+prob = ODEProblem(ssys, [rev.phi => 0, rev.w => 0], (0, 40))
 sol3 = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol3)
 @test minimum(sol3[rev.phi]) > -π
@@ -336,7 +340,7 @@ connections = [connect(world.frame_b, joint.frame_a)
 @named model = System(connections, t, systems = [world, joint, body, damper, spring])
 ssys = multibody(model)#, allow_parameter = false)
 
-prob = ODEProblem(ssys, [damper.s_rel => 1, D(joint.s) => 0, D(D(joint.s)) => 0],
+prob = ODEProblem(ssys, [joint.s => 1, joint.v => 0],
                   (0, 30))
 
 sol = solve(prob, Rodas4())
@@ -359,7 +363,7 @@ systems = @named begin
     bar1 = FixedTranslation(r = [0.3, 0, 0])
     bar2 = FixedTranslation(r = [0.6, 0, 0])
     bar3 = FixedTranslation(r = [0.9, 0, 0])
-    p2 = Prismatic(n = [0, -1, 0], s = 0.1, axisflange = true)
+    p2 = Prismatic(n = [0, -1, 0], s = 0.1, v = 0, axisflange = true)
     spring2 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     spring1 = Multibody.Spring(c = 30, s_unstretched = 0.1)
     damper1 = Multibody.Damper(d = 2)
@@ -525,9 +529,10 @@ end
 ## Planar joint ================================================================
 # ==============================================================================
 using LinearAlgebra
+@testset "Planar joint" begin
 @component function PlanarTest(; name)
     systems = @named begin
-        world = World()
+        world = World(g = 9.80665)
         planar = Planar(n=[0,0,1], n_x=[1,0,0])
         force = Force()
         body = Body(m=1)
@@ -553,11 +558,7 @@ end
 @named sys = PlanarTest()
 sys = complete(sys)
 ssys = multibody(sys)
-prob = ODEProblem(ssys, [
-    sys.world.g => 9.80665; # Modelica default
-    # collect(sys.body.w_a) .=> 0;
-    # collect(sys.body.v_0) .=> 0;
-], (0, 2))
+prob = ODEProblem(ssys, [], (0, 2))
 
 sol = solve(prob, Rodas4())
 @test SciMLBase.successful_retcode(sol)
@@ -566,6 +567,8 @@ sol = solve(prob, Rodas4())
 @test sol(2, idxs=sys.body.r_0) ≈ [1.0907, -18.28, 0] atol=1e-3
 
 # plot(sol)
+
+end
 
 # ==============================================================================
 ## Sperical-joint pendulum ===================================================
@@ -582,7 +585,7 @@ D = Differential(t)
 world = Multibody.world
 
 @named begin
-    joint = Spherical(state = true, isroot = true, phi = 1)
+    joint = Spherical(state = true, isroot = true, phi = fill(1.0, 3))
     bar = FixedTranslation(r = [0, -1, 0])
     body = Body(; m = 1, isroot = false)
 end
@@ -719,7 +722,7 @@ end
 @testset "FreeMotion" begin
 # Model a free-falling body
 # Test 1, enforce state = false
-world = Multibody.world
+world = World(; name = :world, g = 9.81)
 @named freeMotion = FreeMotion(state = false, isroot = false)
 @named body = Body(m = 1, isroot = true)
 
@@ -734,7 +737,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = multibody(model)
 @test length(unknowns(ssys)) == 12
 
-prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [ collect(body.w_a .=> [0, 0, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -758,7 +761,7 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = multibody(model)
 @test length(unknowns(ssys)) == 12 
 
-prob = ODEProblem(ssys, [world.g=>9.81; collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
+prob = ODEProblem(ssys, [ collect(body.w_a .=> [0, 1, 0]); collect(body.v_0 .=> [0, 0, 0]); ], (0, 10))
 
 sol = solve(prob, Rodas4())
 doplot() && plot(sol, idxs = body.r_0[2], title = "Free falling body")
@@ -767,10 +770,10 @@ y = sol(0:0.1:10, idxs = body.r_0[2])
 
 
 # without joint
-world = Multibody.world
+world = World(; name = :world, g = 9.81)
 @named body = Body(m = 1, isroot = true)
 
-@named model = System([], t,
+@named model = System(Equation[], t,
                          systems = [world;
                                     body])
 # ssys = structural_simplify(model, allow_parameters = false)
@@ -778,7 +781,6 @@ ssys = multibody(model)
 @test length(unknowns(ssys)) == 12
 
 prob = ODEProblem(ssys, [
-    world.g=>9.81; 
     collect(body.w_a .=> [0, 1, 0]); 
     collect(body.v_0 .=> [0, 0, 0]); 
 ], (0, 10))
@@ -794,7 +796,7 @@ end
 ## Dzhanibekov effect ==========================================================
 # ==============================================================================
 @testset "Dzhanibekov effect" begin
-world = Multibody.world
+world = World(; name = :world, g = 0.0)
 @named freeMotion = FreeMotion(state = false, isroot = false)
 @named body = BodyShape(m = 1, r=0.1*[1,2,3], isroot = true, I_11 = 1, I_22 = 10, I_33 = 100, quat=false)
 
@@ -809,13 +811,9 @@ eqs = [connect(world.frame_b, freeMotion.frame_a)
 ssys = multibody(model)
 
 prob = ODEProblem(ssys,
-                  Symbolics.scalarize.([
-                    body.body.v_0 .=> [0,1,0] # Movement in y direction
-                    body.body.w_a .=> [0.01, 3.0, 0.02] # Rotation around y axis
-                    body.body.phi .=> 0.0001 .* randn.() 
-                    # body.Q .=> 0.001 .* randn.() .+ [0,0,0,1]
-                    world.g => 0.0 # In space
-                  ]), 
+                  [collect(body.body.v_0) .=> [0, 1, 0];
+                    collect(body.body.w_a) .=> [0.01, 3.0, 0.02];
+                    collect(body.body.phi) .=> 0.0001 .* randn(3)],
                   (0, 3))
 
 sol = solve(prob, Rodas4())
@@ -909,7 +907,7 @@ prob = ODEProblem(ssys, [
     collect(body.r_0) .=> [1,1,1];
     collect(body.w_a) .=> [1,1,1]
 ], (0, 5))
-@time "Stiff rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ 0.1);
+@time "Stiff rope pendulum" sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()); u0 = prob.u0 .+ 0.1);
 @test SciMLBase.successful_retcode(sol)
 
 
@@ -940,7 +938,7 @@ prob = ODEProblem(ssys, [
     collect(body.w_a) .=> [1,1,1];
     collect(body.v_0) .=> [10,10,10]
 ], (0, 10))
-@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=false); u0 = prob.u0 .+ [-0.5, -0.5, -0.5,
+@time "Flexible rope pendulum" sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()); u0 = prob.u0 .+ [-0.5, -0.5, -0.5,
                                                                                         -0.5, -0.5, -0.5,
                                                                                         -0.5, -0.5, -0.5,
                                                                                         0.5, 0.5, 0.5,
@@ -1032,7 +1030,7 @@ end
         collect(chain.link_3.body.w_a) .=> [0,0,0]; 
         collect(chain.link_3.frame_b.r_0) .=> [x_dist,0,0]; 
     ], (0, 4))
-    sol = solve(prob, Rodas4(autodiff=false))
+    sol = solve(prob, Rodas4(autodiff=AutoFiniteDiff()))
     @test SciMLBase.successful_retcode(sol)
 
     # Multibody.render(mounted_chain, sol, x=3, filename = "mounted_chain.gif") # May take long time for n>=10
@@ -1160,7 +1158,7 @@ world = Multibody.world
 
 @named joint = Multibody.Spherical(isroot=false, state=false, quat=false)
 @named rod = FixedTranslation(; r = [1, 0, 0])
-@named body = Body(; m = 1, isroot=true, quat=true)
+@named body = Body(; m = 1, isroot=true, quat=true, r_0=[1, 0, 0])
 
 connections = [connect(world.frame_b, joint.frame_a)
                connect(joint.frame_b, rod.frame_a)
@@ -1480,7 +1478,7 @@ display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 2))
 
-sol = solve(prob, FBDF(autodiff=true))#; initializealg=ShampineCollocationInit())
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()))#; initializealg=ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
 # Multibody.render(model, sol, show_axis=false, x=-1.5, y=0, z=0, timescale=3, display=true) # Video
 # first(Multibody.render(model, sol, 0, show_axis=true, x=-1.5, y=0, z=0))
@@ -1604,7 +1602,7 @@ display(sort(unknowns(ssys), by=string))
 
 prob = ODEProblem(ssys, defs, (0, 2))
 
-sol = solve(prob, FBDF(autodiff=true))#; initializealg=ShampineCollocationInit())
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()))#; initializealg=ShampineCollocationInit())
 @test SciMLBase.successful_retcode(sol)
 # Multibody.render(model, sol, show_axis=false, x=-1.5, y=0, z=0, timescale=3, display=true) # Video
 # first(Multibody.render(model, sol, 0, show_axis=true, x=-1.5, y=0, z=0))

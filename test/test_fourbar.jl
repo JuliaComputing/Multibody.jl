@@ -1,3 +1,4 @@
+using ADTypes
 using Test
 using Multibody
 using ModelingToolkit
@@ -42,7 +43,7 @@ ssys = multibody(fourbar2)
 
 prob = ODEProblem(ssys, [], (0.0, 1.4399)) # The end time is chosen to make the animation below appear to loop forever
 
-sol = solve(prob, FBDF(autodiff=true));
+sol = solve(prob, FBDF(autodiff=AutoForwardDiff()));
 @test SciMLBase.successful_retcode(sol)
 # plot(sol, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green in the animation below)
 
@@ -68,7 +69,7 @@ connections = [connect(j2.frame_b, b2.frame_a)
 @named model = System(connections, t, systems = [world; systems])
 ssys = multibody(model, allow_symbolic=true)
 prob = ODEProblem(ssys, [], (0.0, 1.4399), guesses = [ssys.j1.phi => 0]) # The end time is chosen to make the animation below appear to loop forever
-sol2 = solve(prob, FBDF(autodiff=true)) # 3.9x faster than above
+sol2 = solve(prob, FBDF(autodiff=AutoForwardDiff())) # 3.9x faster than above
 # plot(sol2, idxs=[j2.s]) # Plot the joint coordinate of the prismatic joint (green in the animation below)
 
 

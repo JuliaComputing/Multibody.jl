@@ -9,6 +9,7 @@ using ModelingToolkit
 # using JuliaSimCompiler
 using Plots
 using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 using LinearAlgebra
 
 t = Multibody.t
@@ -38,6 +39,7 @@ D = Differential(t)
 prob = ODEProblem(ssys, [], (0, 3))
 
 using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock
 sol = solve(prob, Rodas4())
 @assert SciMLBase.successful_retcode(sol)
 

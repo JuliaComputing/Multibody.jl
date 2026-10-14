@@ -1,3 +1,4 @@
+using ADTypes
 using ModelingToolkit
 using Multibody
 using Test
@@ -285,7 +286,7 @@ end
             ssys.axis2.motor.Jmotor.w => 0
             ssys.axis3.motor.Jmotor.w => 0
         ], (0.0, 2.0))
-        @time "simulation (solve)" sol = solve(prob, Rodas5P(autodiff=false));
+        @time "simulation (solve)" sol = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()));
         @test SciMLBase.successful_retcode(sol)
     end
 
@@ -345,7 +346,7 @@ end
 #         robot.axis2.motor.Jmotor.phi => deg2rad(20) * (210)
 #         robot.axis3.motor.Jmotor.phi => deg2rad(90) * (60)
 #     ], (0.0, 2.0))
-#     sol2 = solve(prob, Rodas5P(autodiff=false))
+#     sol2 = solve(prob, Rodas5P(autodiff=AutoFiniteDiff()))
 
 #     @test SciMLBase.successful_retcode(sol2)
 
@@ -354,7 +355,7 @@ end
 #     # @test maximum(abs, control_error) < 0.002
 
 #     # using BenchmarkTools
-#     # @btime solve(prob, Rodas5P(autodiff=false));
+#     # @btime solve(prob, Rodas5P(autodiff=AutoFiniteDiff()));
 #     # 152.225 ms (2272926 allocations: 40.08 MiB)
 #     # 114.113 ms (1833534 allocations: 33.38 MiB) # sub 0, 1
 # end

@@ -22,7 +22,6 @@ const R3{T} = RotMatrix{3, T}
 #     w::Any
 # end
 
-RotationMatrix(R::AbstractMatrix, w) = RotationMatrix(R3(R), w)
 
 RotationMatrix() = RotationMatrix(R3(1.0I(3)), zeros(3))
 
@@ -436,9 +435,10 @@ function get_frame(sol, frame, t)
 end
 
 function nonunit_quaternion_equations(R, w; Q = [1, 0, 0, 0])
+    Q0 = Q
     vars = @variables begin
         Q(t)[1:4], [state_priority=-1, description="Unit quaternion with [w,i,j,k]"] # normalized
-        Q̂(t)[1:4]=Q, [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
+        Q̂(t)[1:4]=Q0, [state_priority=1000, description="Non-unit quaternion with [w,i,j,k]"] # Non-normalized
         Q̂d(t)[1:4], [state_priority=1000]
         # NOTE: 
         n(t)
@@ -460,11 +460,11 @@ function nonunit_quaternion_equations(R, w; Q = [1, 0, 0, 0])
     # QR = from_Q(Q, angular_velocity2(Q, D.(Q)))
     QR = from_Q(Q̂ ./ sqrt(n), w)
     eqs = [
-        n ~ Q̂'Q̂
+        n ~ sum(abs2, collect(Q̂))
         c ~ k * (1 - n)
         D.(Q̂) .~ Q̂d
-        Q̂d .~ (Ω * Q̂) ./ 2 + c * Q̂ # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
-        Q .~ Q̂ ./ sqrt(n)
+        collect(Q̂d) .~ (Ω * collect(Q̂)) ./ 2 + c * collect(Q̂) # We use Ω' which is the same as using -w to handle the fact that w coming in here is typically described frame_a rather than in frame_b, the paper is formulated with w being expressed in the rotating body frame (frame_b)
+        collect(Q) .~ collect(Q̂) ./ sqrt(n)
         R ~ from_Q(Q, w)
         # R.w .~ angularVelocity2(Q̂, Q̂d)
     ]

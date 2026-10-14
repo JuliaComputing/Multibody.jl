@@ -190,11 +190,11 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                    )
 
     dnum = d
-    @named begin
-        ptf = PartialTwoFrames()
-        Rrel = NumRotationMatrix()
-        Rrel_inv = NumRotationMatrix()
-    end
+    @named ptf = PartialTwoFrames()
+    Rrel_matrix = at_variables_t(:Rrel, 1:3, 1:3; state_priority = -1)
+    Rrel_inv_matrix = at_variables_t(:Rrel_inv, 1:3, 1:3; state_priority = -1)
+    Rrel = RotationMatrix(Rrel_matrix, get_w(Rrel_matrix))
+    Rrel_inv = RotationMatrix(Rrel_inv_matrix, get_w(Rrel_inv_matrix))
     pars = @parameters begin
         radius = radius, [description = "radius of the joint in animations"]
         color[1:4] = color, [description = "color of the joint in animations (RGBA)"]
@@ -210,6 +210,11 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
                          description = "relative angular velocity of frame_b with respect to frame_a, resolved in frame_b",
                      ] end
 
+    if state
+        vars = [vars; vec(Rrel_matrix)]
+        isroot || (vars = [vars; vec(Rrel_inv_matrix)])
+    end
+
     # torque balance
     if dnum <= 0
         eqs = [zeros(3) ~ frame_a.tau
@@ -217,8 +222,8 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
             frame_b.r_0 ~ frame_a.r_0]
     else
         fric = d*w_rel
-        eqs = [-fric ~ frame_a.tau
-        fric ~ resolve1(Rrel, frame_b.tau)
+        eqs = [-resolve_relative(fric, frame_b, frame_a) ~ frame_a.tau
+        fric ~ frame_b.tau
         frame_b.r_0 ~ frame_a.r_0]
     end
 
@@ -260,16 +265,11 @@ Joint with 3 constraints that define that the origin of `frame_a` and the origin
 
     else
         # Spherical joint does not have state
-        append!(eqs,
-                #frame_b.r_0 ~ transpose(frame_b.R.T)*(frame_b.R.T*(transpose(frame_a.R.T)*(frame_a.R.T*frame_a.r_0)));
+        push!(eqs,
                 zeros(3) ~ frame_a.f +
                             resolve_relative(frame_b.f, frame_b, frame_a))
-        if w_rel_a_fixed || z_rel_a_fixed
-            append!(w_rel .~ angular_velocity2(frame_b) - resolve2(frame_b,
-                                      angular_velocity1(frame_a)))
-        else
-            append!(w_rel .~ zeros(3))
-        end
+        append!(eqs, w_rel .~ angular_velocity2(ori(frame_b)) - resolve2(frame_b,
+                                  angular_velocity1(ori(frame_a))))
     end
 
     extend(System(eqs, t, vars, pars; name), ptf)
@@ -518,10 +518,10 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
     end
     pars = eltype(vars)[]
 
-    @named Rrel_f = Frame()
-    @named Rrel_inv_f = Frame()
-    Rrel = ori(Rrel_f)
-    Rrel_inv = ori(Rrel_inv_f)
+    Rrel_matrix = at_variables_t(:Rrel, 1:3, 1:3; state_priority = -1)
+    Rrel_inv_matrix = at_variables_t(:Rrel_inv, 1:3, 1:3; state_priority = -1)
+    Rrel = RotationMatrix(Rrel_matrix, get_w(Rrel_matrix))
+    Rrel_inv = RotationMatrix(Rrel_inv_matrix, get_w(Rrel_inv_matrix))
 
     eqs = [
            # Cut-forces and cut-torques are zero
@@ -536,10 +536,12 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
            frame_b.r_0 ~ frame_a.r_0 + resolve1(frame_a, r_rel_a)]
 
     if state
+        vars = [vars; vec(Rrel_matrix)]
         if isroot
             append!(eqs,
                     connect_orientation(ori(frame_b), absolute_rotation(frame_a, Rrel); iscut))
         else
+            vars = [vars; vec(Rrel_inv_matrix)]
             append!(eqs,
                     [Rrel_inv ~ inverse_rotation(Rrel)
                      connect_orientation(ori(frame_a), absolute_rotation(frame_b, Rrel_inv); iscut)])
@@ -566,19 +568,10 @@ The relative position vector `r_rel_a` from the origin of `frame_a` to the origi
         end
 
     else
-        # Free motion joint does not have state
-        if w_rel_a_fixed || z_rel_a_fixed
-            append!(eqs,
-                    w_rel_b .~ angular_velocity2(ori(frame_b)) - resolve2(ori(frame_b), angular_velocity1(ori(frame_a))))
-        end
+        append!(eqs,
+                w_rel_b .~ angular_velocity2(ori(frame_b)) - resolve2(ori(frame_b), angular_velocity1(ori(frame_a))))
     end
-    if state && !isroot
-        compose(System(eqs, t, vars, pars; name), frame_a, frame_b, Rrel_f, Rrel_inv_f)
-    elseif state
-        compose(System(eqs, t, vars, pars; name), frame_a, frame_b, Rrel_f, )
-    else
-        compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
-    end
+    compose(System(eqs, t, vars, pars; name), frame_a, frame_b)
 end
 
 """
@@ -635,6 +628,7 @@ If a planar loop is present, e.g., consisting of 4 revolute joints where the joi
     @named Rrel = NumRotationMatrix(; R = Rrel0.R, w = Rrel0.w, varw, state_priority = -1)
 
     Rb = ori(frame_b)
+    vars = [vars; vec(Rrel.R)]
 
     eqs = [
         Rrel ~ relative_rotation(ori(frame_a), ori(frame_b))
